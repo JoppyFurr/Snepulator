@@ -3,8 +3,11 @@
 
 #include "SDL2/SDL.h"
 
-static SDL_Window *window = NULL;
-static SDL_Renderer *renderer = NULL;
+#include "gpu/sega_vdp.h"
+
+/* Global state */
+SDL_Window *window = NULL;
+SDL_Renderer *renderer = NULL;
 
 int main (int argc, char **argv)
 {
@@ -34,6 +37,20 @@ int main (int argc, char **argv)
     SDL_RenderClear (renderer);
     SDL_RenderPresent (renderer);
 
+    vdp_init ();
+
+    /* TEST - Dark green background */
+    vdp_access (0x10, VDP_PORT_CONTROL, VDP_OPERATION_WRITE); /* Address = 0x10 */
+    vdp_access (0xc0, VDP_PORT_CONTROL, VDP_OPERATION_WRITE); /* Target = cram */
+
+    vdp_access (0x04, VDP_PORT_DATA,    VDP_OPERATION_WRITE); /* Dark green */
+
+    vdp_access (0x00, VDP_PORT_CONTROL, VDP_OPERATION_WRITE); /* data = 0x00 */
+    vdp_access (0x27, VDP_PORT_CONTROL, VDP_OPERATION_WRITE); /* Write to background register */
+
+    vdp_dump ();
+
+
     /* Loop until the window is closed */
     for (;;)
     {
@@ -46,6 +63,9 @@ int main (int argc, char **argv)
                 goto snepulator_close;
             }
         }
+
+        vdp_render ();
+        SDL_RenderPresent (renderer);
 
         SDL_Delay (16);
     }
