@@ -24,7 +24,7 @@ int main (int argc, char **argv)
     /* Create a window */
     /* For now, lets assume Master System resolution.
      * 256 × 192, with 16 pixels for left/right border, and 32 pixels for top/bottom border */
-    SDL_CreateWindowAndRenderer (256 + 32, 192 + 64, 0, &window, &renderer);
+    SDL_CreateWindowAndRenderer (256 + VDP_OVERSCAN_X * 2, 192 + VDP_OVERSCAN_Y * 2, 0, &window, &renderer);
     if (window == NULL || renderer == NULL)
     {
         fprintf (stderr, "Error: SDL_CreateWindowAndRenderer failed.\n");
@@ -39,14 +39,20 @@ int main (int argc, char **argv)
 
     vdp_init ();
 
-    /* TEST - Dark green background */
-    vdp_access (0x10, VDP_PORT_CONTROL, VDP_OPERATION_WRITE); /* Address = 0x10 */
-    vdp_access (0xc0, VDP_PORT_CONTROL, VDP_OPERATION_WRITE); /* Target = cram */
+    /* TEST */
 
-    vdp_access (0x04, VDP_PORT_DATA,    VDP_OPERATION_WRITE); /* Dark green */
+        /* Mode 4 */
+        vdp_access (0x04, VDP_PORT_CONTROL, VDP_OPERATION_WRITE); /* data = Mode 4 */
+        vdp_access (0x80, VDP_PORT_CONTROL, VDP_OPERATION_WRITE); /* mode_ctrl_1 */
 
-    vdp_access (0x00, VDP_PORT_CONTROL, VDP_OPERATION_WRITE); /* data = 0x00 */
-    vdp_access (0x27, VDP_PORT_CONTROL, VDP_OPERATION_WRITE); /* Write to background register */
+        /* Dark green for background */
+        vdp_access (0x10, VDP_PORT_CONTROL, VDP_OPERATION_WRITE); /* Address = 0x10 */
+        vdp_access (0xc0, VDP_PORT_CONTROL, VDP_OPERATION_WRITE); /* Target = cram */
+        vdp_access (0x04, VDP_PORT_DATA,    VDP_OPERATION_WRITE); /* Dark green */
+
+        /* Select the background to be sprite colour 0 */
+        vdp_access (0x00, VDP_PORT_CONTROL, VDP_OPERATION_WRITE); /* data = 0x00 */
+        vdp_access (0x87, VDP_PORT_CONTROL, VDP_OPERATION_WRITE); /* Write to background register */
 
     vdp_dump ();
 
