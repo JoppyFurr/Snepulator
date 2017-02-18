@@ -9,6 +9,138 @@
 SDL_Window *window = NULL;
 SDL_Renderer *renderer = NULL;
 
+/* TODO: Eventually move Master System code to its own file */
+static void sms_memory_write (uint16_t addr, uint8_t data)
+{
+    /* No early breaks - Register writes also affect RAM */
+
+    /* 3D glasses */
+    if (addr >= 0xfff8 && addr <= 0xfffb)
+    {
+    }
+
+    /* Mapping (Sega) */
+    if (addr >= 0xfffc && addr <= 0xffff)
+    {
+    }
+
+    /* Mapping (CodeMasters) */
+    if (addr == 0x8000)
+    {
+    }
+
+    /* Cartridge, card, BIOS, expansion slot */
+    if (addr >= 0x0000 && addr <= 0xbfff)
+    {
+    }
+
+    /* RAM + mirror */
+    if (addr >= 0xc000 && addr <= 0xffff)
+    {
+    }
+}
+
+static uint8_t sms_memory_read (uint16_t addr)
+{
+    /* Cartridge, card, BIOS, expansion slot */
+    if (addr >= 0x0000 && addr <= 0xbfff)
+    {
+    }
+
+    /* 8 KiB RAM + mirror */
+    if (addr >= 0xc000 && addr <= 0xffff)
+    {
+    }
+}
+
+static void sms_io_write (uint16_t addr, uint8_t data)
+{
+    addr &= 0x00ff; /* The upper 8 bits are ignored */
+
+    if (addr >= 0x00 && addr <= 0x3f)
+    {
+        if (addr & 0x01 == 0x00)
+        {
+            /* Memory Control Register */
+        }
+        else
+        {
+            /* I/O Control Register */
+        }
+
+    }
+
+    /* PSG */
+    else if (addr >= 0x40 && addr <= 0x7f)
+    {
+        /* Not implemented */
+    }
+
+
+    /* VDP */
+    else if (addr >= 0x80 && addr <= 0xbf)
+    {
+        if (addr & 0x01 == 0x00)
+        {
+            /* VDP Data Register */
+            vdp_access (data, VDP_PORT_DATA, VDP_OPERATION_WRITE);
+        }
+        else
+        {
+            /* VDP Control Register */
+            vdp_access (data, VDP_PORT_CONTROL, VDP_OPERATION_WRITE);
+        }
+    }
+}
+
+static uint8_t sms_io_read (uint16_t addr)
+{
+    addr &= 0x00ff; /* The upper 8 bits are ignored */
+
+    if (addr >= 0x00 && addr <= 0x3f)
+    {
+        /* Returns the last byte of the instruction that read the port */
+    }
+
+    else if (addr >= 0x40 && addr <= 0x7f)
+    {
+        if (addr & 0x01 == 0x00)
+        {
+            /* V Counter */
+        }
+        else
+        {
+            /* H Counter */
+        }
+    }
+
+
+    /* VDP */
+    else if (addr >= 0x80 && addr <= 0xbf)
+    {
+        if (addr & 0x01 == 0x00)
+        {
+            /* VDP Data Register */
+        }
+        else
+        {
+            /* VDP Status Flags */
+        }
+    }
+
+    else if (addr >= 0xc0 && addr <= 0xff)
+    {
+        if (addr & 0x01 == 0x00)
+        {
+            /* I/O Port A/B */
+        }
+        else
+        {
+            /* I/O Port B/misc */
+        }
+    }
+}
+
 int main (int argc, char **argv)
 {
     printf ("Snepulator.\n");
