@@ -5,6 +5,7 @@
 #include "SDL2/SDL.h"
 
 #include "gpu/sega_vdp.h"
+#include "cpu/z80.h"
 
 /* Global state */
 SDL_Window *window = NULL;
@@ -206,7 +207,12 @@ int main (int argc, char **argv)
         goto snepulator_close;
     }
 
+    z80_reset ();
 
+    if (z80_run (sms_memory_read, sms_memory_write, sms_io_read, sms_io_write) == EXIT_FAILURE)
+    {
+        goto snepulator_close;
+    }
 
     /* Loop until the window is closed */
     for (;;)
