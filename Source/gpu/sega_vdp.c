@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <stdbool.h>
 
 #include "SDL2/SDL.h"
@@ -90,27 +91,29 @@ uint32_t vdp_access (uint8_t value, Vdp_Port port, Vdp_Operation operation)
             switch (port)
             {
                 case VDP_PORT_DATA:
-                        first_byte_received = false;
-                        switch (vdp_regs.code)
-                        {
-                            case VDP_CODE_VRAM_READ:
-                                /* TODO */
-                                break;
-                            case VDP_CODE_VRAM_WRITE:
-                                vram[vdp_regs.address] = value;
-                                break;
-                            case VDP_CODE_REG_WRITE:
-                                /* TODO */
-                                break;
-                            case VDP_CODE_CRAM_WRITE:
-                                cram[vdp_regs.address & 0x1f] = value;
-                                break;
-                            default:
-                                break;
-                        }
-                        vdp_regs.address = (vdp_regs.address + 1) & 0x3fff;
+                    fprintf (stdout, "[DEBUG(vdp)]: VDP WRITE DATA %02x.\n", value);
+                    first_byte_received = false;
+                    switch (vdp_regs.code)
+                    {
+                        case VDP_CODE_VRAM_READ:
+                            /* TODO */
+                            break;
+                        case VDP_CODE_VRAM_WRITE:
+                            vram[vdp_regs.address] = value;
+                            break;
+                        case VDP_CODE_REG_WRITE:
+                            /* TODO */
+                            break;
+                        case VDP_CODE_CRAM_WRITE:
+                            cram[vdp_regs.address & 0x1f] = value;
+                            break;
+                        default:
+                            break;
+                    }
+                    vdp_regs.address = (vdp_regs.address + 1) & 0x3fff;
                     break;
                 case VDP_PORT_CONTROL:
+                        fprintf (stdout, "[DEBUG(vdp)]: VDP WRITE CONTROL %02x.\n", value);
                     if (!first_byte_received)
                     {
                         first_byte_received = true;
