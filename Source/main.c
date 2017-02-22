@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 #include "SDL2/SDL.h"
 
@@ -8,6 +9,10 @@
 /* Global state */
 SDL_Window *window = NULL;
 SDL_Renderer *renderer = NULL;
+
+/* This should also be moved somewhere Master System specific */
+uint8_t bios[128 << 10];
+uint8_t ram[8 << 10];
 
 /* TODO: Eventually move Master System code to its own file */
 static void sms_memory_write (uint16_t addr, uint8_t data)
@@ -37,6 +42,7 @@ static void sms_memory_write (uint16_t addr, uint8_t data)
     /* RAM + mirror */
     if (addr >= 0xc000 && addr <= 0xffff)
     {
+        ram[(addr - 0xc000) & ((8 << 10) - 1)] = data;
     }
 }
 
@@ -45,11 +51,14 @@ static uint8_t sms_memory_read (uint16_t addr)
     /* Cartridge, card, BIOS, expansion slot */
     if (addr >= 0x0000 && addr <= 0xbfff)
     {
+        /* TODO: Mapper */
+        return bios[addr];
     }
 
     /* 8 KiB RAM + mirror */
     if (addr >= 0xc000 && addr <= 0xffff)
     {
+        return ram[(addr - 0xc000) & ((8 << 10) - 1)];
     }
 }
 
@@ -141,6 +150,27 @@ static uint8_t sms_io_read (uint16_t addr)
     }
 }
 
+/* For now, load the Alex Kidd bios */
+int32_t sms_load_bios ()
+{
+    FILE *bios_file = fopen ("../alex_kidd_bios.sms", "rb");
+    uint32_t bytes_read = 0;
+    if (!bios_file)
+    {
+        fprintf (stderr, "Error: Unable to load bios.\n");
+        return EXIT_FAILURE;
+    }
+
+    while (bytes_read < (128 << 10))
+    {
+        bytes_read += fread (bios + bytes_read, 1, (128 << 10) - bytes_read, bios_file);
+    }
+
+    fclose (bios_file);
+
+    fprintf (stderr, "BIOS loaded.\n");
+}
+
 int main (int argc, char **argv)
 {
     printf ("Snepulator.\n");
@@ -171,22 +201,11 @@ int main (int argc, char **argv)
 
     vdp_init ();
 
-    /* TEST */
+    if(sms_load_bios () == EXIT_FAILURE)
+    {
+        goto snepulator_close;
+    }
 
-        /* Mode 4 */
-        vdp_access (0x04, VDP_PORT_CONTROL, VDP_OPERATION_WRITE); /* data = Mode 4 */
-        vdp_access (0x80, VDP_PORT_CONTROL, VDP_OPERATION_WRITE); /* mode_ctrl_1 */
-
-        /* Dark green for background */
-        vdp_access (0x10, VDP_PORT_CONTROL, VDP_OPERATION_WRITE); /* Address = 0x10 */
-        vdp_access (0xc0, VDP_PORT_CONTROL, VDP_OPERATION_WRITE); /* Target = cram */
-        vdp_access (0x04, VDP_PORT_DATA,    VDP_OPERATION_WRITE); /* Dark green */
-
-        /* Select the background to be sprite colour 0 */
-        vdp_access (0x00, VDP_PORT_CONTROL, VDP_OPERATION_WRITE); /* data = 0x00 */
-        vdp_access (0x87, VDP_PORT_CONTROL, VDP_OPERATION_WRITE); /* Write to background register */
-
-    vdp_dump ();
 
 
     /* Loop until the window is closed */
