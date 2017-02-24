@@ -63,6 +63,7 @@ static uint8_t sms_memory_read (uint16_t addr)
     }
 }
 
+/* TODO: Is the address actually 16-bit? Or was the document incorrect? */
 static void sms_io_write (uint16_t addr, uint8_t data)
 {
     addr &= 0x00ff; /* The upper 8 bits are ignored */
@@ -72,10 +73,12 @@ static void sms_io_write (uint16_t addr, uint8_t data)
         if (addr & 0x01 == 0x00)
         {
             /* Memory Control Register */
+            fprintf (stderr, "Error: Memory control register not implemented.\n");
         }
         else
         {
             /* I/O Control Register */
+            fprintf (stderr, "Error: I/O control register not implemented.\n");
         }
 
     }
@@ -84,6 +87,7 @@ static void sms_io_write (uint16_t addr, uint8_t data)
     else if (addr >= 0x40 && addr <= 0x7f)
     {
         /* Not implemented */
+        fprintf (stderr, "Error: PSG not implemented.\n");
     }
 
 
