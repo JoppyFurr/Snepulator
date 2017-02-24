@@ -71,7 +71,8 @@ typedef struct Z80_Regs_t {
 
 Z80_Regs z80_regs;
 
-#define E 1
+#define E 1 /* Extended */
+#define U 0 /* Unused */
 static const uint8_t z80_instruction_size[256] = {
     1, 3, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1,
     2, 3, 1, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 1, 2, 1,
@@ -89,6 +90,25 @@ static const uint8_t z80_instruction_size[256] = {
     1, 1, 3, 2, 3, 1, 2, 1, 1, 1, 3, 2, 3, E, 2, 1,
     1, 1, 3, 1, 3, 1, 2, 1, 1, 1, 3, 1, 3, E, 2, 1,
     1, 1, 3, 1, 3, 1, 2, 1, 1, 1, 3, 1, 3, E, 2, 1,
+};
+
+static const uint8_t z80_instruction_size_extended[256] = {
+    U, U, U, U, U, U, U, U, U, U, U, U, U, U, U, U,
+    U, U, U, U, U, U, U, U, U, U, U, U, U, U, U, U,
+    U, U, U, U, U, U, U, U, U, U, U, U, U, U, U, U,
+    U, U, U, U, U, U, U, U, U, U, U, U, U, U, U, U,
+    1, 1, 1, 3, 1, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1, 1,
+    1, 1, 1, 3, 1, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1, 1,
+    1, 1, 1, 3, 1, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1, 1,
+    1, 1, 1, 3, 1, 1, 1, U, 1, 1, 1, 3, 1, 1, 1, U,
+    U, U, U, U, U, U, U, U, U, U, U, U, U, U, U, U,
+    U, U, U, U, U, U, U, U, U, U, U, U, U, U, U, U,
+    1, 1, 1, 1, U, U, U, U, 1, 1, 1, 1, U, U, U, U,
+    1, 1, 1, 1, U, U, U, U, 1, 1, 1, 1, U, U, U, U,
+    U, U, U, U, U, U, U, U, U, U, U, U, U, U, U, U,
+    U, U, U, U, U, U, U, U, U, U, U, U, U, U, U, U,
+    U, U, U, U, U, U, U, U, U, U, U, U, U, U, U, U,
+    U, U, U, U, U, U, U, U, U, U, U, U, U, U, U, U,
 };
 
 void z80_reset ()
@@ -128,7 +148,9 @@ uint32_t z80_run (uint8_t (* memory_read) (uint16_t),
         switch (instruction)
         {
             case 0x00: /* NOP */ break;
+            case 0x01: /* LD BC */ z80_regs.b = param_l; z80_regs.c = param_h; break;
             case 0x06: /* LD B  */ z80_regs.b = param_l; break;
+            case 0x0b: /* DEC BC */ z80_regs.bc--; break;
             case 0x0e: /* LD C  */ z80_regs.c = param_l; break;
 
             case 0x21: /* LD HL */ z80_regs.h = param_h; z80_regs.l = param_l; break;
@@ -136,6 +158,8 @@ uint32_t z80_run (uint8_t (* memory_read) (uint16_t),
 
             case 0x31: /* LD SP */ z80_regs.sp = (uint16_t) param_l + ((uint16_t) param_h << 8); break;
             case 0x36: /* LD (HL) */ memory_write (z80_regs.hl, param_l); break;
+
+            case 0x78: /* LD A,B */ z80_regs.a = z80_regs.b; break;
 
             case 0x80: /* ADD B */ z80_regs.a += z80_regs.b; break; /* TODO, set flags */
             case 0x81: /* ADD C */ z80_regs.a += z80_regs.c; break; /* TODO, set flags */
@@ -158,6 +182,8 @@ uint32_t z80_run (uint8_t (* memory_read) (uint16_t),
             case 0xa4: /* AND H */ z80_regs.a &= z80_regs.h; break; /* TODO, set flags */
             case 0xa5: /* AND L */ z80_regs.a &= z80_regs.l; break; /* TODO, set flags */
 
+            case 0xaf: /* XOR A */ z80_regs.a ^= z80_regs.a; break; /* TODO, set flags */
+
             case 0xb0: /* OR  B */ z80_regs.a |= z80_regs.b; break; /* TODO, set flags */
             case 0xb1: /* OR  C */ z80_regs.a |= z80_regs.c; break; /* TODO, set flags */
             case 0xb2: /* OR  D */ z80_regs.a |= z80_regs.d; break; /* TODO, set flags */
@@ -165,10 +191,15 @@ uint32_t z80_run (uint8_t (* memory_read) (uint16_t),
             case 0xb4: /* OR  H */ z80_regs.a |= z80_regs.h; break; /* TODO, set flags */
             case 0xb5: /* OR  L */ z80_regs.a |= z80_regs.l; break; /* TODO, set flags */
 
-            case 0xc3: /* JP */ z80_regs.pc = (uint16_t) param_l + ((uint16_t) param_h << 8); break;
-            case 0xcd: /* CALL */ memory_write (z80_regs.sp--, z80_regs.pc_h);
-                                  memory_write (z80_regs.sp--, z80_regs.pc_l);
-                                  z80_regs.pc = (uint16_t) param_l + ((uint16_t) param_h << 8); break;
+            case 0xc3: /* JP */    z80_regs.pc = (uint16_t) param_l + ((uint16_t) param_h << 8); break;
+            case 0xc5: /* PUSH BC */ memory_write (--z80_regs.sp, z80_regs.b);
+                                   memory_write (--z80_regs.sp, z80_regs.c); break;
+            case 0xcd: /* CALL */  memory_write (--z80_regs.sp, z80_regs.pc_h);
+                                   memory_write (--z80_regs.sp, z80_regs.pc_l);
+                                   z80_regs.pc = (uint16_t) param_l + ((uint16_t) param_h << 8); break;
+            case 0xc9: /* RET */   z80_regs.pc_l = memory_read (z80_regs.sp++);
+                                   z80_regs.pc_h = memory_read (z80_regs.sp++); break;
+
             case 0xd9: /* EXX */ { uint16_t temp_bc = z80_regs.bc; /* TODO: Write SWAP() macro, this is three lines */
                                    uint16_t temp_de = z80_regs.de;
                                    uint16_t temp_hl = z80_regs.hl;
@@ -180,10 +211,29 @@ uint32_t z80_run (uint8_t (* memory_read) (uint16_t),
                                    z80_regs.alt_hl = temp_hl; } break;
             case 0xed: /* Extended instructions */
                        /* TODO: A second size array */
+
                 instruction = memory_read (z80_regs.pc++);
+
+                switch (z80_instruction_size_extended[instruction])
+                {
+                    case 3:
+                        param_l = memory_read (z80_regs.pc++);
+                        param_h = memory_read (z80_regs.pc++);
+                        break;
+                    case 2:
+                        param_l = memory_read (z80_regs.pc++);
+                        break;
+                    default:
+                        break;
+                }
+
                 switch (instruction)
                 {
                     case 0x56: /* IM 1 */ interrupt_mode = 1; break;
+
+                    case 0xb3: /* OTIR */ { io_write (z80_regs.c, memory_read(z80_regs.hl)),
+                                            z80_regs.hl++; z80_regs.b--;
+                                            z80_regs.pc -= z80_regs.b ? 2 : 0; } break; /* TODO: Set flags */
 
                     default:
                     fprintf (stderr, "Unknown extended instruction: %02x.\n", instruction);
