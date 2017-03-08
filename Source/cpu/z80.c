@@ -224,14 +224,14 @@ uint32_t z80_run (uint8_t (* memory_read) (uint16_t),
 
             case 0x10: /* DJNZ       */ z80_regs.b--; z80_regs.pc += z80_regs.b ? (int8_t) param_l : 0; break;
             case 0x16: /* LD D,*     */ z80_regs.d = param_l; break;
-            case 0x18: /* JR         */ z80_regs.pc += param_l - 2; break;
+            case 0x18: /* JR         */ z80_regs.pc += param_l; break;
             case 0x1b: /* DEC BE     */ z80_regs.bc--; break;
             case 0x1f: /* RRA        */ { uint8_t temp = z80_regs.a;
                                         z80_regs.a = z80_regs.a >> 1 + (z80_regs.f & Z80_FLAG_CARRY) ? 0x80 : 0;
                                         z80_regs.f = (z80_regs.f & (Z80_FLAG_PARITY | Z80_FLAG_ZERO | Z80_FLAG_SIGN)) |
                                                      (temp & 0x80) ? Z80_FLAG_CARRY : 0; } break;
 
-            case 0x20: /* JR NZ      */ z80_regs.pc += (z80_regs.f & Z80_FLAG_ZERO) ? 0 : (int8_t)param_l - 2; break;
+            case 0x20: /* JR NZ      */ z80_regs.pc += (z80_regs.f & Z80_FLAG_ZERO) ? 0 : (int8_t)param_l; break;
             case 0x21: /* LD HL      */ z80_regs.h = param_h; z80_regs.l = param_l; SET_FLAGS_MATH; break;
             case 0x25: /* DEC H      */ z80_regs.h--; SET_FLAGS_DEC (z80_regs.h); break;
             case 0x2a: /* LD HL,(**) */ z80_regs.hl = memory_read (param_hl); break;
