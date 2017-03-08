@@ -233,7 +233,7 @@ int main (int argc, char **argv)
 
     if (z80_run (sms_memory_read, sms_memory_write, sms_io_read, sms_io_write) == EXIT_FAILURE)
     {
-        goto snepulator_close;
+        /* goto snepulator_close; */
     }
 
     /* Loop until the window is closed */
@@ -252,7 +252,8 @@ int main (int argc, char **argv)
         vdp_render ();
         SDL_RenderPresent (renderer);
 
-        SDL_Delay (16);
+        SDL_Delay (1000);
+        /* SDL_Delay (16); */
     }
 
 snepulator_close:
