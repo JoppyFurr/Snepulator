@@ -113,7 +113,8 @@ uint32_t vdp_access (uint8_t value, Vdp_Port port, Vdp_Operation operation)
                     vdp_regs.address = (vdp_regs.address + 1) & 0x3fff;
                     break;
                 case VDP_PORT_CONTROL:
-                        fprintf (stdout, "[DEBUG(vdp)]: VDP WRITE CONTROL %02x.\n", value);
+                        if (value)
+                            fprintf (stdout, "[DEBUG(vdp)]: VDP WRITE CONTROL %02x.\n", value);
                     if (!first_byte_received)
                     {
                         first_byte_received = true;

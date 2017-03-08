@@ -14,6 +14,21 @@ SDL_Renderer *renderer = NULL;
 /* This should also be moved somewhere Master System specific */
 uint8_t bios[128 << 10];
 uint8_t ram[8 << 10];
+uint8_t memory_control = 0x00;
+uint8_t io_control = 0x00;
+
+/* 0: Output
+ * 1: Input */
+#define SMS_IO_TR_A_DIRECTION (1 << 0)
+#define SMS_IO_TH_A_DIRECTION (1 << 1)
+#define SMS_IO_TR_B_DIRECTION (1 << 2)
+#define SMS_IO_TH_B_DIRECTION (1 << 3)
+/* 0: Low
+ * 1: High */
+#define SMS_IO_TR_A_LEVEL (1 << 4)
+#define SMS_IO_TH_A_LEVEL (1 << 5)
+#define SMS_IO_TR_B_LEVEL (1 << 6)
+#define SMS_IO_TH_B_LEVEL (1 << 7)
 
 /* TODO: Eventually move Master System code to its own file */
 static void sms_memory_write (uint16_t addr, uint8_t data)
@@ -64,10 +79,8 @@ static uint8_t sms_memory_read (uint16_t addr)
 }
 
 /* TODO: Is the address actually 16-bit? Or was the document incorrect? */
-static void sms_io_write (uint16_t addr, uint8_t data)
+static void sms_io_write (uint8_t addr, uint8_t data)
 {
-    addr &= 0x00ff; /* The upper 8 bits are ignored */
-
     if (addr >= 0x00 && addr <= 0x3f)
     {
         if (addr & 0x01 == 0x00)
@@ -78,7 +91,7 @@ static void sms_io_write (uint16_t addr, uint8_t data)
         else
         {
             /* I/O Control Register */
-            fprintf (stderr, "Error: I/O control register not implemented.\n");
+            io_control = data;
         }
 
     }
@@ -107,13 +120,12 @@ static void sms_io_write (uint16_t addr, uint8_t data)
     }
 }
 
-static uint8_t sms_io_read (uint16_t addr)
+static uint8_t sms_io_read (uint8_t addr)
 {
-    addr &= 0x00ff; /* The upper 8 bits are ignored */
-
     if (addr >= 0x00 && addr <= 0x3f)
     {
-        /* Returns the last byte of the instruction that read the port */
+        /* SMS2/GG return 0xff */
+        return 0xff;
     }
 
     else if (addr >= 0x40 && addr <= 0x7f)
@@ -121,10 +133,12 @@ static uint8_t sms_io_read (uint16_t addr)
         if (addr & 0x01 == 0x00)
         {
             /* V Counter */
+            fprintf (stderr, "Error: V Counter not implemented.\n");
         }
         else
         {
             /* H Counter */
+            fprintf (stderr, "Error: H Counter not implemented.\n");
         }
     }
 
@@ -135,10 +149,12 @@ static uint8_t sms_io_read (uint16_t addr)
         if (addr & 0x01 == 0x00)
         {
             /* VDP Data Register */
+            fprintf (stderr, "Error: VDP Data Read not implemented.\n");
         }
         else
         {
             /* VDP Status Flags */
+            fprintf (stderr, "Error: VDP Status Read not implemented.\n");
         }
     }
 
@@ -147,10 +163,12 @@ static uint8_t sms_io_read (uint16_t addr)
         if (addr & 0x01 == 0x00)
         {
             /* I/O Port A/B */
+            fprintf (stderr, "Error: I/O Port A/B not implemented.\n");
         }
         else
         {
             /* I/O Port B/misc */
+            fprintf (stderr, "Error: I/O Port B/misc not implemented.\n");
         }
     }
 }
