@@ -83,7 +83,7 @@ static void sms_io_write (uint8_t addr, uint8_t data)
 {
     if (addr >= 0x00 && addr <= 0x3f)
     {
-        if (addr & 0x01 == 0x00)
+        if ((addr & 0x01) == 0x00)
         {
             /* Memory Control Register */
             fprintf (stderr, "Error: Memory control register not implemented.\n");
@@ -107,7 +107,7 @@ static void sms_io_write (uint8_t addr, uint8_t data)
     /* VDP */
     else if (addr >= 0x80 && addr <= 0xbf)
     {
-        if (addr & 0x01 == 0x00)
+        if ((addr & 0x01) == 0x00)
         {
             /* VDP Data Register */
             vdp_access (data, VDP_PORT_DATA, VDP_OPERATION_WRITE);
@@ -130,7 +130,7 @@ static uint8_t sms_io_read (uint8_t addr)
 
     else if (addr >= 0x40 && addr <= 0x7f)
     {
-        if (addr & 0x01 == 0x00)
+        if ((addr & 0x01) == 0x00)
         {
             /* V Counter */
             fprintf (stderr, "Error: V Counter not implemented.\n");
@@ -146,7 +146,7 @@ static uint8_t sms_io_read (uint8_t addr)
     /* VDP */
     else if (addr >= 0x80 && addr <= 0xbf)
     {
-        if (addr & 0x01 == 0x00)
+        if ((addr & 0x01) == 0x00)
         {
             /* VDP Data Register */
             fprintf (stderr, "Error: VDP Data Read not implemented.\n");
@@ -160,7 +160,7 @@ static uint8_t sms_io_read (uint8_t addr)
 
     else if (addr >= 0xc0 && addr <= 0xff)
     {
-        if (addr & 0x01 == 0x00)
+        if ((addr & 0x01) == 0x00)
         {
             /* I/O Port A/B */
             fprintf (stderr, "Error: I/O Port A/B not implemented.\n");

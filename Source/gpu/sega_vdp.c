@@ -68,6 +68,7 @@ uint32_t vdp_access (uint8_t value, Vdp_Port port, Vdp_Operation operation)
     switch (operation)
     {
         case VDP_OPERATION_READ:
+            fprintf (stdout,"[DEBUG(vdp)]: VDP_OPERATION_READ not implemented.\n");
             switch (port)
             {
                 case VDP_PORT_V_COUNTER:
@@ -113,7 +114,7 @@ uint32_t vdp_access (uint8_t value, Vdp_Port port, Vdp_Operation operation)
                     vdp_regs.address = (vdp_regs.address + 1) & 0x3fff;
                     break;
                 case VDP_PORT_CONTROL:
-                        if (value)
+                        if (value != 0x00 && value != 0xff)
                             fprintf (stdout, "[DEBUG(vdp)]: VDP WRITE CONTROL %02x.\n", value);
                     if (!first_byte_received)
                     {
@@ -129,9 +130,12 @@ uint32_t vdp_access (uint8_t value, Vdp_Port port, Vdp_Operation operation)
                         switch (vdp_regs.code)
                         {
                             case VDP_CODE_VRAM_READ:
-                                /* TODO */
+                                // fprintf (stdout,"[DEBUG(vdp)]: VRAM_READ not implemented.\n");
+                                /* Should load value into buffer, but isn't needed until we make a read */
                                 break;
                             case VDP_CODE_REG_WRITE:
+                                fprintf (stdout, "[DEBUG(vdp)]: VDP REG_WRITE [%01x] <- %02x.\n",
+                                         value & 0x0f, vdp_regs.address & 0xff);
                                 if ((value & 0x0f) <= 10)
                                     ((uint8_t *) &vdp_regs) [value & 0x0f] = vdp_regs.address & 0x00ff;
                                 break;
@@ -153,11 +157,11 @@ void vdp_render_pattern (Vdp_Pattern *pattern, Vdp_Palette palette, uint32_t x, 
     {
         for (uint32_t pattern_y = 0; pattern_y < 8; pattern_y++)
         {
-            uint8_t pixel = (cram + (palette == VDP_PALETTE_SPRITE ? 16 : 0))
-                            [ pattern->data[pattern_y * 4 + 0 ] & (8 >> pattern_x) ? (1 << 0) : 0 |
-                              pattern->data[pattern_y * 4 + 1 ] & (8 >> pattern_x) ? (2 << 0) : 0 |
-                              pattern->data[pattern_y * 4 + 2 ] & (8 >> pattern_x) ? (3 << 0) : 0 |
-                              pattern->data[pattern_y * 4 + 3 ] & (8 >> pattern_x) ? (4 << 0) : 0 ];
+            uint8_t pixel = (cram + ((palette == VDP_PALETTE_SPRITE) ? 16 : 0))
+                            [ ((pattern->data[pattern_y * 4 + 0 ] & (8 >> pattern_x)) ? (1 << 0) : 0) |
+                              ((pattern->data[pattern_y * 4 + 1 ] & (8 >> pattern_x)) ? (2 << 0) : 0) |
+                              ((pattern->data[pattern_y * 4 + 2 ] & (8 >> pattern_x)) ? (3 << 0) : 0) |
+                              ((pattern->data[pattern_y * 4 + 3 ] & (8 >> pattern_x)) ? (4 << 0) : 0) ];
 
             SDL_SetRenderDrawColor (renderer, VDP_TO_RED (pixel),
                                               VDP_TO_GREEN (pixel),
@@ -209,7 +213,7 @@ void vdp_render (void)
 
                         uint16_t tile = name_table_base[tile_x + 32 * tile_y];
                         Vdp_Pattern pattern = ((Vdp_Pattern *)vram)[tile * 0x01ff];
-                        Vdp_Palette palette = tile & (1 << 11) ? VDP_PALETTE_SPRITE : VDP_PALETTE_BACKGROUND;
+                        Vdp_Palette palette = (tile & (1 << 11)) ? VDP_PALETTE_SPRITE : VDP_PALETTE_BACKGROUND;
                         /* TODO: Flip flags */
                         /* TODO: Priority flag */
                         vdp_render_pattern (&pattern, palette, VDP_OVERSCAN_X + 8 * tile_x,
