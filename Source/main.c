@@ -110,12 +110,12 @@ static void sms_io_write (uint8_t addr, uint8_t data)
         if ((addr & 0x01) == 0x00)
         {
             /* VDP Data Register */
-            vdp_access (data, VDP_PORT_DATA, VDP_OPERATION_WRITE);
+            vdp_data_write (data);
         }
         else
         {
             /* VDP Control Register */
-            vdp_access (data, VDP_PORT_CONTROL, VDP_OPERATION_WRITE);
+            vdp_control_write (data);
         }
     }
 }
@@ -149,12 +149,12 @@ static uint8_t sms_io_read (uint8_t addr)
         if ((addr & 0x01) == 0x00)
         {
             /* VDP Data Register */
-            fprintf (stderr, "Error: VDP Data Read not implemented.\n");
+            return vdp_data_read ();
         }
         else
         {
             /* VDP Status Flags */
-            fprintf (stderr, "Error: VDP Status Read not implemented.\n");
+            return vdp_status_read ();
         }
     }
 
@@ -233,6 +233,7 @@ int main (int argc, char **argv)
 
     if (z80_run (sms_memory_read, sms_memory_write, sms_io_read, sms_io_write) == EXIT_FAILURE)
     {
+        vdp_dump ();
         /* goto snepulator_close; */
     }
 

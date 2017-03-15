@@ -171,6 +171,11 @@ void z80_reset ()
 
 #define SET_FLAGS_CPL { z80_regs.f = z80_regs.f | Z80_FLAG_HALF | Z80_FLAG_SUB; }
 
+/* TEMPORORY */
+#include "SDL2/SDL.h"
+extern SDL_Renderer *renderer;
+void vdp_render (void);
+
 uint32_t z80_run (uint8_t (* memory_read) (uint16_t),
                   void    (* memory_write)(uint16_t, uint8_t),
                   uint8_t (* io_read)     (uint8_t),
@@ -496,5 +501,12 @@ uint32_t z80_run (uint8_t (* memory_read) (uint16_t),
 
 
         instruction_count++;
+
+        if (instruction_count % 16000 == 0)
+        {
+            vdp_render ();
+            SDL_RenderPresent (renderer);
+            SDL_Delay (33);
+        }
     }
 }

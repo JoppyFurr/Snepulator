@@ -42,13 +42,18 @@ void vdp_dump (void)
     fprintf (stdout, "name_table_addr: %02x.\n", vdp_regs.name_table_addr);
     fprintf (stdout, "background_colour: %02x.\n", vdp_regs.background_colour);
 
-    /* VRAM */
 
     /* CRAM */
     fprintf (stdout, "CRAM:\n");
-    for (uint8_t i = 0; i < sizeof(cram); i++)
+    for (uint16_t i = 0; i < sizeof(cram); i++)
     {
+        if ((i & 0x07) == 0x00)
+        {
+            fprintf (stdout, "0x%04x: ", i);
+        }
+
         fprintf (stdout, "%02x", cram[i]);
+
         if ((i & 0x07) == 0x07)
         {
             fprintf (stdout, "\n");
@@ -59,96 +64,122 @@ void vdp_dump (void)
         }
     }
     fprintf (stdout, "\n");
+
+    /* VRAM */
+    fprintf (stdout, "VRAM:\n");
+    for (uint16_t i = 0; i < sizeof(vram); i++)
+    {
+        if ((i & 0x0f) == 0x00)
+        {
+            if (memcmp (&vram[i], "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 16) == 0)
+            {
+                i += 15;
+                continue;
+            }
+            fprintf (stdout, "0x%04x: ", i);
+        }
+
+        fprintf (stdout, "%02x", vram[i]);
+
+        if ((i & 0x0f) == 0x0f)
+        {
+            fprintf (stdout, "\n");
+        }
+        else
+        {
+            fprintf (stdout, " ");
+        }
+    }
+    fprintf (stdout, "\n");
+
 }
 
-uint32_t vdp_access (uint8_t value, Vdp_Port port, Vdp_Operation operation)
+static bool first_byte_received = false;
+
+uint8_t vdp_data_read ()
 {
-    static bool first_byte_received = false;
+    first_byte_received = false;
 
-    switch (operation)
+    fprintf (stdout,"[DEBUG(vdp)]: vdp_data_read () not implemented.\n");
+}
+
+void vdp_data_write (uint8_t value)
+{
+    first_byte_received = false;
+
+    switch (vdp_regs.code)
     {
-        case VDP_OPERATION_READ:
-            fprintf (stdout,"[DEBUG(vdp)]: VDP_OPERATION_READ not implemented.\n");
-            switch (port)
-            {
-                case VDP_PORT_V_COUNTER:
-                    /* TODO */
-                    break;
-                case VDP_PORT_H_COUNTER:
-                    /* TODO */
-                    break;
-                case VDP_PORT_DATA:
-                    /* TODO */
-                    first_byte_received = false;
-                    break;
-                case VDP_PORT_CONTROL:
-                    /* TODO */
-                    first_byte_received = false;
-                    break;
-            }
+        case VDP_CODE_VRAM_READ:
+            fprintf (stdout, "[DEBUG(vdp)]: vdp_data_write: VRAM_READ not implemented.\n");
             break;
-
-        case VDP_OPERATION_WRITE:
-            switch (port)
+        case VDP_CODE_VRAM_WRITE:
+            if (value != 0x00 && value != 0xff)
             {
-                case VDP_PORT_DATA:
-                    fprintf (stdout, "[DEBUG(vdp)]: VDP WRITE DATA %02x.\n", value);
-                    first_byte_received = false;
-                    switch (vdp_regs.code)
-                    {
-                        case VDP_CODE_VRAM_READ:
-                            /* TODO */
-                            break;
-                        case VDP_CODE_VRAM_WRITE:
-                            vram[vdp_regs.address] = value;
-                            break;
-                        case VDP_CODE_REG_WRITE:
-                            /* TODO */
-                            break;
-                        case VDP_CODE_CRAM_WRITE:
-                            cram[vdp_regs.address & 0x1f] = value;
-                            break;
-                        default:
-                            break;
-                    }
-                    vdp_regs.address = (vdp_regs.address + 1) & 0x3fff;
-                    break;
-                case VDP_PORT_CONTROL:
-                        if (value != 0x00 && value != 0xff)
-                            fprintf (stdout, "[DEBUG(vdp)]: VDP WRITE CONTROL %02x.\n", value);
-                    if (!first_byte_received)
-                    {
-                        first_byte_received = true;
-                        vdp_regs.address = (vdp_regs.address & 0xff00) | (uint16_t) value << 0;
-                    }
-                    else
-                    {
-                        first_byte_received = false;
-                        vdp_regs.address = (vdp_regs.address & 0x00ff) | (uint16_t) value << 8;
-                        vdp_regs.code = value >> 6;
-
-                        switch (vdp_regs.code)
-                        {
-                            case VDP_CODE_VRAM_READ:
-                                // fprintf (stdout,"[DEBUG(vdp)]: VRAM_READ not implemented.\n");
-                                /* Should load value into buffer, but isn't needed until we make a read */
-                                break;
-                            case VDP_CODE_REG_WRITE:
-                                fprintf (stdout, "[DEBUG(vdp)]: VDP REG_WRITE [%01x] <- %02x.\n",
-                                         value & 0x0f, vdp_regs.address & 0xff);
-                                if ((value & 0x0f) <= 10)
-                                    ((uint8_t *) &vdp_regs) [value & 0x0f] = vdp_regs.address & 0x00ff;
-                                break;
-                            default:
-                                break;
-                        }
-                    }
-                    break;
+                fprintf (stdout, "[DEBUG(vdp)]: vdp_data_write: VRAM_WRITE [%04x] <- %02x.\n",
+                         vdp_regs.address, value);
             }
+            vram[vdp_regs.address] = value;
+            break;
+        case VDP_CODE_REG_WRITE:
+            fprintf (stdout, "[DEBUG(vdp)]: vdp_data_write: REG_WRITE not implemented.\n");
+            break;
+        case VDP_CODE_CRAM_WRITE:
+            if (value != 0x00 && value != 0xff)
+            {
+                fprintf (stdout, "[DEBUG(vdp)]: vdp_data_write: CRAM_WRITE [%02x] <- %02x.\n",
+                         vdp_regs.address & 0x1f, value);
+            }
+            cram[vdp_regs.address & 0x1f] = value;
+            break;
+        default:
             break;
     }
+    vdp_regs.address = (vdp_regs.address + 1) & 0x3fff;
+}
 
-    return 0;
+uint8_t vdp_status_read ()
+{
+    first_byte_received = false;
+
+    fprintf (stdout,"[DEBUG(vdp)]: vdp_status_read () not implemented.\n");
+}
+
+void vdp_control_write (uint8_t value)
+{
+    if (!first_byte_received)
+    {
+        first_byte_received = true;
+        vdp_regs.address = (vdp_regs.address & 0x3f00) | ((uint16_t) value << 0);
+    }
+    else
+    {
+        first_byte_received = false;
+        vdp_regs.address = (vdp_regs.address & 0x00ff) | ((uint16_t) (value & 0x3f) << 8);
+        vdp_regs.code = value & 0xc0;
+
+        switch (vdp_regs.code)
+        {
+            case VDP_CODE_VRAM_READ:
+                fprintf (stdout,"[DEBUG(vdp)]: vdp_control_write () VRAM_READ not implemented.\n");
+                break;
+            case VDP_CODE_VRAM_WRITE:
+                fprintf (stdout,"[DEBUG(vdp)]: vdp_control_write () VRAM_WRITE.\n");
+                break;
+            case VDP_CODE_REG_WRITE:
+                fprintf (stdout, "[DEBUG(vdp)]: VDP REG_WRITE [%01x] <- %02x.\n",
+                         value & 0x0f, vdp_regs.address & 0xff);
+                if ((value & 0x0f) <= 10)
+                {
+                    ((uint8_t *) &vdp_regs) [value & 0x0f] = vdp_regs.address & 0x00ff;
+                }
+                break;
+            case VDP_CODE_CRAM_WRITE:
+                fprintf (stdout,"[DEBUG(vdp)]: vdp_control_write () CRAM_WRITE.\n");
+                break;
+            default:
+                break;
+        }
+    }
 }
 
 void vdp_render_pattern (Vdp_Pattern *pattern, Vdp_Palette palette, uint32_t x, uint32_t y)
