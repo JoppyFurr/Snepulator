@@ -78,7 +78,8 @@ static uint8_t sms_memory_read (uint16_t addr)
     }
 }
 
-/* TODO: Is the address actually 16-bit? Or was the document incorrect? */
+extern Z80_Regs z80_regs;
+
 static void sms_io_write (uint8_t addr, uint8_t data)
 {
     if (addr >= 0x00 && addr <= 0x3f)
@@ -92,6 +93,7 @@ static void sms_io_write (uint8_t addr, uint8_t data)
         {
             /* I/O Control Register */
             io_control = data;
+            fprintf (stderr, "[DEBUG(sms)] I/O control register not implemented.\n");
         }
 
     }
