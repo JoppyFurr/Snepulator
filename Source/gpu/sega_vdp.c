@@ -37,34 +37,33 @@ void vdp_dump (void)
 {
     /* Registers */
     fprintf (stdout, "Registers:\n");
-    fprintf (stdout, "mode_ctrl_1: %02x.\n", vdp_regs.mode_ctrl_1);
-    fprintf (stdout, "mode_ctrl_2: %02x.\n", vdp_regs.mode_ctrl_2);
+    fprintf (stdout, "mode_ctrl_1:     %02x.\n", vdp_regs.mode_ctrl_1);
+    fprintf (stdout, "mode_ctrl_2:     %02x.\n", vdp_regs.mode_ctrl_2);
     fprintf (stdout, "name_table_addr: %02x.\n", vdp_regs.name_table_addr);
-    fprintf (stdout, "background_colour: %02x.\n", vdp_regs.background_colour);
+    fprintf (stdout, "bg_colour:       %02x.\n", vdp_regs.background_colour);
+    fprintf (stdout, "\n");
 
-
+#if 1
     /* CRAM */
     fprintf (stdout, "CRAM:\n");
     for (uint16_t i = 0; i < sizeof(cram); i++)
     {
-        if ((i & 0x07) == 0x00)
+        if ((i & 0x0f) == 0x00)
         {
-            fprintf (stdout, "0x%04x: ", i);
+            fprintf (stdout, "0x%04x:", i);
         }
 
-        fprintf (stdout, "%02x", cram[i]);
+        fprintf (stdout, " %02x", cram[i]);
 
-        if ((i & 0x07) == 0x07)
+        if ((i & 0x0f) == 0x0f)
         {
             fprintf (stdout, "\n");
         }
-        else
-        {
-            fprintf (stdout, " ");
-        }
     }
     fprintf (stdout, "\n");
+#endif
 
+#if 0
     /* VRAM */
     fprintf (stdout, "VRAM:\n");
     for (uint16_t i = 0; i < sizeof(vram); i++)
@@ -91,7 +90,9 @@ void vdp_dump (void)
         }
     }
     fprintf (stdout, "\n");
+#endif
 
+#if 0
     /* Name Table */
     fprintf (stdout, "Name Table:\n");
     uint16_t name_table_base = (((uint16_t) vdp_regs.name_table_addr) << 10) & 0x3800;
@@ -112,6 +113,7 @@ void vdp_dump (void)
         }
         fprintf (stdout, "\n");
     }
+#endif
 
 }
 
@@ -131,11 +133,7 @@ void vdp_data_write (uint8_t value)
     switch (vdp_regs.code)
     {
         case VDP_CODE_VRAM_READ:
-            fprintf (stdout, "[DEBUG(vdp)]: vdp_data_write: VRAM_READ not implemented.\n");
-            break;
-
         case VDP_CODE_VRAM_WRITE:
-            fprintf (stdout, "[DEBUG(vdp)]: WRITING TO VRAM [%04x] <- %02x.\n", vdp_regs.address, value);
             vram[vdp_regs.address] = value;
             break;
 
@@ -176,7 +174,7 @@ void vdp_control_write (uint8_t value)
         switch (vdp_regs.code)
         {
             case VDP_CODE_VRAM_READ:
-                fprintf (stdout,"[DEBUG(vdp)]: vdp_control_write () VRAM_READ not implemented.\n");
+                vdp_regs.read_buffer = vram[vdp_regs.address++];
                 break;
             case VDP_CODE_VRAM_WRITE:
                 break;

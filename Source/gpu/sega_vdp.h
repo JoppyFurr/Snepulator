@@ -27,6 +27,7 @@ typedef struct Vdp_Regs_t {
     uint8_t line_counter;
     uint8_t code;
     uint16_t address;
+    uint8_t read_buffer;
 } Vdp_Regs;
 
 typedef struct Vdp_Pattern_t {
