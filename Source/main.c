@@ -17,6 +17,9 @@ uint8_t ram[8 << 10];
 uint8_t memory_control = 0x00;
 uint8_t io_control = 0x00;
 
+/* Sega Mapper */
+uint8_t mapper_bank[3] = { 0x00, 0x01, 0x02 };
+
 /* 0: Output
  * 1: Input */
 #define SMS_IO_TR_A_DIRECTION (1 << 0)
@@ -40,9 +43,25 @@ static void sms_memory_write (uint16_t addr, uint8_t data)
     {
     }
 
-    /* Mapping (Sega) */
-    if (addr >= 0xfffc && addr <= 0xffff)
+    /* Sega Mapper */
+    if (addr == 0xfffc)
     {
+        fprintf (stderr, "Error: Sega Memory Mapper register 0xfffc not implemented.\n");
+    }
+    else if (addr == 0xfffd)
+    {
+        fprintf (stdout, "[DEBUG]: MAPPER[0] set to %02x.\n", data);
+        mapper_bank[0] = data;
+    }
+    else if (addr == 0xfffe)
+    {
+        fprintf (stdout, "[DEBUG]: MAPPER[1] set to %02x.\n", data);
+        mapper_bank[1] = data;
+    }
+    else if (addr == 0xffff)
+    {
+        fprintf (stdout, "[DEBUG]: MAPPER[2] set to %02x.\n", data);
+        mapper_bank[2] = data;
     }
 
     /* Mapping (CodeMasters) */
@@ -67,8 +86,10 @@ static uint8_t sms_memory_read (uint16_t addr)
     /* Cartridge, card, BIOS, expansion slot */
     if (addr >= 0x0000 && addr <= 0xbfff)
     {
-        /* TODO: Mapper */
-        return bios[addr];
+        uint16_t bank_base = mapper_bank[(addr >> 14)] * (16 << 10);
+        uint16_t offset    = addr & 0x3fff;
+        /* if ((memory_control & 0x08) == 0x00) */
+            return bios[bank_base + offset];
     }
 
     /* 8 KiB RAM + mirror */
@@ -76,6 +97,8 @@ static uint8_t sms_memory_read (uint16_t addr)
     {
         return ram[(addr - 0xc000) & ((8 << 10) - 1)];
     }
+
+    return 0xff;
 }
 
 extern Z80_Regs z80_regs;
@@ -87,7 +110,13 @@ static void sms_io_write (uint8_t addr, uint8_t data)
         if ((addr & 0x01) == 0x00)
         {
             /* Memory Control Register */
-            fprintf (stderr, "Error: Memory control register not implemented.\n");
+            memory_control = data;
+            fprintf (stderr, "[DEBUG(sms)]: Memory Control Register <- %02x:\n", memory_control);
+            fprintf (stderr, "              -> PC is %04x.\n", z80_regs.pc);
+            fprintf (stderr, "              -> Cartridge is %s.\n", (memory_control & 0x40) ? "DISABLED" : "ENABLED");
+            fprintf (stderr, "              -> Work RAM is  %s.\n", (memory_control & 0x10) ? "DISABLED" : "ENABLED");
+            fprintf (stderr, "              -> BIOS ROM is  %s.\n", (memory_control & 0x08) ? "DISABLED" : "ENABLED");
+            fprintf (stderr, "              -> I/O Chip is  %s.\n", (memory_control & 0x04) ? "DISABLED" : "ENABLED");
         }
         else
         {
@@ -124,6 +153,12 @@ static void sms_io_write (uint8_t addr, uint8_t data)
 
 static uint8_t sms_io_read (uint8_t addr)
 {
+    if ((memory_control & 0x04) && addr >= 0xC0 && addr <= 0xff)
+    {
+        /* SMS2/GG return 0xff */
+        return 0xff;
+    }
+
     if (addr >= 0x00 && addr <= 0x3f)
     {
         /* SMS2/GG return 0xff */
@@ -193,7 +228,7 @@ int32_t sms_load_bios ()
 
     fclose (bios_file);
 
-    fprintf (stderr, "BIOS loaded.\n");
+    fprintf (stdout, "BIOS loaded.\n");
 }
 
 int main (int argc, char **argv)
