@@ -5,6 +5,7 @@
 #include <stdbool.h>
 
 #include "z80.h"
+#include "z80_names.h"
 
 #define SWAP(TYPE, X, Y) { TYPE tmp = X; X = Y; Y = tmp; }
 
@@ -146,6 +147,21 @@ uint32_t z80_run (uint8_t (* memory_read) (uint16_t),
                 break;
             default:
                 break;
+        }
+
+        if (instruction_count >= 641330 && instruction_count < 641380)
+        {
+            fprintf (stdout, "[DEBUG(%d)]: PC=%02x %s",
+                              instruction_count,
+                              z80_regs.pc - z80_instruction_size[instruction],
+                              z80_instruction_name[instruction]);
+            if (z80_instruction_size[instruction] >= 2)
+                fprintf (stdout, " %02x", param_l);
+
+            if (z80_instruction_size[instruction] >= 3)
+                fprintf (stdout, " %02x", param_h);
+
+            fprintf (stdout, ".\n");
         }
 
         switch (instruction)
@@ -459,10 +475,12 @@ uint32_t z80_run (uint8_t (* memory_read) (uint16_t),
                 break;
 
             case 0xf3: /* DI */ interrupt_enable = false; break;
+            case 0xf5: /* PUSH AF    */ memory_write (--z80_regs.sp, z80_regs.a);
+                                        memory_write (--z80_regs.sp, z80_regs.f); break;
 
             default:
-                fprintf (stderr, "Unknown instruction: %02x. %u instructions have been run.\n",
-                         instruction, instruction_count);
+                fprintf (stderr, "Unknown instruction: \"%s\" (%02x). %u instructions have been run.\n",
+                         z80_instruction_name[instruction], instruction, instruction_count);
                 return EXIT_FAILURE;
         }
 
