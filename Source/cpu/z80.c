@@ -193,9 +193,9 @@ uint32_t z80_run (uint8_t (* memory_read) (uint16_t),
             case 0x1a: /* LD A,(DE)  */ z80_regs.a = memory_read (z80_regs.de); break;
             case 0x1b: /* DEC DE     */ z80_regs.de--; break;
             case 0x1f: /* RRA        */ { uint8_t temp = z80_regs.a;
-                                        z80_regs.a = (z80_regs.a >> 1) + (z80_regs.f & Z80_FLAG_CARRY) ? 0x80 : 0;
+                                        z80_regs.a = (z80_regs.a >> 1) + ((z80_regs.f & Z80_FLAG_CARRY) ? 0x80 : 0);
                                         z80_regs.f = (z80_regs.f & (Z80_FLAG_PARITY | Z80_FLAG_ZERO | Z80_FLAG_SIGN)) |
-                                                     ((temp & 0x80) ? Z80_FLAG_CARRY : 0); } break;
+                                                     ((temp & 0x01) ? Z80_FLAG_CARRY : 0); } break;
 
             case 0x20: /* JR NZ      */ z80_regs.pc += (z80_regs.f & Z80_FLAG_ZERO) ? 0 : (int8_t)param_l; break;
             case 0x21: /* LD HL, **  */ z80_regs.hl = param_hl; break;
@@ -348,7 +348,7 @@ uint32_t z80_run (uint8_t (* memory_read) (uint16_t),
             case 0xb4: /* OR  A,H    */ z80_regs.a |= z80_regs.h; SET_FLAGS_LOGIC; break;
             case 0xb5: /* OR  A,L    */ z80_regs.a |= z80_regs.l; SET_FLAGS_LOGIC; break;
             case 0xb6: /* OR (HL)    */ z80_regs.a |= memory_read (z80_regs.hl); SET_FLAGS_LOGIC; break;
-            case 0xb7: /* OR  A      */ z80_regs.a |= z80_regs.a; SET_FLAGS_LOGIC; break;
+            case 0xb7: /* OR  A,A    */ z80_regs.a |= z80_regs.a; SET_FLAGS_LOGIC; break;
 
             case 0xb8: /* CP A,B     */ SET_FLAGS_SUB (z80_regs.b); break;
             case 0xb9: /* CP A,C     */ SET_FLAGS_SUB (z80_regs.c); break;
@@ -478,15 +478,18 @@ uint32_t z80_run (uint8_t (* memory_read) (uint16_t),
                                                               (Z80_FLAG_SUB | Z80_FLAG_ZERO); } break;
 
                     default:
-                    fprintf (stderr, "Unknown extended instruction: %02x. %u instructions have been run.\n",
-                             instruction, instruction_count);
+                    fprintf (stderr, "Unknown extended instruction: \"%s\" (%02x). %u instructions have been run.\n",
+                             z80_instruction_name_extended[instruction], instruction, instruction_count);
                     return EXIT_FAILURE;
                 }
                 break;
 
+            case 0xf1: /* POP AF     */ z80_regs.f = memory_read (z80_regs.sp++);
+                                        z80_regs.a = memory_read (z80_regs.sp++); break;
             case 0xf3: /* DI */ interrupt_enable = false; break;
             case 0xf5: /* PUSH AF    */ memory_write (--z80_regs.sp, z80_regs.a);
                                         memory_write (--z80_regs.sp, z80_regs.f); break;
+            case 0xf6: /* OR  A,*    */ z80_regs.a |= param_l; SET_FLAGS_LOGIC; break;
             case 0xfe: /* CP A,*     */ SET_FLAGS_SUB (param_l); break;
 
             default:
