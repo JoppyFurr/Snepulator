@@ -88,7 +88,7 @@ static uint8_t sms_memory_read (uint16_t addr)
     {
         uint32_t bank_base = mapper_bank[(addr >> 14)] * ((uint32_t)16 << 10);
         uint16_t offset    = addr & 0x3fff;
-        /* if ((memory_control & 0x08) == 0x00) */
+        if ((memory_control & 0x08) == 0x00)
             return bios[bank_base + offset];
     }
 
