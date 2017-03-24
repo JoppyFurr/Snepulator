@@ -160,12 +160,12 @@ uint8_t vdp_status_read ()
 
 void vdp_control_write (uint8_t value)
 {
-    if (!first_byte_received)
+    if (!first_byte_received) /* First byte */
     {
         first_byte_received = true;
         vdp_regs.address = (vdp_regs.address & 0x3f00) | ((uint16_t) value << 0);
     }
-    else
+    else /* Second byte */
     {
         first_byte_received = false;
         vdp_regs.address = (vdp_regs.address & 0x00ff) | ((uint16_t) (value & 0x3f) << 8);
@@ -196,13 +196,13 @@ void vdp_render_pattern (Vdp_Pattern *pattern_base, Vdp_Palette palette, uint32_
 {
     for (uint32_t pattern_y = 0; pattern_y < 8; pattern_y++)
     {
-        char *line_base = (char *)(&pattern_base[pattern_y * 4]);
+        char *line_base = (char *)(&pattern_base->data[pattern_y * 4]);
         for (uint32_t pattern_x = 0; pattern_x < 8; pattern_x++)
         {
-            uint8_t bit0 = (line_base[0] & (1 << pattern_x)) ? 0x01 : 0x00;
-            uint8_t bit1 = (line_base[1] & (1 << pattern_x)) ? 0x02 : 0x00;
-            uint8_t bit2 = (line_base[2] & (1 << pattern_x)) ? 0x04 : 0x00;
-            uint8_t bit3 = (line_base[3] & (1 << pattern_x)) ? 0x08 : 0x00;
+            uint8_t bit0 = (line_base[0] & (0x80 >> pattern_x)) ? 0x01 : 0x00;
+            uint8_t bit1 = (line_base[1] & (0x80 >> pattern_x)) ? 0x02 : 0x00;
+            uint8_t bit2 = (line_base[2] & (0x80 >> pattern_x)) ? 0x04 : 0x00;
+            uint8_t bit3 = (line_base[3] & (0x80 >> pattern_x)) ? 0x08 : 0x00;
 
             /* TODO: Support the sprite palette */
             uint8_t pixel = cram[((palette == VDP_PALETTE_SPRITE) ? 16 : 0) + (bit0 | bit1 | bit2 | bit3)];
@@ -256,7 +256,7 @@ void vdp_render (void)
 
                         uint16_t tile_address = name_table_base | (tile_y << 6) | (tile_x << 1);
 
-                        uint16_t tile = (uint16_t)(vram [tile_address]) +
+                        uint16_t tile = ((uint16_t)(vram [tile_address])) +
                                         (((uint16_t)(vram [tile_address + 1])) << 8);
 
                         Vdp_Pattern *pattern = (Vdp_Pattern *) &vram[(tile & 0x1ff) * sizeof(Vdp_Pattern)];
