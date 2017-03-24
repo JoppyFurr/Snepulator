@@ -129,7 +129,6 @@ uint32_t z80_run (uint8_t (* memory_read) (uint16_t),
     uint8_t interrupt_mode;
     bool    interrupt_enable = true;
     uint32_t instruction_count = 0;
-    bool print_instruction = false;
 
     for (;;)
     {
@@ -149,22 +148,6 @@ uint32_t z80_run (uint8_t (* memory_read) (uint16_t),
             default:
                 break;
         }
-
-        /* DEBUG */
-        if (instruction_count >= 622900 && instruction_count < 623000)
-        {
-            print_instruction = true;
-            fprintf (stdout, "[DEBUG(%d)]: PC=%02x %s", instruction_count,
-                              z80_regs.pc - z80_instruction_size[instruction],
-                              z80_instruction_name[instruction]);
-            if (z80_instruction_size[instruction] >= 2) fprintf (stdout, " %02x", param_l);
-            if (z80_instruction_size[instruction] >= 3) fprintf (stdout, " %02x", param_h);
-
-            if (instruction != 0xed)
-                fprintf (stdout, ".\n");
-        }
-        else
-            print_instruction = false;
 
         switch (instruction)
         {
@@ -450,16 +433,6 @@ uint32_t z80_run (uint8_t (* memory_read) (uint16_t),
                         break;
                     default:
                         break;
-                }
-
-                /* DEBUG */
-                if (print_instruction)
-                {
-                    fprintf (stdout, " %s", z80_instruction_name_extended[instruction]);
-                    if (z80_instruction_size[instruction] >= 2) fprintf (stdout, " %02x", param_l);
-                    if (z80_instruction_size[instruction] >= 3) fprintf (stdout, " %02x", param_h);
-
-                    fprintf (stdout, ".\n");
                 }
 
                 switch (instruction)

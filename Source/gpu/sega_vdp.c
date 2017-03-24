@@ -35,6 +35,7 @@ void vdp_init (void)
 
 void vdp_dump (void)
 {
+#if 0
     /* Registers */
     fprintf (stdout, "Registers:\n");
     fprintf (stdout, "mode_ctrl_1:     %02x.\n", vdp_regs.mode_ctrl_1);
@@ -42,8 +43,9 @@ void vdp_dump (void)
     fprintf (stdout, "name_table_addr: %02x.\n", vdp_regs.name_table_addr);
     fprintf (stdout, "bg_colour:       %02x.\n", vdp_regs.background_colour);
     fprintf (stdout, "\n");
+#endif
 
-#if 1
+#if 0
     /* CRAM */
     fprintf (stdout, "CRAM:\n");
     for (uint16_t i = 0; i < sizeof(cram); i++)
