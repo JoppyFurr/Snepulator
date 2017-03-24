@@ -377,8 +377,8 @@ uint32_t z80_run (uint8_t (* memory_read) (uint16_t),
                     case 0xb8: /* RES 7,B */ z80_regs.b &= 0x7f; break;
 
                     default:
-                    fprintf (stderr, "Unknown bit instruction: %02x. %u instructions have been run.\n",
-                             instruction, instruction_count);
+                    fprintf (stderr, "Unknown bit instruction: \"%s\" (%02x). %u instructions have been run.\n",
+                             z80_instruction_name_bits[instruction], instruction, instruction_count);
                     return EXIT_FAILURE;
                 }
                 break;
