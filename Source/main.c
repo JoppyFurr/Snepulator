@@ -44,24 +44,25 @@ static void sms_memory_write (uint16_t addr, uint8_t data)
     }
 
     /* Sega Mapper */
+    /* TODO: Support for mappers with more than three bits */
     if (addr == 0xfffc)
     {
         fprintf (stderr, "Error: Sega Memory Mapper register 0xfffc not implemented.\n");
     }
     else if (addr == 0xfffd)
     {
-        fprintf (stdout, "[DEBUG]: MAPPER[0] set to %02x.\n", data);
-        mapper_bank[0] = data;
+        fprintf (stdout, "[DEBUG]: MAPPER[0] set to %02x.\n", data & 0x07);
+        mapper_bank[0] = data & 0x07;
     }
     else if (addr == 0xfffe)
     {
-        fprintf (stdout, "[DEBUG]: MAPPER[1] set to %02x.\n", data);
-        mapper_bank[1] = data;
+        fprintf (stdout, "[DEBUG]: MAPPER[1] set to %02x.\n", data & 0x07);
+        mapper_bank[1] = data & 0x07;
     }
     else if (addr == 0xffff)
     {
-        fprintf (stdout, "[DEBUG]: MAPPER[2] set to %02x.\n", data);
-        mapper_bank[2] = data;
+        fprintf (stdout, "[DEBUG]: MAPPER[2] set to %02x.\n", data & 0x07);
+        mapper_bank[2] = data & 0x07;
     }
 
     /* Mapping (CodeMasters) */
