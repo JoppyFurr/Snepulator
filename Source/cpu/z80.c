@@ -174,7 +174,12 @@ uint32_t z80_run (uint8_t (* memory_read) (uint16_t),
             case 0x11: /* LD DE,**   */ z80_regs.de = param_hl; break;
             case 0x13: /* INC DE     */ z80_regs.de++; break;
             case 0x16: /* LD D,*     */ z80_regs.d = param_l; break;
+            case 0x17: /* RLA        */ { uint8_t temp = z80_regs.a;
+                                        z80_regs.a = (z80_regs.a << 1) + ((z80_regs.f & Z80_FLAG_CARRY) ? 0x01 : 0);
+                                        z80_regs.f = (z80_regs.f & (Z80_FLAG_PARITY | Z80_FLAG_ZERO | Z80_FLAG_SIGN)) |
+                                                     ((temp & 0x80) ? Z80_FLAG_CARRY : 0); } break;
             case 0x18: /* JR         */ z80_regs.pc += (int8_t)param_l; break;
+            case 0x19: /* ADD HL,DE  */ SET_FLAGS_ADD_16 (z80_regs.hl, z80_regs.de); z80_regs.hl += z80_regs.de; break;
             case 0x1a: /* LD A,(DE)  */ z80_regs.a = memory_read (z80_regs.de); break;
             case 0x1b: /* DEC DE     */ z80_regs.de--; break;
             case 0x1f: /* RRA        */ { uint8_t temp = z80_regs.a;
@@ -312,10 +317,20 @@ uint32_t z80_run (uint8_t (* memory_read) (uint16_t),
             case 0x94: /* SUB A,H    */ SET_FLAGS_SUB (z80_regs.h); z80_regs.a -= z80_regs.h; break;
             case 0x95: /* SUB A,L    */ SET_FLAGS_SUB (z80_regs.l); z80_regs.a -= z80_regs.l; break;
 
+            case 0x98: /* SBC A,B    */ SET_FLAGS_SUB ((z80_regs.b + ((z80_regs.f & Z80_FLAG_CARRY) ? 1 : 0)));
+                                        z80_regs.a -=   z80_regs.b + ((z80_regs.f & Z80_FLAG_CARRY) ? 1 : 0); break;
             case 0x99: /* SBC A,C    */ SET_FLAGS_SUB ((z80_regs.c + ((z80_regs.f & Z80_FLAG_CARRY) ? 1 : 0)));
                                         z80_regs.a -=   z80_regs.c + ((z80_regs.f & Z80_FLAG_CARRY) ? 1 : 0); break;
+            case 0x9a: /* SBC A,D    */ SET_FLAGS_SUB ((z80_regs.d + ((z80_regs.f & Z80_FLAG_CARRY) ? 1 : 0)));
+                                        z80_regs.a -=   z80_regs.d + ((z80_regs.f & Z80_FLAG_CARRY) ? 1 : 0); break;
             case 0x9b: /* SBC A,E    */ SET_FLAGS_SUB ((z80_regs.e + ((z80_regs.f & Z80_FLAG_CARRY) ? 1 : 0)));
                                         z80_regs.a -=   z80_regs.e + ((z80_regs.f & Z80_FLAG_CARRY) ? 1 : 0); break;
+            case 0x9c: /* SBC A,H    */ SET_FLAGS_SUB ((z80_regs.h + ((z80_regs.f & Z80_FLAG_CARRY) ? 1 : 0)));
+                                        z80_regs.a -=   z80_regs.h + ((z80_regs.f & Z80_FLAG_CARRY) ? 1 : 0); break;
+            case 0x9d: /* SBC A,L    */ SET_FLAGS_SUB ((z80_regs.l + ((z80_regs.f & Z80_FLAG_CARRY) ? 1 : 0)));
+                                        z80_regs.a -=   z80_regs.l + ((z80_regs.f & Z80_FLAG_CARRY) ? 1 : 0); break;
+            case 0x9f: /* SBC A,A    */ SET_FLAGS_SUB ((z80_regs.a + ((z80_regs.f & Z80_FLAG_CARRY) ? 1 : 0)));
+                                        z80_regs.a -=   z80_regs.a + ((z80_regs.f & Z80_FLAG_CARRY) ? 1 : 0); break;
 
             case 0xa0: /* AND A,B    */ z80_regs.a &= z80_regs.b; SET_FLAGS_LOGIC; break;
             case 0xa1: /* AND A,C    */ z80_regs.a &= z80_regs.c; SET_FLAGS_LOGIC; break;
@@ -371,10 +386,11 @@ uint32_t z80_run (uint8_t (* memory_read) (uint16_t),
                 /* TODO: Perhaps a 256-entry switch statement is not the correct method for this */
                 switch (instruction)
                 {
-                    case 0x79: /* BIT 7,C */ z80_regs.f = (z80_regs.f & Z80_FLAG_CARRY) |
+                    case 0x79: /* BIT 7,C    */ z80_regs.f = (z80_regs.f & Z80_FLAG_CARRY) |
                                                           ((z80_regs.c & 0x80) ? 0 : Z80_FLAG_ZERO) |
                                                           (Z80_FLAG_HALF); break;
-                    case 0xb8: /* RES 7,B */ z80_regs.b &= 0x7f; break;
+                    case 0x86: /* RES 0,(HL) */ memory_write (z80_regs.hl, memory_read (z80_regs.hl) & 0xfe); break;
+                    case 0xb8: /* RES 7,B    */ z80_regs.b &= 0x7f; break;
 
                     default:
                     fprintf (stderr, "Unknown bit instruction: \"%s\" (%02x). %u instructions have been run.\n",
@@ -416,7 +432,13 @@ uint32_t z80_run (uint8_t (* memory_read) (uint16_t),
                                         z80_regs.h = memory_read (z80_regs.sp + 1);
                                         memory_write (z80_regs.sp + 1, temp);
                                         } break;
+            case 0xe5: /* PUSH HL    */ memory_write (--z80_regs.sp, z80_regs.h);
+                                        memory_write (--z80_regs.sp, z80_regs.l); break;
             case 0xe6: /* AND A,*    */ z80_regs.a &= param_l; SET_FLAGS_LOGIC; break;
+            case 0xe7: /* RST 20h    */ memory_write (--z80_regs.sp, z80_regs.pc_h);
+                                        memory_write (--z80_regs.sp, z80_regs.pc_l);
+                                        z80_regs.pc = 0x20; break;
+            case 0xe9: /* JP (HL)    */ z80_regs.pc = param_hl; break;
             case 0xeb: /* EX DE,HL   */ SWAP (uint16_t, z80_regs.de, z80_regs.hl); break;
             case 0xed: /* Extended Instructions */
 
@@ -471,11 +493,15 @@ uint32_t z80_run (uint8_t (* memory_read) (uint16_t),
 
             case 0xf1: /* POP AF     */ z80_regs.f = memory_read (z80_regs.sp++);
                                         z80_regs.a = memory_read (z80_regs.sp++); break;
-            case 0xf3: /* DI */ interrupt_enable = false; break;
+            case 0xf3: /* DI         */ interrupt_enable = false; break;
             case 0xf5: /* PUSH AF    */ memory_write (--z80_regs.sp, z80_regs.a);
                                         memory_write (--z80_regs.sp, z80_regs.f); break;
             case 0xf6: /* OR  A,*    */ z80_regs.a |= param_l; SET_FLAGS_LOGIC; break;
+            case 0xfb: /* EI         */ interrupt_enable = true; break;
             case 0xfe: /* CP A,*     */ SET_FLAGS_SUB (param_l); break;
+            case 0xff: /* RST 38h    */ memory_write (--z80_regs.sp, z80_regs.pc_h);
+                                        memory_write (--z80_regs.sp, z80_regs.pc_l);
+                                        z80_regs.pc = 0x38; break;
 
             default:
                 fprintf (stderr, "Unknown instruction: \"%s\" (%02x). %u instructions have been run.\n",
@@ -490,7 +516,7 @@ uint32_t z80_run (uint8_t (* memory_read) (uint16_t),
         {
             vdp_render ();
             SDL_RenderPresent (renderer);
-            SDL_Delay (33);
+            SDL_Delay (10);
         }
 
         /* DEBUG - Return for some debug */
