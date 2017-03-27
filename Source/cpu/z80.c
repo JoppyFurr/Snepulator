@@ -459,6 +459,8 @@ uint32_t z80_run (uint8_t (* memory_read) (uint16_t),
 
                 switch (instruction)
                 {
+                    case 0xe5: /* PUSH IX    */ memory_write (--z80_regs.sp, z80_regs.ixh);
+                                                memory_write (--z80_regs.sp, z80_regs.ixl); break;
                     default:
                     fprintf (stderr, "Unknown ix instruction: \"%s\" (%02x). %u instructions have been run.\n",
                              z80_instruction_name_ix[instruction], instruction, instruction_count);
@@ -542,6 +544,34 @@ uint32_t z80_run (uint8_t (* memory_read) (uint16_t),
                                         memory_write (--z80_regs.sp, z80_regs.f); break;
             case 0xf6: /* OR  A,*    */ z80_regs.a |= param_l; SET_FLAGS_LOGIC; break;
             case 0xfb: /* EI         */ interrupt_enable = true; break;
+
+            case 0xfd: /* IY         */
+                instruction = memory_read (z80_regs.pc++);
+
+                switch (z80_instruction_size_ix[instruction])
+                {
+                    case 3:
+                        param_l = memory_read (z80_regs.pc++);
+                        param_h = memory_read (z80_regs.pc++);
+                        break;
+                    case 2:
+                        param_l = memory_read (z80_regs.pc++);
+                        break;
+                    default:
+                        break;
+                }
+
+                switch (instruction)
+                {
+                    case 0xe5: /* PUSH IY    */ memory_write (--z80_regs.sp, z80_regs.iyh);
+                                                memory_write (--z80_regs.sp, z80_regs.iyl); break;
+                    default:
+                    fprintf (stderr, "Unknown iy instruction: \"%s\" (%02x). %u instructions have been run.\n",
+                             z80_instruction_name_iy[instruction], instruction, instruction_count);
+                    return EXIT_FAILURE;
+                }
+                break;
+
             case 0xfe: /* CP A,*     */ SET_FLAGS_SUB (param_l); break;
             case 0xff: /* RST 38h    */ memory_write (--z80_regs.sp, z80_regs.pc_h);
                                         memory_write (--z80_regs.sp, z80_regs.pc_l);
