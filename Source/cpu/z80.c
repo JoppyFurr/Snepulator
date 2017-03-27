@@ -402,22 +402,56 @@ uint32_t z80_run (uint8_t (* memory_read) (uint16_t),
             case 0xcb: /* Bit Instructions */
 
                 instruction = memory_read (z80_regs.pc++);
-
-                /* TODO: Perhaps a 256-entry switch statement is not the correct method for this */
-                switch (instruction)
                 {
-                    case 0x79: /* BIT 7,C    */ z80_regs.f = (z80_regs.f & Z80_FLAG_CARRY) |
-                                                          ((z80_regs.c & 0x80) ? 0 : Z80_FLAG_ZERO) |
-                                                          (Z80_FLAG_HALF); break;
-                    case 0x86: /* RES 0,(HL) */ memory_write (z80_regs.hl, memory_read (z80_regs.hl) & 0xfe); break;
-                    case 0xb8: /* RES 7,B    */ z80_regs.b &= 0x7f; break;
+                    uint8_t data;
+                    uint8_t bit;
+                    bool write_data = false;
 
-                    default:
-                    fprintf (stderr, "Unknown bit instruction: \"%s\" (%02x). %u instructions have been run.\n",
-                             z80_instruction_name_bits[instruction], instruction, instruction_count);
-                    return EXIT_FAILURE;
-                }
-                break;
+                    /* Read data */
+                    switch (instruction & 0x07)
+                    {
+                        case 0x00: data = z80_regs.b; break;
+                        case 0x01: data = z80_regs.c; break;
+                        case 0x02: data = z80_regs.d; break;
+                        case 0x03: data = z80_regs.e; break;
+                        case 0x04: data = z80_regs.h; break;
+                        case 0x05: data = z80_regs.l; break;
+                        case 0x06: data = memory_read (z80_regs.hl); break;
+                        case 0x07: data = z80_regs.a; break;
+                    }
+
+                    /* For bit/res/set, determine the bit to operate on */
+                    bit = (instruction >> 3) & 0x07;
+
+                    switch (instruction & 0xc0)
+                    {
+                        case 0x40: /* BIT */ z80_regs.f = (z80_regs.f & Z80_FLAG_CARRY) |
+                                                          ((data & (1 << bit)) ? 0 : Z80_FLAG_ZERO) |
+                                                          (Z80_FLAG_HALF); break;
+                        case 0x80: /* RES */ data &= ~(1 << bit); write_data = true; break;
+                        case 0xc0: /* SET */ data |= (1 << bit); write_data = true; break;
+                        default:
+                            fprintf (stderr, "Unknown bit instruction: \"%s\" (%02x). %u instructions have been run.\n",
+                                     z80_instruction_name_bits[instruction], instruction, instruction_count);
+                            return EXIT_FAILURE;
+                    }
+
+                    /* Write data */
+                    if (write_data)
+                    {
+                        switch (instruction & 0x07)
+                        {
+                            case 0x00: z80_regs.b = data; break;
+                            case 0x01: z80_regs.c = data; break;
+                            case 0x02: z80_regs.d = data; break;
+                            case 0x03: z80_regs.e = data; break;
+                            case 0x04: z80_regs.h = data; break;
+                            case 0x05: z80_regs.l = data; break;
+                            case 0x06: memory_write (z80_regs.hl, data); break;
+                            case 0x07: z80_regs.a = data; break;
+                        }
+                    }
+                } break;
 
             case 0xcd: /* CALL       */ memory_write (--z80_regs.sp, z80_regs.pc_h);
                                         memory_write (--z80_regs.sp, z80_regs.pc_l);
