@@ -54,6 +54,26 @@ static const uint8_t z80_instruction_size_extended[256] = {
     U, U, U, U, U, U, U, U, U, U, U, U, U, U, U, U,
 };
 
+static const uint8_t z80_instruction_size_ix[256] = {
+    U, U, U, U, U, U, U, U, U, 1, U, U, U, U, U, U,
+    U, U, U, U, U, U, U, U, U, 1, U, U, U, U, U, U,
+    U, 3, 3, 1, 1, 1, 2, U, U, 1, 3, 1, 1, 1, 2, U,
+    U, U, U, U, 2, 2, 3, U, U, 1, U, U, U, U, U, U,
+    U, U, U, U, 1, 1, 2, U, U, U, U, U, 1, 1, 2, U,
+    U, U, U, U, 1, 1, 2, U, U, U, U, U, 1, 1, 2, U,
+    1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1,
+    2, 2, 2, 2, 2, 2, U, 2, U, U, U, U, 1, 1, 2, U,
+
+    U, U, U, U, 1, 1, 2, U, U, U, U, U, 1, 1, 2, U,
+    U, U, U, U, 1, 1, 2, U, U, U, U, U, 1, 1, 2, U,
+    U, U, U, U, 1, 1, 2, U, U, U, U, U, 1, 1, 2, U,
+    U, U, U, U, 1, 1, 2, U, U, U, U, U, 1, 1, 2, U,
+    U, U, U, U, U, U, U, U, U, U, U, E, U, U, U, U,
+    U, U, U, U, U, U, U, U, U, U, U, U, U, U, U, U,
+    U, 1, U, 1, U, 1, U, U, U, 1, U, U, U, U, U, U,
+    U, U, U, U, U, U, U, U, U, 1, U, U, U, U, U, U,
+};
+
 static const uint8_t uint8_even_parity[256] = {
     1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,
     0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0,
@@ -421,6 +441,30 @@ uint32_t z80_run (uint8_t (* memory_read) (uint16_t),
                                         SWAP (uint16_t, z80_regs.de, z80_regs.alt_de);
                                         SWAP (uint16_t, z80_regs.hl, z80_regs.alt_hl); break;
             case 0xdb: /* IN (*),A   */ z80_regs.a = io_read (param_l); break;
+            case 0xdd: /* IX         */
+                instruction = memory_read (z80_regs.pc++);
+
+                switch (z80_instruction_size_ix[instruction])
+                {
+                    case 3:
+                        param_l = memory_read (z80_regs.pc++);
+                        param_h = memory_read (z80_regs.pc++);
+                        break;
+                    case 2:
+                        param_l = memory_read (z80_regs.pc++);
+                        break;
+                    default:
+                        break;
+                }
+
+                switch (instruction)
+                {
+                    default:
+                    fprintf (stderr, "Unknown ix instruction: \"%s\" (%02x). %u instructions have been run.\n",
+                             z80_instruction_name_ix[instruction], instruction, instruction_count);
+                    return EXIT_FAILURE;
+                }
+                break;
 
             case 0xe2: /* JP PO      */ z80_regs.pc = (z80_regs.f & Z80_FLAG_PARITY) ?
                                         z80_regs.pc : param_hl; break;
