@@ -267,9 +267,9 @@ int main (int argc, char **argv)
         goto snepulator_close;
     }
 
-    z80_reset ();
+    z80_init (sms_memory_read, sms_memory_write, sms_io_read, sms_io_write);
 
-    if (z80_run (sms_memory_read, sms_memory_write, sms_io_read, sms_io_write) == EXIT_FAILURE)
+    if (z80_run () == EXIT_FAILURE)
     {
         vdp_dump ();
         /* goto snepulator_close; */

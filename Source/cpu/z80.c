@@ -14,6 +14,15 @@
 
 Z80_Regs z80_regs;
 
+/* Function pointers for accessing the rest of the system */
+uint8_t (* memory_read) (uint16_t) = NULL;
+void    (* memory_write)(uint16_t, uint8_t) = NULL;
+uint8_t (* io_read)     (uint8_t) = NULL;
+void    (* io_write)    (uint8_t, uint8_t) = NULL;
+
+/* DIAG */
+uint32_t instruction_count = 0;
+
 #define E 1 /* Extended */
 #define U 0 /* Unused */
 static const uint8_t z80_instruction_size[256] = {
@@ -93,8 +102,16 @@ static const uint8_t uint8_even_parity[256] = {
     1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,
 };
 
-void z80_reset ()
+uint32_t z80_init (uint8_t (* _memory_read) (uint16_t),
+                   void    (* _memory_write)(uint16_t, uint8_t),
+                   uint8_t (* _io_read)     (uint8_t),
+                   void    (* _io_write)    (uint8_t, uint8_t))
 {
+    memory_read  = _memory_read;
+    memory_write = _memory_write;
+    io_read      = _io_read;
+    io_write     = _io_write;
+
     memset (&z80_regs, 0, sizeof (Z80_Regs));
 }
 
@@ -137,10 +154,62 @@ void z80_reset ()
 extern SDL_Renderer *renderer;
 void vdp_render (void);
 
-uint32_t z80_run (uint8_t (* memory_read) (uint16_t),
-                  void    (* memory_write)(uint16_t, uint8_t),
-                  uint8_t (* io_read)     (uint8_t),
-                  void    (* io_write)    (uint8_t, uint8_t))
+uint32_t z80_bit_instruction ()
+{
+    uint8_t instruction = memory_read (z80_regs.pc++);
+    uint8_t data;
+    uint8_t bit;
+    bool write_data = false;
+
+    /* Read data */
+    switch (instruction & 0x07)
+    {
+        case 0x00: data = z80_regs.b; break;
+        case 0x01: data = z80_regs.c; break;
+        case 0x02: data = z80_regs.d; break;
+        case 0x03: data = z80_regs.e; break;
+        case 0x04: data = z80_regs.h; break;
+        case 0x05: data = z80_regs.l; break;
+        case 0x06: data = memory_read (z80_regs.hl); break;
+        case 0x07: data = z80_regs.a; break;
+    }
+
+    /* For bit/res/set, determine the bit to operate on */
+    bit = (instruction >> 3) & 0x07;
+
+    switch (instruction & 0xc0)
+    {
+        case 0x40: /* BIT */ z80_regs.f = (z80_regs.f & Z80_FLAG_CARRY) |
+                                          ((data & (1 << bit)) ? 0 : Z80_FLAG_ZERO) |
+                                          (Z80_FLAG_HALF); break;
+        case 0x80: /* RES */ data &= ~(1 << bit); write_data = true; break;
+        case 0xc0: /* SET */ data |= (1 << bit); write_data = true; break;
+        default:
+            fprintf (stderr, "Unknown bit instruction: \"%s\" (%02x). %u instructions have been run.\n",
+                     z80_instruction_name_bits[instruction], instruction, instruction_count);
+            return EXIT_FAILURE;
+    }
+
+    /* Write data */
+    if (write_data)
+    {
+        switch (instruction & 0x07)
+        {
+            case 0x00: z80_regs.b = data; break;
+            case 0x01: z80_regs.c = data; break;
+            case 0x02: z80_regs.d = data; break;
+            case 0x03: z80_regs.e = data; break;
+            case 0x04: z80_regs.h = data; break;
+            case 0x05: z80_regs.l = data; break;
+            case 0x06: memory_write (z80_regs.hl, data); break;
+            case 0x07: z80_regs.a = data; break;
+        }
+    }
+
+    return 0;
+}
+
+uint32_t z80_run ()
 {
     uint8_t instruction;
     uint8_t param_l;
@@ -148,7 +217,6 @@ uint32_t z80_run (uint8_t (* memory_read) (uint16_t),
     uint16_t param_hl;
     uint8_t interrupt_mode;
     bool    interrupt_enable = true;
-    uint32_t instruction_count = 0;
 
     for (;;)
     {
@@ -398,61 +466,7 @@ uint32_t z80_run (uint8_t (* memory_read) (uint16_t),
             case 0xc9: /* RET        */ z80_regs.pc_l = memory_read (z80_regs.sp++);
                                         z80_regs.pc_h = memory_read (z80_regs.sp++); break;
             case 0xca: /* JP Z,**    */ z80_regs.pc = (z80_regs.f & Z80_FLAG_ZERO) ? param_hl : z80_regs.pc; break;
-
-            case 0xcb: /* Bit Instructions */
-
-                instruction = memory_read (z80_regs.pc++);
-                {
-                    uint8_t data;
-                    uint8_t bit;
-                    bool write_data = false;
-
-                    /* Read data */
-                    switch (instruction & 0x07)
-                    {
-                        case 0x00: data = z80_regs.b; break;
-                        case 0x01: data = z80_regs.c; break;
-                        case 0x02: data = z80_regs.d; break;
-                        case 0x03: data = z80_regs.e; break;
-                        case 0x04: data = z80_regs.h; break;
-                        case 0x05: data = z80_regs.l; break;
-                        case 0x06: data = memory_read (z80_regs.hl); break;
-                        case 0x07: data = z80_regs.a; break;
-                    }
-
-                    /* For bit/res/set, determine the bit to operate on */
-                    bit = (instruction >> 3) & 0x07;
-
-                    switch (instruction & 0xc0)
-                    {
-                        case 0x40: /* BIT */ z80_regs.f = (z80_regs.f & Z80_FLAG_CARRY) |
-                                                          ((data & (1 << bit)) ? 0 : Z80_FLAG_ZERO) |
-                                                          (Z80_FLAG_HALF); break;
-                        case 0x80: /* RES */ data &= ~(1 << bit); write_data = true; break;
-                        case 0xc0: /* SET */ data |= (1 << bit); write_data = true; break;
-                        default:
-                            fprintf (stderr, "Unknown bit instruction: \"%s\" (%02x). %u instructions have been run.\n",
-                                     z80_instruction_name_bits[instruction], instruction, instruction_count);
-                            return EXIT_FAILURE;
-                    }
-
-                    /* Write data */
-                    if (write_data)
-                    {
-                        switch (instruction & 0x07)
-                        {
-                            case 0x00: z80_regs.b = data; break;
-                            case 0x01: z80_regs.c = data; break;
-                            case 0x02: z80_regs.d = data; break;
-                            case 0x03: z80_regs.e = data; break;
-                            case 0x04: z80_regs.h = data; break;
-                            case 0x05: z80_regs.l = data; break;
-                            case 0x06: memory_write (z80_regs.hl, data); break;
-                            case 0x07: z80_regs.a = data; break;
-                        }
-                    }
-                } break;
-
+            case 0xcb: /* Bit Instruction */ z80_bit_instruction (); break;
             case 0xcd: /* CALL       */ memory_write (--z80_regs.sp, z80_regs.pc_h);
                                         memory_write (--z80_regs.sp, z80_regs.pc_l);
                                         z80_regs.pc = param_hl; break;
