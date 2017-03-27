@@ -9,10 +9,10 @@
 
 #define SWAP(TYPE, X, Y) { TYPE tmp = X; X = Y; Y = tmp; }
 
-/* The CPU interacts with the rest of the world by reading and writing to addresses,
- * so we need to construct an interface to allow this */
-
+/* State */
 Z80_Regs z80_regs;
+uint8_t interrupt_mode;
+bool    interrupt_enable = true;
 
 /* Function pointers for accessing the rest of the system */
 uint8_t (* memory_read) (uint16_t) = NULL;
@@ -209,14 +209,67 @@ uint32_t z80_bit_instruction ()
     return 0;
 }
 
+uint32_t z80_extended_instruction ()
+{
+    uint8_t instruction = memory_read (z80_regs.pc++);
+    uint8_t param_l;
+    uint8_t param_h;
+
+    switch (z80_instruction_size_extended[instruction])
+    {
+        case 3:
+            param_l = memory_read (z80_regs.pc++);
+            param_h = memory_read (z80_regs.pc++);
+            break;
+        case 2:
+            param_l = memory_read (z80_regs.pc++);
+            break;
+        default:
+            break;
+    }
+
+    switch (instruction)
+    {
+        case 0x51: /* OUT (C),D */ io_write (z80_regs.c, z80_regs.d); break;
+        case 0x56: /* IM 1      */ interrupt_mode = 1; break;
+        case 0x79: /* OUT (C),A */ io_write (z80_regs.c, z80_regs.a); break;
+        case 0xa3: /* OUTI      */ { io_write (z80_regs.c, memory_read(z80_regs.hl)),
+                                     z80_regs.hl++; z80_regs.b--;
+                                     z80_regs.f = (z80_regs.f & Z80_FLAG_CARRY) |
+                                                  (Z80_FLAG_SUB) |
+                                                  (z80_regs.b == 0 ? Z80_FLAG_ZERO : 0);
+                                   } break;
+
+        case 0xb0: /* LDIR      */ { memory_write (z80_regs.de, memory_read (z80_regs.hl));
+                                     z80_regs.hl++; z80_regs.de++;
+                                     z80_regs.bc--;
+                                     z80_regs.pc -= z80_regs.bc ? 2 : 0;
+                                     z80_regs.f = (z80_regs.f & (Z80_FLAG_CARRY |
+                                                                 Z80_FLAG_ZERO  |
+                                                                 Z80_FLAG_SIGN)) |
+                                                  (z80_regs.bc ? Z80_FLAG_OVERFLOW : 0);
+                                   } break;
+        case 0xb3: /* OUTR      */ { io_write (z80_regs.c, memory_read(z80_regs.hl)),
+                                     z80_regs.hl++; z80_regs.b--;
+                                     z80_regs.pc -= z80_regs.b ? 2 : 0;
+                                     z80_regs.f = (z80_regs.f & Z80_FLAG_CARRY) |
+                                                  (Z80_FLAG_SUB | Z80_FLAG_ZERO); } break;
+
+        default:
+        fprintf (stderr, "Unknown extended instruction: \"%s\" (%02x). %u instructions have been run.\n",
+                 z80_instruction_name_extended[instruction], instruction, instruction_count);
+        return EXIT_FAILURE;
+    }
+
+    return 0;
+}
+
 uint32_t z80_run ()
 {
     uint8_t instruction;
     uint8_t param_l;
     uint8_t param_h;
     uint16_t param_hl;
-    uint8_t interrupt_mode;
-    bool    interrupt_enable = true;
 
     for (;;)
     {
@@ -558,56 +611,7 @@ uint32_t z80_run ()
                                         z80_regs.pc = 0x20; break;
             case 0xe9: /* JP (HL)    */ z80_regs.pc = param_hl; break;
             case 0xeb: /* EX DE,HL   */ SWAP (uint16_t, z80_regs.de, z80_regs.hl); break;
-            case 0xed: /* Extended Instructions */
-
-                instruction = memory_read (z80_regs.pc++);
-
-                switch (z80_instruction_size_extended[instruction])
-                {
-                    case 3:
-                        param_l = memory_read (z80_regs.pc++);
-                        param_h = memory_read (z80_regs.pc++);
-                        break;
-                    case 2:
-                        param_l = memory_read (z80_regs.pc++);
-                        break;
-                    default:
-                        break;
-                }
-
-                switch (instruction)
-                {
-                    case 0x51: /* OUT (C),D */ io_write (z80_regs.c, z80_regs.d); break;
-                    case 0x56: /* IM 1      */ interrupt_mode = 1; break;
-                    case 0x79: /* OUT (C),A */ io_write (z80_regs.c, z80_regs.a); break;
-                    case 0xa3: /* OUTI      */ { io_write (z80_regs.c, memory_read(z80_regs.hl)),
-                                                 z80_regs.hl++; z80_regs.b--;
-                                                 z80_regs.f = (z80_regs.f & Z80_FLAG_CARRY) |
-                                                              (Z80_FLAG_SUB) |
-                                                              (z80_regs.b == 0 ? Z80_FLAG_ZERO : 0);
-                                               } break;
-
-                    case 0xb0: /* LDIR      */ { memory_write (z80_regs.de, memory_read (z80_regs.hl));
-                                                 z80_regs.hl++; z80_regs.de++;
-                                                 z80_regs.bc--;
-                                                 z80_regs.pc -= z80_regs.bc ? 2 : 0;
-                                                 z80_regs.f = (z80_regs.f & (Z80_FLAG_CARRY |
-                                                                             Z80_FLAG_ZERO  |
-                                                                             Z80_FLAG_SIGN)) |
-                                                              (z80_regs.bc ? Z80_FLAG_OVERFLOW : 0);
-                                               } break;
-                    case 0xb3: /* OUTR      */ { io_write (z80_regs.c, memory_read(z80_regs.hl)),
-                                                 z80_regs.hl++; z80_regs.b--;
-                                                 z80_regs.pc -= z80_regs.b ? 2 : 0;
-                                                 z80_regs.f = (z80_regs.f & Z80_FLAG_CARRY) |
-                                                              (Z80_FLAG_SUB | Z80_FLAG_ZERO); } break;
-
-                    default:
-                    fprintf (stderr, "Unknown extended instruction: \"%s\" (%02x). %u instructions have been run.\n",
-                             z80_instruction_name_extended[instruction], instruction, instruction_count);
-                    return EXIT_FAILURE;
-                }
-                break;
+            case 0xed: /* Extended Instructions */ z80_extended_instruction (); break;
 
             case 0xf1: /* POP AF     */ z80_regs.f = memory_read (z80_regs.sp++);
                                         z80_regs.a = memory_read (z80_regs.sp++); break;
