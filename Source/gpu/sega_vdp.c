@@ -25,6 +25,9 @@ static Vdp_Regs vdp_regs;
 static uint8_t cram [VDP_CRAM_SIZE];
 static uint8_t vram [VDP_VRAM_SIZE];
 
+/* TODO: Make this line accurate */
+/* TODO: Add interrupts */
+
 void vdp_init (void)
 {
     /* TODO: Are there any nonzero default values? */
