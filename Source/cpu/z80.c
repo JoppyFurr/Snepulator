@@ -317,6 +317,7 @@ uint32_t z80_run ()
 
             case 0x10: /* DJNZ       */ z80_regs.b--; z80_regs.pc += z80_regs.b ? (int8_t) param_l : 0; break;
             case 0x11: /* LD DE,**   */ z80_regs.de = param_hl; break;
+            case 0x12: /* LD (DE),a  */ memory_write (z80_regs.de, z80_regs.a); break;
             case 0x13: /* INC DE     */ z80_regs.de++; break;
             case 0x16: /* LD D,*     */ z80_regs.d = param_l; break;
             case 0x17: /* RLA        */ { uint8_t temp = z80_regs.a;
@@ -327,16 +328,20 @@ uint32_t z80_run ()
             case 0x19: /* ADD HL,DE  */ SET_FLAGS_ADD_16 (z80_regs.hl, z80_regs.de); z80_regs.hl += z80_regs.de; break;
             case 0x1a: /* LD A,(DE)  */ z80_regs.a = memory_read (z80_regs.de); break;
             case 0x1b: /* DEC DE     */ z80_regs.de--; break;
+            case 0x1d: /* DEC E      */ z80_regs.e--; SET_FLAGS_DEC (z80_regs.e); break;
+            case 0x1e: /* LD E,*     */ z80_regs.e = param_l; break;
             case 0x1f: /* RRA        */ { uint8_t temp = z80_regs.a;
                                         z80_regs.a = (z80_regs.a >> 1) + ((z80_regs.f & Z80_FLAG_CARRY) ? 0x80 : 0);
                                         z80_regs.f = (z80_regs.f & (Z80_FLAG_PARITY | Z80_FLAG_ZERO | Z80_FLAG_SIGN)) |
                                                      ((temp & 0x01) ? Z80_FLAG_CARRY : 0); } break;
 
             case 0x20: /* JR NZ      */ z80_regs.pc += (z80_regs.f & Z80_FLAG_ZERO) ? 0 : (int8_t)param_l; break;
-            case 0x21: /* LD HL, **  */ z80_regs.hl = param_hl; break;
+            case 0x21: /* LD HL,**   */ z80_regs.hl = param_hl; break;
             case 0x23: /* INC HL     */ z80_regs.hl++; break;
             case 0x25: /* DEC H      */ z80_regs.h--; SET_FLAGS_DEC (z80_regs.h); break;
+            case 0x26: /* LD H,*     */ z80_regs.h = param_l; break;
             case 0x28: /* JR Z       */ z80_regs.pc += (z80_regs.f & Z80_FLAG_ZERO) ? (int8_t)param_l : 0; break;
+            case 0x29: /* ADD HL,HL  */ SET_FLAGS_ADD_16 (z80_regs.hl, z80_regs.hl); z80_regs.hl += z80_regs.hl; break;
             case 0x2a: /* LD HL,(**) */ z80_regs.hl = memory_read (param_hl); break;
             case 0x2c: /* INC L      */ z80_regs.l++; SET_FLAGS_INC (z80_regs.l); break;
             case 0x2e: /* LD L,*     */ z80_regs.l = param_l; break;
@@ -584,6 +589,9 @@ uint32_t z80_run ()
 
                 switch (instruction)
                 {
+                    case 0x21: /* LD IX, **  */ z80_regs.ix = param_hl; break;
+                    case 0xe1: /* POP IX     */ z80_regs.ixl = memory_read (z80_regs.sp++);
+                                                z80_regs.ixh = memory_read (z80_regs.sp++); break;
                     case 0xe5: /* PUSH IX    */ memory_write (--z80_regs.sp, z80_regs.ixh);
                                                 memory_write (--z80_regs.sp, z80_regs.ixl); break;
                     default:
@@ -593,6 +601,8 @@ uint32_t z80_run ()
                 }
                 break;
 
+            case 0xe1: /* POP HL     */ z80_regs.l = memory_read (z80_regs.sp++);
+                                        z80_regs.h = memory_read (z80_regs.sp++); break;
             case 0xe2: /* JP PO      */ z80_regs.pc = (z80_regs.f & Z80_FLAG_PARITY) ?
                                         z80_regs.pc : param_hl; break;
             case 0xe3: /* EX (SP),HL */ { uint8_t temp;
