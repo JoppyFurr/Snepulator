@@ -308,14 +308,14 @@ uint32_t z80_run ()
             case 0x0a: /* LD A,(BC)  */ z80_regs.a = memory_read (z80_regs.bc); break;
             case 0x0b: /* DEC BC     */ z80_regs.bc--; break;
             case 0x0c: /* INC C      */ z80_regs.c++; SET_FLAGS_INC (z80_regs.c); break;
-            case 0x0d: /* DEC D      */ z80_regs.d--; SET_FLAGS_DEC (z80_regs.d); break;
+            case 0x0d: /* DEC C      */ z80_regs.c--; SET_FLAGS_DEC (z80_regs.c); break;
             case 0x0e: /* LD C,*     */ z80_regs.c = param_l; break;
             case 0x0f: /* RRCA       */ z80_regs.a = (z80_regs.a >> 1) | ((z80_regs.a & 0x01) ? 0x80 : 0);
                                         z80_regs.f = (z80_regs.f & (Z80_FLAG_PARITY | Z80_FLAG_ZERO | Z80_FLAG_SIGN)) |
                                                      ((z80_regs.a & 0x80) ? Z80_FLAG_CARRY : 0);
                                               break;
 
-            case 0x10: /* DJNZ       */ z80_regs.b--; z80_regs.pc += z80_regs.b ? (int8_t) param_l : 0; break;
+            case 0x10: /* DJNZ       */ z80_regs.pc += --z80_regs.b ? (int8_t) param_l : 0; break;
             case 0x11: /* LD DE,**   */ z80_regs.de = param_hl; break;
             case 0x12: /* LD (DE),a  */ memory_write (z80_regs.de, z80_regs.a); break;
             case 0x13: /* INC DE     */ z80_regs.de++; break;
@@ -343,6 +343,7 @@ uint32_t z80_run ()
             case 0x28: /* JR Z       */ z80_regs.pc += (z80_regs.f & Z80_FLAG_ZERO) ? (int8_t)param_l : 0; break;
             case 0x29: /* ADD HL,HL  */ SET_FLAGS_ADD_16 (z80_regs.hl, z80_regs.hl); z80_regs.hl += z80_regs.hl; break;
             case 0x2a: /* LD HL,(**) */ z80_regs.hl = memory_read (param_hl); break;
+            case 0x2b: /* DEC HL     */ z80_regs.hl--; break;
             case 0x2c: /* INC L      */ z80_regs.l++; SET_FLAGS_INC (z80_regs.l); break;
             case 0x2e: /* LD L,*     */ z80_regs.l = param_l; break;
             case 0x2f: /* CPL        */ z80_regs.a = ~z80_regs.a; SET_FLAGS_CPL; break;
@@ -526,6 +527,12 @@ uint32_t z80_run ()
                                         z80_regs.b = memory_read (z80_regs.sp++); break;
             case 0xc2: /* JP NZ,**   */ z80_regs.pc = (z80_regs.f & Z80_FLAG_ZERO) ? z80_regs.pc : param_hl; break;
             case 0xc3: /* JP **      */ z80_regs.pc = param_hl; break;
+            case 0xc4: /* CALL NZ,** */ if (!(z80_regs.f & Z80_FLAG_ZERO))
+                                        {
+                                            memory_write (--z80_regs.sp, z80_regs.pc_h);
+                                            memory_write (--z80_regs.sp, z80_regs.pc_l);
+                                            z80_regs.pc = param_hl;
+                                        } break;
             case 0xc5: /* PUSH BC    */ memory_write (--z80_regs.sp, z80_regs.b);
                                         memory_write (--z80_regs.sp, z80_regs.c); break;
             case 0xc8: /* RET Z      */ if (z80_regs.f & Z80_FLAG_ZERO)
