@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <errno.h>
 
 #include "SDL2/SDL.h"
 
@@ -12,7 +13,11 @@ SDL_Window *window = NULL;
 SDL_Renderer *renderer = NULL;
 
 /* This should also be moved somewhere Master System specific */
-uint8_t bios[128 << 10];
+uint8_t *bios = NULL;
+uint8_t *cart = NULL;
+static uint32_t bios_size = 0;
+static uint32_t cart_size = 0;
+
 uint8_t ram[8 << 10];
 uint8_t memory_control = 0x00;
 uint8_t io_control = 0x00;
@@ -33,6 +38,10 @@ uint8_t mapper_bank[3] = { 0x00, 0x01, 0x02 };
 #define SMS_IO_TR_B_LEVEL (1 << 6)
 #define SMS_IO_TH_B_LEVEL (1 << 7)
 
+#define SMS_MEMORY_CTRL_BIOS_DISABLE 0x08
+#define SMS_MEMORY_CTRL_CART_DISABLE 0x40
+#define SMS_MEMORY_CTRL_IO_DISABLE   0x04
+
 /* TODO: Eventually move Master System code to its own file */
 static void sms_memory_write (uint16_t addr, uint8_t data)
 {
@@ -44,25 +53,24 @@ static void sms_memory_write (uint16_t addr, uint8_t data)
     }
 
     /* Sega Mapper */
-    /* TODO: Support for mappers with more than three bits */
     if (addr == 0xfffc)
     {
-        fprintf (stderr, "Error: Sega Memory Mapper register 0xfffc not implemented.\n");
+        /* fprintf (stderr, "Error: Sega Memory Mapper register 0xfffc not implemented.\n"); */
     }
     else if (addr == 0xfffd)
     {
-        fprintf (stdout, "[DEBUG]: MAPPER[0] set to %02x.\n", data & 0x07);
-        mapper_bank[0] = data & 0x07;
+        /* fprintf (stdout, "[DEBUG]: MAPPER[0] set to %02x.\n", data & 0x07); */
+        mapper_bank[0] = data & 0x1f;
     }
     else if (addr == 0xfffe)
     {
-        fprintf (stdout, "[DEBUG]: MAPPER[1] set to %02x.\n", data & 0x07);
-        mapper_bank[1] = data & 0x07;
+        /* fprintf (stdout, "[DEBUG]: MAPPER[1] set to %02x.\n", data & 0x07); */
+        mapper_bank[1] = data & 0x1f;
     }
     else if (addr == 0xffff)
     {
-        fprintf (stdout, "[DEBUG]: MAPPER[2] set to %02x.\n", data & 0x07);
-        mapper_bank[2] = data & 0x07;
+        /* fprintf (stdout, "[DEBUG]: MAPPER[2] set to %02x.\n", data & 0x07); */
+        mapper_bank[2] = data & 0x1f;
     }
 
     /* Mapping (CodeMasters) */
@@ -82,6 +90,8 @@ static void sms_memory_write (uint16_t addr, uint8_t data)
     }
 }
 
+/* TODO: Currently assuming a power-of-two size for the ROM */
+
 static uint8_t sms_memory_read (uint16_t addr)
 {
     /* Cartridge, card, BIOS, expansion slot */
@@ -89,8 +99,12 @@ static uint8_t sms_memory_read (uint16_t addr)
     {
         uint32_t bank_base = mapper_bank[(addr >> 14)] * ((uint32_t)16 << 10);
         uint16_t offset    = addr & 0x3fff;
-        if ((memory_control & 0x08) == 0x00)
-            return bios[bank_base + offset];
+
+        if (bios && !(memory_control & SMS_MEMORY_CTRL_BIOS_DISABLE))
+            return bios[(bank_base + offset) & (bios_size - 1)];
+
+        if (cart && !(memory_control & SMS_MEMORY_CTRL_CART_DISABLE))
+            return cart[(bank_base + offset) & (cart_size - 1)];
     }
 
     /* 8 KiB RAM + mirror */
@@ -149,6 +163,13 @@ static void sms_io_write (uint8_t addr, uint8_t data)
             /* VDP Control Register */
             vdp_control_write (data);
         }
+    }
+
+    /* Minimal SDSC Debug Console */
+    if (addr == 0xfd && (memory_control & 0x04))
+    {
+        fprintf (stdout, "%c", data);
+        fflush (stdout);
     }
 }
 
@@ -211,25 +232,40 @@ static uint8_t sms_io_read (uint8_t addr)
     }
 }
 
-/* For now, load the Alex Kidd bios */
-int32_t sms_load_bios ()
+int32_t sms_load_rom (uint8_t **buffer, uint32_t *filesize, char *filename)
 {
-    FILE *bios_file = fopen ("../alex_kidd_bios.sms", "rb");
     uint32_t bytes_read = 0;
-    if (!bios_file)
+
+    /* Open ROM file */
+    FILE *rom_file = fopen (filename, "rb");
+    if (!rom_file)
     {
-        fprintf (stderr, "Error: Unable to load bios.\n");
-        return EXIT_FAILURE;
+        perror ("Error: Unable to open ROM");
+        return -1;
     }
 
-    while (bytes_read < (128 << 10))
+    /* Get ROM size */
+    fseek(rom_file, 0, SEEK_END);
+    *filesize = ftell(rom_file);
+    fseek(rom_file, 0, SEEK_SET);
+
+    /* Allocate memory */
+    *buffer = malloc (*filesize);
+    if (!*buffer)
     {
-        bytes_read += fread (bios + bytes_read, 1, (128 << 10) - bytes_read, bios_file);
+        perror ("Error: Unable to allocate memory for ROM.\n");
+        return -1;
     }
 
-    fclose (bios_file);
+    /* Copy to memory */
+    while (bytes_read < *filesize)
+    {
+        bytes_read += fread (*buffer + bytes_read, 1, *filesize - bytes_read, rom_file);
+    }
 
-    fprintf (stdout, "BIOS loaded.\n");
+    fclose (rom_file);
+
+    return EXIT_SUCCESS;
 }
 
 int main (int argc, char **argv)
@@ -262,10 +298,22 @@ int main (int argc, char **argv)
 
     vdp_init ();
 
-    if(sms_load_bios () == EXIT_FAILURE)
+    /* Load BIOS */
+    if (sms_load_rom (&bios, &bios_size, "../alex_kidd_bios.sms") == -1)
     {
         goto snepulator_close;
     }
+    fprintf (stdout, "%d KiB BIOS loaded.\n", bios_size >> 10);
+
+#if 1
+    /* Load cart */
+    /* if (sms_load_rom (&cart, &cart_size, "../../ROMs/Master System/ZEXSMS/zexdoc.sms") == -1) */
+    if (sms_load_rom (&cart, &cart_size, "../../ROMs/Master System/ZEXSMS/zexdoc_sdsc.sms") == -1)
+    {
+        goto snepulator_close;
+    }
+    fprintf (stdout, "%d KiB cart loaded.\n", cart_size >> 10);
+#endif
 
     z80_init (sms_memory_read, sms_memory_write, sms_io_read, sms_io_write);
 
@@ -274,6 +322,8 @@ int main (int argc, char **argv)
         vdp_dump ();
         /* goto snepulator_close; */
     }
+
+    fprintf (stdout, "EMULATION ENDED.\n");
 
     /* Loop until the window is closed */
     for (;;)
