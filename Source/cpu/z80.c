@@ -21,7 +21,7 @@ uint8_t (* io_read)     (uint8_t) = NULL;
 void    (* io_write)    (uint8_t, uint8_t) = NULL;
 
 /* DIAG */
-uint32_t instruction_count = 0;
+uint64_t instruction_count = 0;
 
 #define E 1 /* Extended */
 #define U 0 /* Unused */
@@ -149,10 +149,16 @@ uint32_t z80_init (uint8_t (* _memory_read) (uint16_t),
 #define SET_FLAGS_ADD_16(Y,X) { z80_regs.f = (z80_regs.f & (Z80_FLAG_OVERFLOW | Z80_FLAG_ZERO | Z80_FLAG_SIGN)) | \
                                              ((((uint32_t)Y + (uint32_t)X) & 0x10000) ? Z80_FLAG_CARRY : 0); }
 
+/* TODO: HALF */
+#define SET_FLAGS_SUB_16(Y,X) { z80_regs.f = (z80_regs.f & (Z80_FLAG_OVERFLOW | Z80_FLAG_ZERO | Z80_FLAG_SIGN)) | \
+                                             (Z80_FLAG_SUB) | \
+                                             ((((uint32_t)Y - (uint32_t)X) & 0x10000) ? Z80_FLAG_CARRY : 0); }
+
 /* TEMPORORY */
 #include "SDL2/SDL.h"
 extern SDL_Renderer *renderer;
 void vdp_render (void);
+static bool _abort_ = false;
 
 uint32_t z80_bit_instruction ()
 {
@@ -185,8 +191,9 @@ uint32_t z80_bit_instruction ()
         case 0x80: /* RES */ data &= ~(1 << bit); write_data = true; break;
         case 0xc0: /* SET */ data |= (1 << bit); write_data = true; break;
         default:
-            fprintf (stderr, "Unknown bit instruction: \"%s\" (%02x). %u instructions have been run.\n",
+            fprintf (stderr, "Unknown bit instruction: \"%s\" (%02x). %lu instructions have been run.\n",
                      z80_instruction_name_bits[instruction], instruction, instruction_count);
+            _abort_ = true;
             return EXIT_FAILURE;
     }
 
@@ -214,12 +221,14 @@ uint32_t z80_extended_instruction ()
     uint8_t instruction = memory_read (z80_regs.pc++);
     uint8_t param_l;
     uint8_t param_h;
+    uint16_t param_hl;
 
     switch (z80_instruction_size_extended[instruction])
     {
         case 3:
             param_l = memory_read (z80_regs.pc++);
             param_h = memory_read (z80_regs.pc++);
+            param_hl = (uint16_t) param_l + ((uint16_t) param_h << 8);
             break;
         case 2:
             param_l = memory_read (z80_regs.pc++);
@@ -230,34 +239,45 @@ uint32_t z80_extended_instruction ()
 
     switch (instruction)
     {
-        case 0x51: /* OUT (C),D */ io_write (z80_regs.c, z80_regs.d); break;
-        case 0x56: /* IM 1      */ interrupt_mode = 1; break;
-        case 0x79: /* OUT (C),A */ io_write (z80_regs.c, z80_regs.a); break;
-        case 0xa3: /* OUTI      */ { io_write (z80_regs.c, memory_read(z80_regs.hl)),
-                                     z80_regs.hl++; z80_regs.b--;
-                                     z80_regs.f = (z80_regs.f & Z80_FLAG_CARRY) |
+        case 0x42: /* SBC HL,BC  */ SET_FLAGS_SUB_16 (z80_regs.hl, (z80_regs.bc + (z80_regs.f & Z80_FLAG_CARRY ? 1 : 0)));
+                                    z80_regs.hl -= z80_regs.bc; break;
+        case 0x51: /* OUT (C),D  */ io_write (z80_regs.c, z80_regs.d); break;
+        case 0x52: /* SBC HL,DE  */ SET_FLAGS_SUB_16 (z80_regs.hl, (z80_regs.de + (z80_regs.f & Z80_FLAG_CARRY ? 1 : 0)));
+                                    z80_regs.hl -= z80_regs.de; break;
+        case 0x53: /* LD (**),DE */ memory_write (param_hl, z80_regs.e);
+                                    memory_write (param_hl + 1, z80_regs.d); break;
+        case 0x56: /* IM 1       */ interrupt_mode = 1; break;
+        case 0x5b: /* LD (DE),** */ memory_write (z80_regs.de, param_l);
+                                    memory_write (z80_regs.de + 1, param_h); break;
+        case 0x73: /* LD (**),SP */ memory_write (param_hl, z80_regs.sp_l);
+                                    memory_write (param_hl + 1, z80_regs.sp_h); break;
+        case 0x79: /* OUT (C),A  */ io_write (z80_regs.c, z80_regs.a); break;
+        case 0xa3: /* OUTI       */ { io_write (z80_regs.c, memory_read(z80_regs.hl)),
+                                      z80_regs.hl++; z80_regs.b--;
+                                      z80_regs.f = (z80_regs.f & Z80_FLAG_CARRY) |
                                                   (Z80_FLAG_SUB) |
                                                   (z80_regs.b == 0 ? Z80_FLAG_ZERO : 0);
-                                   } break;
+                                    } break;
 
-        case 0xb0: /* LDIR      */ { memory_write (z80_regs.de, memory_read (z80_regs.hl));
-                                     z80_regs.hl++; z80_regs.de++;
-                                     z80_regs.bc--;
-                                     z80_regs.pc -= z80_regs.bc ? 2 : 0;
-                                     z80_regs.f = (z80_regs.f & (Z80_FLAG_CARRY |
-                                                                 Z80_FLAG_ZERO  |
-                                                                 Z80_FLAG_SIGN)) |
-                                                  (z80_regs.bc ? Z80_FLAG_OVERFLOW : 0);
-                                   } break;
-        case 0xb3: /* OUTR      */ { io_write (z80_regs.c, memory_read(z80_regs.hl)),
-                                     z80_regs.hl++; z80_regs.b--;
-                                     z80_regs.pc -= z80_regs.b ? 2 : 0;
-                                     z80_regs.f = (z80_regs.f & Z80_FLAG_CARRY) |
-                                                  (Z80_FLAG_SUB | Z80_FLAG_ZERO); } break;
+        case 0xb0: /* LDIR       */ { memory_write (z80_regs.de, memory_read (z80_regs.hl));
+                                      z80_regs.hl++; z80_regs.de++;
+                                      z80_regs.bc--;
+                                      z80_regs.pc -= z80_regs.bc ? 2 : 0;
+                                      z80_regs.f = (z80_regs.f & (Z80_FLAG_CARRY |
+                                                                  Z80_FLAG_ZERO  |
+                                                                  Z80_FLAG_SIGN)) |
+                                                   (z80_regs.bc ? Z80_FLAG_OVERFLOW : 0);
+                                    } break;
+        case 0xb3: /* OUTR       */ { io_write (z80_regs.c, memory_read(z80_regs.hl)),
+                                      z80_regs.hl++; z80_regs.b--;
+                                      z80_regs.pc -= z80_regs.b ? 2 : 0;
+                                      z80_regs.f = (z80_regs.f & Z80_FLAG_CARRY) |
+                                                   (Z80_FLAG_SUB | Z80_FLAG_ZERO); } break;
 
         default:
-        fprintf (stderr, "Unknown extended instruction: \"%s\" (%02x). %u instructions have been run.\n",
+        fprintf (stderr, "Unknown extended instruction: \"%s\" (%02x). %lu instructions have been run.\n",
                  z80_instruction_name_extended[instruction], instruction, instruction_count);
+        _abort_ = true;
         return EXIT_FAILURE;
     }
 
@@ -270,11 +290,31 @@ uint32_t z80_run ()
     uint8_t param_l;
     uint8_t param_h;
     uint16_t param_hl;
+    bool debug_instruction = false;
 
     for (;;)
     {
         /* Fetch */
         instruction = memory_read (z80_regs.pc++);
+
+#if 0
+        if (instruction_count >= 0ull && instruction_count < 1000ull)
+        {
+            debug_instruction = true;
+        }
+        else
+        {
+            debug_instruction = false;
+        }
+#endif
+
+#if 1
+        if (instruction_count == 1000000)
+        {
+            fprintf (stdout, "[DEBUG(z80)]: Reached instruction goal.\n");
+            _abort_ = true;
+        }
+#endif
 
         switch (z80_instruction_size[instruction])
         {
@@ -282,11 +322,26 @@ uint32_t z80_run ()
                 param_l = memory_read (z80_regs.pc++);
                 param_h = memory_read (z80_regs.pc++);
                 param_hl = (uint16_t) param_l + ((uint16_t) param_h << 8);
+#if 1
+                if (debug_instruction) fprintf (stdout, "[DEBUG]: PC=%04x, INST=%s (%02x) %02x %02x. [a=%02x, c=%02x, e=%02x]\n",
+                     z80_regs.pc-3, z80_instruction_name[instruction],
+                     instruction, param_l, param_h, z80_regs.a, z80_regs.c, z80_regs.e);
+#endif
                 break;
             case 2:
                 param_l = memory_read (z80_regs.pc++);
+#if 1
+                if (debug_instruction) fprintf (stdout, "[DEBUG]: PC=%04x, INST=%s (%02x) %02x. [a=%02x, c=%02x, e=%02x]\n",
+                     z80_regs.pc-2, z80_instruction_name[instruction],
+                     instruction, param_l, z80_regs.a, z80_regs.c, z80_regs.e);
+#endif
                 break;
             default:
+#if 1
+                if (debug_instruction) fprintf (stdout, "[DEBUG]: PC=%04x, INST=%s (%02x). [a=%02x, c=%02x, e=%02x]\n",
+                     z80_regs.pc-1, z80_instruction_name[instruction],
+                     instruction, z80_regs.a, z80_regs.c, z80_regs.e);
+#endif
                 break;
         }
 
@@ -319,6 +374,7 @@ uint32_t z80_run ()
             case 0x11: /* LD DE,**   */ z80_regs.de = param_hl; break;
             case 0x12: /* LD (DE),a  */ memory_write (z80_regs.de, z80_regs.a); break;
             case 0x13: /* INC DE     */ z80_regs.de++; break;
+            case 0x14: /* INC D      */ z80_regs.d++; SET_FLAGS_INC (z80_regs.d); break;
             case 0x16: /* LD D,*     */ z80_regs.d = param_l; break;
             case 0x17: /* RLA        */ { uint8_t temp = z80_regs.a;
                                         z80_regs.a = (z80_regs.a << 1) + ((z80_regs.f & Z80_FLAG_CARRY) ? 0x01 : 0);
@@ -337,6 +393,8 @@ uint32_t z80_run ()
 
             case 0x20: /* JR NZ      */ z80_regs.pc += (z80_regs.f & Z80_FLAG_ZERO) ? 0 : (int8_t)param_l; break;
             case 0x21: /* LD HL,**   */ z80_regs.hl = param_hl; break;
+            case 0x22: /* LD (**),HL */ memory_write (param_hl, z80_regs.l);
+                                        memory_write (param_hl + 1, z80_regs.h); break;
             case 0x23: /* INC HL     */ z80_regs.hl++; break;
             case 0x25: /* DEC H      */ z80_regs.h--; SET_FLAGS_DEC (z80_regs.h); break;
             case 0x26: /* LD H,*     */ z80_regs.h = param_l; break;
@@ -358,6 +416,7 @@ uint32_t z80_run ()
             case 0x36: /* LD (HL),*  */ memory_write (z80_regs.hl, param_l); break;
             case 0x38: /* JR C,*     */ z80_regs.pc += (z80_regs.f & Z80_FLAG_CARRY) ? (int8_t) param_l : 0; break;
             case 0x3a: /* LD A,(**)  */ z80_regs.a = memory_read (param_hl); break;
+            case 0x3c: /* INC A      */ z80_regs.a++; SET_FLAGS_INC (z80_regs.a); break;
             case 0x3e: /* LD A,*     */ z80_regs.a = param_l; break;
             case 0x3f: /* CCF        */ z80_regs.f = (z80_regs.f & (Z80_FLAG_SIGN | Z80_FLAG_ZERO | Z80_FLAG_PARITY)) |
                                                      ((z80_regs.f & Z80_FLAG_CARRY) ? Z80_FLAG_HALF : Z80_FLAG_CARRY);
@@ -396,7 +455,7 @@ uint32_t z80_run ()
             case 0x5b: /* LD E,E     */ z80_regs.e = z80_regs.e; break;
             case 0x5c: /* LD E,H     */ z80_regs.e = z80_regs.h; break;
             case 0x5d: /* LD E,L     */ z80_regs.e = z80_regs.l; break;
-            case 0x5e: /* LD E,(HL)  */ z80_regs.c = memory_read(z80_regs.hl); break;
+            case 0x5e: /* LD E,(HL)  */ z80_regs.e = memory_read(z80_regs.hl); break;
             case 0x5f: /* LD E,A     */ z80_regs.e = z80_regs.a; break;
 
             case 0x60: /* LD H,B     */ z80_regs.h = z80_regs.b; break;
@@ -602,7 +661,7 @@ uint32_t z80_run ()
                     case 0xe5: /* PUSH IX    */ memory_write (--z80_regs.sp, z80_regs.ixh);
                                                 memory_write (--z80_regs.sp, z80_regs.ixl); break;
                     default:
-                    fprintf (stderr, "Unknown ix instruction: \"%s\" (%02x). %u instructions have been run.\n",
+                    fprintf (stderr, "Unknown ix instruction: \"%s\" (%02x). %lu instructions have been run.\n",
                              z80_instruction_name_ix[instruction], instruction, instruction_count);
                     return EXIT_FAILURE;
                 }
@@ -632,11 +691,13 @@ uint32_t z80_run ()
 
             case 0xf1: /* POP AF     */ z80_regs.f = memory_read (z80_regs.sp++);
                                         z80_regs.a = memory_read (z80_regs.sp++); break;
-            case 0xf3: /* DI         */ interrupt_enable = false; break;
+            case 0xf3: /* DI         */ fprintf (stdout, "[DEBUG]: Interrupts disable.\n");
+                                        interrupt_enable = false; break;
             case 0xf5: /* PUSH AF    */ memory_write (--z80_regs.sp, z80_regs.a);
                                         memory_write (--z80_regs.sp, z80_regs.f); break;
             case 0xf6: /* OR  A,*    */ z80_regs.a |= param_l; SET_FLAGS_LOGIC; break;
-            case 0xfb: /* EI         */ interrupt_enable = true; break;
+            case 0xfb: /* EI         */ fprintf (stdout, "[DEBUG]: Interrupts enable.\n");
+                                        interrupt_enable = true; break;
 
             case 0xfd: /* IY         */
                 instruction = memory_read (z80_regs.pc++);
@@ -659,7 +720,7 @@ uint32_t z80_run ()
                     case 0xe5: /* PUSH IY    */ memory_write (--z80_regs.sp, z80_regs.iyh);
                                                 memory_write (--z80_regs.sp, z80_regs.iyl); break;
                     default:
-                    fprintf (stderr, "Unknown iy instruction: \"%s\" (%02x). %u instructions have been run.\n",
+                    fprintf (stderr, "Unknown iy instruction: \"%s\" (%02x). %lu instructions have been run.\n",
                              z80_instruction_name_iy[instruction], instruction, instruction_count);
                     return EXIT_FAILURE;
                 }
@@ -671,7 +732,7 @@ uint32_t z80_run ()
                                         z80_regs.pc = 0x38; break;
 
             default:
-                fprintf (stderr, "Unknown instruction: \"%s\" (%02x). %u instructions have been run.\n",
+                fprintf (stderr, "Unknown instruction: \"%s\" (%02x). %lu instructions have been run.\n",
                          z80_instruction_name[instruction], instruction, instruction_count);
                 return EXIT_FAILURE;
         }
@@ -686,8 +747,17 @@ uint32_t z80_run ()
             SDL_Delay (10);
         }
 
+        /* TODO: Restore */
+#if 0
         /* DEBUG - Return for some debug */
-        if (instruction_count == 8000000)
+        if (instruction_count == 1000000000ll)
+        {
+            fprintf (stdout, "[DEBUG(z80)]: Reached instruction goal.\n");
+            return EXIT_FAILURE;
+        }
+#endif
+
+        if (_abort_)
             return EXIT_FAILURE;
     }
 }

@@ -5,12 +5,14 @@ typedef struct Z80_Regs_t {
     /* Special Purpose Registers */
     uint8_t  i;  /* Interrupt Vector */
     uint8_t  r;  /* Memory Refresh */
-    uint16_t sp; /* Stack Pointer */
     union {
         uint16_t pc; /* Program Counter */
+        uint16_t sp; /* Stack Pointer */
         struct {
             uint8_t pc_l;
             uint8_t pc_h;
+            uint8_t sp_l;
+            uint8_t sp_h;
         };
     };
     /* Main Register Set */
