@@ -6,8 +6,10 @@ typedef struct Z80_Regs_t {
     uint8_t  i;  /* Interrupt Vector */
     uint8_t  r;  /* Memory Refresh */
     union {
-        uint16_t pc; /* Program Counter */
-        uint16_t sp; /* Stack Pointer */
+        struct {
+            uint16_t pc; /* Program Counter */
+            uint16_t sp; /* Stack Pointer */
+        };
         struct {
             uint8_t pc_l;
             uint8_t pc_h;
