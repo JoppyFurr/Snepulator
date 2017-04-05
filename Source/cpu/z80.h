@@ -36,10 +36,10 @@ typedef struct Z80_Regs_t {
             uint8_t d;
             uint8_t l;
             uint8_t h;
-            uint8_t ixl;
-            uint8_t ixh;
-            uint8_t iyl;
-            uint8_t iyh;
+            uint8_t ix_l;
+            uint8_t ix_h;
+            uint8_t iy_l;
+            uint8_t iy_h;
         };
     };
     /* Alternate Register Set */
