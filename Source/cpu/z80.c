@@ -256,8 +256,8 @@ uint32_t z80_extended_instruction ()
         case 0x53: /* LD (**),DE */ memory_write (param.w,     z80_regs.e);
                                     memory_write (param.w + 1, z80_regs.d); break;
         case 0x56: /* IM 1       */ interrupt_mode = 1; break;
-        case 0x5b: /* LD (DE),** */ memory_write (z80_regs.de,     param.l);
-                                    memory_write (z80_regs.de + 1, param.h); break;
+        case 0x5b: /* LD DE,(**) */ z80_regs.e = memory_read (param.w);
+                                    z80_regs.d = memory_read (param.w + 1); break;
         case 0x73: /* LD (**),SP */ memory_write (param.w,     z80_regs.sp_l);
                                     memory_write (param.w + 1, z80_regs.sp_h); break;
         case 0x79: /* OUT (C),A  */ io_write (z80_regs.c, z80_regs.a); break;
