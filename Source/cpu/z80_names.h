@@ -50,7 +50,7 @@ const char *z80_instruction_name_extended[256] = {
     "in h,(c)", "out (c),h", "sbc hl,hl", "ld (**),hl", "neg", "retn", "im 0",   "rrd",
     "in l,(c)", "out (c),l", "adc hl,hl", "ld hl,(**)", "neg", "retn", "im 0/1", "rld",
     "in (c)",   "out (c),0", "sbc hl,sp", "ld (**),sp", "neg", "retn", "im 1",   "-",
-    "in a,(c)", "out (c),a", "adc hl,sp", "ld sp,(**)", "neg", "retn"  "im 2",   "-",
+    "in a,(c)", "out (c),a", "adc hl,sp", "ld sp,(**)", "neg", "retn", "im 2",   "-",
     "-",        "-",         "-",         "-",          "-",   "-",    "-",      "-",
     "-",        "-",         "-",         "-",          "-",   "-",    "-",      "-",
     "-",        "-",         "-",         "-",          "-",   "-",    "-",      "-",
