@@ -243,11 +243,22 @@ uint32_t z80_extended_instruction ()
         case 3:
             param.l = memory_read (z80_regs.pc++);
             param.h = memory_read (z80_regs.pc++);
+
+            if (debug_instruction) fprintf (stdout, "[DEBUG]:           INST=%02x %02x %02x,  %-12s\n",
+                 instruction, param.l, param.h,
+                 z80_instruction_name_extended[instruction]);
             break;
         case 2:
             param.l = memory_read (z80_regs.pc++);
+
+            if (debug_instruction) fprintf (stdout, "[DEBUG]:           INST=%02x %02x,     %-12s\n",
+                 instruction, param.l,
+                 z80_instruction_name_extended[instruction]);
             break;
         default:
+            if (debug_instruction) fprintf (stdout, "[DEBUG]:           INST=%02x,        %-12s\n",
+                 instruction,
+                 z80_instruction_name_extended[instruction]);
             break;
     }
 
@@ -481,24 +492,30 @@ uint32_t z80_run ()
                 param.l = memory_read (z80_regs.pc++);
                 param.h = memory_read (z80_regs.pc++);
 #if 1
-                if (debug_instruction) fprintf (stdout, "[DEBUG]: PC=%04x, INST=%s (%02x) %02x %02x. [a=%02x, c=%02x, e=%02x]\n",
-                     z80_regs.pc-3, z80_instruction_name[instruction],
-                     instruction, param.l, param.h, z80_regs.a, z80_regs.c, z80_regs.e);
+                if (debug_instruction) fprintf (stdout, "[DEBUG]: PC=%04x,  INST=%02x %02x %02x,  %-12s"
+                                                                " [af=%04x, bc=%04x, de=%04x, hl=%04x]\n",
+                     z80_regs.pc-3, instruction, param.l, param.h,
+                     z80_instruction_name[instruction],
+                     z80_regs.af, z80_regs.bc, z80_regs.de, z80_regs.hl);
 #endif
                 break;
             case 2:
                 param.l = memory_read (z80_regs.pc++);
 #if 1
-                if (debug_instruction) fprintf (stdout, "[DEBUG]: PC=%04x, INST=%s (%02x) %02x. [a=%02x, c=%02x, e=%02x]\n",
-                     z80_regs.pc-2, z80_instruction_name[instruction],
-                     instruction, param.l, z80_regs.a, z80_regs.c, z80_regs.e);
+                if (debug_instruction) fprintf (stdout, "[DEBUG]: PC=%04x,  INST=%02x %02x,     %-12s"
+                                                                " [af=%04x, bc=%04x, de=%04x, hl=%04x]\n",
+                     z80_regs.pc-2, instruction, param.l,
+                     z80_instruction_name[instruction],
+                     z80_regs.af, z80_regs.bc, z80_regs.de, z80_regs.hl);
 #endif
                 break;
             default:
 #if 1
-                if (debug_instruction) fprintf (stdout, "[DEBUG]: PC=%04x, INST=%s (%02x). [a=%02x, c=%02x, e=%02x]\n",
-                     z80_regs.pc-1, z80_instruction_name[instruction],
-                     instruction, z80_regs.a, z80_regs.c, z80_regs.e);
+                if (debug_instruction) fprintf (stdout, "[DEBUG]: PC=%04x,  INST=%02x,        %-12s"
+                                                                " [af=%04x, bc=%04x, de=%04x, hl=%04x]\n",
+                     z80_regs.pc-1, instruction,
+                     z80_instruction_name[instruction],
+                     z80_regs.af, z80_regs.bc, z80_regs.de, z80_regs.hl);
 #endif
                 break;
         }
