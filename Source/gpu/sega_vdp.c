@@ -280,7 +280,7 @@ void vdp_render (void)
 
         /* TMS9918 mode */
         default:
-            fprintf (stderr, "TMS9918 modes not implemented.\n");
+            /* fprintf (stderr, "TMS9918 modes not implemented.\n"); */
             break;
     }
 }
