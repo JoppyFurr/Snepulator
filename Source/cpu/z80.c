@@ -262,6 +262,8 @@ uint32_t z80_extended_instruction ()
                                                  (z80_regs.a == 0              ? Z80_FLAG_ZERO     : 0) |
                                                  (z80_regs.a & 0x80            ? Z80_FLAG_SIGN     : 0);
                                     break;
+        case 0x4a: /* ADC HL,BC  */ SET_FLAGS_ADD_16 (z80_regs.hl, (z80_regs.bc + ((z80_regs.f & Z80_FLAG_CARRY) ? 1 : 0)));
+                                    z80_regs.hl +=   z80_regs.bc + ((z80_regs.f & Z80_FLAG_CARRY) ? 1 : 0); break;
         case 0x4b: /* LD BC,(**) */ z80_regs.c = memory_read (param.w);
                                     z80_regs.b = memory_read (param.w + 1); break;
 
@@ -271,15 +273,21 @@ uint32_t z80_extended_instruction ()
         case 0x53: /* LD (**),DE */ memory_write (param.w,     z80_regs.e);
                                     memory_write (param.w + 1, z80_regs.d); break;
         case 0x56: /* IM 1       */ interrupt_mode = 1; break;
+        case 0x5a: /* ADC HL,DE  */ SET_FLAGS_ADD_16 (z80_regs.hl, (z80_regs.de + ((z80_regs.f & Z80_FLAG_CARRY) ? 1 : 0)));
+                                    z80_regs.hl +=   z80_regs.de + ((z80_regs.f & Z80_FLAG_CARRY) ? 1 : 0); break;
         case 0x5b: /* LD DE,(**) */ z80_regs.e = memory_read (param.w);
                                     z80_regs.d = memory_read (param.w + 1); break;
 
+        case 0x62: /* SBC HL,HL  */ SET_FLAGS_SUB_16 (z80_regs.hl, (z80_regs.hl + ((z80_regs.f & Z80_FLAG_CARRY) ? 1 : 0)));
+                                    z80_regs.hl -=   z80_regs.hl + ((z80_regs.f & Z80_FLAG_CARRY) ? 1 : 0); break;
         case 0x67: /* RRD        */ temp_1 = memory_read (z80_regs.hl);
                                     temp_2 = z80_regs.a;
                                     z80_regs.a &= 0xf0; z80_regs.a |= (temp_1 * 0x0f);
                                     temp_1 >>= 4; temp_1 |= (temp_2 << 4);
                                     SET_FLAGS_RRD;
                                     break;
+        case 0x6a: /* ADC HL,HL  */ SET_FLAGS_ADD_16 (z80_regs.hl, (z80_regs.hl + ((z80_regs.f & Z80_FLAG_CARRY) ? 1 : 0)));
+                                    z80_regs.hl +=   z80_regs.hl + ((z80_regs.f & Z80_FLAG_CARRY) ? 1 : 0); break;
         case 0x6f: /* RLD        */ temp_1 = memory_read (z80_regs.hl);
                                     temp_2 = z80_regs.a;
                                     z80_regs.a &= 0xf0; z80_regs.a |= (temp_1 >> 4);
@@ -287,8 +295,12 @@ uint32_t z80_extended_instruction ()
                                     SET_FLAGS_RRD;
                                     break;
 
+        case 0x72: /* SBC HL,SP  */ SET_FLAGS_SUB_16 (z80_regs.hl, (z80_regs.sp + ((z80_regs.f & Z80_FLAG_CARRY) ? 1 : 0)));
+                                    z80_regs.hl -=   z80_regs.sp + ((z80_regs.f & Z80_FLAG_CARRY) ? 1 : 0); break;
         case 0x73: /* LD (**),SP */ memory_write (param.w,     z80_regs.sp_l);
                                     memory_write (param.w + 1, z80_regs.sp_h); break;
+        case 0x7a: /* ADC HL,SP  */ SET_FLAGS_ADD_16 (z80_regs.hl, (z80_regs.sp + ((z80_regs.f & Z80_FLAG_CARRY) ? 1 : 0)));
+                                    z80_regs.hl +=   z80_regs.sp + ((z80_regs.f & Z80_FLAG_CARRY) ? 1 : 0); break;
         case 0x79: /* OUT (C),A  */ io_write (z80_regs.c, z80_regs.a); break;
         case 0x7b: /* LD SP,(**) */ z80_regs.sp_l = memory_read (param.w);
                                     z80_regs.sp_h = memory_read (param.w + 1); break;
@@ -660,6 +672,77 @@ uint32_t z80_bit_instruction ()
     return 0;
 }
 
+void z80_instruction_daa ()
+{   /* TODO: Set flags */
+    if (!(z80_regs.f & Z80_FLAG_SUB))
+    {
+        if      (!(z80_regs.f & Z80_FLAG_CARRY) && (z80_regs.a & 0xf0 <= 0x90) && !(z80_regs.f & Z80_FLAG_HALF) && (0x0f <= 0x09))
+        {
+            /* Nothing to do */
+        }
+        else if (!(z80_regs.f & Z80_FLAG_CARRY) && (z80_regs.a & 0xf0 <= 0x80) && !(z80_regs.f & Z80_FLAG_HALF) && (0x0f >= 0x0A))
+        {
+            z80_regs.a += 0x06;
+        }
+        else if (!(z80_regs.f & Z80_FLAG_CARRY) && (z80_regs.a & 0xf0 <= 0x90) &&  (z80_regs.f & Z80_FLAG_HALF) && (0x0f <= 0x03))
+        {
+            z80_regs.a += 0x06;
+        }
+        else if (!(z80_regs.f & Z80_FLAG_CARRY) && (z80_regs.a & 0xf0 >= 0xA0) && !(z80_regs.f & Z80_FLAG_HALF) && (0x0f <= 0x09))
+        {
+            z80_regs.a += 0x60;
+            z80_regs.f |= Z80_FLAG_CARRY;
+        }
+        else if (!(z80_regs.f & Z80_FLAG_CARRY) && (z80_regs.a & 0xf0 >= 0x90) && !(z80_regs.f & Z80_FLAG_HALF) && (0x0f >= 0x0A))
+        {
+            z80_regs.a += 0x66;
+            z80_regs.f |= Z80_FLAG_CARRY;
+        }
+        else if (!(z80_regs.f & Z80_FLAG_CARRY) && (z80_regs.a & 0xf0 >= 0xA0) &&  (z80_regs.f & Z80_FLAG_HALF) && (0x0f <= 0x03))
+        {
+            z80_regs.a += 0x66;
+            z80_regs.f |= Z80_FLAG_CARRY;
+        }
+        else if ( (z80_regs.f & Z80_FLAG_CARRY) && (z80_regs.a & 0xf0 <= 0x20) && !(z80_regs.f & Z80_FLAG_HALF) && (0x0f <= 0x09))
+        {
+            z80_regs.a += 0x60;
+            z80_regs.f |= Z80_FLAG_CARRY;
+        }
+        else if ( (z80_regs.f & Z80_FLAG_CARRY) && (z80_regs.a & 0xf0 <= 0x20) && !(z80_regs.f & Z80_FLAG_HALF) && (0x0f >= 0x0A))
+        {
+            z80_regs.a += 0x66;
+            z80_regs.f |= Z80_FLAG_CARRY;
+        }
+        else if ( (z80_regs.f & Z80_FLAG_CARRY) && (z80_regs.a & 0xf0 <= 0x30) &&  (z80_regs.f & Z80_FLAG_HALF) && (0x0f <= 0x03))
+        {
+            z80_regs.a += 0x66;
+            z80_regs.f |= Z80_FLAG_CARRY;
+        }
+    }
+    else
+    {
+        if      (!(z80_regs.f & Z80_FLAG_CARRY) && (z80_regs.a & 0xf0 <= 0x90) && !(z80_regs.f & Z80_FLAG_HALF) && (0x0f <= 0x09))
+        {
+            /* Nothing to do */
+        }
+        else if (!(z80_regs.f & Z80_FLAG_CARRY) && (z80_regs.a & 0xf0 <= 0x80) &&  (z80_regs.f & Z80_FLAG_HALF) && (0x0f >= 0x06))
+        {
+            z80_regs.a += 0xfa;
+        }
+        else if ( (z80_regs.f & Z80_FLAG_CARRY) && (z80_regs.a & 0xf0 >= 0x70) && !(z80_regs.f & Z80_FLAG_HALF) && (0x0f <= 0x09))
+        {
+            z80_regs.a += 0xa0;
+            z80_regs.f |= Z80_FLAG_CARRY;
+        }
+        else if ( (z80_regs.f & Z80_FLAG_CARRY) && ((z80_regs.a & 0xf0 == 0x60) ||
+                                                  (z80_regs.a & 0xf0 == 0x70)) &&  (z80_regs.f & Z80_FLAG_HALF) && (0x0f >= 0x06))
+        {
+            z80_regs.a += 0x9a;
+            z80_regs.f |= Z80_FLAG_CARRY;
+        }
+    }
+}
+
 uint32_t z80_instruction ()
 {
     uint8_t instruction;
@@ -762,6 +845,7 @@ uint32_t z80_instruction ()
         case 0x24: /* INC H      */ z80_regs.h++; SET_FLAGS_INC (z80_regs.h); break;
         case 0x25: /* DEC H      */ z80_regs.h--; SET_FLAGS_DEC (z80_regs.h); break;
         case 0x26: /* LD H,*     */ z80_regs.h = param.l; break;
+        case 0x27: /* DAA        */ z80_instruction_daa (); break;
         case 0x28: /* JR Z       */ z80_regs.pc += (z80_regs.f & Z80_FLAG_ZERO) ? (int8_t)param.l : 0; break;
         case 0x29: /* ADD HL,HL  */ SET_FLAGS_ADD_16 (z80_regs.hl, z80_regs.hl); z80_regs.hl += z80_regs.hl; break;
         case 0x2a: /* LD HL,(**) */ z80_regs.l = memory_read (param.w);
@@ -784,6 +868,7 @@ uint32_t z80_instruction ()
                                     memory_write (z80_regs.hl, temp);
                                     SET_FLAGS_DEC (temp); break;
         case 0x36: /* LD (HL),*  */ memory_write (z80_regs.hl, param.l); break;
+        case 0x37: /* SCF        */ z80_regs.f |= Z80_FLAG_CARRY; break;
         case 0x38: /* JR C,*     */ z80_regs.pc += (z80_regs.f & Z80_FLAG_CARRY) ? (int8_t) param.l : 0; break;
         case 0x39: /* ADD HL,SP  */ SET_FLAGS_ADD_16 (z80_regs.hl, z80_regs.sp); z80_regs.hl += z80_regs.sp; break;
         case 0x3a: /* LD A,(**)  */ z80_regs.a = memory_read (param.w); break;
