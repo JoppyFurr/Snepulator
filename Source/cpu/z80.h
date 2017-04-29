@@ -63,13 +63,25 @@ typedef struct Z80_Regs_t {
     };
 } Z80_Regs;
 
-#define Z80_FLAG_CARRY           (1 << 0)
-#define Z80_FLAG_SUB             (1 << 1)
-#define Z80_FLAG_PARITY          (1 << 2)
-#define Z80_FLAG_OVERFLOW        (1 << 2)
-#define Z80_FLAG_HALF            (1 << 4)
-#define Z80_FLAG_ZERO            (1 << 6)
-#define Z80_FLAG_SIGN            (1 << 7)
+#define BIT_0               (1 << 0)
+#define BIT_1               (1 << 1)
+#define BIT_2               (1 << 2)
+#define BIT_3               (1 << 3)
+#define BIT_4               (1 << 4)
+#define BIT_5               (1 << 5)
+#define BIT_6               (1 << 6)
+#define BIT_7               (1 << 7)
+
+/* Z80 FLAGS */
+#define Z80_FLAG_CARRY      BIT_0
+#define Z80_FLAG_SUB        BIT_1
+#define Z80_FLAG_PARITY     BIT_2
+#define Z80_FLAG_OVERFLOW   BIT_2
+#define Z80_FLAG_X          BIT_3
+#define Z80_FLAG_HALF       BIT_4
+#define Z80_FLAG_Y          BIT_5
+#define Z80_FLAG_ZERO       BIT_6
+#define Z80_FLAG_SIGN       BIT_7
 
 /* Function declarations */
 uint32_t z80_init (uint8_t (* _memory_read) (uint16_t),
