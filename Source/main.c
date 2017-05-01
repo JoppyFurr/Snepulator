@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <errno.h>
 
 #include "SDL2/SDL.h"
@@ -192,7 +193,7 @@ static uint8_t sms_io_read (uint8_t addr)
         if ((addr & 0x01) == 0x00)
         {
             /* V Counter */
-            fprintf (stderr, "Error: V Counter not implemented.\n");
+            return vdp_get_v_counter ();
         }
         else
         {

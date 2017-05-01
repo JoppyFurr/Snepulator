@@ -22,6 +22,7 @@ extern SDL_Renderer *renderer;
 
 /* VDP State */
 static Vdp_Regs vdp_regs;
+static uint8_t v_counter = 0;
 static uint8_t cram [VDP_CRAM_SIZE];
 static uint8_t vram [VDP_VRAM_SIZE];
 
@@ -158,9 +159,13 @@ void vdp_data_write (uint8_t value)
 
 uint8_t vdp_status_read ()
 {
+    uint8_t status = vdp_regs.status;
     first_byte_received = false;
 
-    fprintf (stdout,"[DEBUG(vdp)]: vdp_status_read () not implemented.\n");
+    /* Clear on read */
+    vdp_regs.status = 0x00;
+
+    return status;
 }
 
 void vdp_control_write (uint8_t value)
@@ -187,6 +192,15 @@ void vdp_control_write (uint8_t value)
                 if ((value & 0x0f) <= 10)
                 {
                     ((uint8_t *) &vdp_regs) [value & 0x0f] = vdp_regs.address & 0x00ff;
+
+                    if ((value & 0x0f) == 0x01 && ((vdp_regs.address & 0x00ff) & (1 << 5)))
+                    {
+                        fprintf (stdout, "[DEBUG(vdp)]: Frame interrupts enabled.\n");
+                    }
+                    else if ((value & 0x0f) == 0x00 && ((vdp_regs.address & 0x00ff) & (1 << 4)))
+                    {
+                        fprintf (stdout, "[DEBUG(vdp)]: Line interrupts enabled.\n");
+                    }
                 }
                 break;
             case VDP_CODE_CRAM_WRITE:
@@ -219,6 +233,53 @@ void vdp_render_pattern (Vdp_Pattern *pattern_base, Vdp_Palette palette, uint32_
             SDL_RenderDrawPoint (renderer, x + pattern_x, y + pattern_y);
         }
     }
+}
+
+/* TODO: For now, assuming 256x192 PAL */
+/* 50 frames per second, 313 scanlines per frame */
+
+/* 192 - Active display
+ *  48 - Bottom border
+ *   3 - Bottom blanking
+ *   3 - Vertical blanking
+ *  13 - Top blanking
+ *  54 - Top border
+ *
+ *  0x00 -> 0xf2, 0xba -> 0xff
+ */
+
+#define SMS_CLOCK_RATE_PAL  3546895
+#define SMS_CLOCK_PER_FRAME_PAL (SMS_CLOCK_RATE_PAL / 50)
+
+void vdp_clock_update (uint64_t cycles)
+{
+    uint16_t v_counter_16 = (cycles % SMS_CLOCK_PER_FRAME_PAL) / 227; /* Dividing by 227 roughly maps from 0 -> 312,
+                                                                         one value per scanline */
+    if (v_counter_16 <= 0xf2)
+        v_counter = v_counter_16;
+    else
+        v_counter = v_counter_16 - 0x39;
+
+    /* Frame interrupt */
+    if (v_counter_16 == 0xc1) /* TODO: This constant is only for 192-line mode */
+        vdp_regs.status |= (1 << 7);
+
+    /* TODO: Line interrupt */
+}
+
+uint8_t vdp_get_v_counter (void)
+{
+    return v_counter;
+}
+
+/* TODO */
+bool vdp_get_interrupt (void)
+{
+    /* Frame interrupt */
+    if ((vdp_regs.mode_ctrl_2 & (1 << 5)) && (vdp_regs.status & VDP_STATUS_INT))
+        return true;
+
+    return false;
 }
 
 void vdp_render (void)
