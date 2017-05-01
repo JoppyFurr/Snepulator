@@ -13,8 +13,7 @@
 
 /* State */
 Z80_Regs z80_regs;
-uint8_t interrupt_mode;
-bool    interrupt_enable = true;
+uint64_t z80_cycle = 0;
 
 /* Function pointers for accessing the rest of the system */
 uint8_t (* memory_read) (uint16_t) = NULL;
@@ -23,6 +22,10 @@ uint8_t (* io_read)     (uint8_t) = NULL;
 void    (* io_write)    (uint8_t, uint8_t) = NULL;
 
 /* TODO: For IX/IY, can we do a SWAP (IX,HL) before/after the instruction? */
+
+/* TODO: Note: Interrupts should not be accepted until after the instruction following EI */
+
+/* TODO: Cycle counts for interrupt response */
 
 /* DIAG */
 uint64_t instruction_count = 0;
@@ -49,6 +52,28 @@ static const uint8_t z80_instruction_size[256] = {
     1, 1, 3, 1, 3, 1, 2, 1, 1, 1, 3, 1, 3, E, 2, 1,
 };
 
+/* TODO: Implement variable cycle-lengths */
+#define V 0 /* Variable */
+static const uint8_t z80_instruction_cycles[256] = {
+     4, 10,  7,  6,  4,  4,  7,  4,  4, 11,  7,  6,  4,  4,  7,  4,
+     V, 10,  7,  6,  4,  4,  7,  4, 12, 11,  7,  6,  4,  4,  7,  4,
+     V, 10, 16,  6,  4,  4,  7,  4,  V, 11, 16,  6,  4,  4,  7,  4,
+     V, 10, 13,  6, 11, 11, 10,  4,  V, 11, 13,  6,  4,  4,  7,  4,
+     4,  4,  4,  4,  4,  4,  7,  4,  4,  4,  4,  4,  4,  4,  7,  4,
+     4,  4,  4,  4,  4,  4,  7,  4,  4,  4,  4,  4,  4,  4,  7,  4,
+     4,  4,  4,  4,  4,  4,  7,  4,  4,  4,  4,  4,  4,  4,  7,  4,
+     7,  7,  7,  7,  7,  7,  4,  7,  4,  4,  4,  4,  4,  4,  7,  4,
+     4,  4,  4,  4,  4,  4,  7,  4,  4,  4,  4,  4,  4,  4,  7,  4,
+     4,  4,  4,  4,  4,  4,  7,  4,  4,  4,  4,  4,  4,  4,  7,  4,
+     4,  4,  4,  4,  4,  4,  7,  4,  4,  4,  4,  4,  4,  4,  7,  4,
+     4,  4,  4,  4,  4,  4,  7,  4,  4,  4,  4,  4,  4,  4,  7,  4,
+     V, 10, 10, 10,  V, 11,  7, 11,  V, 10, 10,  V,  V, 17,  7, 11,
+     V, 10, 10, 11,  V, 11,  7, 11,  V,  4, 10, 11,  V,  V,  7, 11,
+     V, 10, 10, 19,  V, 11,  7, 11,  V,  4, 10,  4,  V,  V,  7, 11,
+     V, 10, 10,  4,  V, 11,  7, 11,  V,  6, 10,  4,  V,  V,  7, 11,
+};
+
+/* TODO: Implement cycle lengths for extended instructions */
 static const uint8_t z80_instruction_size_extended[256] = {
     U, U, U, U, U, U, U, U, U, U, U, U, U, U, U, U,
     U, U, U, U, U, U, U, U, U, U, U, U, U, U, U, U,
@@ -68,6 +93,7 @@ static const uint8_t z80_instruction_size_extended[256] = {
     U, U, U, U, U, U, U, U, U, U, U, U, U, U, U, U,
 };
 
+/* TODO: Implement cycle lengths for IX/IY and bit instructions */
 static const uint8_t z80_instruction_size_ix[256] = {
     U, U, U, U, U, U, U, U, U, 1, U, U, U, U, U, U,
     U, U, U, U, U, U, U, U, U, 1, U, U, U, U, U, U,
@@ -117,7 +143,10 @@ uint32_t z80_init (uint8_t (* _memory_read) (uint16_t),
     io_read      = _io_read;
     io_write     = _io_write;
 
+    /* Reset values */
     memset (&z80_regs, 0, sizeof (Z80_Regs));
+    z80_regs.af = 0xffff;
+    z80_regs.sp = 0xffff;
 }
 
 #define SET_FLAGS_LOGIC  { z80_regs.f = (uint8_even_parity[z80_regs.a] ? Z80_FLAG_PARITY : 0) | \
@@ -272,7 +301,7 @@ uint32_t z80_extended_instruction ()
                                     z80_regs.hl -=                 (z80_regs.de + (z80_regs.f & Z80_FLAG_CARRY ? 1 : 0)); break;
         case 0x53: /* LD (**),DE */ memory_write (param.w,     z80_regs.e);
                                     memory_write (param.w + 1, z80_regs.d); break;
-        case 0x56: /* IM 1       */ interrupt_mode = 1; break;
+        case 0x56: /* IM 1       */ fprintf (stdout, "[DEBUG]: Interrupt mode = 1.\n"); z80_regs.im = 1; break;
         case 0x5a: /* ADC HL,DE  */ SET_FLAGS_ADD_16 (z80_regs.hl, (z80_regs.de + ((z80_regs.f & Z80_FLAG_CARRY) ? 1 : 0)));
                                     z80_regs.hl +=   z80_regs.de + ((z80_regs.f & Z80_FLAG_CARRY) ? 1 : 0); break;
         case 0x5b: /* LD DE,(**) */ z80_regs.e = memory_read (param.w);
@@ -1172,12 +1201,12 @@ uint32_t z80_instruction ()
         case 0xf1: /* POP AF     */ z80_regs.f = memory_read (z80_regs.sp++);
                                     z80_regs.a = memory_read (z80_regs.sp++); break;
         case 0xf3: /* DI         */ /* fprintf (stdout, "[DEBUG]: Interrupts disable.\n"); */
-                                    interrupt_enable = false; break;
+                                    z80_regs.iff1 = false; z80_regs.iff2 = false; break;
         case 0xf5: /* PUSH AF    */ memory_write (--z80_regs.sp, z80_regs.a);
                                     memory_write (--z80_regs.sp, z80_regs.f); break;
         case 0xf6: /* OR  A,*    */ z80_regs.a |= param.l; SET_FLAGS_LOGIC; break;
         case 0xfb: /* EI         */ fprintf (stdout, "[DEBUG]: Interrupts enable.\n");
-                                    interrupt_enable = true; break;
+                                    z80_regs.iff1 = true; z80_regs.iff2 = true; break;
 
         case 0xfd: /* IY         */ z80_regs.iy = z80_ix_iy_instruction (z80_regs.iy); break;
 
@@ -1191,7 +1220,15 @@ uint32_t z80_instruction ()
                      z80_instruction_name[instruction], instruction, instruction_count);
             _abort_ = true;
     }
+
+    z80_cycle += z80_instruction_cycles [instruction];
 }
+
+/* TODO: Move these somewhere SMS-specific */
+extern void vdp_clock_update (uint64_t cycles);
+extern bool vdp_get_interrupt (void);
+#define SMS_CLOCK_RATE_PAL  3546895
+#define SMS_CLOCK_RATE_NTSC 3579545
 
 uint32_t z80_run ()
 {
@@ -1217,15 +1254,37 @@ uint32_t z80_run ()
         }
 #endif
         z80_instruction ();
-
         instruction_count++;
 
-        /* TODO: Once instructions are implemented, get timing sorted */
-        if (instruction_count % 600000 == 0)
+        /* Time has passed, update the VDP state */
+        vdp_clock_update (z80_cycle);
+
+        /* Check for interrupts */
+        if (z80_regs.iff1 && vdp_get_interrupt ())
+        {
+            z80_regs.iff1 = false;
+            z80_regs.iff2 = false;
+
+            switch (z80_regs.im)
+            {
+                case 1:
+                    /* RST 0x38 */
+                    memory_write (--z80_regs.sp, z80_regs.pc_h);
+                    memory_write (--z80_regs.sp, z80_regs.pc_l);
+                    z80_regs.pc = 0x38;
+                    break;
+                default:
+                    fprintf (stderr, "Unknown interrupt mode %d.\n", z80_regs.im);
+                    _abort_ = true;
+            }
+        }
+
+        /* TODO: Rather than SMS cycles, we should update the display based on host VSYNC */
+        if (z80_cycle % (SMS_CLOCK_RATE_PAL / 60) == 0)
         {
             vdp_render ();
             SDL_RenderPresent (renderer);
-            SDL_Delay (2);
+            SDL_Delay (10);
         }
 
         if (_abort_)

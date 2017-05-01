@@ -61,6 +61,9 @@ typedef struct Z80_Regs_t {
             uint8_t alt_h;
         };
     };
+    uint8_t im;
+    bool iff1;
+    bool iff2;
 } Z80_Regs;
 
 #define BIT_0               (1 << 0)
