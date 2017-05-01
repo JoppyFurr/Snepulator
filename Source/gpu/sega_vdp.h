@@ -28,6 +28,7 @@ typedef struct Vdp_Regs_t {
     uint8_t code;
     uint16_t address;
     uint8_t read_buffer;
+    uint8_t status;
 } Vdp_Regs;
 
 typedef struct Vdp_Pattern_t {
@@ -40,6 +41,7 @@ typedef struct Vdp_Pattern_t {
 
 /* Register bits */
 #define VDP_MODE_CTRL_1_MODE_4  (1 << 2)
+#define VDP_STATUS_INT (1 << 7)
 
 /* Functions */
 uint8_t vdp_data_read ();
@@ -50,3 +52,6 @@ void vdp_control_write (uint8_t value);
 void vdp_init (void);
 void vdp_dump (void);
 void vdp_render (void);
+void vdp_clock_update (uint64_t cycles);
+bool vdp_get_interrupt (void);
+uint8_t vdp_get_v_counter (void);
