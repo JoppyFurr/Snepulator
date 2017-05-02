@@ -1304,6 +1304,7 @@ extern bool vdp_get_interrupt (void);
 
 uint32_t z80_run ()
 {
+    uint64_t next_frame_cycle = 0;
     for (;;)
     {
 
@@ -1352,7 +1353,7 @@ uint32_t z80_run ()
         }
 
         /* TODO: Rather than SMS cycles, we should update the display based on host VSYNC */
-        if (z80_cycle % (SMS_CLOCK_RATE_PAL / 60) == 0)
+        if (z80_cycle >= next_frame_cycle)
         {
             /* Check input */
             SDL_Event event;
@@ -1368,6 +1369,8 @@ uint32_t z80_run ()
             vdp_render ();
             SDL_RenderPresent (renderer);
             SDL_Delay (10);
+
+            next_frame_cycle = z80_cycle + (SMS_CLOCK_RATE_PAL / 50);
         }
 
         if (_abort_)
