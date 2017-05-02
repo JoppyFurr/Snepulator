@@ -1282,6 +1282,17 @@ uint32_t z80_run ()
         /* TODO: Rather than SMS cycles, we should update the display based on host VSYNC */
         if (z80_cycle % (SMS_CLOCK_RATE_PAL / 60) == 0)
         {
+            /* Check input */
+            SDL_Event event;
+
+            while (SDL_PollEvent (&event))
+            {
+                if (event.type == SDL_QUIT)
+                {
+                    _abort_ = true;
+                }
+            }
+
             vdp_render ();
             SDL_RenderPresent (renderer);
             SDL_Delay (10);
