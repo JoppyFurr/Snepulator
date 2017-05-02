@@ -271,8 +271,32 @@ int32_t sms_load_rom (uint8_t **buffer, uint32_t *filesize, char *filename)
 
 int main (int argc, char **argv)
 {
+    char *bios_filename = NULL;
+    char *cart_filename = NULL;
+
     printf ("Snepulator.\n");
     printf ("Built on " BUILD_DATE ".\n");
+
+    /* Parse all CLI arguments */
+    while (*(++argv))
+    {
+        if (!strcmp ("-b", *argv))
+        {
+            /* BIOS to load */
+            bios_filename = *(++argv);
+        }
+        else if (!strcmp ("-r", *argv))
+        {
+            /* ROM to load */
+            cart_filename = *(++argv);
+        }
+        else
+        {
+            /* Display usage */
+            fprintf (stdout, "Usage: Snepulator [-b bios.sms] [-r rom.sms]\n");
+            return EXIT_FAILURE;
+        }
+    }
 
     /* Initialize SDL */
     if (SDL_Init (SDL_INIT_EVERYTHING) == -1)
@@ -300,21 +324,21 @@ int main (int argc, char **argv)
     vdp_init ();
 
     /* Load BIOS */
-    if (sms_load_rom (&bios, &bios_size, "../alex_kidd_bios.sms") == -1)
+    if (sms_load_rom (&bios, &bios_size, bios_filename) == -1)
     {
         goto snepulator_close;
     }
-    fprintf (stdout, "%d KiB BIOS loaded.\n", bios_size >> 10);
+    fprintf (stdout, "%d KiB BIOS %s loaded.\n", bios_size >> 10, bios_filename);
 
-#if 1
     /* Load cart */
-    /* if (sms_load_rom (&cart, &cart_size, "../../ROMs/Master System/ZEXSMS/zexdoc.sms") == -1) */
-    if (sms_load_rom (&cart, &cart_size, "../../ROMs/Master System/ZEXSMS/zexdoc_sdsc.sms") == -1)
+    if (cart_filename)
     {
-        goto snepulator_close;
+        if (sms_load_rom (&cart, &cart_size, cart_filename) == -1)
+        {
+            goto snepulator_close;
+        }
+        fprintf (stdout, "%d KiB cart %s loaded.\n", cart_size >> 10, cart_filename);
     }
-    fprintf (stdout, "%d KiB cart loaded.\n", cart_size >> 10);
-#endif
 
     z80_init (sms_memory_read, sms_memory_write, sms_io_read, sms_io_write);
 
