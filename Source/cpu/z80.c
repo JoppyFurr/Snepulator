@@ -190,16 +190,9 @@ uint32_t z80_init (uint8_t (* _memory_read) (uint16_t),
                                              ((((uint32_t)Y - (uint32_t)X) & 0x10000)                      ? Z80_FLAG_CARRY : 0) | \
                                              ((((uint32_t)(Y & 0x0fff) - (uint32_t)(X & 0x0fff)) & 0x1000) ? Z80_FLAG_HALF  : 0); }
 
-#define SET_FLAGS_CPD(X) { z80_regs.f = (z80_regs.f                                & Z80_FLAG_CARRY       ) | \
+#define SET_FLAGS_CPD_CPI(X) { z80_regs.f = (z80_regs.f                            & Z80_FLAG_CARRY       ) | \
                                         (                                            Z80_FLAG_SUB         ) | \
-                                        ((z80_regs.bc - 1)                         ? Z80_FLAG_OVERFLOW : 0) | \
-                                        (((z80_regs.a & 0x0f) - (X & 0x0f)) & 0x10 ? Z80_FLAG_HALF     : 0) | \
-                                        ((z80_regs.a == X)                         ? Z80_FLAG_ZERO     : 0) | \
-                                        ((z80_regs.a - X) & 0x80                   ? Z80_FLAG_SIGN     : 0); }
-
-#define SET_FLAGS_CPI(X) { z80_regs.f = (z80_regs.f                                & Z80_FLAG_CARRY       ) | \
-                                        (                                            Z80_FLAG_SUB         ) | \
-                                        ((z80_regs.bc - 1)                         ? Z80_FLAG_OVERFLOW : 0) | \
+                                        ((z80_regs.bc)                             ? Z80_FLAG_OVERFLOW : 0) | \
                                         (((z80_regs.a & 0x0f) - (X & 0x0f)) & 0x10 ? Z80_FLAG_HALF     : 0) | \
                                         ((z80_regs.a == X)                         ? Z80_FLAG_ZERO     : 0) | \
                                         ((z80_regs.a - X) & 0x80                   ? Z80_FLAG_SIGN     : 0); }
@@ -351,9 +344,10 @@ uint32_t z80_extended_instruction ()
                                     z80_regs.f &= (Z80_FLAG_CARRY | Z80_FLAG_ZERO | Z80_FLAG_SIGN);
                                     z80_regs.f |= (z80_regs.bc ? Z80_FLAG_OVERFLOW : 0); break;
         case 0xa1: /* CPI        */ temp_1 = memory_read (z80_regs.hl);
-                                    SET_FLAGS_CPI (temp_1);
                                     z80_regs.hl++;
-                                    z80_regs.bc--; break;
+                                    z80_regs.bc--;
+                                    SET_FLAGS_CPD_CPI (temp_1);
+                                    break;
         case 0xa3: /* OUTI       */ { io_write (z80_regs.c, memory_read(z80_regs.hl)),
                                       z80_regs.hl++; z80_regs.b--;
                                       z80_regs.f = (z80_regs.f & Z80_FLAG_CARRY) |
@@ -365,9 +359,9 @@ uint32_t z80_extended_instruction ()
                                     z80_regs.f &= (Z80_FLAG_CARRY | Z80_FLAG_ZERO | Z80_FLAG_SIGN);
                                     z80_regs.f |= (z80_regs.bc ? Z80_FLAG_OVERFLOW : 0); break;
         case 0xa9: /* CPD        */ temp_1 = memory_read (z80_regs.hl);
-                                    SET_FLAGS_CPD (temp_1);
                                     z80_regs.hl--;
                                     z80_regs.bc--;
+                                    SET_FLAGS_CPD_CPI (temp_1);
                                     break;
 
         case 0xb0: /* LDIR       */ memory_write (z80_regs.de, memory_read (z80_regs.hl));
@@ -380,10 +374,10 @@ uint32_t z80_extended_instruction ()
                                                  (z80_regs.bc ? Z80_FLAG_OVERFLOW : 0);
                                     break;
         case 0xb1: /* CPIR       */ temp_1 = memory_read (z80_regs.hl);
-                                    SET_FLAGS_CPI (temp_1);
                                     z80_regs.hl++;
                                     z80_regs.bc--;
-                                    z80_regs.pc -= (z80_regs.bc == 0 || z80_regs.a == temp_1) ? 2 : 0;
+                                    z80_regs.pc -= (z80_regs.bc == 0 || z80_regs.a == temp_1) ? 0 : 2;
+                                    SET_FLAGS_CPD_CPI (temp_1);
                                     break;
         case 0xb3: /* OUTR       */ io_write (z80_regs.c, memory_read(z80_regs.hl)),
                                     z80_regs.hl++; z80_regs.b--;
@@ -398,10 +392,10 @@ uint32_t z80_extended_instruction ()
                                                  (z80_regs.bc ? Z80_FLAG_OVERFLOW : 0);
                                     z80_regs.pc -= z80_regs.bc ? 2 : 0; break;
         case 0xb9: /* CPDR       */ temp_1 = memory_read (z80_regs.hl);
-                                    SET_FLAGS_CPD (temp_1);
-                                    z80_regs.pc -= (z80_regs.bc && !(z80_regs.f & Z80_FLAG_ZERO)) ? 2 : 0;
                                     z80_regs.hl--;
                                     z80_regs.bc--;
+                                    z80_regs.pc -= (z80_regs.bc == 0 || z80_regs.a == temp_1) ? 0 : 2;
+                                    SET_FLAGS_CPD_CPI (temp_1);
                                     break;
 
         default:
