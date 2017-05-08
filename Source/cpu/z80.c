@@ -218,10 +218,10 @@ uint32_t z80_init (uint8_t (* _memory_read) (uint16_t),
                                        (X == 0x00                               ? Z80_FLAG_ZERO   : 0) | \
                                        ((X & 0x80)                              ? Z80_FLAG_SIGN   : 0); }
 
-#define SET_FLAGS_RRD { z80_regs.f = (z80_regs.f                                & Z80_FLAG_CARRY)      | \
+#define SET_FLAGS_RRD_RLD { z80_regs.f = (z80_regs.f                            & Z80_FLAG_CARRY)      | \
                                      (uint8_even_parity[z80_regs.a]             ? Z80_FLAG_PARITY : 0) | \
                                      (z80_regs.a == 0x00                        ? Z80_FLAG_ZERO   : 0) | \
-                                     (z80_regs.a & 0x80                         ? Z80_FLAG_ZERO   : 0); }
+                                     (z80_regs.a & 0x80                         ? Z80_FLAG_SIGN   : 0); }
 
 
 /* TEMPORORY */
@@ -314,9 +314,10 @@ uint32_t z80_extended_instruction ()
                                     z80_regs.hl -=   z80_regs.hl + ((z80_regs.f & Z80_FLAG_CARRY) ? 1 : 0); break;
         case 0x67: /* RRD        */ temp_1 = memory_read (z80_regs.hl);
                                     temp_2 = z80_regs.a;
-                                    z80_regs.a &= 0xf0; z80_regs.a |= (temp_1 * 0x0f);
+                                    z80_regs.a &= 0xf0; z80_regs.a |= (temp_1 & 0x0f);
                                     temp_1 >>= 4; temp_1 |= (temp_2 << 4);
-                                    SET_FLAGS_RRD;
+                                    memory_write (z80_regs.hl, temp_1);
+                                    SET_FLAGS_RRD_RLD;
                                     break;
         case 0x69: /* OUT (C),L  */ io_write (z80_regs.c, z80_regs.l); break;
         case 0x6a: /* ADC HL,HL  */ SET_FLAGS_ADD_16 (z80_regs.hl, (z80_regs.hl + ((z80_regs.f & Z80_FLAG_CARRY) ? 1 : 0)));
@@ -325,7 +326,8 @@ uint32_t z80_extended_instruction ()
                                     temp_2 = z80_regs.a;
                                     z80_regs.a &= 0xf0; z80_regs.a |= (temp_1 >> 4);
                                     temp_1 <<= 4; temp_1 |= (temp_2 & 0x0f);
-                                    SET_FLAGS_RRD;
+                                    memory_write (z80_regs.hl, temp_1);
+                                    SET_FLAGS_RRD_RLD;
                                     break;
 
         case 0x71: /* OUT (C),0  */ io_write (z80_regs.c, 0); break;
