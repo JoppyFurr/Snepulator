@@ -418,30 +418,54 @@ uint32_t z80_extended_instruction ()
 
 uint32_t z80_ix_iy_bit_instruction (uint16_t reg_ix_iy_w)
 {
+    /* Note: The displacement comes first, then the instruction */
+    uint8_t displacement = memory_read (z80_regs.pc++);
     uint8_t instruction = memory_read (z80_regs.pc++);
     uint8_t data;
     uint8_t bit;
     bool write_data = true;
+    uint8_t temp;
 
-    uint8_t param_l;
 
     /* All IX/IY bit instructions take one parameter */
-    param_l = memory_read (z80_regs.pc++);
 
     /* Read data */
-    data = memory_read (reg_ix_iy_w + (int8_t) param_l);
+    data = memory_read (reg_ix_iy_w + (int8_t) displacement);
 
     /* For bit/res/set, determine the bit to operate on */
-    bit = 1 << ((instruction >> 3) * 0x07);
+    bit = 1 << ((instruction >> 3) & 0x07);
 
     switch (instruction & 0xf8)
     {
         case 0x00: /* RLC (ix+*) */ data = (data << 1) | ((data & 0x80) ? 0x01 : 0x00); SET_FLAGS_RLC (data); break;
+        case 0x08: /* RRC (ix+*) */ data = (data >> 1) | (data << 7); SET_FLAGS_RRC (data); break;
+        case 0x10: /* RL  (ix+*) */ temp = data;
+                                    data = (data << 1) | ((z80_regs.f & Z80_FLAG_CARRY) ? 0x01 : 0x00); SET_FLAGS_RL (data);
+                                    z80_regs.f |= (temp & 0x80) ? Z80_FLAG_CARRY : 0; break;
+        case 0x18: /* RR  (ix+*) */ temp = data;
+                                    data = (data >> 1) | ((z80_regs.f & Z80_FLAG_CARRY) ? 0x80 : 0x00); SET_FLAGS_RR (data);
+                                    z80_regs.f |= (temp & 0x01) ? Z80_FLAG_CARRY : 0; break;
+
+        case 0x20: /* SLA (ix+*) */ temp = data;
+                                    data = (data << 1); SET_FLAGS_RL (data);
+                                    z80_regs.f |= (temp & 0x80) ? Z80_FLAG_CARRY : 0; break;
+        case 0x28: /* SRA (ix+*) */ temp = data;
+                                    data = (data >> 1) | (data & 0x80); SET_FLAGS_RR (data);
+                                    z80_regs.f |= (temp & 0x01) ? Z80_FLAG_CARRY : 0; break;
+
+        case 0x30: /* SLL (ix+*) */ temp = data;
+                                    data = (data << 1) | 0x01; SET_FLAGS_RL (data);
+                                    z80_regs.f |= (temp & 0x80) ? Z80_FLAG_CARRY : 0; break;
+        case 0x38: /* SRL (ix+*) */ temp = data;
+                                    data = (data >> 1); SET_FLAGS_RR (data);
+                                    z80_regs.f |= (temp & 0x01) ? Z80_FLAG_CARRY : 0; break;
         case 0x40: case 0x48: case 0x50: case 0x58: /* BIT */
         case 0x60: case 0x68: case 0x70: case 0x78:
-            z80_regs.f = (z80_regs.f               & Z80_FLAG_CARRY   ) |
-                         ((data & bit) == 0        ? Z80_FLAG_ZERO : 0) |
-                         (                           Z80_FLAG_HALF    );
+            z80_regs.f = (z80_regs.f & Z80_FLAG_CARRY) |
+                         ((bit & data) ? 0 : Z80_FLAG_PARITY) |
+                         (Z80_FLAG_HALF) |
+                         ((bit & data) ? 0 : Z80_FLAG_ZERO) |
+                         (((bit == BIT_7) && (data & BIT_7)) ? Z80_FLAG_SIGN : 0);
             write_data = false; break;
         case 0x80: case 0x88: case 0x90: case 0x98: /* RES */
         case 0xa0: case 0xa8: case 0xb0: case 0xb8:
@@ -459,7 +483,7 @@ uint32_t z80_ix_iy_bit_instruction (uint16_t reg_ix_iy_w)
     /* Write data */
     if (write_data)
     {
-        memory_write (reg_ix_iy_w + (int8_t) param_l, data);
+        memory_write (reg_ix_iy_w + (int8_t) displacement, data);
 
         switch (instruction & 0x07)
         {
@@ -682,7 +706,7 @@ uint32_t z80_bit_instruction ()
     uint8_t data;
     uint8_t temp;
     uint8_t bit;
-    bool write_data = false;
+    bool write_data = true;
 
     /* Read data */
     switch (instruction & 0x07)
@@ -733,15 +757,16 @@ uint32_t z80_bit_instruction ()
                          (Z80_FLAG_HALF) |
                          ((bit & data) ? 0 : Z80_FLAG_ZERO) |
                          (((bit == BIT_7) && (data & BIT_7)) ? Z80_FLAG_SIGN : 0);
+            write_data = false;
             break;
 
         case 0x80: case 0x88: case 0x90: case 0x98: /* RES */
         case 0xa0: case 0xa8: case 0xb0: case 0xb8:
-            data &= ~bit; write_data = true; break;
+            data &= ~bit; break;
 
         case 0xc0: case 0xc8: case 0xd0: case 0xd8: /* SET */
         case 0xe0: case 0xe8: case 0xf0: case 0xf8:
-            data |= bit; write_data = true; break;
+            data |= bit; break;
 
         default:
             fprintf (stderr, "Unknown bit instruction: \"%s\" (%02x). %" PRIu64 " instructions have been run.\n",
