@@ -28,8 +28,8 @@ typedef struct Z80_Regs_t {
             uint16_t iy;
         };
         struct {
-            uint8_t a;
             uint8_t f;
+            uint8_t a;
             uint8_t c;
             uint8_t b;
             uint8_t e;
@@ -51,8 +51,8 @@ typedef struct Z80_Regs_t {
             uint16_t alt_hl;
         };
         struct {
-            uint8_t alt_a;
             uint8_t alt_f;
+            uint8_t alt_a;
             uint8_t alt_c;
             uint8_t alt_b;
             uint8_t alt_e;
