@@ -85,6 +85,7 @@ typedef struct Z80_Regs_t {
 #define Z80_FLAG_Y          BIT_5
 #define Z80_FLAG_ZERO       BIT_6
 #define Z80_FLAG_SIGN       BIT_7
+#define Z80_FLAG_NONE       0x00
 
 /* Function declarations */
 uint32_t z80_init (uint8_t (* _memory_read) (uint16_t),
