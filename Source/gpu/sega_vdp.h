@@ -14,21 +14,23 @@ typedef enum Vdp_Palette_t {
 
 /* Structs */
 typedef struct Vdp_Regs_t {
-    uint8_t mode_ctrl_1;
-    uint8_t mode_ctrl_2;
-    uint8_t name_table_addr;
-    uint8_t colour_table_addr;          /* Unused - Bits 0xff should be set. */
-    uint8_t background_pattern_addr;    /* Unused - Bits 0x07 should be set. */
-    uint8_t sprite_attr_table_addr;
-    uint8_t sprite_pattern_table_addr;
-    uint8_t background_colour;          /* Bits 0x0f select the background from the sprite palette. */
-    uint8_t background_x_scroll;
-    uint8_t background_y_scroll;
-    uint8_t line_counter;
-    uint8_t code;
+    uint8_t  mode_ctrl_1;
+    uint8_t  mode_ctrl_2;
+    uint8_t  name_table_addr;
+    uint8_t  colour_table_addr;          /* Unused - Bits 0xff should be set. */
+    uint8_t  background_pattern_addr;    /* Unused - Bits 0x07 should be set. */
+    uint8_t  sprite_attr_table_addr;
+    uint8_t  sprite_pattern_table_addr;
+    uint8_t  background_colour;          /* Bits 0x0f select the background from the sprite palette. */
+    uint8_t  background_x_scroll;
+    uint8_t  background_y_scroll;
+    uint8_t  line_counter;
+    uint8_t  code;
     uint16_t address;
-    uint8_t read_buffer;
-    uint8_t status;
+    uint8_t  read_buffer;
+    uint8_t  status;
+    uint8_t  line_interrupt_counter;
+    bool     line_interrupt;
 } Vdp_Regs;
 
 typedef struct Vdp_Pattern_t {

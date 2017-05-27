@@ -164,6 +164,7 @@ uint8_t vdp_status_read ()
 
     /* Clear on read */
     vdp_regs.status = 0x00;
+    vdp_regs.line_interrupt = false;
 
     return status;
 }
@@ -251,20 +252,40 @@ void vdp_render_pattern (Vdp_Pattern *pattern_base, Vdp_Palette palette, uint32_
 #define SMS_CLOCK_RATE_PAL  3546895
 #define SMS_CLOCK_PER_FRAME_PAL (SMS_CLOCK_RATE_PAL / 50)
 
+/* TODO: Consider skipped values */
 void vdp_clock_update (uint64_t cycles)
 {
     uint16_t v_counter_16 = (cycles % SMS_CLOCK_PER_FRAME_PAL) / 227; /* Dividing by 227 roughly maps from 0 -> 312,
                                                                          one value per scanline */
+    uint8_t previous_v_counter = v_counter;
+
     if (v_counter_16 <= 0xf2)
         v_counter = v_counter_16;
     else
         v_counter = v_counter_16 - 0x39;
 
-    /* Frame interrupt */
-    if (v_counter_16 == 0xc1) /* TODO: This constant is only for 192-line mode */
-        vdp_regs.status |= (1 << 7);
+    /* Line interrupt */
+    if (v_counter > 192)
+        vdp_regs.line_interrupt_counter = vdp_regs.line_counter;
+    else if (v_counter != previous_v_counter)
+    {
+        vdp_regs.line_interrupt_counter--;
+        if (vdp_regs.line_interrupt_counter = 0xff)
+            vdp_regs.line_interrupt = true;
+    }
 
-    /* TODO: Line interrupt */
+    /* Frame interrupt */
+    static int frame = 0;
+    if (v_counter != previous_v_counter)
+    {
+        printf ("[frame=%d, v_counter_16=%d]\n", frame, v_counter_16);
+        if (v_counter_16 == 0xc1) /* TODO: This constant is only for 192-line mode */
+        {
+            vdp_regs.status |= VDP_STATUS_INT;
+            frame++;
+        }
+    }
+
 }
 
 uint8_t vdp_get_v_counter (void)
@@ -275,9 +296,25 @@ uint8_t vdp_get_v_counter (void)
 /* TODO */
 bool vdp_get_interrupt (void)
 {
+    /* DEBUG */
+    printf ("vdp_get_interrupt: frame: (%s, %s)\n",
+            (vdp_regs.mode_ctrl_2 & (1 << 5)) ? "enabled" : "disabled",
+            (vdp_regs.status & VDP_STATUS_INT) ? "interrupt pending" : "no interrupt"
+            );
+
     /* Frame interrupt */
     if ((vdp_regs.mode_ctrl_2 & (1 << 5)) && (vdp_regs.status & VDP_STATUS_INT))
+    {
+        printf ("[DEBUG]: Frame interrupt sent.\n");
         return true;
+    }
+
+    /* Line interrupt */
+    if ((vdp_regs.mode_ctrl_1 & (1 << 4)) && vdp_regs.line_interrupt)
+    {
+        printf ("[DEBUG]: Line interrupt sent.\n");
+        return true;
+    }
 
     return false;
 }
