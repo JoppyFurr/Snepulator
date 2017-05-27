@@ -218,17 +218,18 @@ static uint8_t sms_io_read (uint8_t addr)
         }
     }
 
+    /* A pressed button returns zero */
     else if (addr >= 0xc0 && addr <= 0xff)
     {
         if ((addr & 0x01) == 0x00)
         {
             /* I/O Port A/B */
-            fprintf (stderr, "Error: I/O Port A/B not implemented.\n");
+            return 0xff;
         }
         else
         {
             /* I/O Port B/misc */
-            fprintf (stderr, "Error: I/O Port B/misc not implemented.\n");
+            return 0xff;
         }
     }
 }
