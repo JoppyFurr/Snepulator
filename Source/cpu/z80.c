@@ -25,6 +25,8 @@ void    (* io_write)    (uint8_t, uint8_t) = NULL;
 
 /* TODO: Cycle counts for interrupt response */
 
+uint8_t instructions_before_interrupts = 0;
+
 #define E 1 /* Extended */
 #define U 0 /* Unused */
 static const uint8_t z80_instruction_size[256] = {
@@ -1441,15 +1443,20 @@ uint32_t z80_run ()
         vdp_clock_update (z80_cycle);
 
         /* Check for interrupts */
-        if (z80_regs.iff1 && vdp_get_interrupt ())
+        if (instructions_before_interrupts)
+            instructions_before_interrupts--;
+
+        if (!instructions_before_interrupts && z80_regs.iff1 && vdp_get_interrupt ())
         {
             z80_regs.iff1 = false;
             z80_regs.iff2 = false;
 
             switch (z80_regs.im)
             {
+                /* TODO: Cycle count? */
                 case 1:
                     /* RST 0x38 */
+                    printf ("INTERRUPT: RST 0x38  <--\n");
                     memory_write (--z80_regs.sp, z80_regs.pc_h);
                     memory_write (--z80_regs.sp, z80_regs.pc_l);
                     z80_regs.pc = 0x38;
