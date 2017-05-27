@@ -9,8 +9,6 @@
 
 #define SWAP(TYPE, X, Y) { TYPE tmp = X; X = Y; Y = tmp; }
 
-#define DEBUG
-
 /* State */
 Z80_Regs z80_regs;
 uint64_t z80_cycle = 0;
@@ -26,10 +24,6 @@ void    (* io_write)    (uint8_t, uint8_t) = NULL;
 /* TODO: Note: Interrupts should not be accepted until after the instruction following EI */
 
 /* TODO: Cycle counts for interrupt response */
-
-/* DIAG */
-uint64_t instruction_count = 0;
-bool debug_instruction = false;
 
 #define E 1 /* Extended */
 #define U 0 /* Unused */
@@ -289,22 +283,11 @@ uint32_t z80_extended_instruction ()
         case 3:
             param.l = memory_read (z80_regs.pc++);
             param.h = memory_read (z80_regs.pc++);
-
-            if (debug_instruction) fprintf (stdout, "[DEBUG]:           INST=%02x %02x %02x,  %-12s\n",
-                 instruction, param.l, param.h,
-                 z80_instruction_name_extended[instruction]);
             break;
         case 2:
             param.l = memory_read (z80_regs.pc++);
-
-            if (debug_instruction) fprintf (stdout, "[DEBUG]:           INST=%02x %02x,     %-12s\n",
-                 instruction, param.l,
-                 z80_instruction_name_extended[instruction]);
             break;
         default:
-            if (debug_instruction) fprintf (stdout, "[DEBUG]:           INST=%02x,        %-12s\n",
-                 instruction,
-                 z80_instruction_name_extended[instruction]);
             break;
     }
 
@@ -440,8 +423,8 @@ uint32_t z80_extended_instruction ()
                                     break;
 
         default:
-        fprintf (stderr, "Unknown extended instruction: \"%s\" (%02x). %" PRIu64 " instructions have been run.\n",
-                 z80_instruction_name_extended[instruction], instruction, instruction_count);
+        fprintf (stderr, "Unknown extended instruction: \"%s\" (%02x).\n",
+                 z80_instruction_name_extended[instruction], instruction);
         _abort_ = true;
     }
 
@@ -509,8 +492,8 @@ uint32_t z80_ix_iy_bit_instruction (uint16_t reg_ix_iy_w)
         case 0xe0: case 0xe8: case 0xf0: case 0xf8:
             data |= bit; break;
         default:
-            fprintf (stderr, "Unknown ix/iy bit instruction: \"%s\" (%02x). %" PRIu64 " instructions have been run.\n",
-                     z80_instruction_name_bits[instruction], instruction, instruction_count);
+            fprintf (stderr, "Unknown ix/iy bit instruction: \"%s\" (%02x).\n",
+                     z80_instruction_name_bits[instruction], instruction);
             write_data = false;
             _abort_ = true;
     }
@@ -724,8 +707,8 @@ uint16_t z80_ix_iy_instruction (uint16_t reg_ix_iy_in)
         case 0xe5: /* PUSH IX      */ memory_write (--z80_regs.sp, reg_ix_iy.h);
                                       memory_write (--z80_regs.sp, reg_ix_iy.l); break;
         default:
-        fprintf (stderr, "Unknown ix/iy instruction: \"%s\" (%02x). %" PRIu64 " instructions have been run.\n",
-                 z80_instruction_name_ix[instruction], instruction, instruction_count);
+        fprintf (stderr, "Unknown ix/iy instruction: \"%s\" (%02x).\n",
+                 z80_instruction_name_ix[instruction], instruction);
         _abort_ = true;
     }
 
@@ -804,8 +787,8 @@ uint32_t z80_bit_instruction ()
             data |= bit; break;
 
         default:
-            fprintf (stderr, "Unknown bit instruction: \"%s\" (%02x). %" PRIu64 " instructions have been run.\n",
-                     z80_instruction_name_bits[instruction], instruction, instruction_count);
+            fprintf (stderr, "Unknown bit instruction: \"%s\" (%02x).\n",
+                     z80_instruction_name_bits[instruction], instruction);
             _abort_ = true;
     }
 
@@ -907,32 +890,11 @@ uint32_t z80_instruction ()
         case 3:
             param.l = memory_read (z80_regs.pc++);
             param.h = memory_read (z80_regs.pc++);
-#ifdef DEBUG
-            if (debug_instruction) fprintf (stdout, "[DEBUG]: PC=%04x,  INST=%02x %02x %02x,  %-12s"
-                                                            " [af=%04x, bc=%04x, de=%04x, hl=%04x]\n",
-                 z80_regs.pc-3, instruction, param.l, param.h,
-                 z80_instruction_name[instruction],
-                 z80_regs.af, z80_regs.bc, z80_regs.de, z80_regs.hl);
-#endif
             break;
         case 2:
             param.l = memory_read (z80_regs.pc++);
-#ifdef DEBUG
-            if (debug_instruction) fprintf (stdout, "[DEBUG]: PC=%04x,  INST=%02x %02x,     %-12s"
-                                                            " [af=%04x, bc=%04x, de=%04x, hl=%04x]\n",
-                 z80_regs.pc-2, instruction, param.l,
-                 z80_instruction_name[instruction],
-                 z80_regs.af, z80_regs.bc, z80_regs.de, z80_regs.hl);
-#endif
             break;
         default:
-#ifdef DEBUG
-            if (debug_instruction) fprintf (stdout, "[DEBUG]: PC=%04x,  INST=%02x,        %-12s"
-                                                            " [af=%04x, bc=%04x, de=%04x, hl=%04x]\n",
-                 z80_regs.pc-1, instruction,
-                 z80_instruction_name[instruction],
-                 z80_regs.af, z80_regs.bc, z80_regs.de, z80_regs.hl);
-#endif
             break;
     }
 
@@ -1453,8 +1415,8 @@ uint32_t z80_instruction ()
                                     z80_regs.pc = 0x38; break;
 
         default:
-            fprintf (stderr, "Unknown instruction: \"%s\" (%02x). %" PRIu64 " instructions have been run.\n",
-                     z80_instruction_name[instruction], instruction, instruction_count);
+            fprintf (stderr, "Unknown instruction: \"%s\" (%02x).\n",
+                     z80_instruction_name[instruction], instruction);
             _abort_ = true;
     }
 
@@ -1473,27 +1435,7 @@ uint32_t z80_run ()
     uint64_t frame_number = 0;
     for (;;)
     {
-
-#if 0
-        if (instruction_count >= 0000ull && instruction_count < 1000ull)
-        {
-            debug_instruction = true;
-        }
-        else
-        {
-            debug_instruction = false;
-        }
-#endif
-
-#if 0
-        if (instruction_count == 20000)
-        {
-            fprintf (stdout, "[DEBUG(z80)]: Reached instruction goal.\n");
-            _abort_ = true;
-        }
-#endif
         z80_instruction ();
-        instruction_count++;
 
         /* Time has passed, update the VDP state */
         vdp_clock_update (z80_cycle);
