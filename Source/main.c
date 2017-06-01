@@ -232,6 +232,9 @@ static uint8_t sms_io_read (uint8_t addr)
             return 0xff;
         }
     }
+
+    /* DEFAULT */
+    return 0xff;
 }
 
 int32_t sms_load_rom (uint8_t **buffer, uint32_t *filesize, char *filename)

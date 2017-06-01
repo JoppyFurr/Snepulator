@@ -88,9 +88,9 @@ typedef struct Z80_Regs_t {
 #define Z80_FLAG_NONE       0x00
 
 /* Function declarations */
-uint32_t z80_init (uint8_t (* _memory_read) (uint16_t),
-                   void    (* _memory_write)(uint16_t, uint8_t),
-                   uint8_t (* _io_read)     (uint8_t),
-                   void    (* _io_write)    (uint8_t, uint8_t));
+void z80_init (uint8_t (* _memory_read) (uint16_t),
+               void    (* _memory_write)(uint16_t, uint8_t),
+               uint8_t (* _io_read)     (uint8_t),
+               void    (* _io_write)    (uint8_t, uint8_t));
 
-uint32_t z80_instruction ();
+void z80_instruction ();
