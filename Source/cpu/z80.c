@@ -11,6 +11,7 @@
 
 /* State */
 Z80_Regs z80_regs;
+extern bool _abort_;
 
 /* 8-bit register access */
 #define A (z80_regs.a)
@@ -257,12 +258,6 @@ uint32_t z80_init (uint8_t (* _memory_read) (uint16_t),
                                      (z80_regs.a == 0x00                        ? Z80_FLAG_ZERO   : 0) | \
                                      (z80_regs.a & 0x80                         ? Z80_FLAG_SIGN   : 0); }
 
-
-/* TEMPORORY */
-#include "SDL2/SDL.h"
-extern SDL_Renderer *renderer;
-void vdp_render (void);
-static bool _abort_ = false;
 
 uint32_t z80_extended_instruction ()
 {
@@ -1458,80 +1453,3 @@ uint32_t z80_instruction ()
     }
 }
 
-/* TODO: Move these somewhere SMS-specific */
-extern void vdp_clock_update (uint64_t cycles);
-extern bool vdp_get_interrupt (void);
-#define SMS_CLOCK_RATE_PAL  3546895
-#define SMS_CLOCK_RATE_NTSC 3579545
-
-uint32_t z80_run ()
-{
-    uint64_t next_frame_cycle = 0;
-    uint64_t frame_number = 0;
-    for (;;)
-    {
-        z80_instruction ();
-
-        /* Time has passed, update the VDP state */
-        vdp_clock_update (z80_cycle);
-
-        /* Check for interrupts */
-        if (instructions_before_interrupts)
-            instructions_before_interrupts--;
-
-        if (!instructions_before_interrupts && z80_regs.iff1 && vdp_get_interrupt ())
-        {
-            z80_regs.iff1 = false;
-            z80_regs.iff2 = false;
-
-            switch (z80_regs.im)
-            {
-                /* TODO: Cycle count? */
-                case 1:
-                    /* RST 0x38 */
-                    printf ("INTERRUPT: RST 0x38  <--\n");
-                    memory_write (--z80_regs.sp, z80_regs.pc_h);
-                    memory_write (--z80_regs.sp, z80_regs.pc_l);
-                    z80_regs.pc = 0x38;
-                    break;
-                default:
-                    fprintf (stderr, "Unknown interrupt mode %d.\n", z80_regs.im);
-                    _abort_ = true;
-            }
-        }
-
-        /* TODO: Rather than SMS cycles, we should update the display based on host VSYNC */
-        if (z80_cycle >= next_frame_cycle)
-        {
-            /* Check input */
-            SDL_Event event;
-
-            while (SDL_PollEvent (&event))
-            {
-                if (event.type == SDL_QUIT)
-                {
-                    _abort_ = true;
-                }
-            }
-
-            frame_number++;
-
-            vdp_render ();
-            SDL_RenderPresent (renderer);
-            SDL_Delay (10);
-
-            if ((frame_number % 50) == 0)
-            {
-                printf ("-- %02" PRId64 " seconds have passed --\n", frame_number / 50);
-            }
-
-            next_frame_cycle = z80_cycle + (SMS_CLOCK_RATE_PAL / 50);
-        }
-
-        if (_abort_)
-        {
-            fprintf (stderr, "[DEBUG]: _abort_ set. Terminating emulation.\n");
-            return EXIT_FAILURE;
-        }
-    }
-}
