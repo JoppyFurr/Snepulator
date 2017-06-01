@@ -130,6 +130,9 @@ uint8_t vdp_data_read ()
     first_byte_received = false;
 
     fprintf (stdout,"[DEBUG(vdp)]: vdp_data_read () not implemented.\n");
+
+    /* DEFAULT */
+    return 0xff;
 }
 
 void vdp_data_write (uint8_t value)
@@ -270,7 +273,7 @@ void vdp_clock_update (uint64_t cycles)
     else if (v_counter != previous_v_counter)
     {
         vdp_regs.line_interrupt_counter--;
-        if (vdp_regs.line_interrupt_counter = 0xff)
+        if (vdp_regs.line_interrupt_counter == 0xff)
             vdp_regs.line_interrupt = true;
     }
 
