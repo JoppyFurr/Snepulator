@@ -270,6 +270,20 @@ int32_t sms_load_rom (uint8_t **buffer, uint32_t *filesize, char *filename)
     return EXIT_SUCCESS;
 }
 
+bool _abort_ = false;
+
+/* TODO: Move these somewhere SMS-specific */
+extern const char *z80_instruction_name[256];
+extern const char *z80_instruction_name_extended[256];
+extern const char *z80_instruction_name_bits[256];
+extern const char *z80_instruction_name_ix[256];
+extern void vdp_clock_update (uint64_t cycles);
+extern bool vdp_get_interrupt (void);
+extern uint8_t instructions_before_interrupts;
+extern uint64_t z80_cycle;
+#define SMS_CLOCK_RATE_PAL  3546895
+#define SMS_CLOCK_RATE_NTSC 3579545
+
 int main (int argc, char **argv)
 {
     char *bios_filename = NULL;
@@ -322,12 +336,10 @@ int main (int argc, char **argv)
     SDL_RenderClear (renderer);
     SDL_RenderPresent (renderer);
 
-    vdp_init ();
-
     /* Load BIOS */
     if (sms_load_rom (&bios, &bios_size, bios_filename) == -1)
     {
-        goto snepulator_close;
+        _abort_ = true;
     }
     fprintf (stdout, "%d KiB BIOS %s loaded.\n", bios_size >> 10, bios_filename);
 
@@ -336,17 +348,131 @@ int main (int argc, char **argv)
     {
         if (sms_load_rom (&cart, &cart_size, cart_filename) == -1)
         {
-            goto snepulator_close;
+            _abort_ = true;
         }
         fprintf (stdout, "%d KiB cart %s loaded.\n", cart_size >> 10, cart_filename);
     }
 
     z80_init (sms_memory_read, sms_memory_write, sms_io_read, sms_io_write);
+    vdp_init ();
 
-    if (z80_run () == EXIT_FAILURE)
+    /* Master System loop */
+    uint64_t next_frame_cycle = 0;
+    uint64_t frame_number = 0;
+    while (!_abort_)
     {
-        vdp_dump ();
-        /* goto snepulator_close; */
+        /* TIMING DEBUG */
+        uint64_t previous_cycle_count = z80_cycle;
+        uint8_t debug_instruction_0 = sms_memory_read (z80_regs.pc + 0);
+        uint8_t debug_instruction_1 = sms_memory_read (z80_regs.pc + 1);
+        uint8_t debug_instruction_2 = sms_memory_read (z80_regs.pc + 2);
+        uint8_t debug_instruction_3 = sms_memory_read (z80_regs.pc + 3);
+        z80_instruction ();
+        if (z80_cycle == previous_cycle_count)
+        {
+            fprintf (stderr, "Instruction %x %x %x %x took no time\n",
+                     debug_instruction_0,
+                     debug_instruction_1,
+                     debug_instruction_2,
+                     debug_instruction_3);
+
+            if (debug_instruction_0 == 0xcb)
+                fprintf (stderr, "DECODE %s %s %x %x took no time\n",
+                         z80_instruction_name[debug_instruction_0],
+                         z80_instruction_name_bits[debug_instruction_1],
+                         debug_instruction_2,
+                         debug_instruction_3);
+            else if (debug_instruction_0 == 0xed)
+                fprintf (stderr, "DECODE %s %s %x %x took no time\n",
+                         z80_instruction_name[debug_instruction_0],
+                         z80_instruction_name_extended[debug_instruction_1],
+                         debug_instruction_2,
+                         debug_instruction_3);
+            else if ((debug_instruction_0 == 0xdd || debug_instruction_0 == 0xfd) && debug_instruction_1 == 0xcb)
+                fprintf (stderr, "DECODE %s %s %s took no time\n",
+                         z80_instruction_name[debug_instruction_0],
+                         z80_instruction_name_ix[debug_instruction_1],
+                         z80_instruction_name_bits[debug_instruction_2]);
+            else if (debug_instruction_0 == 0xdd || debug_instruction_0 == 0xfd)
+                    fprintf (stderr, "DECODE %s %s %x %x took no time\n",
+                             z80_instruction_name[debug_instruction_0],
+                             z80_instruction_name_ix[debug_instruction_1],
+                             debug_instruction_2,
+                             debug_instruction_3);
+            else
+                fprintf (stderr, "DECODE %s %x %x %x took no time\n",
+                         z80_instruction_name[debug_instruction_0],
+                         debug_instruction_1,
+                         debug_instruction_2,
+                         debug_instruction_3);
+            _abort_ = true;
+        }
+        /* END TIMING DEBUG */
+
+        /* Time has passed, update the VDP state */
+        vdp_clock_update (z80_cycle);
+
+        /* Check for interrupts */
+        if (instructions_before_interrupts)
+            instructions_before_interrupts--;
+
+        /* TODO: Interrupt handling should live in the z80 file */
+        if (!instructions_before_interrupts && z80_regs.iff1 && vdp_get_interrupt ())
+        {
+            z80_regs.iff1 = false;
+            z80_regs.iff2 = false;
+
+            switch (z80_regs.im)
+            {
+                /* TODO: Cycle count? */
+                case 1:
+                    /* RST 0x38 */
+#if 0
+                    printf ("INTERRUPT: RST 0x38  <--\n");
+#endif
+                    sms_memory_write (--z80_regs.sp, z80_regs.pc_h);
+                    sms_memory_write (--z80_regs.sp, z80_regs.pc_l);
+                    z80_regs.pc = 0x38;
+                    break;
+                default:
+                    fprintf (stderr, "Unknown interrupt mode %d.\n", z80_regs.im);
+                    _abort_ = true;
+            }
+        }
+
+        /* TODO: Rather than SMS cycles, we should update the display based on host VSYNC */
+        if (z80_cycle >= next_frame_cycle)
+        {
+            /* Check input */
+            SDL_Event event;
+
+            while (SDL_PollEvent (&event))
+            {
+                if (event.type == SDL_QUIT)
+                {
+                    _abort_ = true;
+                }
+            }
+
+            frame_number++;
+
+            vdp_render ();
+            SDL_RenderPresent (renderer);
+            SDL_Delay (10);
+
+            if ((frame_number % 50) == 0)
+            {
+                printf ("-- %02" PRId64 " seconds have passed --\n", frame_number / 50);
+            }
+
+            next_frame_cycle = z80_cycle + (SMS_CLOCK_RATE_PAL / 50);
+        }
+
+        if (_abort_)
+        {
+            fprintf (stderr, "[DEBUG]: _abort_ set. Terminating emulation.\n");
+            return EXIT_FAILURE;
+        }
     }
 
     fprintf (stdout, "EMULATION ENDED.\n");

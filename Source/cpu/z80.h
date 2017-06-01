@@ -93,4 +93,4 @@ uint32_t z80_init (uint8_t (* _memory_read) (uint16_t),
                    uint8_t (* _io_read)     (uint8_t),
                    void    (* _io_write)    (uint8_t, uint8_t));
 
-uint32_t z80_run ();
+uint32_t z80_instruction ();
