@@ -876,6 +876,7 @@ void z80_instruction_daa ()
 }
 
 #define LD(X,Y) { X = Y; }
+#define JP(X)   { PC = X; }
 
 /* 8-bit ALU Operations */
 #define ADD(X,Y) { SET_FLAGS_ADD (X, Y); X += Y; }
@@ -1205,12 +1206,12 @@ void z80_instruction ()
         case 0xb6: /* OR (HL)    */ z80_regs.a |= memory_read (z80_regs.hl); SET_FLAGS_OR_XOR; z80_cycle += 7; break;
         case 0xb7: /* OR  A,A    */ OR (A, A);              CYCLES (4);     break;
 
-        case 0xb8: /* CP A,B     */ SET_FLAGS_SUB (A, z80_regs.b); CYCLES (4); break;
-        case 0xb9: /* CP A,C     */ SET_FLAGS_SUB (A, z80_regs.c); CYCLES (4); break;
-        case 0xba: /* CP A,D     */ SET_FLAGS_SUB (A, z80_regs.d); CYCLES (4); break;
-        case 0xbb: /* CP A,E     */ SET_FLAGS_SUB (A, z80_regs.e); CYCLES (4); break;
-        case 0xbc: /* CP A,H     */ SET_FLAGS_SUB (A, z80_regs.h); CYCLES (4); break;
-        case 0xbd: /* CP A,L     */ SET_FLAGS_SUB (A, z80_regs.l); CYCLES (4); break;
+        case 0xb8: /* CP A,B     */ SET_FLAGS_SUB (A, B); CYCLES (4); break;
+        case 0xb9: /* CP A,C     */ SET_FLAGS_SUB (A, C); CYCLES (4); break;
+        case 0xba: /* CP A,D     */ SET_FLAGS_SUB (A, D); CYCLES (4); break;
+        case 0xbb: /* CP A,E     */ SET_FLAGS_SUB (A, E); CYCLES (4); break;
+        case 0xbc: /* CP A,H     */ SET_FLAGS_SUB (A, H); CYCLES (4); break;
+        case 0xbd: /* CP A,L     */ SET_FLAGS_SUB (A, L); CYCLES (4); break;
         case 0xbe: /* CP A,(HL)  */ temp = memory_read (z80_regs.hl); SET_FLAGS_SUB (A, temp);
                                                                 CYCLES (7); break;
         case 0xbf: /* CP A,A     */ SET_FLAGS_SUB (A, z80_regs.a); CYCLES (4); break;
@@ -1229,8 +1230,7 @@ void z80_instruction ()
         case 0xc1: /* POP BC     */ z80_regs.c = memory_read (z80_regs.sp++);
                                     z80_regs.b = memory_read (z80_regs.sp++); z80_cycle += 10; break;
         case 0xc2: /* JP NZ,**   */ z80_regs.pc = (z80_regs.f & Z80_FLAG_ZERO) ? z80_regs.pc : param.w; z80_cycle += 10; break;
-        case 0xc3: /* JP **      */ z80_regs.pc = param.w;
-                                    z80_cycle += 10; break;
+        case 0xc3: /* JP **      */ JP (NN); CYCLES (10); break;
         case 0xc4: /* CALL NZ,** */ if (z80_regs.f & Z80_FLAG_ZERO)
                                     {
                                         z80_cycle += 10;
@@ -1402,8 +1402,8 @@ void z80_instruction ()
                                         z80_cycle += 5;
                                     }
                                     break;
-        case 0xe9: /* JP (HL)    */ z80_regs.pc = param.w; CYCLES (4); break;
-        case 0xea: /* JP PE,**   */ z80_regs.pc = (z80_regs.f & Z80_FLAG_PARITY) ? param.w : z80_regs.pc; z80_cycle += 10; break;
+        case 0xe9: /* JP (HL)    */ JP (HL); CYCLES (4); break;
+        case 0xea: /* JP PE,**   */ if (F & Z80_FLAG_PARITY) JP (NN); CYCLES (10); break;
         case 0xeb: /* EX DE,HL   */ SWAP (uint16_t, z80_regs.de, z80_regs.hl); CYCLES (4); break;
         case 0xed: /* Extended Instructions */ z80_extended_instruction (); break;
         case 0xee: /* XOR A,*    */ z80_regs.a ^= param.l; SET_FLAGS_OR_XOR; z80_cycle += 7; break;
@@ -1424,7 +1424,7 @@ void z80_instruction ()
                                     break;
         case 0xf1: /* POP AF     */ z80_regs.f = memory_read (z80_regs.sp++);
                                     z80_regs.a = memory_read (z80_regs.sp++); z80_cycle += 10; break;
-        case 0xf2: /* JP P,**    */ z80_regs.pc = (z80_regs.f & Z80_FLAG_SIGN) ? z80_regs.pc : param.w; z80_cycle += 10; break;
+        case 0xf2: /* JP P,**    */ if (F & Z80_FLAG_SIGN) JP (NN); CYCLES (10); break;
         case 0xf3: /* DI         */ fprintf (stdout, "[DEBUG]: Interrupts disable.\n");
                                     z80_regs.iff1 = false; z80_regs.iff2 = false;
                                     CYCLES (4); break;
