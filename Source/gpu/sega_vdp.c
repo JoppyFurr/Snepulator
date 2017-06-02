@@ -281,7 +281,9 @@ void vdp_clock_update (uint64_t cycles)
     static int frame = 0;
     if (v_counter != previous_v_counter)
     {
+#if 0
         printf ("[frame=%d, v_counter_16=%d]\n", frame, v_counter_16);
+#endif
         if (v_counter_16 == 0xc1) /* TODO: This constant is only for 192-line mode */
         {
             vdp_regs.status |= VDP_STATUS_INT;
@@ -299,11 +301,13 @@ uint8_t vdp_get_v_counter (void)
 /* TODO */
 bool vdp_get_interrupt (void)
 {
+#if 0
     /* DEBUG */
     printf ("vdp_get_interrupt: frame: (%s, %s)\n",
             (vdp_regs.mode_ctrl_2 & (1 << 5)) ? "enabled" : "disabled",
             (vdp_regs.status & VDP_STATUS_INT) ? "interrupt pending" : "no interrupt"
             );
+#endif
 
     /* Frame interrupt */
     if ((vdp_regs.mode_ctrl_2 & (1 << 5)) && (vdp_regs.status & VDP_STATUS_INT))
