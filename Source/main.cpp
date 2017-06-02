@@ -6,8 +6,10 @@
 
 #include "SDL2/SDL.h"
 
+extern "C" {
 #include "gpu/sega_vdp.h"
 #include "cpu/z80.h"
+}
 
 /* Global state */
 SDL_Window *window = NULL;
@@ -255,7 +257,7 @@ int32_t sms_load_rom (uint8_t **buffer, uint32_t *filesize, char *filename)
     fseek(rom_file, 0, SEEK_SET);
 
     /* Allocate memory */
-    *buffer = malloc (*filesize);
+    *buffer = (uint8_t *) malloc (*filesize);
     if (!*buffer)
     {
         perror ("Error: Unable to allocate memory for ROM.\n");
