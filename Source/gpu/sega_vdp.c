@@ -18,7 +18,6 @@
 
 /* Externs */
 extern SDL_Window *window;
-extern SDL_Renderer *renderer;
 
 /* VDP State */
 static Vdp_Regs vdp_regs;
@@ -215,6 +214,10 @@ void vdp_control_write (uint8_t value)
     }
 }
 
+extern float sms_vdp_texture_data [256 * 256 * 3];
+#define VDP_STRIDE_X (3)
+#define VDP_STRIDE_Y (256 * 3)
+
 void vdp_render_pattern (Vdp_Pattern *pattern_base, Vdp_Palette palette, uint32_t x, uint32_t y)
 {
     for (uint32_t pattern_y = 0; pattern_y < 8; pattern_y++)
@@ -230,11 +233,9 @@ void vdp_render_pattern (Vdp_Pattern *pattern_base, Vdp_Palette palette, uint32_
             /* TODO: Support the sprite palette */
             uint8_t pixel = cram[((palette == VDP_PALETTE_SPRITE) ? 16 : 0) + (bit0 | bit1 | bit2 | bit3)];
 
-            SDL_SetRenderDrawColor (renderer, VDP_TO_RED (pixel),
-                                              VDP_TO_GREEN (pixel),
-                                              VDP_TO_BLUE (pixel), 255);
-
-            SDL_RenderDrawPoint (renderer, x + pattern_x, y + pattern_y);
+            sms_vdp_texture_data [(x + pattern_x) * VDP_STRIDE_X + (y + pattern_y) * VDP_STRIDE_Y + 0] = VDP_TO_RED (pixel) / 256.0f;
+            sms_vdp_texture_data [(x + pattern_x) * VDP_STRIDE_X + (y + pattern_y) * VDP_STRIDE_Y + 1] = VDP_TO_GREEN (pixel) / 256.0f;
+            sms_vdp_texture_data [(x + pattern_x) * VDP_STRIDE_X + (y + pattern_y) * VDP_STRIDE_Y + 2] = VDP_TO_BLUE (pixel) / 256.0f;
         }
     }
 }
@@ -328,11 +329,13 @@ bool vdp_get_interrupt (void)
 
 void vdp_render (void)
 {
+#if 0
     uint8_t pixel;
     /* Background / overscan - Is this specific to mode 4? */
     pixel = cram [16 + (vdp_regs.background_colour & 0x0f)];
     SDL_SetRenderDrawColor (renderer, VDP_TO_RED (pixel), VDP_TO_GREEN (pixel), VDP_TO_BLUE (pixel), 255);
     SDL_RenderClear (renderer);
+#endif
 
     switch (vdp_regs.mode_ctrl_1 & VDP_MODE_CTRL_1_MODE_4)
     {
@@ -375,8 +378,7 @@ void vdp_render (void)
 
                         /* TODO: Flip flags */
                         /* TODO: Priority flag */
-                        vdp_render_pattern (pattern, palette, VDP_OVERSCAN_X + 8 * tile_x,
-                                                               VDP_OVERSCAN_Y + 8 * tile_y);
+                        vdp_render_pattern (pattern, palette, 8 * tile_x, 8 * tile_y);
 
                     }
                 }
