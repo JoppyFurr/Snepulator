@@ -215,6 +215,7 @@ void vdp_control_write (uint8_t value)
 }
 
 extern float sms_vdp_texture_data [256 * 256 * 3];
+extern float sms_vdp_background [3];
 #define VDP_STRIDE_X (3)
 #define VDP_STRIDE_Y (256 * 3)
 
@@ -282,9 +283,6 @@ void vdp_clock_update (uint64_t cycles)
     static int frame = 0;
     if (v_counter != previous_v_counter)
     {
-#if 0
-        printf ("[frame=%d, v_counter_16=%d]\n", frame, v_counter_16);
-#endif
         if (v_counter_16 == 0xc1) /* TODO: This constant is only for 192-line mode */
         {
             vdp_regs.status |= VDP_STATUS_INT;
@@ -302,14 +300,6 @@ uint8_t vdp_get_v_counter (void)
 /* TODO */
 bool vdp_get_interrupt (void)
 {
-#if 0
-    /* DEBUG */
-    printf ("vdp_get_interrupt: frame: (%s, %s)\n",
-            (vdp_regs.mode_ctrl_2 & (1 << 5)) ? "enabled" : "disabled",
-            (vdp_regs.status & VDP_STATUS_INT) ? "interrupt pending" : "no interrupt"
-            );
-#endif
-
     /* Frame interrupt */
     if ((vdp_regs.mode_ctrl_2 & (1 << 5)) && (vdp_regs.status & VDP_STATUS_INT))
     {
@@ -329,13 +319,12 @@ bool vdp_get_interrupt (void)
 
 void vdp_render (void)
 {
-#if 0
-    uint8_t pixel;
     /* Background / overscan - Is this specific to mode 4? */
-    pixel = cram [16 + (vdp_regs.background_colour & 0x0f)];
-    SDL_SetRenderDrawColor (renderer, VDP_TO_RED (pixel), VDP_TO_GREEN (pixel), VDP_TO_BLUE (pixel), 255);
-    SDL_RenderClear (renderer);
-#endif
+    uint8_t bg_colour;
+    bg_colour = cram [16 + (vdp_regs.background_colour & 0x0f)];
+    sms_vdp_background [0] = VDP_TO_RED (bg_colour) / 256.0f;
+    sms_vdp_background [1] = VDP_TO_GREEN (bg_colour) / 256.0f;
+    sms_vdp_background [2] = VDP_TO_BLUE (bg_colour) / 256.0f;
 
     switch (vdp_regs.mode_ctrl_1 & VDP_MODE_CTRL_1_MODE_4)
     {

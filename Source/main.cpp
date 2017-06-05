@@ -19,6 +19,7 @@ SDL_Window *window = NULL;
 SDL_GLContext glcontext = NULL;
 GLuint sms_vdp_texture = 0;
 float  sms_vdp_texture_data [256 * 256 * 3];
+float  sms_vdp_background [3];
 int window_width;
 int window_height;
 
@@ -413,6 +414,8 @@ int main (int argc, char **argv)
         ImGui_ImplSdlGL3_NewFrame (window);
 
         /* Draw main menu bar */
+        /* What colour should this be? A "Snepulator" theme, or should it blend in with the overscan colour? */
+        /* TODO: Some measure should be taken to prevent the menu from obscuring the gameplay */
         if (ImGui::BeginMainMenuBar())
         {
             if (ImGui::BeginMenu("File"))
@@ -425,7 +428,6 @@ int main (int argc, char **argv)
             ImGui::EndMainMenuBar();
         }
 
-            /* TODO: Restore the overscan colour */
         /* Window Contents */
         {
             /* Scale the image to a multiple of SMS resolution */
@@ -449,14 +451,15 @@ int main (int argc, char **argv)
                           /* uv0 */  ImVec2 (0, 0),
                           /* uv1 */  ImVec2 (1, 0.75),
                           /* tint */ ImColor (255, 255, 255, 255),
-                          /* border */ ImColor (0, 0, 0, 255));
+                          /* border */ ImColor (0, 0, 0, 0));
             ImGui::End();
             ImGui::PopStyleColor (1);
         }
 
         /* Draw to HW */
         glViewport(0, 0, (int)ImGui::GetIO().DisplaySize.x, (int)ImGui::GetIO().DisplaySize.y);
-        glClearColor(0.125, 0.125, 0.125, 0);
+        /* A thought: What about the option to dim the background? */
+        glClearColor(sms_vdp_background[0] * 0.80, sms_vdp_background[1] * 0.80, sms_vdp_background[2] * 0.80, 0);
         glClear(GL_COLOR_BUFFER_BIT);
         ImGui::Render();
 
