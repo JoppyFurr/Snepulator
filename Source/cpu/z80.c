@@ -37,6 +37,7 @@ extern bool _abort_;
 #define NN param.w
 
 /* Cycle count */
+/* TODO: At some point this will wrap around… */
 uint64_t z80_cycle = 0;
 #define CYCLES(X) { z80_cycle += X; }
 
@@ -1484,3 +1485,92 @@ void z80_instruction ()
     }
 }
 
+/* TODO: Remove knowledge of the VDP from here */
+extern void vdp_clock_update (uint64_t cycles);
+extern bool vdp_get_interrupt (void);
+
+void z80_run_until_cycle (uint64_t run_until)
+{
+    while (z80_cycle < run_until)
+    {
+        /* TIMING DEBUG */
+        uint64_t previous_cycle_count = z80_cycle;
+        uint8_t debug_instruction_0 = memory_read (z80_regs.pc + 0);
+        uint8_t debug_instruction_1 = memory_read (z80_regs.pc + 1);
+        uint8_t debug_instruction_2 = memory_read (z80_regs.pc + 2);
+        uint8_t debug_instruction_3 = memory_read (z80_regs.pc + 3);
+        z80_instruction ();
+        if (z80_cycle == previous_cycle_count)
+        {
+            fprintf (stderr, "Instruction %x %x %x %x took no time\n",
+                     debug_instruction_0,
+                     debug_instruction_1,
+                     debug_instruction_2,
+                     debug_instruction_3);
+
+            if (debug_instruction_0 == 0xcb)
+                fprintf (stderr, "DECODE %s %s %x %x took no time\n",
+                         z80_instruction_name[debug_instruction_0],
+                         z80_instruction_name_bits[debug_instruction_1],
+                         debug_instruction_2,
+                         debug_instruction_3);
+            else if (debug_instruction_0 == 0xed)
+                fprintf (stderr, "DECODE %s %s %x %x took no time\n",
+                         z80_instruction_name[debug_instruction_0],
+                         z80_instruction_name_extended[debug_instruction_1],
+                         debug_instruction_2,
+                         debug_instruction_3);
+            else if ((debug_instruction_0 == 0xdd || debug_instruction_0 == 0xfd) && debug_instruction_1 == 0xcb)
+                fprintf (stderr, "DECODE %s %s %s took no time\n",
+                         z80_instruction_name[debug_instruction_0],
+                         z80_instruction_name_ix[debug_instruction_1],
+                         z80_instruction_name_bits[debug_instruction_2]);
+            else if (debug_instruction_0 == 0xdd || debug_instruction_0 == 0xfd)
+                    fprintf (stderr, "DECODE %s %s %x %x took no time\n",
+                             z80_instruction_name[debug_instruction_0],
+                             z80_instruction_name_ix[debug_instruction_1],
+                             debug_instruction_2,
+                             debug_instruction_3);
+            else
+                fprintf (stderr, "DECODE %s %x %x %x took no time\n",
+                         z80_instruction_name[debug_instruction_0],
+                         debug_instruction_1,
+                         debug_instruction_2,
+                         debug_instruction_3);
+            _abort_ = true;
+        }
+        /* END TIMING DEBUG */
+
+        /* Time has passed, update the VDP state */
+        /* TODO: This shouldn't really be in the z80 code. Perhaps a register-able time-passed function? */
+        vdp_clock_update (z80_cycle);
+
+        /* Check for interrupts */
+        if (instructions_before_interrupts)
+            instructions_before_interrupts--;
+
+        /* TODO: Interrupt handling should live in the z80 file */
+        if (!instructions_before_interrupts && z80_regs.iff1 && vdp_get_interrupt ())
+        {
+            z80_regs.iff1 = false;
+            z80_regs.iff2 = false;
+
+            switch (z80_regs.im)
+            {
+                /* TODO: Cycle count? */
+                case 1:
+                    /* RST 0x38 */
+#if 0
+                    printf ("INTERRUPT: RST 0x38  <--\n");
+#endif
+                    memory_write (--z80_regs.sp, z80_regs.pc_h);
+                    memory_write (--z80_regs.sp, z80_regs.pc_l);
+                    z80_regs.pc = 0x38;
+                    break;
+                default:
+                    fprintf (stderr, "Unknown interrupt mode %d.\n", z80_regs.im);
+                    _abort_ = true;
+            }
+        }
+    }
+}
