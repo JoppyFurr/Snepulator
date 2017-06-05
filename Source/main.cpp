@@ -477,6 +477,7 @@ int main (int argc, char **argv)
         /* TODO: Rather than SMS cycles, we should update the display based on host VSYNC */
         if (z80_cycle >= next_frame_cycle)
         {
+            SDL_GetWindowSize (window, &window_width, &window_height);
             /* Check input */
             SDL_Event event;
 
@@ -514,7 +515,10 @@ int main (int argc, char **argv)
 
             /* TODO: Restore the overscan colour */
             {
-                SDL_GetWindowSize (window, &window_width, &window_height);
+                /* Scale the image a multiple of SMS resolution */
+                uint8_t scale = (window_width / 256) > (window_height / 192) ? (window_height / 192) : (window_width / 256);
+                if (scale < 1)
+                    scale = 1;
                 ImGui::PushStyleColor (ImGuiCol_WindowBg, ImColor (0.0f, 0.0f, 0.0f, 0.0f));
                 ImGui::SetNextWindowSize (ImVec2 (window_width, window_height));
                 ImGui::Begin ("VDP Output", NULL, ImGuiWindowFlags_NoTitleBar |
@@ -526,9 +530,9 @@ int main (int argc, char **argv)
                                                   ImGuiWindowFlags_NoBringToFrontOnFocus);
 
                 /* Centre VDP output */
-                ImGui::SetCursorPosX (window_width / 2 - 256 / 2);
-                ImGui::SetCursorPosY (window_height / 2 - 192 / 2);
-                ImGui::Image ((void *) (uintptr_t) sms_vdp_texture, ImVec2 (256, 192),
+                ImGui::SetCursorPosX (window_width / 2 - (256 * scale) / 2);
+                ImGui::SetCursorPosY (window_height / 2 - (192 * scale) / 2);
+                ImGui::Image ((void *) (uintptr_t) sms_vdp_texture, ImVec2 (256 * scale, 192 * scale),
                               /* uv0 */  ImVec2 (0, 0),
                               /* uv1 */  ImVec2 (1, 0.75),
                               /* tint */ ImColor (255, 255, 255, 255),
