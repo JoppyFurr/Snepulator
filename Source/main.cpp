@@ -19,6 +19,8 @@ SDL_Window *window = NULL;
 SDL_GLContext glcontext = NULL;
 GLuint sms_vdp_texture = 0;
 float  sms_vdp_texture_data [256 * 256 * 3];
+int window_width;
+int window_height;
 
 /* This should also be moved somewhere Master System specific */
 uint8_t *bios = NULL;
@@ -510,16 +512,29 @@ int main (int argc, char **argv)
                 ImGui::EndMainMenuBar();
             }
 
-            /* TODO: Make this window behave as the 'root' window */
             /* TODO: Restore the overscan colour */
             {
-                ImGui::Begin ("VDP Output", NULL);
+                SDL_GetWindowSize (window, &window_width, &window_height);
+                ImGui::PushStyleColor (ImGuiCol_WindowBg, ImColor (0.0f, 0.0f, 0.0f, 0.0f));
+                ImGui::SetNextWindowSize (ImVec2 (window_width, window_height));
+                ImGui::Begin ("VDP Output", NULL, ImGuiWindowFlags_NoTitleBar |
+                                                  ImGuiWindowFlags_NoResize |
+                                                  ImGuiWindowFlags_NoScrollbar |
+                                                  ImGuiWindowFlags_NoInputs |
+                                                  ImGuiWindowFlags_NoSavedSettings |
+                                                  ImGuiWindowFlags_NoFocusOnAppearing |
+                                                  ImGuiWindowFlags_NoBringToFrontOnFocus);
+
+                /* Centre VDP output */
+                ImGui::SetCursorPosX (window_width / 2 - 256 / 2);
+                ImGui::SetCursorPosY (window_height / 2 - 192 / 2);
                 ImGui::Image ((void *) (uintptr_t) sms_vdp_texture, ImVec2 (256, 192),
                               /* uv0 */  ImVec2 (0, 0),
                               /* uv1 */  ImVec2 (1, 0.75),
                               /* tint */ ImColor (255, 255, 255, 255),
                               /* border */ ImColor (0, 0, 0, 255));
                 ImGui::End();
+                ImGui::PopStyleColor (1);
             }
 
 
