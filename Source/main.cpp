@@ -285,13 +285,6 @@ int32_t sms_load_rom (uint8_t **buffer, uint32_t *filesize, char *filename)
 bool _abort_ = false;
 
 /* TODO: Move these somewhere SMS-specific */
-extern const char *z80_instruction_name[256];
-extern const char *z80_instruction_name_extended[256];
-extern const char *z80_instruction_name_bits[256];
-extern const char *z80_instruction_name_ix[256];
-extern void vdp_clock_update (uint64_t cycles);
-extern bool vdp_get_interrupt (void);
-extern uint8_t instructions_before_interrupts;
 extern uint64_t z80_cycle;
 #define SMS_CLOCK_RATE_PAL  3546895
 #define SMS_CLOCK_RATE_NTSC 3579545
@@ -392,178 +385,85 @@ int main (int argc, char **argv)
 
     /* Master System loop */
     uint64_t next_frame_cycle = 0;
-    uint64_t frame_number = 0;
     while (!_abort_)
     {
-        /* TIMING DEBUG */
-        uint64_t previous_cycle_count = z80_cycle;
-        uint8_t debug_instruction_0 = sms_memory_read (z80_regs.pc + 0);
-        uint8_t debug_instruction_1 = sms_memory_read (z80_regs.pc + 1);
-        uint8_t debug_instruction_2 = sms_memory_read (z80_regs.pc + 2);
-        uint8_t debug_instruction_3 = sms_memory_read (z80_regs.pc + 3);
-        z80_instruction ();
-        if (z80_cycle == previous_cycle_count)
+        /* INPUT */
+        SDL_GetWindowSize (window, &window_width, &window_height);
+        SDL_Event event;
+
+        ImGui_ImplSdlGL3_ProcessEvent (&event);
+
+        while (SDL_PollEvent (&event))
         {
-            fprintf (stderr, "Instruction %x %x %x %x took no time\n",
-                     debug_instruction_0,
-                     debug_instruction_1,
-                     debug_instruction_2,
-                     debug_instruction_3);
-
-            if (debug_instruction_0 == 0xcb)
-                fprintf (stderr, "DECODE %s %s %x %x took no time\n",
-                         z80_instruction_name[debug_instruction_0],
-                         z80_instruction_name_bits[debug_instruction_1],
-                         debug_instruction_2,
-                         debug_instruction_3);
-            else if (debug_instruction_0 == 0xed)
-                fprintf (stderr, "DECODE %s %s %x %x took no time\n",
-                         z80_instruction_name[debug_instruction_0],
-                         z80_instruction_name_extended[debug_instruction_1],
-                         debug_instruction_2,
-                         debug_instruction_3);
-            else if ((debug_instruction_0 == 0xdd || debug_instruction_0 == 0xfd) && debug_instruction_1 == 0xcb)
-                fprintf (stderr, "DECODE %s %s %s took no time\n",
-                         z80_instruction_name[debug_instruction_0],
-                         z80_instruction_name_ix[debug_instruction_1],
-                         z80_instruction_name_bits[debug_instruction_2]);
-            else if (debug_instruction_0 == 0xdd || debug_instruction_0 == 0xfd)
-                    fprintf (stderr, "DECODE %s %s %x %x took no time\n",
-                             z80_instruction_name[debug_instruction_0],
-                             z80_instruction_name_ix[debug_instruction_1],
-                             debug_instruction_2,
-                             debug_instruction_3);
-            else
-                fprintf (stderr, "DECODE %s %x %x %x took no time\n",
-                         z80_instruction_name[debug_instruction_0],
-                         debug_instruction_1,
-                         debug_instruction_2,
-                         debug_instruction_3);
-            _abort_ = true;
-        }
-        /* END TIMING DEBUG */
-
-        /* Time has passed, update the VDP state */
-        vdp_clock_update (z80_cycle);
-
-        /* Check for interrupts */
-        if (instructions_before_interrupts)
-            instructions_before_interrupts--;
-
-        /* TODO: Interrupt handling should live in the z80 file */
-        if (!instructions_before_interrupts && z80_regs.iff1 && vdp_get_interrupt ())
-        {
-            z80_regs.iff1 = false;
-            z80_regs.iff2 = false;
-
-            switch (z80_regs.im)
+            if (event.type == SDL_QUIT)
             {
-                /* TODO: Cycle count? */
-                case 1:
-                    /* RST 0x38 */
-#if 0
-                    printf ("INTERRUPT: RST 0x38  <--\n");
-#endif
-                    sms_memory_write (--z80_regs.sp, z80_regs.pc_h);
-                    sms_memory_write (--z80_regs.sp, z80_regs.pc_l);
-                    z80_regs.pc = 0x38;
-                    break;
-                default:
-                    fprintf (stderr, "Unknown interrupt mode %d.\n", z80_regs.im);
-                    _abort_ = true;
+                _abort_ = true;
             }
         }
 
-        /* TODO: Rather than SMS cycles, we should update the display based on host VSYNC */
-        if (z80_cycle >= next_frame_cycle)
+        /* EMULATE */
+        z80_run_until_cycle (next_frame_cycle);
+
+        /* RENDER VDP */
+        vdp_render ();
+        glBindTexture (GL_TEXTURE_2D, sms_vdp_texture);
+        glTexImage2D (GL_TEXTURE_2D, 0, GL_RGB, 256, 256, 0, GL_RGB, GL_FLOAT, sms_vdp_texture_data);
+
+        /* RENDER GUI */
+        ImGui_ImplSdlGL3_NewFrame (window);
+
+        /* Draw main menu bar */
+        if (ImGui::BeginMainMenuBar())
         {
-            SDL_GetWindowSize (window, &window_width, &window_height);
-            /* Check input */
-            SDL_Event event;
-
-            ImGui_ImplSdlGL3_ProcessEvent (&event);
-
-            while (SDL_PollEvent (&event))
+            if (ImGui::BeginMenu("File"))
             {
-                if (event.type == SDL_QUIT)
-                {
-                    _abort_ = true;
-                }
+                if (ImGui::MenuItem("Open", NULL)) {}
+                ImGui::Separator();
+                if (ImGui::MenuItem("Quit", NULL)) { _abort_ = true; }
+                ImGui::EndMenu();
             }
-
-            frame_number++;
-
-            /* Render VDP output to a texture */
-            vdp_render ();
-            glBindTexture (GL_TEXTURE_2D, sms_vdp_texture);
-            glTexImage2D (GL_TEXTURE_2D, 0, GL_RGB, 256, 256, 0, GL_RGB, GL_FLOAT, sms_vdp_texture_data);
-
-            ImGui_ImplSdlGL3_NewFrame (window);
-
-            /* Draw main menu */
-            if (ImGui::BeginMainMenuBar())
-            {
-                if (ImGui::BeginMenu("File"))
-                {
-                    if (ImGui::MenuItem("Open", NULL)) {}
-                    ImGui::Separator();
-                    if (ImGui::MenuItem("Quit", NULL)) { _abort_ = true; }
-                    ImGui::EndMenu();
-                }
-                ImGui::EndMainMenuBar();
-            }
+            ImGui::EndMainMenuBar();
+        }
 
             /* TODO: Restore the overscan colour */
-            {
-                /* Scale the image a multiple of SMS resolution */
-                uint8_t scale = (window_width / 256) > (window_height / 192) ? (window_height / 192) : (window_width / 256);
-                if (scale < 1)
-                    scale = 1;
-                ImGui::PushStyleColor (ImGuiCol_WindowBg, ImColor (0.0f, 0.0f, 0.0f, 0.0f));
-                ImGui::SetNextWindowSize (ImVec2 (window_width, window_height));
-                ImGui::Begin ("VDP Output", NULL, ImGuiWindowFlags_NoTitleBar |
-                                                  ImGuiWindowFlags_NoResize |
-                                                  ImGuiWindowFlags_NoScrollbar |
-                                                  ImGuiWindowFlags_NoInputs |
-                                                  ImGuiWindowFlags_NoSavedSettings |
-                                                  ImGuiWindowFlags_NoFocusOnAppearing |
-                                                  ImGuiWindowFlags_NoBringToFrontOnFocus);
-
-                /* Centre VDP output */
-                ImGui::SetCursorPosX (window_width / 2 - (256 * scale) / 2);
-                ImGui::SetCursorPosY (window_height / 2 - (192 * scale) / 2);
-                ImGui::Image ((void *) (uintptr_t) sms_vdp_texture, ImVec2 (256 * scale, 192 * scale),
-                              /* uv0 */  ImVec2 (0, 0),
-                              /* uv1 */  ImVec2 (1, 0.75),
-                              /* tint */ ImColor (255, 255, 255, 255),
-                              /* border */ ImColor (0, 0, 0, 255));
-                ImGui::End();
-                ImGui::PopStyleColor (1);
-            }
-
-
-            /* Use ImGui to draw to H/W */
-            glViewport(0, 0, (int)ImGui::GetIO().DisplaySize.x, (int)ImGui::GetIO().DisplaySize.y);
-            glClearColor(0.125, 0.125, 0.125, 0);
-            glClear(GL_COLOR_BUFFER_BIT);
-            ImGui::Render();
-
-            SDL_GL_SwapWindow (window);
-
-            SDL_Delay (10); /* TODO: This should be V-Sync, not a delay */
-
-            if ((frame_number % 50) == 0)
-            {
-                printf ("-- %02" PRId64 " seconds have passed --\n", frame_number / 50);
-            }
-
-            next_frame_cycle = z80_cycle + (SMS_CLOCK_RATE_PAL / 50);
-        }
-
-        if (_abort_)
+        /* Window Contents */
         {
-            fprintf (stderr, "[DEBUG]: _abort_ set. Terminating emulation.\n");
+            /* Scale the image to a multiple of SMS resolution */
+            uint8_t scale = (window_width / 256) > (window_height / 192) ? (window_height / 192) : (window_width / 256);
+            if (scale < 1)
+                scale = 1;
+            ImGui::PushStyleColor (ImGuiCol_WindowBg, ImColor (0.0f, 0.0f, 0.0f, 0.0f));
+            ImGui::SetNextWindowSize (ImVec2 (window_width, window_height));
+            ImGui::Begin ("VDP Output", NULL, ImGuiWindowFlags_NoTitleBar |
+                                              ImGuiWindowFlags_NoResize |
+                                              ImGuiWindowFlags_NoScrollbar |
+                                              ImGuiWindowFlags_NoInputs |
+                                              ImGuiWindowFlags_NoSavedSettings |
+                                              ImGuiWindowFlags_NoFocusOnAppearing |
+                                              ImGuiWindowFlags_NoBringToFrontOnFocus);
+
+            /* Centre VDP output */
+            ImGui::SetCursorPosX (window_width / 2 - (256 * scale) / 2);
+            ImGui::SetCursorPosY (window_height / 2 - (192 * scale) / 2);
+            ImGui::Image ((void *) (uintptr_t) sms_vdp_texture, ImVec2 (256 * scale, 192 * scale),
+                          /* uv0 */  ImVec2 (0, 0),
+                          /* uv1 */  ImVec2 (1, 0.75),
+                          /* tint */ ImColor (255, 255, 255, 255),
+                          /* border */ ImColor (0, 0, 0, 255));
+            ImGui::End();
+            ImGui::PopStyleColor (1);
         }
+
+        /* Draw to HW */
+        glViewport(0, 0, (int)ImGui::GetIO().DisplaySize.x, (int)ImGui::GetIO().DisplaySize.y);
+        glClearColor(0.125, 0.125, 0.125, 0);
+        glClear(GL_COLOR_BUFFER_BIT);
+        ImGui::Render();
+
+        SDL_GL_SwapWindow (window);
+        SDL_Delay (10); /* TODO: This should be V-Sync, not a delay */
+
+        next_frame_cycle = z80_cycle + (SMS_CLOCK_RATE_PAL / 50);
     }
 
     fprintf (stdout, "EMULATION ENDED.\n");
