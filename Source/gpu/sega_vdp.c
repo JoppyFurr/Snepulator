@@ -16,9 +16,6 @@
 #define VDP_TO_GREEN(C) ((0xff / 3) * ((C & 0x0c) >> 2))
 #define VDP_TO_BLUE(C)  ((0xff / 3) * ((C & 0x30) >> 4))
 
-/* Externs */
-extern SDL_Window *window;
-
 /* VDP State */
 static Vdp_Regs vdp_regs;
 static uint8_t v_counter = 0;
