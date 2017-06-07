@@ -376,4 +376,13 @@ void vdp_render (void)
             /* fprintf (stderr, "TMS9918 modes not implemented.\n"); */
             break;
     }
+
+    /* Populate a stripe of overscan below the VDP texture, as OpenGL likes a power-of-two size
+     * and will try use this line rather than GL_TEXTURE_BORDER_COLOR. */
+    for (int i = 0; i < 256; i++)
+    {
+            sms_vdp_texture_data [(i) * VDP_STRIDE_X + 192 * VDP_STRIDE_Y + 0] = sms_vdp_background[0];
+            sms_vdp_texture_data [(i) * VDP_STRIDE_X + 192 * VDP_STRIDE_Y + 1] = sms_vdp_background[1];
+            sms_vdp_texture_data [(i) * VDP_STRIDE_X + 192 * VDP_STRIDE_Y + 2] = sms_vdp_background[2];
+    }
 }
