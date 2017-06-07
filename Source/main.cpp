@@ -16,7 +16,7 @@ extern "C" {
 
 /* Global state */
 float  sms_vdp_texture_data [256 * 256 * 3];
-float  sms_vdp_background [3];
+float  sms_vdp_background [4] = { 0.125, 0.125, 0.125, 1.0 };
 bool _abort_ = false;
 
 int main (int argc, char **argv)
@@ -26,6 +26,7 @@ int main (int argc, char **argv)
     GLuint sms_vdp_texture = 0;
     char *bios_filename = NULL;
     char *cart_filename = NULL;
+    GLenum video_filter = GL_NEAREST;
     int window_width;
     int window_height;
 
@@ -94,10 +95,9 @@ int main (int argc, char **argv)
     /* Create texture for VDP output */
     glGenTextures (1, &sms_vdp_texture);
     glBindTexture (GL_TEXTURE_2D, sms_vdp_texture);
-    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+    glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, sms_vdp_background);
 
     /* Initialise SMS */
     sms_init (bios_filename, cart_filename);
@@ -125,6 +125,9 @@ int main (int argc, char **argv)
         /* RENDER VDP */
         vdp_render ();
         glBindTexture (GL_TEXTURE_2D, sms_vdp_texture);
+        glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, video_filter);
+        glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, video_filter);
+        glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, sms_vdp_background);
         glTexImage2D (GL_TEXTURE_2D, 0, GL_RGB, 256, 256, 0, GL_RGB, GL_FLOAT, sms_vdp_texture_data);
 
         /* RENDER GUI */
@@ -140,6 +143,16 @@ int main (int argc, char **argv)
                 if (ImGui::MenuItem("Open", NULL)) {}
                 ImGui::Separator();
                 if (ImGui::MenuItem("Quit", NULL)) { _abort_ = true; }
+                ImGui::EndMenu();
+            }
+            if (ImGui::BeginMenu("Video"))
+            {
+                if (ImGui::BeginMenu("Filter"))
+                {
+                    if (ImGui::MenuItem("GL_NEAREST", NULL, video_filter == GL_NEAREST)) { video_filter = GL_NEAREST; }
+                    if (ImGui::MenuItem("GL_LINEAR",  NULL, video_filter == GL_LINEAR))  { video_filter = GL_LINEAR;  }
+                    ImGui::EndMenu();
+                }
                 ImGui::EndMenu();
             }
             ImGui::EndMainMenuBar();
