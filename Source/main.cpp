@@ -72,8 +72,9 @@ int main (int argc, char **argv)
     SDL_GL_SetAttribute (SDL_GL_STENCIL_SIZE, 8); /* Do we need this? */
     SDL_GL_SetAttribute (SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute (SDL_GL_CONTEXT_MINOR_VERSION, 2);
+    /* TODO: Consider a slightly larger window to expose overscan / the menu bar */
     window = SDL_CreateWindow ("Snepulator", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-                      256 + VDP_OVERSCAN_X * 2, 192 + VDP_OVERSCAN_Y * 2, SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL);
+                      256, 192, SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL);
     if (window == NULL)
     {
         fprintf (stderr, "Error: SDL_CreateWindowfailed.\n");

@@ -22,6 +22,7 @@ typedef enum Vdp_Palette_t {
 #define BIT_6               (1 << 6)
 #define BIT_7               (1 << 7)
 
+
 /* Structs */
 typedef struct Vdp_Regs_t {
     uint8_t  mode_ctrl_1;
@@ -48,24 +49,20 @@ typedef struct Vdp_Regs_t {
     uint8_t  background_colour;         /* Bits 0x0f select the background from the sprite palette. */
     uint8_t  background_x_scroll;       /* Horizontal scroll */
     uint8_t  background_y_scroll;       /* Vertical scroll */
-    uint8_t  line_counter;              /* Line interrupt counter */
+    uint8_t  line_counter;              /* Line interrupt counter reset value */
 
     uint8_t  code;
     uint16_t address;
     uint8_t  read_buffer;
     uint8_t  status;
 #define VDP_STATUS_INT                  BIT_7
-    uint8_t  line_interrupt_counter;
-    bool     line_interrupt;
+    uint8_t  line_interrupt_counter;    /* Line interrupt counter current value */
+    bool     line_interrupt;            /* Line interrupt pending */
 } Vdp_Regs;
 
 typedef struct Vdp_Pattern_t {
     uint8_t data[32];
 } Vdp_Pattern;
-
-/* Defines */
-#define VDP_OVERSCAN_X 8
-#define VDP_OVERSCAN_Y 16
 
 
 /* Functions */
