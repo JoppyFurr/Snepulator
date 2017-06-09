@@ -352,10 +352,17 @@ void vdp_render (void)
 
                 uint8_t start_column = 32 - ((vdp_regs.background_x_scroll & 0xf8) >> 3);
                 uint8_t fine_scroll_x = vdp_regs.background_x_scroll & 0x07;
+                uint8_t start_row = 32 - ((vdp_regs.background_y_scroll & 0xf8) >> 3);
+                uint8_t fine_scroll_y = vdp_regs.background_y_scroll & 0x07;
                 Point2D position;
 
                 /* TODO: Populate the left of the screen with the background colour for fine-scroll coverage */
                 /* TODO: Implement VDP_MODE_CTRL_1_HLOCK_24_31 */
+                /* TODO: Implement VDP_MODE_CTRL_1_VLOCK_0_1   */
+                /* TODO: Implement VDP_MODE_CTRL_2_BLK         */
+                /* TODO: For 192 lines, the Y scroll value should wrap at 224 */
+                /* TODO: The vertical scroll value should only take affect between active frames, not mid-frame */
+                /* TODO: If fine-scroll of Y is active, what happens in the first few lines of the display? */
                 for (uint32_t tile_y = 0; tile_y < 28; tile_y++)
                 {
                     if (tile_y >= 24) /* TODO: Do this properly once scrolling is implemented */
@@ -363,7 +370,7 @@ void vdp_render (void)
 
                     for (uint32_t tile_x = 0; tile_x < 32; tile_x++)
                     {
-                        uint16_t tile_address = name_table_base | (tile_y << 6) | ((tile_x + start_column) % 32 << 1);
+                        uint16_t tile_address = name_table_base | ((tile_y + start_row) << 6) | ((tile_x + start_column) % 32 << 1);
 
                         uint16_t tile = ((uint16_t)(vram [tile_address])) +
                                         (((uint16_t)(vram [tile_address + 1])) << 8);
@@ -375,7 +382,7 @@ void vdp_render (void)
                         /* TODO: Flip flags */
                         /* TODO: Priority flag */
                         position.x = 8 * tile_x + fine_scroll_x;
-                        position.y = 8 * tile_y;
+                        position.y = 8 * tile_y + fine_scroll_y;
                         vdp_render_pattern (pattern, palette, position);
 
                     }
