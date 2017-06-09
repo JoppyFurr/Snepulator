@@ -216,24 +216,23 @@ extern float sms_vdp_background [3];
 #define VDP_STRIDE_X (3)
 #define VDP_STRIDE_Y (256 * 3)
 
-void vdp_render_pattern (Vdp_Pattern *pattern_base, Vdp_Palette palette, uint32_t x, uint32_t y)
+void vdp_render_pattern (Vdp_Pattern *pattern_base, Vdp_Palette palette, uint32_t x_offset, uint32_t y_offset)
 {
-    for (uint32_t pattern_y = 0; pattern_y < 8; pattern_y++)
+    for (uint32_t y = 0; y < 8; y++)
     {
-        char *line_base = (char *)(&pattern_base->data[pattern_y * 4]);
-        for (uint32_t pattern_x = 0; pattern_x < 8; pattern_x++)
+        char *line_base = (char *)(&pattern_base->data[y * 4]);
+        for (uint32_t x = 0; x < 8; x++)
         {
-            uint8_t bit0 = (line_base[0] & (0x80 >> pattern_x)) ? 0x01 : 0x00;
-            uint8_t bit1 = (line_base[1] & (0x80 >> pattern_x)) ? 0x02 : 0x00;
-            uint8_t bit2 = (line_base[2] & (0x80 >> pattern_x)) ? 0x04 : 0x00;
-            uint8_t bit3 = (line_base[3] & (0x80 >> pattern_x)) ? 0x08 : 0x00;
+            uint8_t bit0 = (line_base[0] & (0x80 >> x)) ? 0x01 : 0x00;
+            uint8_t bit1 = (line_base[1] & (0x80 >> x)) ? 0x02 : 0x00;
+            uint8_t bit2 = (line_base[2] & (0x80 >> x)) ? 0x04 : 0x00;
+            uint8_t bit3 = (line_base[3] & (0x80 >> x)) ? 0x08 : 0x00;
 
-            /* TODO: Support the sprite palette */
             uint8_t pixel = cram[((palette == VDP_PALETTE_SPRITE) ? 16 : 0) + (bit0 | bit1 | bit2 | bit3)];
 
-            sms_vdp_texture_data [(x + pattern_x) * VDP_STRIDE_X + (y + pattern_y) * VDP_STRIDE_Y + 0] = VDP_TO_RED (pixel) / 256.0f;
-            sms_vdp_texture_data [(x + pattern_x) * VDP_STRIDE_X + (y + pattern_y) * VDP_STRIDE_Y + 1] = VDP_TO_GREEN (pixel) / 256.0f;
-            sms_vdp_texture_data [(x + pattern_x) * VDP_STRIDE_X + (y + pattern_y) * VDP_STRIDE_Y + 2] = VDP_TO_BLUE (pixel) / 256.0f;
+            sms_vdp_texture_data [(x_offset + x) * VDP_STRIDE_X + (y_offset + y) * VDP_STRIDE_Y + 0] = VDP_TO_RED   (pixel) / 256.0f;
+            sms_vdp_texture_data [(x_offset + x) * VDP_STRIDE_X + (y_offset + y) * VDP_STRIDE_Y + 1] = VDP_TO_GREEN (pixel) / 256.0f;
+            sms_vdp_texture_data [(x_offset + x) * VDP_STRIDE_X + (y_offset + y) * VDP_STRIDE_Y + 2] = VDP_TO_BLUE  (pixel) / 256.0f;
         }
     }
 }
@@ -298,14 +297,14 @@ uint8_t vdp_get_v_counter (void)
 bool vdp_get_interrupt (void)
 {
     /* Frame interrupt */
-    if ((vdp_regs.mode_ctrl_2 & (1 << 5)) && (vdp_regs.status & VDP_STATUS_INT))
+    if ((vdp_regs.mode_ctrl_2 & VDP_MODE_CTRL_2_FRAME_INT_EN) && (vdp_regs.status & VDP_STATUS_INT))
     {
         printf ("[DEBUG]: Frame interrupt sent.\n");
         return true;
     }
 
     /* Line interrupt */
-    if ((vdp_regs.mode_ctrl_1 & (1 << 4)) && vdp_regs.line_interrupt)
+    if ((vdp_regs.mode_ctrl_1 & VDP_MODE_CTRL_1_LINE_INT_EN) && vdp_regs.line_interrupt)
     {
         printf ("[DEBUG]: Line interrupt sent.\n");
         return true;
