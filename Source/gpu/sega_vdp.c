@@ -216,13 +216,20 @@ extern float sms_vdp_background [3];
 #define VDP_STRIDE_X (3)
 #define VDP_STRIDE_Y (256 * 3)
 
-void vdp_render_pattern (Vdp_Pattern *pattern_base, Vdp_Palette palette, uint32_t x_offset, uint32_t y_offset)
+typedef struct Point2D_s {
+    int32_t x;
+    int32_t y;
+} Point2D;
+
+void vdp_render_pattern (Vdp_Pattern *pattern_base, Vdp_Palette palette, Point2D offset)
 {
     for (uint32_t y = 0; y < 8; y++)
     {
         char *line_base = (char *)(&pattern_base->data[y * 4]);
         for (uint32_t x = 0; x < 8; x++)
         {
+            if (x + offset.x > 255)
+                continue;
             uint8_t bit0 = (line_base[0] & (0x80 >> x)) ? 0x01 : 0x00;
             uint8_t bit1 = (line_base[1] & (0x80 >> x)) ? 0x02 : 0x00;
             uint8_t bit2 = (line_base[2] & (0x80 >> x)) ? 0x04 : 0x00;
@@ -230,9 +237,9 @@ void vdp_render_pattern (Vdp_Pattern *pattern_base, Vdp_Palette palette, uint32_
 
             uint8_t pixel = cram[((palette == VDP_PALETTE_SPRITE) ? 16 : 0) + (bit0 | bit1 | bit2 | bit3)];
 
-            sms_vdp_texture_data [(x_offset + x) * VDP_STRIDE_X + (y_offset + y) * VDP_STRIDE_Y + 0] = VDP_TO_RED   (pixel) / 256.0f;
-            sms_vdp_texture_data [(x_offset + x) * VDP_STRIDE_X + (y_offset + y) * VDP_STRIDE_Y + 1] = VDP_TO_GREEN (pixel) / 256.0f;
-            sms_vdp_texture_data [(x_offset + x) * VDP_STRIDE_X + (y_offset + y) * VDP_STRIDE_Y + 2] = VDP_TO_BLUE  (pixel) / 256.0f;
+            sms_vdp_texture_data [(offset.x + x) * VDP_STRIDE_X + (offset.y + y) * VDP_STRIDE_Y + 0] = VDP_TO_RED   (pixel) / 256.0f;
+            sms_vdp_texture_data [(offset.x + x) * VDP_STRIDE_X + (offset.y + y) * VDP_STRIDE_Y + 1] = VDP_TO_GREEN (pixel) / 256.0f;
+            sms_vdp_texture_data [(offset.x + x) * VDP_STRIDE_X + (offset.y + y) * VDP_STRIDE_Y + 2] = VDP_TO_BLUE  (pixel) / 256.0f;
         }
     }
 }
@@ -336,14 +343,19 @@ void vdp_render (void)
              *  sprites
              *  priority background */
 
-            /* Background */
-            /* By default the background is made out of 32×28 tiles */
-            /* For other resolutions this can be 32×32 tiles */
-
-            /* For other resolutions we use only two bits */
+            /* Background:
+             * For 192 lines, the background is made up of 32×28 tiles.
+             * For more than 192 lines, the background is made up of 32×32 tiles. */
             {
+                /* TODO: If using more than 192 lines, only two bits should be used here */
                 uint16_t name_table_base = (((uint16_t) vdp_regs.name_table_addr) << 10) & 0x3800;
 
+                uint8_t start_column = 32 - ((vdp_regs.background_x_scroll & 0xf8) >> 3);
+                uint8_t fine_scroll_x = vdp_regs.background_x_scroll & 0x07;
+                Point2D position;
+
+                /* TODO: Populate the left of the screen with the background colour for fine-scroll coverage */
+                /* TODO: Implement VDP_MODE_CTRL_1_HLOCK_24_31 */
                 for (uint32_t tile_y = 0; tile_y < 28; tile_y++)
                 {
                     if (tile_y >= 24) /* TODO: Do this properly once scrolling is implemented */
@@ -351,8 +363,7 @@ void vdp_render (void)
 
                     for (uint32_t tile_x = 0; tile_x < 32; tile_x++)
                     {
-
-                        uint16_t tile_address = name_table_base | (tile_y << 6) | (tile_x << 1);
+                        uint16_t tile_address = name_table_base | (tile_y << 6) | ((tile_x + start_column) % 32 << 1);
 
                         uint16_t tile = ((uint16_t)(vram [tile_address])) +
                                         (((uint16_t)(vram [tile_address + 1])) << 8);
@@ -363,7 +374,9 @@ void vdp_render (void)
 
                         /* TODO: Flip flags */
                         /* TODO: Priority flag */
-                        vdp_render_pattern (pattern, palette, 8 * tile_x, 8 * tile_y);
+                        position.x = 8 * tile_x + fine_scroll_x;
+                        position.y = 8 * tile_y;
+                        vdp_render_pattern (pattern, palette, position);
 
                     }
                 }
