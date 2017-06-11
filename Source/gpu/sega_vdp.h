@@ -36,28 +36,28 @@ typedef struct Vdp_Regs_t {
 #define VDP_MODE_CTRL_1_HLOCK_24_31     BIT_7
     uint8_t  mode_ctrl_2;
 #define VDP_MODE_CTRL_2_SPRITE_DOUBLE   BIT_0
-#define VDP_MODE_CTRL_2_SPRITE_WIDE     BIT_1
+#define VDP_MODE_CTRL_2_SPRITE_TALL     BIT_1
 #define VDP_MODE_CTRL_2_MODE_3          BIT_3
 #define VDP_MODE_CTRL_2_MODE_1          BIT_4
 #define VDP_MODE_CTRL_2_FRAME_INT_EN    BIT_5
 #define VDP_MODE_CTRL_2_BLK             BIT_6
-    uint8_t  name_table_addr;           /* Bits 0x0e select name table base address. */
-    uint8_t  colour_table_addr;         /* Unused - Bits 0xff should be set. */
-    uint8_t  background_pattern_addr;   /* Unused - Bits 0x07 should be set. */
-    uint8_t  sprite_attr_table_addr;    /* Bits 0x7e select the sprite attribute table base address. */
-    uint8_t  sprite_pattern_table_addr; /* Bits 0x01 selects sprite pattern generator base address. */
-    uint8_t  background_colour;         /* Bits 0x0f select the background from the sprite palette. */
-    uint8_t  background_x_scroll;       /* Horizontal scroll */
-    uint8_t  background_y_scroll;       /* Vertical scroll */
-    uint8_t  line_counter;              /* Line interrupt counter reset value */
+    uint8_t  name_table_addr;                   /* Bits 0x0e select name table base address. */
+    uint8_t  colour_table_addr;                 /* Unused - Bits 0xff should be set. */
+    uint8_t  background_pattern_generator_addr; /* Unused - Bits 0x07 should be set. */
+    uint8_t  sprite_attr_table_addr;            /* Bits 0x7e select the sprite attribute table base address. */
+    uint8_t  sprite_pattern_generator_addr;     /* Bit  0x04 selects sprite pattern generator base address. */
+    uint8_t  background_colour;                 /* Bits 0x0f select the background from the sprite palette. */
+    uint8_t  background_x_scroll;               /* Horizontal scroll */
+    uint8_t  background_y_scroll;               /* Vertical scroll */
+    uint8_t  line_counter;                      /* Line interrupt counter reset value */
 
     uint8_t  code;
     uint16_t address;
     uint8_t  read_buffer;
     uint8_t  status;
 #define VDP_STATUS_INT                  BIT_7
-    uint8_t  line_interrupt_counter;    /* Line interrupt counter current value */
-    bool     line_interrupt;            /* Line interrupt pending */
+    uint8_t  line_interrupt_counter;            /* Line interrupt counter current value */
+    bool     line_interrupt;                    /* Line interrupt pending */
 } Vdp_Regs;
 
 typedef struct Vdp_Pattern_t {
