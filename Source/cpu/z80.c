@@ -51,6 +51,8 @@ void    (* io_write)    (uint8_t, uint8_t) = NULL;
 
 /* TODO: Note: Interrupts should not be accepted until after the instruction following EI */
 
+/* TODO: Consider the accuracy of the R register */
+
 uint8_t instructions_before_interrupts = 0;
 
 #define X 1 /* Extended */
@@ -311,11 +313,12 @@ uint32_t z80_extended_instruction ()
                                     z80_regs.iff1 = z80_regs.iff2;
                                     break;
         case 0x4a: /* ADC HL,BC  */ temp_16 = z80_regs.bc + CARRY_BIT;
-                                    SET_FLAGS_ADC_16 (z80_regs.bc); z80_regs.hl += temp_16; break;
+                                    SET_FLAGS_ADC_16 (z80_regs.bc); z80_regs.hl += temp_16; z80_cycle += 15; break;
         case 0x4b: /* LD BC,(**) */ z80_regs.c = memory_read (param.w);
                                     z80_regs.b = memory_read (param.w + 1); z80_cycle += 20; break;
         case 0x4d: /* RETI       */ z80_regs.pc_l = memory_read (z80_regs.sp++);
                                     z80_regs.pc_h = memory_read (z80_regs.sp++);
+                                    z80_cycle += 14;
                                     break; /* TODO: Signals the IO device that the interrupt is handled? */
 
         case 0x51: /* OUT (C),D  */ io_write (z80_regs.c, z80_regs.d); z80_cycle += 12; break;
@@ -326,9 +329,15 @@ uint32_t z80_extended_instruction ()
         case 0x56: /* IM 1       */ fprintf (stdout, "[DEBUG]: Interrupt mode = 1.\n"); z80_regs.im = 1; z80_cycle += 8; break;
         case 0x59: /* OUT (C),E  */ io_write (z80_regs.c, z80_regs.e); z80_cycle += 12; break;
         case 0x5a: /* ADC HL,DE  */ temp_16 = z80_regs.de + CARRY_BIT;
-                                    SET_FLAGS_ADC_16 (z80_regs.de); z80_regs.hl += temp_16; break;
+                                    SET_FLAGS_ADC_16 (z80_regs.de); z80_regs.hl += temp_16; z80_cycle += 15; break;
         case 0x5b: /* LD DE,(**) */ z80_regs.e = memory_read (param.w);
                                     z80_regs.d = memory_read (param.w + 1); z80_cycle += 20; break;
+        case 0x5f: /* LD A,R     */ z80_regs.a = z80_regs.r; z80_cycle += 9;
+                                    z80_regs.f = (z80_regs.f &                Z80_FLAG_CARRY       ) |
+                                                 (z80_regs.r & 0x80         ? Z80_FLAG_SIGN     : 0) |
+                                                 (z80_regs.r == 0           ? Z80_FLAG_ZERO     : 0) |
+                                                 (z80_regs.iff2             ? Z80_FLAG_OVERFLOW : 0);
+                                    break;
 
         case 0x61: /* OUT (C),H  */ io_write (z80_regs.c, z80_regs.h); z80_cycle += 12; break;
         case 0x62: /* SBC HL,HL  */ temp_16 = z80_regs.hl + CARRY_BIT;
@@ -342,13 +351,13 @@ uint32_t z80_extended_instruction ()
                                     break;
         case 0x69: /* OUT (C),L  */ io_write (z80_regs.c, z80_regs.l); z80_cycle += 12; break;
         case 0x6a: /* ADC HL,HL  */ temp_16 = z80_regs.hl + CARRY_BIT;
-                                    SET_FLAGS_ADC_16 (z80_regs.hl); z80_regs.hl += temp_16; break;
+                                    SET_FLAGS_ADC_16 (z80_regs.hl); z80_regs.hl += temp_16; z80_cycle += 15; break;
         case 0x6f: /* RLD        */ temp_1 = memory_read (z80_regs.hl);
                                     temp_2 = z80_regs.a;
                                     z80_regs.a &= 0xf0; z80_regs.a |= (temp_1 >> 4);
                                     temp_1 <<= 4; temp_1 |= (temp_2 & 0x0f);
                                     memory_write (z80_regs.hl, temp_1);
-                                    SET_FLAGS_RRD_RLD;
+                                    SET_FLAGS_RRD_RLD; z80_cycle += 18;
                                     break;
 
         case 0x71: /* OUT (C),0  */ io_write (z80_regs.c, 0); break;
@@ -357,7 +366,7 @@ uint32_t z80_extended_instruction ()
         case 0x73: /* LD (**),SP */ memory_write (param.w,     z80_regs.sp_l);
                                     memory_write (param.w + 1, z80_regs.sp_h); z80_cycle += 20; break;
         case 0x7a: /* ADC HL,SP  */ temp_16 = z80_regs.sp + CARRY_BIT;
-                                    SET_FLAGS_ADC_16 (z80_regs.sp); z80_regs.hl += temp_16; break;
+                                    SET_FLAGS_ADC_16 (z80_regs.sp); z80_regs.hl += temp_16; z80_cycle += 15; break;
         case 0x79: /* OUT (C),A  */ io_write (z80_regs.c, z80_regs.a); z80_cycle += 12; break;
         case 0x7b: /* LD SP,(**) */ z80_regs.sp_l = memory_read (param.w);
                                     z80_regs.sp_h = memory_read (param.w + 1); z80_cycle += 20; break;
@@ -416,7 +425,8 @@ uint32_t z80_extended_instruction ()
                                                                 Z80_FLAG_ZERO  |
                                                                 Z80_FLAG_SIGN)) |
                                                  (z80_regs.bc ? Z80_FLAG_OVERFLOW : 0);
-                                    z80_regs.pc -= z80_regs.bc ? 2 : 0; break;
+                                    z80_regs.pc -= z80_regs.bc ? 2 : 0;
+                                    z80_cycle += (z80_regs.bc == 0) ? 16 : 21; break;
         case 0xb9: /* CPDR       */ temp_1 = memory_read (z80_regs.hl);
                                     z80_regs.hl--;
                                     z80_regs.bc--;
@@ -573,16 +583,16 @@ uint16_t z80_ix_iy_instruction (uint16_t reg_ix_iy_in)
         case 0x22: /* LD (**),IX   */ memory_write (param.w,     reg_ix_iy.l);
                                       memory_write (param.w + 1, reg_ix_iy.h); z80_cycle += 20; break;
         case 0x23: /* INC IX       */ reg_ix_iy.w++; z80_cycle += 10; break;
-        case 0x24: /* INC IXH      */ reg_ix_iy.h++; SET_FLAGS_INC (reg_ix_iy.h) break;
-        case 0x25: /* DEC IXH      */ reg_ix_iy.h--; SET_FLAGS_DEC (reg_ix_iy.h) break;
-        case 0x26: /* LD IXH,*     */ reg_ix_iy.h = param.l; break;
+        case 0x24: /* INC IXH      */ reg_ix_iy.h++; SET_FLAGS_INC (reg_ix_iy.h); z80_cycle += 8; break;
+        case 0x25: /* DEC IXH      */ reg_ix_iy.h--; SET_FLAGS_DEC (reg_ix_iy.h); z80_cycle += 8; break;
+        case 0x26: /* LD IXH,*     */ reg_ix_iy.h = param.l; z80_cycle += 11; break;
         case 0x29: /* ADD IX,IX    */ SET_FLAGS_ADD_16 (reg_ix_iy.w, reg_ix_iy.w); reg_ix_iy.w += reg_ix_iy.w; CYCLES (15); break;
         case 0x2a: /* LD IX,(**)   */ reg_ix_iy.l = memory_read (param.w);
                                       reg_ix_iy.h = memory_read (param.w + 1); z80_cycle += 20; break;
         case 0x2b: /* DEC IX       */ reg_ix_iy.w--; break;
-        case 0x2c: /* INC IXL      */ reg_ix_iy.l++; SET_FLAGS_INC (reg_ix_iy.l) break;
-        case 0x2d: /* DEC IXL      */ reg_ix_iy.l--; SET_FLAGS_DEC (reg_ix_iy.l) break;
-        case 0x2e: /* LD IXL,*     */ reg_ix_iy.l = param.l; break;
+        case 0x2c: /* INC IXL      */ reg_ix_iy.l++; SET_FLAGS_INC (reg_ix_iy.l); z80_cycle += 8; break;
+        case 0x2d: /* DEC IXL      */ reg_ix_iy.l--; SET_FLAGS_DEC (reg_ix_iy.l); z80_cycle += 8; break;
+        case 0x2e: /* LD IXL,*     */ reg_ix_iy.l = param.l; z80_cycle += 11; break;
 
         case 0x34: /* INC (IX+*)   */ temp = memory_read (reg_ix_iy.w + (int8_t) param.l);
                                       temp++; SET_FLAGS_INC (temp);
@@ -692,7 +702,7 @@ uint16_t z80_ix_iy_instruction (uint16_t reg_ix_iy_in)
         case 0xac: /* XOR A,IXH    */ z80_regs.a ^= reg_ix_iy.h; SET_FLAGS_OR_XOR; break;
         case 0xad: /* XOR A,IXL    */ z80_regs.a ^= reg_ix_iy.l; SET_FLAGS_OR_XOR; break;
         case 0xae: /* XOR A,(IX+*) */ z80_regs.a ^= memory_read (reg_ix_iy.w + (int8_t) param.l);
-                                      SET_FLAGS_OR_XOR; break;
+                                      SET_FLAGS_OR_XOR; z80_cycle += 19; break;
 
         case 0xb4: /* OR A,IXH     */ z80_regs.a |= reg_ix_iy.h; SET_FLAGS_OR_XOR; break;
         case 0xb5: /* OR A,IXL     */ z80_regs.a |= reg_ix_iy.l; SET_FLAGS_OR_XOR; break;
@@ -909,6 +919,9 @@ void z80_instruction ()
             uint8_t h;
         };
     } param;
+
+    /* TODO: This register should be incremented in more places than just here */
+    z80_regs.r = (z80_regs.r & 0x80) |((z80_regs.r + 1) & 0x7f);
 
     /* Fetch */
     instruction = memory_read (z80_regs.pc++);
@@ -1444,6 +1457,9 @@ void z80_instruction ()
         case 0xf5: /* PUSH AF    */ memory_write (--z80_regs.sp, z80_regs.a);
                                     memory_write (--z80_regs.sp, z80_regs.f); z80_cycle += 11; break;
         case 0xf6: /* OR A,*     */ z80_regs.a |= param.l; SET_FLAGS_OR_XOR; z80_cycle += 7; break;
+        case 0xf7: /* RST 30h    */ memory_write (--z80_regs.sp, z80_regs.pc_h);
+                                    memory_write (--z80_regs.sp, z80_regs.pc_l);
+                                    PC = 0x30; CYCLES (11);        break;
         case 0xf8: /* RET M      */ if (z80_regs.f & Z80_FLAG_SIGN)
                                     {
                                         z80_regs.pc_l = memory_read (z80_regs.sp++);
