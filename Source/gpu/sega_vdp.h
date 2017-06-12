@@ -40,7 +40,7 @@ typedef struct Vdp_Regs_t {
 #define VDP_MODE_CTRL_2_MODE_3          BIT_3
 #define VDP_MODE_CTRL_2_MODE_1          BIT_4
 #define VDP_MODE_CTRL_2_FRAME_INT_EN    BIT_5
-#define VDP_MODE_CTRL_2_BLK             BIT_6
+#define VDP_MODE_CTRL_2_BLANK           BIT_6
     uint8_t  name_table_addr;                   /* Bits 0x0e select name table base address. */
     uint8_t  colour_table_addr;                 /* Unused - Bits 0xff should be set. */
     uint8_t  background_pattern_generator_addr; /* Unused - Bits 0x07 should be set. */
