@@ -287,7 +287,7 @@ bool vdp_get_interrupt (void)
     return false;
 }
 
-extern float sms_vdp_texture_data [256 * 256 * 3];
+extern float sms_vdp_texture_data [256 * 192 * 3];
 extern float sms_vdp_background [3];
 #define VDP_STRIDE_X (3)
 #define VDP_STRIDE_Y (256 * 3)
@@ -304,8 +304,10 @@ void vdp_render_pattern (Vdp_Pattern *pattern_base, Vdp_Palette palette, Point2D
         char *line_base = (char *)(&pattern_base->data[y * 4]);
         for (uint32_t x = 0; x < 8; x++)
         {
-            if (x + offset.x > 255)
+            /* Don't draw texture pixels that fall outside of the screen */
+            if (x + offset.x >= 256 || y + offset.y >= 192)
                 continue;
+
             uint8_t bit0 = (line_base[0] & (0x80 >> x)) ? 0x01 : 0x00;
             uint8_t bit1 = (line_base[1] & (0x80 >> x)) ? 0x02 : 0x00;
             uint8_t bit2 = (line_base[2] & (0x80 >> x)) ? 0x04 : 0x00;
@@ -443,15 +445,5 @@ void vdp_render (void)
         default:
             /* fprintf (stderr, "TMS9918 modes not implemented.\n"); */
             break;
-    }
-
-    /* TODO: Investigate using a NPOT texture to remove this */
-    /* Populate a stripe of overscan below the VDP texture, as OpenGL likes a power-of-two size
-     * and will try use this line rather than GL_TEXTURE_BORDER_COLOR. */
-    for (int i = 0; i < 256; i++)
-    {
-            sms_vdp_texture_data [(i) * VDP_STRIDE_X + 192 * VDP_STRIDE_Y + 0] = sms_vdp_background[0];
-            sms_vdp_texture_data [(i) * VDP_STRIDE_X + 192 * VDP_STRIDE_Y + 1] = sms_vdp_background[1];
-            sms_vdp_texture_data [(i) * VDP_STRIDE_X + 192 * VDP_STRIDE_Y + 2] = sms_vdp_background[2];
     }
 }

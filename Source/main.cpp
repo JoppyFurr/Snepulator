@@ -15,7 +15,7 @@ extern "C" {
 }
 
 /* Global state */
-float  sms_vdp_texture_data [256 * 256 * 3];
+float  sms_vdp_texture_data [256 * 192 * 3];
 float  sms_vdp_background [4] = { 0.125, 0.125, 0.125, 1.0 };
 bool _abort_ = false;
 
@@ -129,7 +129,7 @@ int main (int argc, char **argv)
         glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, video_filter);
         glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, video_filter);
         glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, sms_vdp_background);
-        glTexImage2D (GL_TEXTURE_2D, 0, GL_RGB, 256, 256, 0, GL_RGB, GL_FLOAT, sms_vdp_texture_data);
+        glTexImage2D (GL_TEXTURE_2D, 0, GL_RGB, 256, 192, 0, GL_RGB, GL_FLOAT, sms_vdp_texture_data);
 
         /* RENDER GUI */
         ImGui_ImplSdlGL3_NewFrame (window);
@@ -180,7 +180,7 @@ int main (int argc, char **argv)
             ImGui::SetCursorPosY (window_height / 2 - (192 * scale) / 2);
             ImGui::Image ((void *) (uintptr_t) sms_vdp_texture, ImVec2 (256 * scale, 192 * scale),
                           /* uv0 */  ImVec2 (0, 0),
-                          /* uv1 */  ImVec2 (1, 0.75),
+                          /* uv1 */  ImVec2 (1, 1),
                           /* tint */ ImColor (255, 255, 255, 255),
                           /* border */ ImColor (0, 0, 0, 0));
             ImGui::End();
