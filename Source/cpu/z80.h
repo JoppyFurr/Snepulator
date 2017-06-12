@@ -2,21 +2,6 @@
 /* TODO: Do we need to do anything extra to tell the compiler to pack the structs? */
 /* Note: Assuming little endian for now */
 typedef struct Z80_Regs_t {
-    /* Special Purpose Registers */
-    uint8_t  i;  /* Interrupt Vector */
-    uint8_t  r;  /* Memory Refresh */
-    union {
-        struct {
-            uint16_t pc; /* Program Counter */
-            uint16_t sp; /* Stack Pointer */
-        };
-        struct {
-            uint8_t pc_l;
-            uint8_t pc_h;
-            uint8_t sp_l;
-            uint8_t sp_h;
-        };
-    };
     /* Main Register Set */
     union {
         struct {
@@ -24,8 +9,6 @@ typedef struct Z80_Regs_t {
             uint16_t bc;
             uint16_t de;
             uint16_t hl;
-            uint16_t ix;
-            uint16_t iy;
         };
         struct {
             uint8_t f;
@@ -36,10 +19,6 @@ typedef struct Z80_Regs_t {
             uint8_t d;
             uint8_t l;
             uint8_t h;
-            uint8_t ix_l;
-            uint8_t ix_h;
-            uint8_t iy_l;
-            uint8_t iy_h;
         };
     };
     /* Alternate Register Set */
@@ -59,6 +38,28 @@ typedef struct Z80_Regs_t {
             uint8_t alt_d;
             uint8_t alt_l;
             uint8_t alt_h;
+        };
+    };
+    /* Special Purpose Registers */
+    union {
+        struct {
+            uint16_t ir;
+            uint16_t ix;    /* Index registers */
+            uint16_t iy;
+            uint16_t sp;    /* Stack Pointer */
+            uint16_t pc;    /* Program Counter */
+        };
+        struct {
+            uint8_t i;      /* Interrupt Vector */
+            uint8_t r;      /* Memory Refresh */
+            uint8_t ix_l;
+            uint8_t ix_h;
+            uint8_t iy_l;
+            uint8_t iy_h;
+            uint8_t sp_l;
+            uint8_t sp_h;
+            uint8_t pc_l;
+            uint8_t pc_h;
         };
     };
     uint8_t im;
