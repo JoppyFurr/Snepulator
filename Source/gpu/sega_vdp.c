@@ -337,10 +337,8 @@ void vdp_render_background (bool priority)
     uint8_t fine_scroll_y = vdp_regs.background_y_scroll & 0x07;
     Point2D position;
 
-    /* TODO: Populate the left of the screen with the background colour for fine-scroll coverage */
     /* TODO: Implement VDP_MODE_CTRL_1_HLOCK_24_31 */
     /* TODO: Implement VDP_MODE_CTRL_1_VLOCK_0_1   */
-    /* TODO: Implement VDP_MODE_CTRL_2_BLK         */
     /* TODO: For 192 lines, the Y scroll value should wrap at 224 */
     /* TODO: The vertical scroll value should only take affect between active frames, not mid-frame */
     /* TODO: If fine-scroll of Y is active, what happens in the first few lines of the display? */
@@ -418,6 +416,22 @@ void vdp_render_sprites (void)
  *       SMS games actually use */
 void vdp_render (void)
 {
+    /* Check if the display is blanked */
+    if (!(vdp_regs.mode_ctrl_2 & VDP_MODE_CTRL_2_BLANK))
+    {
+        sms_vdp_background [0] = 0.0f;
+        sms_vdp_background [1] = 0.0f;
+        sms_vdp_background [2] = 0.0f;
+        for (int y = 0; y < 192; y++)
+            for (int x = 0; x < 256; x++)
+            {
+                    sms_vdp_texture_data [x * VDP_STRIDE_X + y * VDP_STRIDE_Y + 0] = 0.0f;
+                    sms_vdp_texture_data [x * VDP_STRIDE_X + y * VDP_STRIDE_Y + 1] = 0.0f;
+                    sms_vdp_texture_data [x * VDP_STRIDE_X + y * VDP_STRIDE_Y + 2] = 0.0f;
+            }
+        return;
+    }
+
     /* Background / overscan - Is this specific to mode 4? */
     uint8_t bg_colour;
     bg_colour = cram [16 + (vdp_regs.background_colour & 0x0f)];
