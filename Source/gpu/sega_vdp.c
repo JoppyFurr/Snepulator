@@ -344,9 +344,6 @@ void vdp_render_background (bool priority)
     /* TODO: If fine-scroll of Y is active, what happens in the first few lines of the display? */
     for (uint32_t tile_y = 0; tile_y < 28; tile_y++)
     {
-        if (tile_y >= 24) /* TODO: Do this properly once scrolling is implemented */
-            continue;
-
         for (uint32_t tile_x = 0; tile_x < 32; tile_x++)
         {
             uint16_t tile_address = name_table_base | ((tile_y + start_row) << 6) | ((tile_x + start_column) % 32 << 1);
@@ -378,9 +375,8 @@ void vdp_render_background (bool priority)
 /* TODO: Draw order: the first entry in the line's sprite buffer with a non-transparent pixel is the one that sticks */
 void vdp_render_sprites (void)
 {
-
     uint16_t sprite_attribute_table_base = (((uint16_t) vdp_regs.sprite_attr_table_addr) << 7) & 0x3f00;
-    uint16_t sprite_pattern_generator_base = (((uint16_t) vdp_regs.sprite_pattern_generator_addr) << 13) & 0x2000;
+    uint16_t sprite_pattern_offset = (vdp_regs.sprite_pattern_generator_addr & 0x04) ? 256 : 0;
     Vdp_Pattern *pattern;
     Point2D position;
 
@@ -400,13 +396,13 @@ void vdp_render_sprites (void)
         if (vdp_regs.mode_ctrl_2 & VDP_MODE_CTRL_2_SPRITE_TALL)
             pattern_index &= 0xfe;
 
-        pattern = (Vdp_Pattern *) &vram [sprite_pattern_generator_base + pattern_index * sizeof (Vdp_Pattern)];
+        pattern = (Vdp_Pattern *) &vram [(sprite_pattern_offset + pattern_index) * sizeof (Vdp_Pattern)];
         vdp_render_pattern (pattern, VDP_PALETTE_SPRITE, position, true);
 
         if (vdp_regs.mode_ctrl_2 & VDP_MODE_CTRL_2_SPRITE_TALL)
         {
             position.y += 8;
-            pattern = (Vdp_Pattern *) &vram [sprite_pattern_generator_base + (pattern_index + 1) * sizeof (Vdp_Pattern)];
+            pattern = (Vdp_Pattern *) &vram [(sprite_pattern_offset + pattern_index + 1) * sizeof (Vdp_Pattern)];
             vdp_render_pattern (pattern, VDP_PALETTE_SPRITE, position, true);
         }
     }
