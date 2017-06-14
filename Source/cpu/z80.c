@@ -396,6 +396,14 @@ uint32_t z80_extended_instruction ()
                                     z80_regs.bc--;
                                     SET_FLAGS_CPD_CPI (temp_1);
                                     break;
+        case 0xab: /* OUTD       */ temp_1 = memory_read (z80_regs.hl);
+                                    z80_regs.b--;
+                                    io_write (z80_regs.c, temp_1);
+                                    z80_regs.hl--;
+                                    /* TODO: Confirm 'unknown' flag behaviour */
+                                    z80_regs.f |= Z80_FLAG_SUB;
+                                    z80_regs.f = (z80_regs.f & ~Z80_FLAG_ZERO) | (z80_regs.b == 0 ? Z80_FLAG_ZERO : 0);
+                                    z80_cycle += 16; break;
 
         case 0xb0: /* LDIR       */ memory_write (z80_regs.de, memory_read (z80_regs.hl));
                                     z80_regs.hl++; z80_regs.de++;
