@@ -297,21 +297,34 @@ typedef struct Point2D_s {
     int32_t y;
 } Point2D;
 
-void vdp_render_pattern (Vdp_Pattern *pattern_base, Vdp_Palette palette, Point2D offset, bool transparency)
+void vdp_render_pattern (Vdp_Pattern *pattern_base, Vdp_Palette palette, Point2D offset, bool h_flip, bool v_flip, bool transparency)
 {
     for (uint32_t y = 0; y < 8; y++)
     {
-        char *line_base = (char *)(&pattern_base->data[y * 4]);
+        char *line_base;
+
+        if (v_flip)
+            line_base = (char *)(&pattern_base->data[(7 - y) * 4]);
+        else
+            line_base = (char *)(&pattern_base->data[y * 4]);
+
         for (uint32_t x = 0; x < 8; x++)
         {
             /* Don't draw texture pixels that fall outside of the screen */
             if (x + offset.x >= 256 || y + offset.y >= 192)
                 continue;
 
-            uint8_t bit0 = (line_base[0] & (0x80 >> x)) ? 0x01 : 0x00;
-            uint8_t bit1 = (line_base[1] & (0x80 >> x)) ? 0x02 : 0x00;
-            uint8_t bit2 = (line_base[2] & (0x80 >> x)) ? 0x04 : 0x00;
-            uint8_t bit3 = (line_base[3] & (0x80 >> x)) ? 0x08 : 0x00;
+            int shift;
+
+            if (h_flip)
+                shift = 7 - x;
+            else
+                shift = x;
+
+            uint8_t bit0 = (line_base[0] & (0x80 >> shift)) ? 0x01 : 0x00;
+            uint8_t bit1 = (line_base[1] & (0x80 >> shift)) ? 0x02 : 0x00;
+            uint8_t bit2 = (line_base[2] & (0x80 >> shift)) ? 0x04 : 0x00;
+            uint8_t bit3 = (line_base[3] & (0x80 >> shift)) ? 0x08 : 0x00;
 
             if (transparency == true && (bit0 | bit1 | bit2 | bit3) == 0)
                 continue;
@@ -325,7 +338,10 @@ void vdp_render_pattern (Vdp_Pattern *pattern_base, Vdp_Palette palette, Point2D
     }
 }
 
-/* TODO: Find out how transparent pixels work */
+#define VDP_PATTERN_HORIZONTAL_FLIP     BIT_9
+#define VDP_PATTERN_VERTICAL_FLIP       BIT_10
+
+/* TODO: Confirm left-edge behaviour or a real Master System */
 void vdp_render_background (bool priority)
 {
     /* TODO: If using more than 192 lines, only two bits should be used here */
@@ -355,14 +371,16 @@ void vdp_render_background (bool priority)
             if (priority && !(tile & 0x1000))
                 continue;
 
+            bool h_flip = tile & VDP_PATTERN_HORIZONTAL_FLIP;
+            bool v_flip = tile & VDP_PATTERN_VERTICAL_FLIP;
+
             Vdp_Pattern *pattern = (Vdp_Pattern *) &vram[(tile & 0x1ff) * sizeof(Vdp_Pattern)];
 
             Vdp_Palette palette = (tile & (1 << 11)) ? VDP_PALETTE_SPRITE : VDP_PALETTE_BACKGROUND;
 
-            /* TODO: Flip flags */
             position.x = 8 * tile_x + fine_scroll_x;
             position.y = 8 * tile_y + fine_scroll_y;
-            vdp_render_pattern (pattern, palette, position, false);
+            vdp_render_pattern (pattern, palette, position, h_flip, v_flip, false | priority);
 
         }
     }
@@ -397,13 +415,13 @@ void vdp_render_sprites (void)
             pattern_index &= 0xfe;
 
         pattern = (Vdp_Pattern *) &vram [(sprite_pattern_offset + pattern_index) * sizeof (Vdp_Pattern)];
-        vdp_render_pattern (pattern, VDP_PALETTE_SPRITE, position, true);
+        vdp_render_pattern (pattern, VDP_PALETTE_SPRITE, position, false, false, true);
 
         if (vdp_regs.mode_ctrl_2 & VDP_MODE_CTRL_2_SPRITE_TALL)
         {
             position.y += 8;
             pattern = (Vdp_Pattern *) &vram [(sprite_pattern_offset + pattern_index + 1) * sizeof (Vdp_Pattern)];
-            vdp_render_pattern (pattern, VDP_PALETTE_SPRITE, position, true);
+            vdp_render_pattern (pattern, VDP_PALETTE_SPRITE, position, false, false, true);
         }
     }
 }
