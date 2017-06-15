@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 #include <errno.h>
 
 #include "sms.h"
@@ -22,6 +23,10 @@ uint8_t io_control = 0x00;
 
 /* Sega Mapper */
 uint8_t mapper_bank[3] = { 0x00, 0x01, 0x02 };
+
+/* Gamepads */
+SMS_Gamepad gamepad_1;
+SMS_Gamepad gamepad_2;
 
 /* 0: Output
  * 1: Input */
@@ -222,7 +227,14 @@ static uint8_t sms_io_read (uint8_t addr)
         if ((addr & 0x01) == 0x00)
         {
             /* I/O Port A/B */
-            return 0xff;
+            return (gamepad_1.up        ? 0 : BIT_0) |
+                   (gamepad_1.down      ? 0 : BIT_1) |
+                   (gamepad_1.left      ? 0 : BIT_2) |
+                   (gamepad_1.right     ? 0 : BIT_3) |
+                   (gamepad_1.button_1  ? 0 : BIT_4) |
+                   (gamepad_1.button_2  ? 0 : BIT_5) |
+                   (gamepad_2.up        ? 0 : BIT_6) |
+                   (gamepad_2.down      ? 0 : BIT_7);
         }
         else
         {
@@ -295,6 +307,9 @@ void sms_init (char *bios_filename, char *cart_filename)
     /* Initialise CPU and VDP */
     z80_init (sms_memory_read, sms_memory_write, sms_io_read, sms_io_write);
     vdp_init ();
+
+    memset (&gamepad_1, 0, sizeof (gamepad_1));
+    memset (&gamepad_2, 0, sizeof (gamepad_2));
 
     next_frame_cycle = 0;
 }

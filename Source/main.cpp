@@ -5,6 +5,7 @@
 #include <errno.h>
 
 #include "SDL2/SDL.h"
+#include "SDL2/SDL_joystick.h"
 #include <GL/gl3w.h>
 #include "../Libraries/imgui-1.49/imgui.h"
 #include "../Libraries/imgui-1.49/examples/sdl_opengl3_example/imgui_impl_sdl_gl3.h"
@@ -12,6 +13,7 @@
 extern "C" {
 #include "gpu/sega_vdp.h"
 #include "sms.h"
+    extern SMS_Gamepad gamepad_1;
 }
 
 /* Global state */
@@ -30,6 +32,10 @@ int main (int argc, char **argv)
     int window_width;
     int window_height;
 
+    SDL_Joystick *player_1_joystick = NULL;
+    SDL_Joystick *player_2_joystick = NULL;
+    int player_1_joystick_id = -1;
+    int player_2_joystick_id = -1;
 
     printf ("Snepulator.\n");
     printf ("Built on " BUILD_DATE ".\n");
@@ -110,14 +116,57 @@ int main (int argc, char **argv)
         SDL_GetWindowSize (window, &window_width, &window_height);
         SDL_Event event;
 
-        ImGui_ImplSdlGL3_ProcessEvent (&event);
-
+        /* TODO: For now, we hard-code the USB Saturn gamepad on my desk. A "Configure gamepad" option needs to be created. */
+        /* TODO: For any saved configuration, use UUID instead of "id". */
         while (SDL_PollEvent (&event))
         {
+            ImGui_ImplSdlGL3_ProcessEvent (&event);
+
             if (event.type == SDL_QUIT)
             {
                 _abort_ = true;
             }
+
+            /* Player 1 Gamepad input */
+            else if (event.type == SDL_JOYAXISMOTION && event.jaxis.which == player_1_joystick_id)
+            {
+                switch (event.jaxis.axis)
+                {
+                    case 0: /* Left-right */
+                        gamepad_1.left = event.jaxis.value < -1000;
+                        gamepad_1.right = event.jaxis.value > 1000;
+                        break;
+                    case 1: /* Up-down */
+                        gamepad_1.up = event.jaxis.value < -1000;
+                        gamepad_1.down = event.jaxis.value > 1000;
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            else if ((event.type == SDL_JOYBUTTONUP || SDL_JOYBUTTONDOWN) &&
+                      event.jbutton.which == player_1_joystick_id)
+            {
+                switch (event.jbutton.button)
+                {
+                    case 2: /* "B" on my USB Saturn gamepad */
+                        gamepad_1.button_1 = (event.type == SDL_JOYBUTTONDOWN) ? true : false;
+                        break;
+                    case 1: /* "C" on my USB Saturn gamepad */
+                        gamepad_1.button_2 = (event.type == SDL_JOYBUTTONDOWN) ? true : false;
+                        break;
+                    default: /* Don't care */
+                        break;
+                }
+            }
+
+            else if (event.type == SDL_JOYBUTTONUP && event.jbutton.which == player_1_joystick_id)
+            {
+            }
+
+            else if (event.type == SDL_JOYDEVICEREMOVED && event.jdevice.which == player_1_joystick_id)
+                printf ("TODO: Player 1 joystick removed. Do something nice like pause the game until it's re-attached.\n");
         }
 
         /* EMULATE */
@@ -152,6 +201,36 @@ int main (int argc, char **argv)
                 {
                     if (ImGui::MenuItem("GL_NEAREST", NULL, video_filter == GL_NEAREST)) { video_filter = GL_NEAREST; }
                     if (ImGui::MenuItem("GL_LINEAR",  NULL, video_filter == GL_LINEAR))  { video_filter = GL_LINEAR;  }
+                    ImGui::EndMenu();
+                }
+                ImGui::EndMenu();
+            }
+            if (ImGui::BeginMenu("Input"))
+            {
+                if (ImGui::BeginMenu("Player 1"))
+                {
+                    for (int i = 0; i < SDL_NumJoysticks (); i++)
+                    {
+                        const char *joystick_name = SDL_JoystickNameForIndex (i);
+                        if (joystick_name == NULL)
+                            joystick_name = "Unknown Joystick";
+
+                        /* TODO: Deal with joysticks being removed from the system mid-game. Maybe auto-pause? */
+                        if (ImGui::MenuItem(joystick_name, NULL, player_1_joystick_id == i) && player_1_joystick_id != i)
+                        {
+                            if (player_1_joystick)
+                                SDL_JoystickClose (player_1_joystick);
+
+                            player_1_joystick = SDL_JoystickOpen (i);
+                            if (player_1_joystick)
+                                player_1_joystick_id = i;
+                        }
+                    }
+                    ImGui::EndMenu();
+                }
+                if (ImGui::BeginMenu("Player 2"))
+                {
+                    if (ImGui::MenuItem("Not Implemented", NULL)) { };
                     ImGui::EndMenu();
                 }
                 ImGui::EndMenu();
