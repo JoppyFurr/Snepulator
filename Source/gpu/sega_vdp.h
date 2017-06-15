@@ -75,7 +75,6 @@ uint8_t vdp_status_read ();
 void vdp_control_write (uint8_t value);
 
 void vdp_init (void);
-void vdp_dump (void);
 void vdp_render (void);
 void vdp_clock_update (uint64_t cycles);
 bool vdp_get_interrupt (void);
