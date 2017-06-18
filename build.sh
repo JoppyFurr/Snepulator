@@ -10,6 +10,7 @@ rm Work/*.o
 gcc -c Source/cpu/z80.c         -o Work/z80.o       -std=c11 -Wall -Werror
 gcc -c Source/gpu/sega_vdp.c    -o Work/sega_vdp.o  -std=c11 -Wall -Werror
 gcc -c Source/sms.c             -o Work/sms.o       -std=c11 -Wall -Werror
+gcc -c Source/audio/sn79489.c   -o Work/sn79489.o   -std=c11 -Wall -Werror
 
 # Compile C++11 GUI and link to the rest of the code.
 g++ Source/main.cpp Work/*.o \
