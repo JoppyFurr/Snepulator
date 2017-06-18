@@ -8,6 +8,7 @@
 #include "sms.h"
 #include "cpu/z80.h"
 #include "gpu/sega_vdp.h"
+#include "audio/sn79489.h"
 
 extern bool _abort_;
 
@@ -150,7 +151,7 @@ static void sms_io_write (uint8_t addr, uint8_t data)
     else if (addr >= 0x40 && addr <= 0x7f)
     {
         /* Not implemented */
-        fprintf (stderr, "Error: PSG not implemented.\n");
+        sn79489_data_write (data);
     }
 
 
@@ -283,6 +284,12 @@ int32_t sms_load_rom (uint8_t **buffer, uint32_t *filesize, char *filename)
     return EXIT_SUCCESS;
 }
 
+void sms_audio_callback (void *userdata, uint8_t *stream, int len)
+{
+    /* Assuming little-endian host */
+    sn79489_get_samples ((int16_t *)stream, len / 2);
+}
+
 uint64_t next_frame_cycle = 0;
 
 void sms_init (char *bios_filename, char *cart_filename)
@@ -307,6 +314,7 @@ void sms_init (char *bios_filename, char *cart_filename)
     /* Initialise CPU and VDP */
     z80_init (sms_memory_read, sms_memory_write, sms_io_read, sms_io_write);
     vdp_init ();
+    sn79489_init ();
 
     memset (&gamepad_1, 0, sizeof (gamepad_1));
     memset (&gamepad_2, 0, sizeof (gamepad_2));
