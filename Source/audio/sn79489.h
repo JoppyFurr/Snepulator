@@ -20,12 +20,14 @@ typedef struct SN79489_Regs_t {
     int16_t counter_1;
     int16_t counter_2;
     int16_t counter_3;
+    int16_t lfsr;
 
     /* Outputs */
     int16_t output_0;
     int16_t output_1;
     int16_t output_2;
     int16_t output_3;
+    int16_t output_lfsr;
 
 } SN79489_Regs;
 

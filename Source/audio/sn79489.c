@@ -47,6 +47,7 @@ void sn79489_data_write (uint8_t data)
             /* Noise */
             case 0x60:
                 psg_regs.noise = data & 0x0f;
+                psg_regs.lfsr  = 0x0001;
                 break;
             case 0x70:
                 psg_regs.vol_3 = data & 0x0f;
@@ -85,6 +86,7 @@ void sn79489_data_write (uint8_t data)
             /* Noise */
             case 0x60:
                 psg_regs.noise = data & 0x0f;
+                psg_regs.lfsr  = 0x0001;
                 break;
             case 0x70:
                 psg_regs.vol_3 = data & 0x0f;
@@ -102,7 +104,6 @@ void sn79489_init (void)
     psg_regs.vol_2 = 0x0f;
     psg_regs.vol_3 = 0x0f;
 
-    /* Net zero */
     psg_regs.output_0 =  1;
     psg_regs.output_1 = -1;
     psg_regs.output_2 =  1;
@@ -125,7 +126,6 @@ void sn79489_get_samples (int16_t *stream, int count)
 
     static int16_t psg_sample_ring[PSG_RING_SIZE];
 
-    printf ("DEBUG: vol= (%x  %x  %x)\n", psg_regs.vol_0, psg_regs.vol_1, psg_regs.vol_2);
 
     /* Generate samples in PSG time */
     while (psg_sample_count < (((soundcard_sample_count + count) * PSG_CLOCK_RATE_PAL) / 48000))
@@ -133,29 +133,70 @@ void sn79489_get_samples (int16_t *stream, int count)
         psg_regs.counter_0--;
         psg_regs.counter_1--;
         psg_regs.counter_2--;
+        psg_regs.counter_3--;
 
-        if (psg_regs.counter_0 < 0)
+        if (psg_regs.counter_0 <= 0)
         {
             psg_regs.counter_0 = psg_regs.tone_0;
             psg_regs.output_0 *= -1;
         }
 
-        if (psg_regs.counter_1 < 0)
+        if (psg_regs.counter_1 <= 0)
         {
             psg_regs.counter_1 = psg_regs.tone_1;
             psg_regs.output_1 *= -1;
         }
 
-        if (psg_regs.counter_2 < 0)
+        if (psg_regs.counter_2 <= 0)
         {
             psg_regs.counter_2 = psg_regs.tone_2;
             psg_regs.output_2 *= -1;
         }
 
+        if (psg_regs.counter_3 <= 0)
+        {
+            switch (psg_regs.noise & 0x03)
+            {
+                case 0x00:
+                    psg_regs.counter_3 = 0x10;
+                    break;
+                case 0x01:
+                    psg_regs.counter_3 = 0x20;
+                    break;
+                case 0x02:
+                    psg_regs.counter_3 = 0x40;
+                    break;
+                case 0x03:
+                    psg_regs.counter_3 = psg_regs.tone_2;
+                    break;
+                default:
+                    break;
+            }
+            psg_regs.output_3 *= -1;
+
+            /* On transition from -1 to 1, shift the LFSR */
+            if (psg_regs.output_3 == 1)
+            {
+                psg_regs.output_lfsr = (psg_regs.lfsr & 0x8000) ? 1 : 0;
+
+                if (psg_regs.noise & (1 << 2))
+                {
+                    /* White noise - Tap bits 12 and 15 */
+                    psg_regs.lfsr = (psg_regs.lfsr << 1) | ((psg_regs.lfsr & 0x8000 ? 1 : 0) ^ (psg_regs.lfsr & 0x1000 ? 1 : 0));
+                }
+                else
+                {
+                    /* Periodic noise  - Tap bit 15 */
+                    psg_regs.lfsr = (psg_regs.lfsr << 1) | (psg_regs.lfsr & 0x8000 ? 1 : 0);
+                }
+            }
+        }
+
         psg_sample_ring[psg_sample_count % PSG_RING_SIZE] = 0;
-        psg_sample_ring[psg_sample_count % PSG_RING_SIZE] += psg_regs.output_0 * (0x0f - psg_regs.vol_0) * BASE_VOLUME;
-        psg_sample_ring[psg_sample_count % PSG_RING_SIZE] += psg_regs.output_1 * (0x0f - psg_regs.vol_1) * BASE_VOLUME;
-        psg_sample_ring[psg_sample_count % PSG_RING_SIZE] += psg_regs.output_2 * (0x0f - psg_regs.vol_2) * BASE_VOLUME;
+        psg_sample_ring[psg_sample_count % PSG_RING_SIZE] += psg_regs.output_0    * (0x0f - psg_regs.vol_0) * BASE_VOLUME;
+        psg_sample_ring[psg_sample_count % PSG_RING_SIZE] += psg_regs.output_1    * (0x0f - psg_regs.vol_1) * BASE_VOLUME;
+        psg_sample_ring[psg_sample_count % PSG_RING_SIZE] += psg_regs.output_2    * (0x0f - psg_regs.vol_2) * BASE_VOLUME;
+        psg_sample_ring[psg_sample_count % PSG_RING_SIZE] += psg_regs.output_lfsr * (0x0f - psg_regs.vol_3) * BASE_VOLUME;
 
         psg_sample_count++;
     }
