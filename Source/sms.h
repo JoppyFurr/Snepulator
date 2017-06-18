@@ -11,5 +11,6 @@ typedef struct SMS_Gamepad_t {
     bool button_2;
 } SMS_Gamepad;
 
-void sms_init (char *bios_filename, char *cart_filename);
+void sms_audio_callback (void *userdata, uint8_t *stream, int len);
 void sms_run_frame (void);
+void sms_init (char *bios_filename, char *cart_filename);

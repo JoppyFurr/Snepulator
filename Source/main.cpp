@@ -23,19 +23,35 @@ bool _abort_ = false;
 
 int main (int argc, char **argv)
 {
+    /* Video */
     SDL_Window *window = NULL;
     SDL_GLContext glcontext = NULL;
     GLuint sms_vdp_texture = 0;
-    char *bios_filename = NULL;
-    char *cart_filename = NULL;
     GLenum video_filter = GL_NEAREST;
     int window_width;
     int window_height;
 
+    /* Audio */
+    /* TODO: Will we ever want to change the SDL audio driver? */
+    SDL_AudioDeviceID audio_device_id;
+    SDL_AudioSpec desired_audiospec;
+    SDL_AudioSpec obtained_audiospec;
+    memset (&desired_audiospec, 0, sizeof (desired_audiospec));
+    desired_audiospec.freq = 48000;
+    desired_audiospec.format = AUDIO_S16LSB;
+    desired_audiospec.channels = 1;
+    desired_audiospec.samples = 2048;
+    desired_audiospec.callback = sms_audio_callback;
+
+    /* Gamepads */
     SDL_Joystick *player_1_joystick = NULL;
     SDL_Joystick *player_2_joystick = NULL;
     int player_1_joystick_id = -1;
     int player_2_joystick_id = -1;
+
+    /* Files */
+    char *bios_filename = NULL;
+    char *cart_filename = NULL;
 
     printf ("Snepulator.\n");
     printf ("Built on " BUILD_DATE ".\n");
@@ -105,6 +121,13 @@ int main (int argc, char **argv)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
     glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, sms_vdp_background);
+
+    /* Open the default audio device */
+    audio_device_id = SDL_OpenAudioDevice (NULL, 0, &desired_audiospec, &obtained_audiospec,
+            SDL_AUDIO_ALLOW_FREQUENCY_CHANGE | SDL_AUDIO_ALLOW_FORMAT_CHANGE | SDL_AUDIO_ALLOW_CHANNELS_CHANGE );
+
+    SDL_PauseAudioDevice (audio_device_id, 0);
+
 
     /* Initialise SMS */
     sms_init (bios_filename, cart_filename);
@@ -195,6 +218,23 @@ int main (int argc, char **argv)
                 if (ImGui::MenuItem("Quit", NULL)) { _abort_ = true; }
                 ImGui::EndMenu();
             }
+            if (ImGui::BeginMenu("Audio"))
+            {
+                if (ImGui::BeginMenu("Device"))
+                {
+                    int count = SDL_GetNumAudioDevices (0);
+                    for (int i = 0; i < count; i++)
+                    {
+                        const char *audio_device_name = SDL_GetAudioDeviceName (i, 0);
+                        if (audio_device_name == NULL)
+                            audio_device_name = "Unknown Audio Device";
+
+                        if (ImGui::MenuItem(audio_device_name, NULL)) { }
+                    }
+                    ImGui::EndMenu();
+                }
+                ImGui::EndMenu();
+            }
             if (ImGui::BeginMenu("Video"))
             {
                 if (ImGui::BeginMenu("Filter"))
@@ -280,6 +320,7 @@ int main (int argc, char **argv)
 
     fprintf (stdout, "EMULATION ENDED.\n");
 
+    SDL_CloseAudioDevice (audio_device_id);
     glDeleteTextures (1, &sms_vdp_texture);
     SDL_GL_DeleteContext (glcontext);
     SDL_DestroyWindow (window);
