@@ -365,9 +365,15 @@ uint32_t z80_extended_instruction ()
                                     SET_FLAGS_SBC_16 (z80_regs.sp); z80_regs.hl -= temp_16; z80_cycle += 15; break;
         case 0x73: /* LD (**),SP */ memory_write (param.w,     z80_regs.sp_l);
                                     memory_write (param.w + 1, z80_regs.sp_h); z80_cycle += 20; break;
+        case 0x78: /* IN A,(C)   */ z80_regs.a = io_read (z80_regs.c);
+                                    z80_regs.f = (z80_regs.f &                    Z80_FLAG_CARRY     ) |
+                                                 (z80_regs.a & 0x80             ? Z80_FLAG_SIGN   : 0) |
+                                                 (z80_regs.a == 0x00            ? Z80_FLAG_ZERO   : 0) |
+                                                 (uint8_even_parity[z80_regs.a] ? Z80_FLAG_PARITY : 0);
+                                    z80_cycle += 12; break;
+        case 0x79: /* OUT (C),A  */ io_write (z80_regs.c, z80_regs.a); z80_cycle += 12; break;
         case 0x7a: /* ADC HL,SP  */ temp_16 = z80_regs.sp + CARRY_BIT;
                                     SET_FLAGS_ADC_16 (z80_regs.sp); z80_regs.hl += temp_16; z80_cycle += 15; break;
-        case 0x79: /* OUT (C),A  */ io_write (z80_regs.c, z80_regs.a); z80_cycle += 12; break;
         case 0x7b: /* LD SP,(**) */ z80_regs.sp_l = memory_read (param.w);
                                     z80_regs.sp_h = memory_read (param.w + 1); z80_cycle += 20; break;
 
