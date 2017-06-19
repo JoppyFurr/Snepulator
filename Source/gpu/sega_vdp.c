@@ -2,8 +2,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
-
-#include "SDL2/SDL.h"
+#include <string.h>
 
 #include "sega_vdp.h"
 
@@ -229,6 +228,7 @@ void vdp_render_pattern (Vdp_Pattern *pattern_base, Vdp_Palette palette, Point2D
                 continue;
 
             /* TODO: This seems to be chopping off a little too much */
+            /* TODO: To make this blend in better, should it use the darkened version? */
             /* Don't draw the left-most eight pixels if BIT_5 of CTRL_1 is set */
             if (vdp_regs.mode_ctrl_1 & VDP_MODE_CTRL_1_MASK_COL_1 && x + offset.x < 8)
                 continue;
@@ -268,8 +268,8 @@ void vdp_render_background (bool priority)
 
     uint8_t start_column = 32 - ((vdp_regs.background_x_scroll & 0xf8) >> 3);
     uint8_t fine_scroll_x = vdp_regs.background_x_scroll & 0x07;
-    uint8_t start_row = 32 - ((vdp_regs.background_y_scroll & 0xf8) >> 3);
-    uint8_t fine_scroll_y = vdp_regs.background_y_scroll & 0x07;
+    uint8_t start_row = (((vdp_regs.background_y_scroll % 224) & 0xf8) >> 3);
+    uint8_t fine_scroll_y = (vdp_regs.background_y_scroll % 224) & 0x07;
     Point2D position;
 
     /* TODO: Implement VDP_MODE_CTRL_1_HLOCK_24_31 */
@@ -277,11 +277,11 @@ void vdp_render_background (bool priority)
     /* TODO: For 192 lines, the Y scroll value should wrap at 224 */
     /* TODO: The vertical scroll value should only take affect between active frames, not mid-frame */
     /* TODO: If fine-scroll of Y is active, what happens in the first few lines of the display? */
-    for (uint32_t tile_y = 0; tile_y < 28; tile_y++)
+    for (uint32_t tile_y = 0; tile_y < 24; tile_y++)
     {
         for (uint32_t tile_x = 0; tile_x < 32; tile_x++)
         {
-            uint16_t tile_address = name_table_base | ((tile_y + start_row) << 6) | ((tile_x + start_column) % 32 << 1);
+            uint16_t tile_address = name_table_base | (((tile_y + start_row) % 28) << 6) | ((tile_x + start_column) % 32 << 1);
 
             uint16_t tile = ((uint16_t)(vram [tile_address])) +
                             (((uint16_t)(vram [tile_address + 1])) << 8);
@@ -298,7 +298,7 @@ void vdp_render_background (bool priority)
             Vdp_Palette palette = (tile & (1 << 11)) ? VDP_PALETTE_SPRITE : VDP_PALETTE_BACKGROUND;
 
             position.x = 8 * tile_x + fine_scroll_x;
-            position.y = 8 * tile_y + fine_scroll_y;
+            position.y = 8 * tile_y - fine_scroll_y;
             vdp_render_pattern (pattern, palette, position, h_flip, v_flip, false | priority);
 
         }
