@@ -347,7 +347,7 @@ uint32_t z80_extended_instruction ()
                                     z80_regs.a &= 0xf0; z80_regs.a |= (temp_1 & 0x0f);
                                     temp_1 >>= 4; temp_1 |= (temp_2 << 4);
                                     memory_write (z80_regs.hl, temp_1);
-                                    SET_FLAGS_RRD_RLD;
+                                    SET_FLAGS_RRD_RLD; z80_cycle += 18;
                                     break;
         case 0x69: /* OUT (C),L  */ io_write (z80_regs.c, z80_regs.l); z80_cycle += 12; break;
         case 0x6a: /* ADC HL,HL  */ temp_16 = z80_regs.hl + CARRY_BIT;
@@ -396,7 +396,8 @@ uint32_t z80_extended_instruction ()
         case 0xa8: /* LDD        */ memory_write (z80_regs.de, memory_read (z80_regs.hl));
                                     z80_regs.hl--; z80_regs.de--; z80_regs.bc--;
                                     z80_regs.f &= (Z80_FLAG_CARRY | Z80_FLAG_ZERO | Z80_FLAG_SIGN);
-                                    z80_regs.f |= (z80_regs.bc ? Z80_FLAG_OVERFLOW : 0); break;
+                                    z80_regs.f |= (z80_regs.bc ? Z80_FLAG_OVERFLOW : 0);
+                                    z80_cycle += 16; break;
         case 0xa9: /* CPD        */ temp_1 = memory_read (z80_regs.hl);
                                     z80_regs.hl--;
                                     z80_regs.bc--;
@@ -1579,8 +1580,8 @@ void z80_run_until_cycle (uint64_t run_until)
         if (instructions_before_interrupts)
             instructions_before_interrupts--;
 
-        /* TODO: Interrupt handling should live in the z80 file */
-        if (!instructions_before_interrupts && z80_regs.iff1 && vdp_get_interrupt ())
+        /* TODO: Make this less Master System specific */
+        if (z80_regs.iff1 && !instructions_before_interrupts && vdp_get_interrupt ())
         {
             z80_regs.iff1 = false;
             z80_regs.iff2 = false;
@@ -1589,10 +1590,6 @@ void z80_run_until_cycle (uint64_t run_until)
             {
                 /* TODO: Cycle count? */
                 case 1:
-                    /* RST 0x38 */
-#if 0
-                    printf ("INTERRUPT: RST 0x38  <--\n");
-#endif
                     memory_write (--z80_regs.sp, z80_regs.pc_h);
                     memory_write (--z80_regs.sp, z80_regs.pc_l);
                     z80_regs.pc = 0x38;
