@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <inttypes.h>
 #include <stdbool.h>
 #include <string.h>
 
@@ -17,7 +18,7 @@
 
 /* VDP State */
 static Vdp_Regs vdp_regs;
-static uint8_t v_counter = 0;
+static uint8_t v_counter = 0; /* Should this be added to the register struct? */
 static uint8_t cram [VDP_CRAM_SIZE];
 static uint8_t vram [VDP_VRAM_SIZE];
 
@@ -106,13 +107,20 @@ void vdp_control_write (uint8_t value)
                 {
                     ((uint8_t *) &vdp_regs) [value & 0x0f] = vdp_regs.address & 0x00ff;
 
-                    if ((value & 0x0f) == 0x01 && ((vdp_regs.address & 0x00ff) & (1 << 5)))
+                    if ((value & 0x0f) == 0x01)
                     {
-                        fprintf (stdout, "[DEBUG(vdp)]: Frame interrupts enabled.\n");
+                        if ((vdp_regs.address & 0x00ff) & VDP_MODE_CTRL_2_FRAME_INT_EN)
+                            fprintf (stdout, "[DEBUG(vdp)]: Frame interrupts enabled.\n");
+                        else
+                            fprintf (stdout, "[DEBUG(vdp)]: Frame interrupts disable.\n");
+
                     }
-                    else if ((value & 0x0f) == 0x00 && ((vdp_regs.address & 0x00ff) & (1 << 4)))
+                    else if ((value & 0x0f) == 0x00)
                     {
-                        fprintf (stdout, "[DEBUG(vdp)]: Line interrupts enabled.\n");
+                        if ((vdp_regs.address & 0x00ff) & VDP_MODE_CTRL_1_LINE_INT_EN)
+                            fprintf (stdout, "[DEBUG(vdp)]: Line interrupts enabled.\n");
+                        else
+                            fprintf (stdout, "[DEBUG(vdp)]: Line interrupts disabled.\n");
                     }
                 }
                 break;
@@ -139,40 +147,43 @@ void vdp_control_write (uint8_t value)
 
 #define SMS_CLOCK_RATE_PAL  3546895
 #define SMS_CLOCK_PER_FRAME_PAL (SMS_CLOCK_RATE_PAL / 50)
+#define SMS_CLOCK_PER_LINE_PAL (SMS_CLOCK_RATE_PAL / (50 * 313))
 
-/* TODO: Consider skipped values */
+/* TODO: For now, assuming PAL (313 scanlines) */
 void vdp_clock_update (uint64_t cycles)
 {
-    uint16_t v_counter_16 = (cycles % SMS_CLOCK_PER_FRAME_PAL) / 227; /* Dividing by 227 roughly maps from 0 -> 312,
-                                                                         one value per scanline */
-    uint8_t previous_v_counter = v_counter;
+    static uint64_t previous_cycles = 0;
+    static uint64_t cycles_unprocessed = 0;
+    static uint16_t v_counter_16 = 0;
 
-    if (v_counter_16 <= 0xf2)
-        v_counter = v_counter_16;
-    else
-        v_counter = v_counter_16 - 0x39;
+    cycles_unprocessed += (cycles - previous_cycles);
+    previous_cycles = cycles;
 
-    /* Line interrupt */
-    if (v_counter > 192)
-        vdp_regs.line_interrupt_counter = vdp_regs.line_counter;
-    else if (v_counter != previous_v_counter)
+    while (cycles_unprocessed > SMS_CLOCK_PER_LINE_PAL)
     {
-        vdp_regs.line_interrupt_counter--;
-        if (vdp_regs.line_interrupt_counter == 0xff)
-            vdp_regs.line_interrupt = true;
-    }
-
-    /* Frame interrupt */
-    static int frame = 0;
-    if (v_counter != previous_v_counter)
-    {
-        if (v_counter_16 == 0xc1) /* TODO: This constant is only for 192-line mode */
-        {
+        /* Check for frame interrupt */
+        if (v_counter_16 == 193)
             vdp_regs.status |= VDP_STATUS_INT;
-            frame++;
-        }
-    }
 
+        /* Decrement the line interrupt counter during the active display period.
+         * Reset outside of the active display period (but not the first line after) */
+        if (v_counter_16 <= 192)
+            vdp_regs.line_interrupt_counter--;
+        else
+            vdp_regs.line_interrupt_counter = vdp_regs.line_counter;
+
+        /* On underflow, we reset the line interrupt counter and set the pending flag */
+        if (vdp_regs.line_interrupt_counter == 0xff)
+        {
+            vdp_regs.line_interrupt_counter = vdp_regs.line_counter;
+            vdp_regs.line_interrupt = true;
+        }
+
+        /* Update values for the next line */
+        v_counter_16 = (v_counter_16 + 1) % 313;
+        v_counter = (v_counter_16 <= 0xf2) ? v_counter_16 : (v_counter_16 - 0xf3) + 0xba;
+        cycles_unprocessed -= SMS_CLOCK_PER_LINE_PAL;
+    }
 }
 
 uint8_t vdp_get_v_counter (void)
@@ -180,24 +191,27 @@ uint8_t vdp_get_v_counter (void)
     return v_counter;
 }
 
-/* TODO */
 bool vdp_get_interrupt (void)
 {
+    bool interrupt = false;
+
     /* Frame interrupt */
     if ((vdp_regs.mode_ctrl_2 & VDP_MODE_CTRL_2_FRAME_INT_EN) && (vdp_regs.status & VDP_STATUS_INT))
     {
-        printf ("[DEBUG]: Frame interrupt sent.\n");
-        return true;
+        static uint64_t frame_interrupt_count = 0;
+        printf ("Frame interrupt %" PRIu64 ".\n", ++frame_interrupt_count);
+        interrupt = true;
     }
 
     /* Line interrupt */
     if ((vdp_regs.mode_ctrl_1 & VDP_MODE_CTRL_1_LINE_INT_EN) && vdp_regs.line_interrupt)
     {
-        printf ("[DEBUG]: Line interrupt sent.\n");
-        return true;
+        static uint64_t line_interrupt_count = 0;
+        printf ("Line interrupt %" PRIu64 ".\n", ++line_interrupt_count);
+        interrupt = true;
     }
 
-    return false;
+    return interrupt;
 }
 
 extern float sms_vdp_texture_data [256 * 192 * 3];
@@ -274,9 +288,8 @@ void vdp_render_background (bool priority)
 
     /* TODO: Implement VDP_MODE_CTRL_1_HLOCK_24_31 */
     /* TODO: Implement VDP_MODE_CTRL_1_VLOCK_0_1   */
-    /* TODO: For 192 lines, the Y scroll value should wrap at 224 */
     /* TODO: The vertical scroll value should only take affect between active frames, not mid-frame */
-    /* TODO: If fine-scroll of Y is active, what happens in the first few lines of the display? */
+    /* TODO: If fine-scroll of Y is active, what happens in the first/last few lines of the display? */
     for (uint32_t tile_y = 0; tile_y < 24; tile_y++)
     {
         for (uint32_t tile_x = 0; tile_x < 32; tile_x++)
@@ -310,6 +323,7 @@ void vdp_render_background (bool priority)
 /* TODO: VDP Flag BIT_3 of ctrl_1 subtracts 8 from x position of sprites */
 /* TODO: Pixel-doubling */
 /* TODO: Draw order: the first entry in the line's sprite buffer with a non-transparent pixel is the one that sticks */
+/* TODO: Actually render as-per the clock cycles. May need to double-buffer to prevent tearing */
 void vdp_render_sprites (void)
 {
     uint16_t sprite_attribute_table_base = (((uint16_t) vdp_regs.sprite_attr_table_addr) << 7) & 0x3f00;
