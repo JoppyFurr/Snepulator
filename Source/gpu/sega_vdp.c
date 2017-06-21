@@ -173,7 +173,7 @@ void vdp_clock_update (uint64_t cycles)
             vdp_regs.line_interrupt_counter = vdp_regs.line_counter;
 
         /* On underflow, we reset the line interrupt counter and set the pending flag */
-        if (vdp_regs.line_interrupt_counter == 0xff)
+        if (v_counter_16 <= 192 && vdp_regs.line_interrupt_counter == 0xff)
         {
             vdp_regs.line_interrupt_counter = vdp_regs.line_counter;
             vdp_regs.line_interrupt = true;
