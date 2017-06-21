@@ -77,7 +77,7 @@ uint8_t vdp_status_read ()
 
     /* Clear on read */
     vdp_regs.status = 0x00;
-    vdp_regs.line_interrupt = false;
+    vdp_regs.line_interrupt = false; /* "The flag remains set until the control port (IO port 0xbf) is read */
 
     return status;
 }
@@ -106,22 +106,6 @@ void vdp_control_write (uint8_t value)
                 if ((value & 0x0f) <= 10)
                 {
                     ((uint8_t *) &vdp_regs) [value & 0x0f] = vdp_regs.address & 0x00ff;
-
-                    if ((value & 0x0f) == 0x01)
-                    {
-                        if ((vdp_regs.address & 0x00ff) & VDP_MODE_CTRL_2_FRAME_INT_EN)
-                            fprintf (stdout, "[DEBUG(vdp)]: Frame interrupts enabled.\n");
-                        else
-                            fprintf (stdout, "[DEBUG(vdp)]: Frame interrupts disable.\n");
-
-                    }
-                    else if ((value & 0x0f) == 0x00)
-                    {
-                        if ((vdp_regs.address & 0x00ff) & VDP_MODE_CTRL_1_LINE_INT_EN)
-                            fprintf (stdout, "[DEBUG(vdp)]: Line interrupts enabled.\n");
-                        else
-                            fprintf (stdout, "[DEBUG(vdp)]: Line interrupts disabled.\n");
-                    }
                 }
                 break;
             case VDP_CODE_CRAM_WRITE:
