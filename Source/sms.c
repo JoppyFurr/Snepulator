@@ -11,6 +11,7 @@
 #include "audio/sn79489.h"
 
 extern bool _abort_;
+extern bool _running_;
 
 /* Console state */
 uint8_t *bios = NULL;
@@ -287,7 +288,10 @@ int32_t sms_load_rom (uint8_t **buffer, uint32_t *filesize, char *filename)
 void sms_audio_callback (void *userdata, uint8_t *stream, int len)
 {
     /* Assuming little-endian host */
-    sn79489_get_samples ((int16_t *)stream, len / 2);
+    if (_running_)
+        sn79489_get_samples ((int16_t *)stream, len / 2);
+    else
+        memset (stream, 0, len);
 }
 
 uint64_t next_frame_cycle = 0;
