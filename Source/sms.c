@@ -5,13 +5,14 @@
 #include <string.h>
 #include <errno.h>
 
+#include "snepulator.h"
+extern Snepulator snepulator;
+
 #include "sms.h"
 #include "cpu/z80.h"
 #include "gpu/sega_vdp.h"
 #include "audio/sn79489.h"
 
-extern bool _abort_;
-extern bool _running_;
 
 /* Console state */
 uint8_t *bios = NULL;
@@ -288,7 +289,7 @@ int32_t sms_load_rom (uint8_t **buffer, uint32_t *filesize, char *filename)
 void sms_audio_callback (void *userdata, uint8_t *stream, int len)
 {
     /* Assuming little-endian host */
-    if (_running_)
+    if (snepulator.running)
         sn79489_get_samples ((int16_t *)stream, len / 2);
     else
         memset (stream, 0, len);
@@ -301,7 +302,7 @@ void sms_init (char *bios_filename, char *cart_filename)
     /* Load BIOS */
     if (sms_load_rom (&bios, &bios_size, bios_filename) == -1)
     {
-        _abort_ = true;
+        snepulator.abort = true;
     }
     fprintf (stdout, "%d KiB BIOS %s loaded.\n", bios_size >> 10, bios_filename);
 
@@ -310,7 +311,7 @@ void sms_init (char *bios_filename, char *cart_filename)
     {
         if (sms_load_rom (&cart, &cart_size, cart_filename) == -1)
         {
-            _abort_ = true;
+            snepulator.abort = true;
         }
         fprintf (stdout, "%d KiB cart %s loaded.\n", cart_size >> 10, cart_filename);
     }

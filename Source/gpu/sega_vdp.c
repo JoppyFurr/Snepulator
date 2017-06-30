@@ -5,6 +5,9 @@
 #include <stdbool.h>
 #include <string.h>
 
+#include "../snepulator.h"
+extern Snepulator snepulator;
+
 #include "sega_vdp.h"
 
 /* Constants */
@@ -198,8 +201,6 @@ bool vdp_get_interrupt (void)
     return interrupt;
 }
 
-extern float sms_vdp_texture_data [256 * 192 * 3];
-extern float sms_vdp_background [3];
 #define VDP_STRIDE_X (3)
 #define VDP_STRIDE_Y (256 * 3)
 
@@ -248,9 +249,9 @@ void vdp_render_pattern (Vdp_Pattern *pattern_base, Vdp_Palette palette, Point2D
 
             uint8_t pixel = cram[((palette == VDP_PALETTE_SPRITE) ? 16 : 0) + (bit0 | bit1 | bit2 | bit3)];
 
-            sms_vdp_texture_data [(offset.x + x) * VDP_STRIDE_X + (offset.y + y) * VDP_STRIDE_Y + 0] = VDP_TO_RED   (pixel) / 256.0f;
-            sms_vdp_texture_data [(offset.x + x) * VDP_STRIDE_X + (offset.y + y) * VDP_STRIDE_Y + 1] = VDP_TO_GREEN (pixel) / 256.0f;
-            sms_vdp_texture_data [(offset.x + x) * VDP_STRIDE_X + (offset.y + y) * VDP_STRIDE_Y + 2] = VDP_TO_BLUE  (pixel) / 256.0f;
+            snepulator.sms_vdp_texture_data [(offset.x + x) * VDP_STRIDE_X + (offset.y + y) * VDP_STRIDE_Y + 0] = VDP_TO_RED   (pixel) / 256.0f;
+            snepulator.sms_vdp_texture_data [(offset.x + x) * VDP_STRIDE_X + (offset.y + y) * VDP_STRIDE_Y + 1] = VDP_TO_GREEN (pixel) / 256.0f;
+            snepulator.sms_vdp_texture_data [(offset.x + x) * VDP_STRIDE_X + (offset.y + y) * VDP_STRIDE_Y + 2] = VDP_TO_BLUE  (pixel) / 256.0f;
         }
     }
 }
@@ -350,15 +351,15 @@ void vdp_render (void)
     /* Check if the display is blanked */
     if (!(vdp_regs.mode_ctrl_2 & VDP_MODE_CTRL_2_BLANK))
     {
-        sms_vdp_background [0] = 0.0f;
-        sms_vdp_background [1] = 0.0f;
-        sms_vdp_background [2] = 0.0f;
+        snepulator.video_background [0] = 0.0f;
+        snepulator.video_background [1] = 0.0f;
+        snepulator.video_background [2] = 0.0f;
         for (int y = 0; y < 192; y++)
             for (int x = 0; x < 256; x++)
             {
-                    sms_vdp_texture_data [x * VDP_STRIDE_X + y * VDP_STRIDE_Y + 0] = 0.0f;
-                    sms_vdp_texture_data [x * VDP_STRIDE_X + y * VDP_STRIDE_Y + 1] = 0.0f;
-                    sms_vdp_texture_data [x * VDP_STRIDE_X + y * VDP_STRIDE_Y + 2] = 0.0f;
+                    snepulator.sms_vdp_texture_data [x * VDP_STRIDE_X + y * VDP_STRIDE_Y + 0] = 0.0f;
+                    snepulator.sms_vdp_texture_data [x * VDP_STRIDE_X + y * VDP_STRIDE_Y + 1] = 0.0f;
+                    snepulator.sms_vdp_texture_data [x * VDP_STRIDE_X + y * VDP_STRIDE_Y + 2] = 0.0f;
             }
         return;
     }
@@ -366,9 +367,9 @@ void vdp_render (void)
     /* Background / overscan - Is this specific to mode 4? */
     uint8_t bg_colour;
     bg_colour = cram [16 + (vdp_regs.background_colour & 0x0f)];
-    sms_vdp_background [0] = VDP_TO_RED (bg_colour) / 256.0f;
-    sms_vdp_background [1] = VDP_TO_GREEN (bg_colour) / 256.0f;
-    sms_vdp_background [2] = VDP_TO_BLUE (bg_colour) / 256.0f;
+    snepulator.video_background [0] = VDP_TO_RED (bg_colour) / 256.0f;
+    snepulator.video_background [1] = VDP_TO_GREEN (bg_colour) / 256.0f;
+    snepulator.video_background [2] = VDP_TO_BLUE (bg_colour) / 256.0f;
 
     switch (vdp_regs.mode_ctrl_1 & VDP_MODE_CTRL_1_MODE_4)
     {
@@ -377,9 +378,9 @@ void vdp_render (void)
             for (int y = 0; y < 192; y++)
                 for (int x = 0; x < 256; x++)
                 {
-                        sms_vdp_texture_data [x * VDP_STRIDE_X + y * VDP_STRIDE_Y + 0] = sms_vdp_background[0];
-                        sms_vdp_texture_data [x * VDP_STRIDE_X + y * VDP_STRIDE_Y + 1] = sms_vdp_background[1];
-                        sms_vdp_texture_data [x * VDP_STRIDE_X + y * VDP_STRIDE_Y + 2] = sms_vdp_background[2];
+                        snepulator.sms_vdp_texture_data [x * VDP_STRIDE_X + y * VDP_STRIDE_Y + 0] = snepulator.video_background[0];
+                        snepulator.sms_vdp_texture_data [x * VDP_STRIDE_X + y * VDP_STRIDE_Y + 1] = snepulator.video_background[1];
+                        snepulator.sms_vdp_texture_data [x * VDP_STRIDE_X + y * VDP_STRIDE_Y + 2] = snepulator.video_background[2];
                 }
             vdp_render_background (false);
             vdp_render_sprites ();

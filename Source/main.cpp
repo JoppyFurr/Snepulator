@@ -11,16 +11,96 @@
 #include "../Libraries/imgui-1.49/examples/sdl_opengl3_example/imgui_impl_sdl_gl3.h"
 
 extern "C" {
+#include "snepulator.h"
 #include "gpu/sega_vdp.h"
 #include "sms.h"
     extern SMS_Gamepad gamepad_1;
 }
 
 /* Global state */
-float  sms_vdp_texture_data [256 * 192 * 3];
-float  sms_vdp_background [4] = { 0.125, 0.125, 0.125, 1.0 };
-bool _abort_ = false;
-bool _running_ = false;
+Snepulator snepulator;
+
+/* Gamepads */
+SDL_Joystick *player_1_joystick;
+SDL_Joystick *player_2_joystick;
+int player_1_joystick_id;
+int player_2_joystick_id;
+
+
+void snepulator_render_menubar (void)
+{
+    /* What colour should this be? A "Snepulator" theme, or should it blend in with the overscan colour? */
+    /* TODO: Some measure should be taken to prevent the menu from obscuring the gameplay */
+    if (ImGui::BeginMainMenuBar())
+    {
+        if (ImGui::BeginMenu("File"))
+        {
+            if (ImGui::MenuItem("Open", NULL)) { snepulator.running = false, snepulator.modal = MODAL_OPEN; }
+            if (ImGui::MenuItem("Pause", NULL, !snepulator.running)) { snepulator.running = !snepulator.running; }
+            ImGui::Separator();
+            if (ImGui::MenuItem("Quit", NULL)) { snepulator.abort = true; }
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Audio"))
+        {
+            if (ImGui::BeginMenu("Device"))
+            {
+                int count = SDL_GetNumAudioDevices (0);
+                for (int i = 0; i < count; i++)
+                {
+                    const char *audio_device_name = SDL_GetAudioDeviceName (i, 0);
+                    if (audio_device_name == NULL)
+                        audio_device_name = "Unknown Audio Device";
+
+                    if (ImGui::MenuItem(audio_device_name, NULL)) { }
+                }
+                ImGui::EndMenu();
+            }
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Video"))
+        {
+            if (ImGui::BeginMenu("Filter"))
+            {
+                if (ImGui::MenuItem("GL_NEAREST", NULL, snepulator.video_filter == GL_NEAREST)) { snepulator.video_filter = GL_NEAREST; }
+                if (ImGui::MenuItem("GL_LINEAR",  NULL, snepulator.video_filter == GL_LINEAR))  { snepulator.video_filter = GL_LINEAR;  }
+                ImGui::EndMenu();
+            }
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Input"))
+        {
+            if (ImGui::BeginMenu("Player 1"))
+            {
+                for (int i = 0; i < SDL_NumJoysticks (); i++)
+                {
+                    const char *joystick_name = SDL_JoystickNameForIndex (i);
+                    if (joystick_name == NULL)
+                        joystick_name = "Unknown Joystick";
+
+                    /* TODO: Deal with joysticks being removed from the system mid-game. Maybe auto-pause? */
+                    if (ImGui::MenuItem(joystick_name, NULL, player_1_joystick_id == i) && player_1_joystick_id != i)
+                    {
+                        if (player_1_joystick)
+                            SDL_JoystickClose (player_1_joystick);
+
+                        player_1_joystick = SDL_JoystickOpen (i);
+                        if (player_1_joystick)
+                            player_1_joystick_id = i;
+                    }
+                }
+                ImGui::EndMenu();
+            }
+            if (ImGui::BeginMenu("Player 2"))
+            {
+                if (ImGui::MenuItem("Not Implemented", NULL)) { };
+                ImGui::EndMenu();
+            }
+            ImGui::EndMenu();
+        }
+        ImGui::EndMainMenuBar();
+    }
+}
 
 int main (int argc, char **argv)
 {
@@ -28,7 +108,6 @@ int main (int argc, char **argv)
     SDL_Window *window = NULL;
     SDL_GLContext glcontext = NULL;
     GLuint sms_vdp_texture = 0;
-    GLenum video_filter = GL_NEAREST;
     int window_width;
     int window_height;
 
@@ -44,18 +123,14 @@ int main (int argc, char **argv)
     desired_audiospec.samples = 2048;
     desired_audiospec.callback = sms_audio_callback;
 
-    /* Gamepads */
-    SDL_Joystick *player_1_joystick = NULL;
-    SDL_Joystick *player_2_joystick = NULL;
-    int player_1_joystick_id = -1;
-    int player_2_joystick_id = -1;
-
-    /* Files */
-    char *bios_filename = NULL;
-    char *cart_filename = NULL;
-
     printf ("Snepulator.\n");
     printf ("Built on " BUILD_DATE ".\n");
+
+    /* Initialize Snepulator state */
+    memset (&snepulator, 0, sizeof (snepulator));
+    snepulator.video_filter = GL_NEAREST;
+    player_1_joystick_id = -1;
+    player_2_joystick_id = -1;
 
     /* Parse all CLI arguments */
     while (*(++argv))
@@ -63,12 +138,12 @@ int main (int argc, char **argv)
         if (!strcmp ("-b", *argv))
         {
             /* BIOS to load */
-            bios_filename = *(++argv);
+            snepulator.bios_filename = *(++argv);
         }
         else if (!strcmp ("-r", *argv))
         {
             /* ROM to load */
-            cart_filename = *(++argv);
+            snepulator.cart_filename = *(++argv);
         }
         else
         {
@@ -121,7 +196,7 @@ int main (int argc, char **argv)
     glBindTexture (GL_TEXTURE_2D, sms_vdp_texture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-    glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, sms_vdp_background);
+    glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, snepulator.video_background);
 
     /* Open the default audio device */
     audio_device_id = SDL_OpenAudioDevice (NULL, 0, &desired_audiospec, &obtained_audiospec,
@@ -129,14 +204,13 @@ int main (int argc, char **argv)
 
     SDL_PauseAudioDevice (audio_device_id, 0);
 
-
     /* Initialise SMS */
-    sms_init (bios_filename, cart_filename);
+    sms_init (snepulator.bios_filename, snepulator.cart_filename);
 
-    _running_ = true;
+    snepulator.running = true;
 
     /* Main loop */
-    while (!_abort_)
+    while (!snepulator.abort)
     {
         /* INPUT */
         SDL_GetWindowSize (window, &window_width, &window_height);
@@ -150,7 +224,7 @@ int main (int argc, char **argv)
 
             if (event.type == SDL_QUIT)
             {
-                _abort_ = true;
+                snepulator.abort = true;
             }
 
             /* Player 1 Gamepad input */
@@ -196,92 +270,22 @@ int main (int argc, char **argv)
         }
 
         /* EMULATE */
-        if (_running_)
+        if (snepulator.running)
             sms_run_frame ();
 
         /* RENDER VDP */
         vdp_render ();
         glBindTexture (GL_TEXTURE_2D, sms_vdp_texture);
-        glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, video_filter);
-        glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, video_filter);
-        glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, sms_vdp_background);
-        glTexImage2D (GL_TEXTURE_2D, 0, GL_RGB, 256, 192, 0, GL_RGB, GL_FLOAT, sms_vdp_texture_data);
+        glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, snepulator.video_filter);
+        glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, snepulator.video_filter);
+        glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, snepulator.video_background);
+        glTexImage2D (GL_TEXTURE_2D, 0, GL_RGB, 256, 192, 0, GL_RGB, GL_FLOAT, snepulator.sms_vdp_texture_data);
 
         /* RENDER GUI */
         ImGui_ImplSdlGL3_NewFrame (window);
 
         /* Draw main menu bar */
-        /* What colour should this be? A "Snepulator" theme, or should it blend in with the overscan colour? */
-        /* TODO: Some measure should be taken to prevent the menu from obscuring the gameplay */
-        if (ImGui::BeginMainMenuBar())
-        {
-            if (ImGui::BeginMenu("File"))
-            {
-                if (ImGui::MenuItem("Open", NULL)) {}
-                if (ImGui::MenuItem("Pause", NULL, !_running_)) { _running_ = !_running_; }
-                ImGui::Separator();
-                if (ImGui::MenuItem("Quit", NULL)) { _abort_ = true; }
-                ImGui::EndMenu();
-            }
-            if (ImGui::BeginMenu("Audio"))
-            {
-                if (ImGui::BeginMenu("Device"))
-                {
-                    int count = SDL_GetNumAudioDevices (0);
-                    for (int i = 0; i < count; i++)
-                    {
-                        const char *audio_device_name = SDL_GetAudioDeviceName (i, 0);
-                        if (audio_device_name == NULL)
-                            audio_device_name = "Unknown Audio Device";
-
-                        if (ImGui::MenuItem(audio_device_name, NULL)) { }
-                    }
-                    ImGui::EndMenu();
-                }
-                ImGui::EndMenu();
-            }
-            if (ImGui::BeginMenu("Video"))
-            {
-                if (ImGui::BeginMenu("Filter"))
-                {
-                    if (ImGui::MenuItem("GL_NEAREST", NULL, video_filter == GL_NEAREST)) { video_filter = GL_NEAREST; }
-                    if (ImGui::MenuItem("GL_LINEAR",  NULL, video_filter == GL_LINEAR))  { video_filter = GL_LINEAR;  }
-                    ImGui::EndMenu();
-                }
-                ImGui::EndMenu();
-            }
-            if (ImGui::BeginMenu("Input"))
-            {
-                if (ImGui::BeginMenu("Player 1"))
-                {
-                    for (int i = 0; i < SDL_NumJoysticks (); i++)
-                    {
-                        const char *joystick_name = SDL_JoystickNameForIndex (i);
-                        if (joystick_name == NULL)
-                            joystick_name = "Unknown Joystick";
-
-                        /* TODO: Deal with joysticks being removed from the system mid-game. Maybe auto-pause? */
-                        if (ImGui::MenuItem(joystick_name, NULL, player_1_joystick_id == i) && player_1_joystick_id != i)
-                        {
-                            if (player_1_joystick)
-                                SDL_JoystickClose (player_1_joystick);
-
-                            player_1_joystick = SDL_JoystickOpen (i);
-                            if (player_1_joystick)
-                                player_1_joystick_id = i;
-                        }
-                    }
-                    ImGui::EndMenu();
-                }
-                if (ImGui::BeginMenu("Player 2"))
-                {
-                    if (ImGui::MenuItem("Not Implemented", NULL)) { };
-                    ImGui::EndMenu();
-                }
-                ImGui::EndMenu();
-            }
-            ImGui::EndMainMenuBar();
-        }
+        snepulator_render_menubar ();
 
         /* Window Contents */
         {
@@ -314,7 +318,7 @@ int main (int argc, char **argv)
         /* Draw to HW */
         glViewport(0, 0, (int)ImGui::GetIO().DisplaySize.x, (int)ImGui::GetIO().DisplaySize.y);
         /* A thought: What about the option to dim the background? */
-        glClearColor(sms_vdp_background[0] * 0.80, sms_vdp_background[1] * 0.80, sms_vdp_background[2] * 0.80, 0);
+        glClearColor(snepulator.video_background[0] * 0.80, snepulator.video_background[1] * 0.80, snepulator.video_background[2] * 0.80, 0);
         glClear(GL_COLOR_BUFFER_BIT);
         ImGui::Render();
 

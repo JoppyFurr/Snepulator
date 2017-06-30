@@ -4,6 +4,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "../snepulator.h"
+extern Snepulator snepulator;
+
 #include "z80.h"
 #include "z80_names.h"
 
@@ -12,7 +15,6 @@
 
 /* State */
 Z80_Regs z80_regs;
-extern bool _abort_;
 
 /* 8-bit register access */
 #define A z80_regs.a
@@ -452,7 +454,7 @@ uint32_t z80_extended_instruction ()
         default:
         fprintf (stderr, "Unknown extended instruction: \"%s\" (%02x).\n",
                  z80_instruction_name_extended[instruction], instruction);
-        _abort_ = true;
+        snepulator.abort = true;
     }
 
     return 0;
@@ -523,7 +525,7 @@ uint32_t z80_ix_iy_bit_instruction (uint16_t reg_ix_iy_w)
             fprintf (stderr, "Unknown ix/iy bit instruction: \"%s\" (%02x).\n",
                      z80_instruction_name_bits[instruction], instruction);
             write_data = false;
-            _abort_ = true;
+            snepulator.abort = true;
     }
 
     /* Write data */
@@ -737,7 +739,7 @@ uint16_t z80_ix_iy_instruction (uint16_t reg_ix_iy_in)
         default:
         fprintf (stderr, "Unknown ix/iy instruction: \"%s\" (%02x).\n",
                  z80_instruction_name_ix[instruction], instruction);
-        _abort_ = true;
+        snepulator.abort = true;
     }
 
     return reg_ix_iy.w;
@@ -824,7 +826,7 @@ uint32_t z80_bit_instruction ()
         default:
             fprintf (stderr, "Unknown bit instruction: \"%s\" (%02x).\n",
                      z80_instruction_name_bits[instruction], instruction);
-            _abort_ = true;
+            snepulator.abort = true;
     }
 
     /* Write data */
@@ -1512,7 +1514,7 @@ void z80_instruction ()
         default:
             fprintf (stderr, "Unknown instruction: \"%s\" (%02x).\n",
                      z80_instruction_name[instruction], instruction);
-            _abort_ = true;
+            snepulator.abort = true;
     }
 }
 
@@ -1568,7 +1570,7 @@ void z80_run_until_cycle (uint64_t run_until)
                          debug_instruction_1,
                          debug_instruction_2,
                          debug_instruction_3);
-            _abort_ = true;
+            snepulator.abort = true;
         }
         /* END TIMING DEBUG */
 
@@ -1596,7 +1598,7 @@ void z80_run_until_cycle (uint64_t run_until)
                     break;
                 default:
                     fprintf (stderr, "Unknown interrupt mode %d.\n", z80_regs.im);
-                    _abort_ = true;
+                    snepulator.abort = true;
             }
         }
     }
