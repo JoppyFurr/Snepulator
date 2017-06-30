@@ -113,7 +113,7 @@ void sn79489_init (void)
 
 #define PSG_CLOCK_RATE_PAL  (3546895 >> 4)
 #define PSG_RING_SIZE 16386
-#define BASE_VOLUME 50
+#define BASE_VOLUME 100
 
 /* TODO: Fix assumption of 48000 samples per sec */
 /* TODO: Fix assumption of PAL */

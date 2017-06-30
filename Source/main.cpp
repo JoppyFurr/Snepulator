@@ -20,6 +20,7 @@ extern "C" {
 float  sms_vdp_texture_data [256 * 192 * 3];
 float  sms_vdp_background [4] = { 0.125, 0.125, 0.125, 1.0 };
 bool _abort_ = false;
+bool _running_ = false;
 
 int main (int argc, char **argv)
 {
@@ -132,6 +133,8 @@ int main (int argc, char **argv)
     /* Initialise SMS */
     sms_init (bios_filename, cart_filename);
 
+    _running_ = true;
+
     /* Main loop */
     while (!_abort_)
     {
@@ -193,7 +196,8 @@ int main (int argc, char **argv)
         }
 
         /* EMULATE */
-        sms_run_frame ();
+        if (_running_)
+            sms_run_frame ();
 
         /* RENDER VDP */
         vdp_render ();
@@ -214,6 +218,7 @@ int main (int argc, char **argv)
             if (ImGui::BeginMenu("File"))
             {
                 if (ImGui::MenuItem("Open", NULL)) {}
+                if (ImGui::MenuItem("Pause", NULL, !_running_)) { _running_ = !_running_; }
                 ImGui::Separator();
                 if (ImGui::MenuItem("Quit", NULL)) { _abort_ = true; }
                 ImGui::EndMenu();
