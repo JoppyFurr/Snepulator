@@ -29,13 +29,15 @@ int player_2_joystick_id;
 
 void snepulator_render_menubar (void)
 {
+    bool open_modal = false;
+
     /* What colour should this be? A "Snepulator" theme, or should it blend in with the overscan colour? */
     /* TODO: Some measure should be taken to prevent the menu from obscuring the gameplay */
     if (ImGui::BeginMainMenuBar())
     {
         if (ImGui::BeginMenu("File"))
         {
-            if (ImGui::MenuItem("Open", NULL)) { snepulator.running = false, snepulator.modal = MODAL_OPEN; }
+            if (ImGui::MenuItem("Open", NULL)) { snepulator.running = false; open_modal = true; }
             if (ImGui::MenuItem("Pause", NULL, !snepulator.running)) { snepulator.running = !snepulator.running; }
             ImGui::Separator();
             if (ImGui::MenuItem("Quit", NULL)) { snepulator.abort = true; }
@@ -99,6 +101,25 @@ void snepulator_render_menubar (void)
             ImGui::EndMenu();
         }
         ImGui::EndMainMenuBar();
+    }
+
+    /* Open any popups requested */
+    if (open_modal)
+        ImGui::OpenPopup("Open");
+}
+
+void snepulator_render_open_modal (void)
+{
+    if (ImGui::BeginPopupModal ("Open", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+    {
+        ImGui::Text("Open - Coming soon :P");
+        ImGui::Separator();
+        if (ImGui::Button("Cancel", ImVec2(120,0))) {
+            snepulator.running = true;
+            ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::EndPopup();
     }
 }
 
@@ -283,9 +304,8 @@ int main (int argc, char **argv)
 
         /* RENDER GUI */
         ImGui_ImplSdlGL3_NewFrame (window);
-
-        /* Draw main menu bar */
         snepulator_render_menubar ();
+        snepulator_render_open_modal ();
 
         /* Window Contents */
         {
