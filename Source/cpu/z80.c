@@ -710,7 +710,8 @@ uint16_t z80_ix_iy_instruction (uint16_t reg_ix_iy_in)
                                       SET_FLAGS_SBC (reg_ix_iy.l); z80_regs.a -= temp; break;
         case 0x9e: /* SBC A,(IX+*) */ value_read= memory_read (reg_ix_iy.w + (int8_t) param.l);
                                       temp = value_read + CARRY_BIT;
-                                      SET_FLAGS_SBC (value_read); z80_regs.a -= temp; break;
+                                      SET_FLAGS_SBC (value_read); z80_regs.a -= temp;
+                                      z80_cycle += 19; break;
 
         case 0xa4: /* AND A,IXH    */ z80_regs.a &= reg_ix_iy.h; SET_FLAGS_AND; break;
         case 0xa5: /* AND A,IXL    */ z80_regs.a &= reg_ix_iy.l; SET_FLAGS_AND; break;
@@ -736,6 +737,11 @@ uint16_t z80_ix_iy_instruction (uint16_t reg_ix_iy_in)
         case 0xe5: /* PUSH IX      */ memory_write (--z80_regs.sp, reg_ix_iy.h);
                                       memory_write (--z80_regs.sp, reg_ix_iy.l);
                                       z80_cycle += 15; break;
+
+        case 0xf9: /* LD SP,IX     */ z80_regs.sp = reg_ix_iy.w;
+                                      z80_cycle += 10;
+                                      break;
+
         default:
         fprintf (stderr, "Unknown ix/iy instruction: \"%s\" (%02x).\n",
                  z80_instruction_name_ix[instruction], instruction);
