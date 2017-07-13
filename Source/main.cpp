@@ -105,16 +105,37 @@ void snepulator_render_menubar (void)
 
     /* Open any popups requested */
     if (open_modal)
-        ImGui::OpenPopup("Open");
+        ImGui::OpenPopup("Open ROM...");
 }
 
 void snepulator_render_open_modal (void)
 {
-    if (ImGui::BeginPopupModal ("Open", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+    static float f;
+    if (ImGui::BeginPopupModal ("Open ROM...", NULL, ImGuiWindowFlags_AlwaysAutoResize))
     {
-        ImGui::Text("Open - Coming soon :P");
-        ImGui::Separator();
-        if (ImGui::Button("Cancel", ImVec2(120,0))) {
+        /* TODO: Something other than hard coded values */
+
+        ImGui::Text("/home/joppy/ROMs/Master System/");
+
+        /* ROM Directories */
+        ImGui::BeginChild ("Directories", ImVec2 (150, 400), true);
+            ImGui::Button ("Master System", ImVec2 (ImGui::GetContentRegionAvailWidth (), 24));
+            ImGui::Button ("SG-1000",       ImVec2 (ImGui::GetContentRegionAvailWidth (), 24));
+        ImGui::EndChild ();
+
+        ImGui::SameLine ();
+
+        /* Directory Contents */
+        ImGui::BeginChild ("Files", ImVec2 (350, 400), true);
+        ImGui::EndChild ();
+
+        /* Buttons */
+        if (ImGui::Button ("Cancel", ImVec2 (120,0))) {
+            snepulator.running = true;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine ();
+        if (ImGui::Button ("Open", ImVec2(120,0))) {
             snepulator.running = true;
             ImGui::CloseCurrentPopup();
         }
