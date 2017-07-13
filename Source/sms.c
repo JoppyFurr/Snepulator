@@ -300,11 +300,14 @@ uint64_t next_frame_cycle = 0;
 void sms_init (char *bios_filename, char *cart_filename)
 {
     /* Load BIOS */
-    if (sms_load_rom (&bios, &bios_size, bios_filename) == -1)
+    if (bios_filename)
     {
-        snepulator.abort = true;
+        if (sms_load_rom (&bios, &bios_size, bios_filename) == -1)
+        {
+            snepulator.abort = true;
+        }
+        fprintf (stdout, "%d KiB BIOS %s loaded.\n", bios_size >> 10, bios_filename);
     }
-    fprintf (stdout, "%d KiB BIOS %s loaded.\n", bios_size >> 10, bios_filename);
 
     /* Load cart */
     if (cart_filename)
