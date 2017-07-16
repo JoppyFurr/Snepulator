@@ -99,7 +99,8 @@ static void sms_memory_write (uint16_t addr, uint8_t data)
 
 /* TODO: Currently assuming a power-of-two size for the ROM */
 
-static uint8_t sms_memory_read (uint16_t addr)
+// static uint8_t sms_memory_read (uint16_t addr)
+uint8_t sms_memory_read (uint16_t addr)
 {
     /* Cartridge, card, BIOS, expansion slot */
     if (addr >= 0x0000 && addr <= 0xbfff)
