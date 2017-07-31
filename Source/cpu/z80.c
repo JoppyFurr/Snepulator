@@ -1461,7 +1461,7 @@ void z80_instruction ()
                                     break;
         case 0xf1: /* POP AF     */ z80_regs.f = memory_read (z80_regs.sp++);
                                     z80_regs.a = memory_read (z80_regs.sp++); z80_cycle += 10; break;
-        case 0xf2: /* JP P,**    */ if (F & Z80_FLAG_SIGN) JP (NN); CYCLES (10); break;
+        case 0xf2: /* JP P,**    */ if (!(F & Z80_FLAG_SIGN)) JP (NN); CYCLES (10); break;
         case 0xf3: /* DI         */ fprintf (stdout, "[DEBUG]: Interrupts disable.\n");
                                     z80_regs.iff1 = false; z80_regs.iff2 = false;
                                     CYCLES (4); break;
