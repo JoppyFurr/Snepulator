@@ -1462,8 +1462,7 @@ void z80_instruction ()
         case 0xf1: /* POP AF     */ z80_regs.f = memory_read (z80_regs.sp++);
                                     z80_regs.a = memory_read (z80_regs.sp++); z80_cycle += 10; break;
         case 0xf2: /* JP P,**    */ if (!(F & Z80_FLAG_SIGN)) JP (NN); CYCLES (10); break;
-        case 0xf3: /* DI         */ fprintf (stdout, "[DEBUG]: Interrupts disable.\n");
-                                    z80_regs.iff1 = false; z80_regs.iff2 = false;
+        case 0xf3: /* DI         */ z80_regs.iff1 = false; z80_regs.iff2 = false;
                                     CYCLES (4); break;
         case 0xf4: /* CALL P,**  */ if (z80_regs.f & Z80_FLAG_SIGN)
                                     {
@@ -1496,8 +1495,7 @@ void z80_instruction ()
                                     break;
         case 0xf9: /* LD SP,HL   */ LD (SP, HL);             CYCLES (6); break;
         case 0xfa: /* JP M,**    */ z80_regs.pc = (z80_regs.f & Z80_FLAG_SIGN) ? param.w : z80_regs.pc; z80_cycle += 10; break;
-        case 0xfb: /* EI         */ fprintf (stdout, "[DEBUG]: Interrupts enable.\n");
-                                    z80_regs.iff1 = true; z80_regs.iff2 = true; instructions_before_interrupts = 2; CYCLES (4); break;
+        case 0xfb: /* EI         */ z80_regs.iff1 = true; z80_regs.iff2 = true; instructions_before_interrupts = 2; CYCLES (4); break;
         case 0xfc: /* CALL M,**  */ if (z80_regs.f & Z80_FLAG_SIGN)
                                     {
                                         memory_write (--SP, z80_regs.pc_h);

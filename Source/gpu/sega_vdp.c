@@ -185,16 +185,12 @@ bool vdp_get_interrupt (void)
     /* Frame interrupt */
     if ((vdp_regs.mode_ctrl_2 & VDP_MODE_CTRL_2_FRAME_INT_EN) && (vdp_regs.status & VDP_STATUS_INT))
     {
-        static uint64_t frame_interrupt_count = 0;
-        printf ("Frame interrupt %" PRIu64 ".\n", ++frame_interrupt_count);
         interrupt = true;
     }
 
     /* Line interrupt */
     if ((vdp_regs.mode_ctrl_1 & VDP_MODE_CTRL_1_LINE_INT_EN) && vdp_regs.line_interrupt)
     {
-        static uint64_t line_interrupt_count = 0;
-        printf ("Line interrupt %" PRIu64 ".\n", ++line_interrupt_count);
         interrupt = true;
     }
 
