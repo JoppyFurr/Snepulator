@@ -122,6 +122,9 @@ void vdp_control_write (uint8_t value)
 /* TODO: For now, assuming 256x192 PAL */
 /* 50 frames per second, 313 scanlines per frame */
 
+/* TODO: Copy the frame to the GPU code once we hit vertical blanking */
+/* TODO: Implement some kind of "Run CPU until frame completes" code */
+
 /* 192 - Active display
  *  48 - Bottom border
  *   3 - Bottom blanking
@@ -205,50 +208,51 @@ typedef struct Point2D_s {
     int32_t y;
 } Point2D;
 
-void vdp_render_pattern (Vdp_Pattern *pattern_base, Vdp_Palette palette, Point2D offset, bool h_flip, bool v_flip, bool transparency)
+void vdp_render_line_mode4_pattern (uint16_t line, Vdp_Pattern *pattern_base, Vdp_Palette palette, Point2D offset, bool h_flip, bool v_flip, bool transparency)
 {
-    for (uint32_t y = 0; y < 8; y++)
+    char *line_base;
+
+    /* Early abort if the pattern doesn't belong on this line */
+    if (line < offset.y || line >= offset.y + 8)
+        return;
+
+    if (v_flip)
+        line_base = (char *)(&pattern_base->data[(7 - (line - offset.y)) * 4]);
+    else
+        line_base = (char *)(&pattern_base->data[(line - offset.y) * 4]);
+
+    for (uint32_t x = 0; x < 8; x++)
     {
-        char *line_base;
+        /* Don't draw texture pixels that fall outside of the screen */
+        if (x + offset.x >= 256)
+            continue;
 
-        if (v_flip)
-            line_base = (char *)(&pattern_base->data[(7 - y) * 4]);
+        /* TODO: This seems to be chopping off a little too much */
+        /* TODO: To make this blend in better, should it use the darkened version? */
+        /* Don't draw the left-most eight pixels if BIT_5 of CTRL_1 is set */
+        if (vdp_regs.mode_ctrl_1 & VDP_MODE_CTRL_1_MASK_COL_1 && x + offset.x < 8)
+            continue;
+
+        int shift;
+
+        if (h_flip)
+            shift = 7 - x;
         else
-            line_base = (char *)(&pattern_base->data[y * 4]);
+            shift = x;
 
-        for (uint32_t x = 0; x < 8; x++)
-        {
-            /* Don't draw texture pixels that fall outside of the screen */
-            if (x + offset.x >= 256 || y + offset.y >= 192)
-                continue;
+        uint8_t bit0 = (line_base[0] & (0x80 >> shift)) ? 0x01 : 0x00;
+        uint8_t bit1 = (line_base[1] & (0x80 >> shift)) ? 0x02 : 0x00;
+        uint8_t bit2 = (line_base[2] & (0x80 >> shift)) ? 0x04 : 0x00;
+        uint8_t bit3 = (line_base[3] & (0x80 >> shift)) ? 0x08 : 0x00;
 
-            /* TODO: This seems to be chopping off a little too much */
-            /* TODO: To make this blend in better, should it use the darkened version? */
-            /* Don't draw the left-most eight pixels if BIT_5 of CTRL_1 is set */
-            if (vdp_regs.mode_ctrl_1 & VDP_MODE_CTRL_1_MASK_COL_1 && x + offset.x < 8)
-                continue;
+        if (transparency == true && (bit0 | bit1 | bit2 | bit3) == 0)
+            continue;
 
-            int shift;
+        uint8_t pixel = cram[((palette == VDP_PALETTE_SPRITE) ? 16 : 0) + (bit0 | bit1 | bit2 | bit3)];
 
-            if (h_flip)
-                shift = 7 - x;
-            else
-                shift = x;
-
-            uint8_t bit0 = (line_base[0] & (0x80 >> shift)) ? 0x01 : 0x00;
-            uint8_t bit1 = (line_base[1] & (0x80 >> shift)) ? 0x02 : 0x00;
-            uint8_t bit2 = (line_base[2] & (0x80 >> shift)) ? 0x04 : 0x00;
-            uint8_t bit3 = (line_base[3] & (0x80 >> shift)) ? 0x08 : 0x00;
-
-            if (transparency == true && (bit0 | bit1 | bit2 | bit3) == 0)
-                continue;
-
-            uint8_t pixel = cram[((palette == VDP_PALETTE_SPRITE) ? 16 : 0) + (bit0 | bit1 | bit2 | bit3)];
-
-            snepulator.sms_vdp_texture_data [(offset.x + x) * VDP_STRIDE_X + (offset.y + y) * VDP_STRIDE_Y + 0] = VDP_TO_RED   (pixel) / 256.0f;
-            snepulator.sms_vdp_texture_data [(offset.x + x) * VDP_STRIDE_X + (offset.y + y) * VDP_STRIDE_Y + 1] = VDP_TO_GREEN (pixel) / 256.0f;
-            snepulator.sms_vdp_texture_data [(offset.x + x) * VDP_STRIDE_X + (offset.y + y) * VDP_STRIDE_Y + 2] = VDP_TO_BLUE  (pixel) / 256.0f;
-        }
+        snepulator.sms_vdp_texture_data [(offset.x + x) * VDP_STRIDE_X + line * VDP_STRIDE_Y + 0] = VDP_TO_RED   (pixel) / 256.0f;
+        snepulator.sms_vdp_texture_data [(offset.x + x) * VDP_STRIDE_X + line * VDP_STRIDE_Y + 1] = VDP_TO_GREEN (pixel) / 256.0f;
+        snepulator.sms_vdp_texture_data [(offset.x + x) * VDP_STRIDE_X + line * VDP_STRIDE_Y + 2] = VDP_TO_BLUE  (pixel) / 256.0f;
     }
 }
 
@@ -256,7 +260,7 @@ void vdp_render_pattern (Vdp_Pattern *pattern_base, Vdp_Palette palette, Point2D
 #define VDP_PATTERN_VERTICAL_FLIP       BIT_10
 
 /* TODO: Confirm left-edge behaviour or a real Master System */
-void vdp_render_background (bool priority)
+void vdp_render_line_mode4_background (uint16_t line, bool priority)
 {
     /* TODO: If using more than 192 lines, only two bits should be used here */
     uint16_t name_table_base = (((uint16_t) vdp_regs.name_table_addr) << 10) & 0x3800;
@@ -293,7 +297,7 @@ void vdp_render_background (bool priority)
 
             position.x = 8 * tile_x + fine_scroll_x;
             position.y = 8 * tile_y - fine_scroll_y;
-            vdp_render_pattern (pattern, palette, position, h_flip, v_flip, false | priority);
+            vdp_render_line_mode4_pattern (line, pattern, palette, position, h_flip, v_flip, false | priority);
 
         }
     }
@@ -305,7 +309,7 @@ void vdp_render_background (bool priority)
 /* TODO: Pixel-doubling */
 /* TODO: Draw order: the first entry in the line's sprite buffer with a non-transparent pixel is the one that sticks */
 /* TODO: Actually render as-per the clock cycles. May need to double-buffer to prevent tearing */
-void vdp_render_sprites (void)
+void vdp_render_line_mode4_sprites (uint16_t line)
 {
     uint16_t sprite_attribute_table_base = (((uint16_t) vdp_regs.sprite_attr_table_addr) << 7) & 0x3f00;
     uint16_t sprite_pattern_offset = (vdp_regs.sprite_pattern_generator_addr & 0x04) ? 256 : 0;
@@ -325,67 +329,82 @@ void vdp_render_sprites (void)
         position.x = x;
         position.y = y + 1;
 
+        /* Skip sprites not on this line */
+        /* TODO: Some more optimization could be done here */
+        if (line < position.y || line > position.y + 16)
+            continue;
+
         if (vdp_regs.mode_ctrl_2 & VDP_MODE_CTRL_2_SPRITE_TALL)
             pattern_index &= 0xfe;
 
         pattern = (Vdp_Pattern *) &vram [(sprite_pattern_offset + pattern_index) * sizeof (Vdp_Pattern)];
-        vdp_render_pattern (pattern, VDP_PALETTE_SPRITE, position, false, false, true);
+        vdp_render_line_mode4_pattern (line, pattern, VDP_PALETTE_SPRITE, position, false, false, true);
 
         if (vdp_regs.mode_ctrl_2 & VDP_MODE_CTRL_2_SPRITE_TALL)
         {
             position.y += 8;
             pattern = (Vdp_Pattern *) &vram [(sprite_pattern_offset + pattern_index + 1) * sizeof (Vdp_Pattern)];
-            vdp_render_pattern (pattern, VDP_PALETTE_SPRITE, position, false, false, true);
+            vdp_render_line_mode4_pattern (line, pattern, VDP_PALETTE_SPRITE, position, false, false, true);
         }
     }
+}
+
+void vdp_render_line_mode4_192 (uint16_t line)
+{
+    /* Background */
+    for (int x = 0; x < 256; x++)
+    {
+            snepulator.sms_vdp_texture_data [x * VDP_STRIDE_X + line * VDP_STRIDE_Y + 0] = snepulator.video_background[0];
+            snepulator.sms_vdp_texture_data [x * VDP_STRIDE_X + line * VDP_STRIDE_Y + 1] = snepulator.video_background[1];
+            snepulator.sms_vdp_texture_data [x * VDP_STRIDE_X + line * VDP_STRIDE_Y + 2] = snepulator.video_background[2];
+    }
+
+    /* Early return if the display is blanked */
+    if (!(vdp_regs.mode_ctrl_2 & VDP_MODE_CTRL_2_BLANK))
+    {
+        return;
+    }
+
+    vdp_render_line_mode4_background (line, false);
+    vdp_render_line_mode4_sprites (line);
+    vdp_render_line_mode4_background (line, true);
 }
 
 /* Note: For now, we will assume 192 lines, as this is what the vast majority of
  *       SMS games actually use */
 void vdp_render (void)
 {
-    /* Check if the display is blanked */
+
+
     if (!(vdp_regs.mode_ctrl_2 & VDP_MODE_CTRL_2_BLANK))
     {
+        /* Display is blanked */
         snepulator.video_background [0] = 0.0f;
         snepulator.video_background [1] = 0.0f;
         snepulator.video_background [2] = 0.0f;
-        for (int y = 0; y < 192; y++)
-            for (int x = 0; x < 256; x++)
-            {
-                    snepulator.sms_vdp_texture_data [x * VDP_STRIDE_X + y * VDP_STRIDE_Y + 0] = 0.0f;
-                    snepulator.sms_vdp_texture_data [x * VDP_STRIDE_X + y * VDP_STRIDE_Y + 1] = 0.0f;
-                    snepulator.sms_vdp_texture_data [x * VDP_STRIDE_X + y * VDP_STRIDE_Y + 2] = 0.0f;
-            }
-        return;
     }
-
-    /* Background / overscan - Is this specific to mode 4? */
-    uint8_t bg_colour;
-    bg_colour = cram [16 + (vdp_regs.background_colour & 0x0f)];
-    snepulator.video_background [0] = VDP_TO_RED (bg_colour) / 256.0f;
-    snepulator.video_background [1] = VDP_TO_GREEN (bg_colour) / 256.0f;
-    snepulator.video_background [2] = VDP_TO_BLUE (bg_colour) / 256.0f;
+    else
+    {
+        /* Overscan colour. Is this mode4-specific? */
+        uint8_t bg_colour;
+        bg_colour = cram [16 + (vdp_regs.background_colour & 0x0f)];
+        snepulator.video_background [0] = VDP_TO_RED (bg_colour) / 256.0f;
+        snepulator.video_background [1] = VDP_TO_GREEN (bg_colour) / 256.0f;
+        snepulator.video_background [2] = VDP_TO_BLUE (bg_colour) / 256.0f;
+    }
 
     switch (vdp_regs.mode_ctrl_1 & VDP_MODE_CTRL_1_MODE_4)
     {
         /* Mode 4 */
         case VDP_MODE_CTRL_1_MODE_4:
             for (int y = 0; y < 192; y++)
-                for (int x = 0; x < 256; x++)
-                {
-                        snepulator.sms_vdp_texture_data [x * VDP_STRIDE_X + y * VDP_STRIDE_Y + 0] = snepulator.video_background[0];
-                        snepulator.sms_vdp_texture_data [x * VDP_STRIDE_X + y * VDP_STRIDE_Y + 1] = snepulator.video_background[1];
-                        snepulator.sms_vdp_texture_data [x * VDP_STRIDE_X + y * VDP_STRIDE_Y + 2] = snepulator.video_background[2];
-                }
-            vdp_render_background (false);
-            vdp_render_sprites ();
-            vdp_render_background (true);
+            {
+                vdp_render_line_mode4_192 (y);
+            }
             break;
 
-        /* TMS9918 mode */
         default:
-            /* fprintf (stderr, "TMS9918 modes not implemented.\n"); */
+            /* TODO: Implement other modes */
             break;
     }
 }
