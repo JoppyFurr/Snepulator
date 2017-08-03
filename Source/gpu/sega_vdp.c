@@ -24,6 +24,7 @@ static Vdp_Regs vdp_regs;
 static uint8_t v_counter = 0; /* Should this be added to the register struct? */
 static uint8_t cram [VDP_CRAM_SIZE];
 static uint8_t vram [VDP_VRAM_SIZE];
+float vdp_output_buffer [256 * 192 * 3];
 
 /* TODO: Make this line accurate */
 /* TODO: Add interrupts */
@@ -139,6 +140,8 @@ void vdp_control_write (uint8_t value)
 #define SMS_CLOCK_PER_FRAME_PAL (SMS_CLOCK_RATE_PAL / 50)
 #define SMS_CLOCK_PER_LINE_PAL (SMS_CLOCK_RATE_PAL / (50 * 313))
 
+void vdp_render_line (uint16_t line);
+
 /* TODO: For now, assuming PAL (313 scanlines) */
 void vdp_clock_update (uint64_t cycles)
 {
@@ -149,8 +152,13 @@ void vdp_clock_update (uint64_t cycles)
     cycles_unprocessed += (cycles - previous_cycles);
     previous_cycles = cycles;
 
+    /* Has a line just completed? */
     while (cycles_unprocessed > SMS_CLOCK_PER_LINE_PAL)
     {
+        /* Render the  line to the buffer */
+        if (v_counter_16 < 192)
+            vdp_render_line (v_counter_16);
+
         /* Check for frame interrupt */
         if (v_counter_16 == 193)
             vdp_regs.status |= VDP_STATUS_INT;
@@ -250,9 +258,9 @@ void vdp_render_line_mode4_pattern (uint16_t line, Vdp_Pattern *pattern_base, Vd
 
         uint8_t pixel = cram[((palette == VDP_PALETTE_SPRITE) ? 16 : 0) + (bit0 | bit1 | bit2 | bit3)];
 
-        snepulator.sms_vdp_texture_data [(offset.x + x) * VDP_STRIDE_X + line * VDP_STRIDE_Y + 0] = VDP_TO_RED   (pixel) / 256.0f;
-        snepulator.sms_vdp_texture_data [(offset.x + x) * VDP_STRIDE_X + line * VDP_STRIDE_Y + 1] = VDP_TO_GREEN (pixel) / 256.0f;
-        snepulator.sms_vdp_texture_data [(offset.x + x) * VDP_STRIDE_X + line * VDP_STRIDE_Y + 2] = VDP_TO_BLUE  (pixel) / 256.0f;
+        vdp_output_buffer [(offset.x + x) * VDP_STRIDE_X + line * VDP_STRIDE_Y + 0] = VDP_TO_RED   (pixel) / 256.0f;
+        vdp_output_buffer [(offset.x + x) * VDP_STRIDE_X + line * VDP_STRIDE_Y + 1] = VDP_TO_GREEN (pixel) / 256.0f;
+        vdp_output_buffer [(offset.x + x) * VDP_STRIDE_X + line * VDP_STRIDE_Y + 2] = VDP_TO_BLUE  (pixel) / 256.0f;
     }
 }
 
@@ -354,9 +362,9 @@ void vdp_render_line_mode4_192 (uint16_t line)
     /* Background */
     for (int x = 0; x < 256; x++)
     {
-            snepulator.sms_vdp_texture_data [x * VDP_STRIDE_X + line * VDP_STRIDE_Y + 0] = snepulator.video_background[0];
-            snepulator.sms_vdp_texture_data [x * VDP_STRIDE_X + line * VDP_STRIDE_Y + 1] = snepulator.video_background[1];
-            snepulator.sms_vdp_texture_data [x * VDP_STRIDE_X + line * VDP_STRIDE_Y + 2] = snepulator.video_background[2];
+            vdp_output_buffer [x * VDP_STRIDE_X + line * VDP_STRIDE_Y + 0] = snepulator.video_background[0];
+            vdp_output_buffer [x * VDP_STRIDE_X + line * VDP_STRIDE_Y + 1] = snepulator.video_background[1];
+            vdp_output_buffer [x * VDP_STRIDE_X + line * VDP_STRIDE_Y + 2] = snepulator.video_background[2];
     }
 
     /* Early return if the display is blanked */
@@ -370,12 +378,8 @@ void vdp_render_line_mode4_192 (uint16_t line)
     vdp_render_line_mode4_background (line, true);
 }
 
-/* Note: For now, we will assume 192 lines, as this is what the vast majority of
- *       SMS games actually use */
-void vdp_render (void)
+void vdp_render_line (uint16_t line)
 {
-
-
     if (!(vdp_regs.mode_ctrl_2 & VDP_MODE_CTRL_2_BLANK))
     {
         /* Display is blanked */
@@ -397,14 +401,19 @@ void vdp_render (void)
     {
         /* Mode 4 */
         case VDP_MODE_CTRL_1_MODE_4:
-            for (int y = 0; y < 192; y++)
-            {
-                vdp_render_line_mode4_192 (y);
-            }
+                vdp_render_line_mode4_192 (line);
             break;
 
         default:
             /* TODO: Implement other modes */
             break;
     }
+
+}
+
+/* Note: For now, we will assume 192 lines, as this is what the vast majority of
+ *       SMS games actually use */
+void vdp_render (void)
+{
+    memcpy (snepulator.sms_vdp_texture_data, vdp_output_buffer, sizeof (vdp_output_buffer));
 }
