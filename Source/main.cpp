@@ -312,7 +312,6 @@ int main (int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    /* Setup ImGui binding */
     glcontext = SDL_GL_CreateContext (window);
     if (glcontext == NULL)
     {
@@ -320,6 +319,9 @@ int main (int argc, char **argv)
         SDL_Quit ();
         return EXIT_FAILURE;
     }
+    SDL_GL_SetSwapInterval (1);
+
+    /* Setup ImGui binding */
     gl3wInit();
     ImGui_ImplSdlGL3_Init (window);
 
@@ -455,8 +457,6 @@ int main (int argc, char **argv)
         ImGui::Render();
 
         SDL_GL_SwapWindow (window);
-        SDL_Delay (10); /* TODO: This should be V-Sync, not a delay */
-
     }
 
     fprintf (stdout, "EMULATION ENDED.\n");

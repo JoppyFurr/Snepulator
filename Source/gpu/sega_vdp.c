@@ -24,7 +24,8 @@ static Vdp_Regs vdp_regs;
 static uint8_t v_counter = 0; /* Should this be added to the register struct? */
 static uint8_t cram [VDP_CRAM_SIZE];
 static uint8_t vram [VDP_VRAM_SIZE];
-float vdp_output_buffer [256 * 192 * 3];
+float vdp_frame_complete [256 * 192 * 3];
+float vdp_frame_current  [256 * 192 * 3];
 
 /* TODO: Make this line accurate */
 /* TODO: Add interrupts */
@@ -159,6 +160,14 @@ void vdp_clock_update (uint64_t cycles)
         if (v_counter_16 < 192)
             vdp_render_line (v_counter_16);
 
+        /* Copy a complete frame to the buffer */
+        /* TODO: Would it be better to ignore the bottom-border and copy early to reduce latency? */
+        /* TODO: This is okay for single-threaded code, but locking may be needed if multi-threading is added */
+        if (v_counter_16 == 240)
+        {
+            memcpy (vdp_frame_complete, vdp_frame_current, sizeof (vdp_frame_current));
+        }
+
         /* Check for frame interrupt */
         if (v_counter_16 == 193)
             vdp_regs.status |= VDP_STATUS_INT;
@@ -225,7 +234,7 @@ void vdp_render_line_mode4_pattern (uint16_t line, Vdp_Pattern *pattern_base, Vd
         return;
 
     if (v_flip)
-        line_base = (char *)(&pattern_base->data[(7 - (line - offset.y)) * 4]);
+        line_base = (char *)(&pattern_base->data[(offset.y - line + 7) * 4]);
     else
         line_base = (char *)(&pattern_base->data[(line - offset.y) * 4]);
 
@@ -258,9 +267,9 @@ void vdp_render_line_mode4_pattern (uint16_t line, Vdp_Pattern *pattern_base, Vd
 
         uint8_t pixel = cram[((palette == VDP_PALETTE_SPRITE) ? 16 : 0) + (bit0 | bit1 | bit2 | bit3)];
 
-        vdp_output_buffer [(offset.x + x) * VDP_STRIDE_X + line * VDP_STRIDE_Y + 0] = VDP_TO_RED   (pixel) / 256.0f;
-        vdp_output_buffer [(offset.x + x) * VDP_STRIDE_X + line * VDP_STRIDE_Y + 1] = VDP_TO_GREEN (pixel) / 256.0f;
-        vdp_output_buffer [(offset.x + x) * VDP_STRIDE_X + line * VDP_STRIDE_Y + 2] = VDP_TO_BLUE  (pixel) / 256.0f;
+        vdp_frame_current [(offset.x + x) * VDP_STRIDE_X + line * VDP_STRIDE_Y + 0] = VDP_TO_RED   (pixel) / 256.0f;
+        vdp_frame_current [(offset.x + x) * VDP_STRIDE_X + line * VDP_STRIDE_Y + 1] = VDP_TO_GREEN (pixel) / 256.0f;
+        vdp_frame_current [(offset.x + x) * VDP_STRIDE_X + line * VDP_STRIDE_Y + 2] = VDP_TO_BLUE  (pixel) / 256.0f;
     }
 }
 
@@ -268,6 +277,7 @@ void vdp_render_line_mode4_pattern (uint16_t line, Vdp_Pattern *pattern_base, Vd
 #define VDP_PATTERN_VERTICAL_FLIP       BIT_10
 
 /* TODO: Confirm left-edge behaviour or a real Master System */
+/* TODO: Optimize this for one-line-at-a-time rendering */
 void vdp_render_line_mode4_background (uint16_t line, bool priority)
 {
     /* TODO: If using more than 192 lines, only two bits should be used here */
@@ -362,9 +372,9 @@ void vdp_render_line_mode4_192 (uint16_t line)
     /* Background */
     for (int x = 0; x < 256; x++)
     {
-            vdp_output_buffer [x * VDP_STRIDE_X + line * VDP_STRIDE_Y + 0] = snepulator.video_background[0];
-            vdp_output_buffer [x * VDP_STRIDE_X + line * VDP_STRIDE_Y + 1] = snepulator.video_background[1];
-            vdp_output_buffer [x * VDP_STRIDE_X + line * VDP_STRIDE_Y + 2] = snepulator.video_background[2];
+            vdp_frame_current [x * VDP_STRIDE_X + line * VDP_STRIDE_Y + 0] = snepulator.video_background[0];
+            vdp_frame_current [x * VDP_STRIDE_X + line * VDP_STRIDE_Y + 1] = snepulator.video_background[1];
+            vdp_frame_current [x * VDP_STRIDE_X + line * VDP_STRIDE_Y + 2] = snepulator.video_background[2];
     }
 
     /* Early return if the display is blanked */
@@ -415,5 +425,5 @@ void vdp_render_line (uint16_t line)
  *       SMS games actually use */
 void vdp_render (void)
 {
-    memcpy (snepulator.sms_vdp_texture_data, vdp_output_buffer, sizeof (vdp_output_buffer));
+    memcpy (snepulator.sms_vdp_texture_data, vdp_frame_complete, sizeof (vdp_frame_complete));
 }
