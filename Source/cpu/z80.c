@@ -313,7 +313,7 @@ uint32_t z80_extended_instruction ()
         case 0x45: /* RETN       */ z80_regs.pc_l = memory_read (z80_regs.sp++);
                                     z80_regs.pc_h = memory_read (z80_regs.sp++);
                                     z80_regs.iff1 = z80_regs.iff2;
-                                    break;
+                                    z80_cycle += 14; break;
         case 0x4a: /* ADC HL,BC  */ temp_16 = z80_regs.bc + CARRY_BIT;
                                     SET_FLAGS_ADC_16 (z80_regs.bc); z80_regs.hl += temp_16; z80_cycle += 15; break;
         case 0x4b: /* LD BC,(**) */ z80_regs.c = memory_read (param.w);
@@ -1525,6 +1525,7 @@ void z80_instruction ()
 /* TODO: Remove knowledge of the VDP from here */
 extern void vdp_clock_update (uint64_t cycles);
 extern bool vdp_get_interrupt (void);
+extern bool sms_nmi_check (void);
 
 void z80_run_until_cycle (uint64_t run_until)
 {
@@ -1587,23 +1588,45 @@ void z80_run_until_cycle (uint64_t run_until)
             instructions_before_interrupts--;
 
         /* TODO: Make this less Master System specific */
-        if (z80_regs.iff1 && !instructions_before_interrupts && vdp_get_interrupt ())
+        if (!instructions_before_interrupts)
         {
-            z80_regs.iff1 = false;
-            z80_regs.iff2 = false;
-
-            switch (z80_regs.im)
+            /* First, check for non-maskable interrupts */
+            if (sms_nmi_check())
             {
+                z80_regs.iff1 = false;
                 /* TODO: Cycle count? */
-                case 1:
-                    memory_write (--z80_regs.sp, z80_regs.pc_h);
-                    memory_write (--z80_regs.sp, z80_regs.pc_l);
-                    z80_regs.pc = 0x38;
-                    break;
-                default:
-                    fprintf (stderr, "Unknown interrupt mode %d.\n", z80_regs.im);
-                    snepulator.abort = true;
+                memory_write (--z80_regs.sp, z80_regs.pc_h);
+                memory_write (--z80_regs.sp, z80_regs.pc_l);
+                z80_regs.pc = 0x66;
             }
+
+            /* Then check for maskable interrupts */
+            if (z80_regs.iff1 && vdp_get_interrupt ())
+            {
+                if (z80_regs.halt)
+                {
+                    z80_regs.halt = false;
+                    z80_regs.pc += 1;
+                }
+
+                z80_regs.iff1 = false;
+                z80_regs.iff2 = false;
+
+                switch (z80_regs.im)
+                {
+                    /* TODO: Cycle count? */
+                    case 1:
+                        memory_write (--z80_regs.sp, z80_regs.pc_h);
+                        memory_write (--z80_regs.sp, z80_regs.pc_l);
+                        z80_regs.pc = 0x38;
+                        break;
+                    default:
+                        fprintf (stderr, "Unknown interrupt mode %d.\n", z80_regs.im);
+                        snepulator.abort = true;
+                }
+            }
+
         }
+
     }
 }

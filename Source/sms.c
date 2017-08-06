@@ -30,6 +30,7 @@ uint8_t mapper_bank[3] = { 0x00, 0x01, 0x02 };
 /* Gamepads */
 SMS_Gamepad gamepad_1;
 SMS_Gamepad gamepad_2;
+bool pause_button;
 
 /* 0: Output
  * 1: Input */
@@ -251,6 +252,21 @@ static uint8_t sms_io_read (uint8_t addr)
     return 0xff;
 }
 
+bool sms_nmi_check()
+{
+    static bool pause_button_previous = false;
+    bool ret = false;
+
+    if (pause_button_previous == false && pause_button == true)
+    {
+        ret = true;
+    }
+
+    pause_button_previous = pause_button;
+
+    return ret;
+}
+
 int32_t sms_load_rom (uint8_t **buffer, uint32_t *filesize, char *filename)
 {
     uint32_t bytes_read = 0;
@@ -327,6 +343,7 @@ void sms_init (char *bios_filename, char *cart_filename)
 
     memset (&gamepad_1, 0, sizeof (gamepad_1));
     memset (&gamepad_2, 0, sizeof (gamepad_2));
+    pause_button = false;
 
     next_frame_cycle = 0;
 }

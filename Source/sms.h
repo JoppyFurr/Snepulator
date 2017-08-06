@@ -14,3 +14,4 @@ typedef struct SMS_Gamepad_t {
 void sms_audio_callback (void *userdata, uint8_t *stream, int len);
 void sms_run_frame (void);
 void sms_init (char *bios_filename, char *cart_filename);
+bool sms_nmi_check();

@@ -15,6 +15,7 @@ extern "C" {
 #include "gpu/sega_vdp.h"
 #include "sms.h"
     extern SMS_Gamepad gamepad_1;
+    extern bool pause_button;
 }
 
 /* Global state */
@@ -390,6 +391,8 @@ int main (int argc, char **argv)
                     case 1: /* "C" on my USB Saturn gamepad */
                         gamepad_1.button_2 = (event.type == SDL_JOYBUTTONDOWN) ? true : false;
                         break;
+                    case 9:
+                        pause_button = (event.type == SDL_JOYBUTTONDOWN) ? true : false;
                     default: /* Don't care */
                         break;
                 }
