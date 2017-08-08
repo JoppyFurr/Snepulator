@@ -35,8 +35,8 @@ typedef struct Vdp_Regs_t {
 #define VDP_MODE_CTRL_1_EC              BIT_3
 #define VDP_MODE_CTRL_1_LINE_INT_EN     BIT_4
 #define VDP_MODE_CTRL_1_MASK_COL_1      BIT_5
-#define VDP_MODE_CTRL_1_VLOCK_0_1       BIT_6
-#define VDP_MODE_CTRL_1_HLOCK_24_31     BIT_7
+#define VDP_MODE_CTRL_1_SCROLL_DISABLE_ROW_0_1      BIT_6
+#define VDP_MODE_CTRL_1_SCROLL_DISABLE_COL_24_31    BIT_7
     uint8_t  mode_ctrl_2;
 #define VDP_MODE_CTRL_2_SPRITE_DOUBLE   BIT_0
 #define VDP_MODE_CTRL_2_SPRITE_TALL     BIT_1

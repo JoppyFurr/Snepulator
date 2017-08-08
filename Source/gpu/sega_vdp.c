@@ -289,8 +289,14 @@ void vdp_render_line_mode4_background (uint16_t line, bool priority)
     uint8_t fine_scroll_y = (vdp_regs.background_y_scroll % 224) & 0x07;
     Point2D position;
 
-    /* TODO: Implement VDP_MODE_CTRL_1_HLOCK_24_31 */
-    /* TODO: Implement VDP_MODE_CTRL_1_VLOCK_0_1   */
+    /* A bit in mode_ctrl_1 can disable scrolling for the first two rows */
+    if (vdp_regs.mode_ctrl_1 & VDP_MODE_CTRL_1_SCROLL_DISABLE_ROW_0_1 && line < 16)
+    {
+        start_column = 0;
+        fine_scroll_x = 0;
+    }
+
+    /* TODO: Implement VDP_MODE_CTRL_1_SCROLL_DISABLE_COL_24_31 */
     /* TODO: The vertical scroll value should only take affect between active frames, not mid-frame */
     /* TODO: If fine-scroll of Y is active, what happens in the first/last few lines of the display? */
     for (uint32_t tile_y = 0; tile_y < 24; tile_y++)
