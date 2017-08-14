@@ -450,11 +450,11 @@ uint32_t z80_extended_instruction ()
                                     CYCLES (BC ? 21 : 16);
                                     break;
         case 0xb1: /* CPIR       */ temp_1 = memory_read (z80_regs.hl);
-                                    z80_regs.hl++;
-                                    z80_regs.bc--;
-                                    PC -= (BC == 0 || z80_regs.a == temp_1) ? 0 : 2;
-                                    SET_FLAGS_CPD_CPI (temp_1);
-                                    break;
+                                    HL++; BC--;
+                                    if (BC != 0 && A != temp_1) {
+                                        PC -= 2;                CYCLES (21); }
+                                    else {                      CYCLES (16); }
+                                    SET_FLAGS_CPD_CPI (temp_1);                 break;
         case 0xb3: /* OTIR       */ io_write (z80_regs.c, memory_read(z80_regs.hl)),
                                     z80_regs.hl++; z80_regs.b--;
                                     PC -= z80_regs.b ? 2 : 0;
@@ -763,6 +763,7 @@ uint16_t z80_ix_iy_instruction (uint16_t reg_ix_iy_in)
         case 0xe5: /* PUSH IX      */ memory_write (--z80_regs.sp, reg_ix_iy.h);
                                       memory_write (--z80_regs.sp, reg_ix_iy.l);
                                       CYCLES (15); break;
+        case 0xe6: /* -            */ FALL_THROUGH ();          break;
         case 0xe9: /* JP (IX)      */ PC = reg_ix_iy.w;
                                       CYCLES (8); break;
 
