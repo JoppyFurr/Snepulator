@@ -67,18 +67,15 @@ static void sms_memory_write (uint16_t addr, uint8_t data)
     }
     else if (addr == 0xfffd)
     {
-        /* fprintf (stdout, "[DEBUG]: MAPPER[0] set to %02x.\n", data & 0x07); */
-        mapper_bank[0] = data & 0x1f;
+        mapper_bank[0] = data & 0x3f;
     }
     else if (addr == 0xfffe)
     {
-        /* fprintf (stdout, "[DEBUG]: MAPPER[1] set to %02x.\n", data & 0x07); */
-        mapper_bank[1] = data & 0x1f;
+        mapper_bank[1] = data & 0x3f;
     }
     else if (addr == 0xffff)
     {
-        /* fprintf (stdout, "[DEBUG]: MAPPER[2] set to %02x.\n", data & 0x07); */
-        mapper_bank[2] = data & 0x1f;
+        mapper_bank[2] = data & 0x3f;
     }
 
     /* Mapping (CodeMasters) */
@@ -106,8 +103,13 @@ uint8_t sms_memory_read (uint16_t addr)
     /* Cartridge, card, BIOS, expansion slot */
     if (addr >= 0x0000 && addr <= 0xbfff)
     {
-        uint32_t bank_base = mapper_bank[(addr >> 14)] * ((uint32_t)16 << 10);
+        uint8_t  slot = (addr >> 14);
+        uint32_t bank_base = mapper_bank[slot] * ((uint32_t) 16 << 10);
         uint16_t offset    = addr & 0x3fff;
+
+        /* The first 1 KiB of slot 0 is not affected by mapping */
+        if (slot == 0 && offset < (1 << 10))
+            bank_base = 0;
 
         if (bios && !(memory_control & SMS_MEMORY_CTRL_BIOS_DISABLE))
             return bios[(bank_base + offset) & (bios_size - 1)];
