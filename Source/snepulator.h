@@ -1,4 +1,10 @@
 
+typedef enum Video_Filter_t {
+    VIDEO_FILTER_NEAREST,
+    VIDEO_FILTER_LINEAR,
+    VIDEO_FILTER_SCANLINES,
+} Video_Filter;
+
 typedef struct Snepulator_t {
     bool    abort ;
     bool    running ;
@@ -8,9 +14,10 @@ typedef struct Snepulator_t {
     char *cart_filename;
 
     /* Video */
-    unsigned int video_filter; /* GLenum */
+    Video_Filter video_filter;
     float        video_background [4];
     float        sms_vdp_texture_data [256 * 192 * 3];
+    float        sms_vdp_texture_data_scanlines [256 * 192 * 3 * 3];
 
 } Snepulator;
 
