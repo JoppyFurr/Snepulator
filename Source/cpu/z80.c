@@ -388,15 +388,17 @@ uint32_t z80_extended_instruction ()
         case 0x72: /* SBC HL,SP  */ temp_16 = SP + CARRY_BIT;
                                     SET_FLAGS_SBC_16 (SP);
                                     HL -= temp_16;              CYCLES (15);    break;
-        case 0x73: /* LD (**),SP */ memory_write (NN,     SP);
-                                    memory_write (NN + 1, SP);  CYCLES (20);    break;
+        case 0x73: /* LD (**),SP */ memory_write (NN,     z80_regs.sp_l);
+                                    memory_write (NN + 1, z80_regs.sp_h);
+                                                                CYCLES (20);    break;
         case 0x78: /* IN A,(C)   */ IN_C (A);                   CYCLES (12);    break;
         case 0x79: /* OUT (C),A  */ io_write (C, A);            CYCLES (12);    break;
         case 0x7a: /* ADC HL,SP  */ temp_16 = SP + CARRY_BIT;
                                     SET_FLAGS_ADC_16 (SP); HL += temp_16;
                                                                 CYCLES (15);    break;
-        case 0x7b: /* LD SP,(**) */ SP = memory_read (NN);
-                                    SP = memory_read (NN + 1);  CYCLES (20);    break;
+        case 0x7b: /* LD SP,(**) */ z80_regs.sp_l = memory_read (NN);
+                                    z80_regs.sp_h = memory_read (NN + 1);
+                                                                CYCLES (20);    break;
 
         case 0xa0: /* LDI        */ memory_write (DE, memory_read (HL));
                                     HL++; DE++; BC--;
