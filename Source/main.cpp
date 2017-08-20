@@ -27,7 +27,6 @@ SDL_Joystick *player_2_joystick;
 int player_1_joystick_id;
 int player_2_joystick_id;
 
-
 void snepulator_render_menubar (void)
 {
     bool open_modal = false;
@@ -68,8 +67,18 @@ void snepulator_render_menubar (void)
         {
             if (ImGui::BeginMenu("Filter"))
             {
-                if (ImGui::MenuItem("GL_NEAREST", NULL, snepulator.video_filter == GL_NEAREST)) { snepulator.video_filter = GL_NEAREST; }
-                if (ImGui::MenuItem("GL_LINEAR",  NULL, snepulator.video_filter == GL_LINEAR))  { snepulator.video_filter = GL_LINEAR;  }
+                if (ImGui::MenuItem("GL_NEAREST", NULL, snepulator.video_filter == VIDEO_FILTER_NEAREST))
+                {
+                    snepulator.video_filter = VIDEO_FILTER_NEAREST;
+                }
+                if (ImGui::MenuItem("GL_LINEAR",  NULL, snepulator.video_filter == VIDEO_FILTER_LINEAR))
+                {
+                    snepulator.video_filter = VIDEO_FILTER_LINEAR;
+                }
+                if (ImGui::MenuItem("Scanlines",  NULL, snepulator.video_filter == VIDEO_FILTER_SCANLINES))
+                {
+                    snepulator.video_filter = VIDEO_FILTER_SCANLINES;
+                }
                 ImGui::EndMenu();
             }
             ImGui::EndMenu();
@@ -235,6 +244,7 @@ void snepulator_render_debug_modal (void)
     }
 }
 
+#define VDP_STRIDE_Y (256 * 3)
 int main (int argc, char **argv)
 {
     /* Video */
@@ -261,7 +271,7 @@ int main (int argc, char **argv)
 
     /* Initialize Snepulator state */
     memset (&snepulator, 0, sizeof (snepulator));
-    snepulator.video_filter = GL_NEAREST;
+    snepulator.video_filter = VIDEO_FILTER_NEAREST;
     player_1_joystick_id = -1;
     player_2_joystick_id = -1;
 
@@ -416,7 +426,45 @@ int main (int argc, char **argv)
         glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, snepulator.video_filter);
         glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, snepulator.video_filter);
         glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, snepulator.video_background);
-        glTexImage2D (GL_TEXTURE_2D, 0, GL_RGB, 256, 192, 0, GL_RGB, GL_FLOAT, snepulator.sms_vdp_texture_data);
+
+        switch (snepulator.video_filter)
+        {
+            case VIDEO_FILTER_NEAREST:
+                glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+                glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+                glTexImage2D    (GL_TEXTURE_2D, 0, GL_RGB, 256, 192, 0, GL_RGB, GL_FLOAT,
+                                 snepulator.sms_vdp_texture_data);
+                break;
+            case VIDEO_FILTER_LINEAR:
+                glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+                glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                glTexImage2D    (GL_TEXTURE_2D, 0, GL_RGB, 256, 192, 0, GL_RGB, GL_FLOAT,
+                                 snepulator.sms_vdp_texture_data);
+                break;
+            case VIDEO_FILTER_SCANLINES:
+                /* TODO: Scanlines should also cover the overscan area */
+                glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+                glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                for (int y = 0; y < 192; y++)
+                {
+                    float *line_three = &snepulator.sms_vdp_texture_data_scanlines [(3 * y + 2) * VDP_STRIDE_Y];
+
+                    memcpy (&snepulator.sms_vdp_texture_data_scanlines [(3 * y + 0) * VDP_STRIDE_Y],
+                            &snepulator.sms_vdp_texture_data           [     y      * VDP_STRIDE_Y],
+                            sizeof (float) * 256 * 3);
+                    memcpy (&snepulator.sms_vdp_texture_data_scanlines [(3 * y + 1) * VDP_STRIDE_Y],
+                            &snepulator.sms_vdp_texture_data           [     y      * VDP_STRIDE_Y],
+                            sizeof (float) * 256 * 3);
+
+                    for (int x = 0; x < 256 * 3; x++)
+                    {
+                        line_three[x] = 0.5 * snepulator.sms_vdp_texture_data [y * VDP_STRIDE_Y + x];
+                    }
+                }
+                glTexImage2D    (GL_TEXTURE_2D, 0, GL_RGB, 256, 192 * 3, 0, GL_RGB, GL_FLOAT,
+                                 snepulator.sms_vdp_texture_data_scanlines);
+                break;
+        }
 
         /* RENDER GUI */
         ImGui_ImplSdlGL3_NewFrame (window);
