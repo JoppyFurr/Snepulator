@@ -415,8 +415,8 @@ uint32_t z80_extended_instruction ()
                                                                 CYCLES (16);    break;
         case 0xa3: /* OUTI       */ io_write (C, memory_read(HL)),
                                     HL++; B--;
-                                    F = (F & Z80_FLAG_CARRY) |
-                                        (Z80_FLAG_SUB) |
+                                    F = (F      & Z80_FLAG_CARRY) |
+                                        (         Z80_FLAG_SUB  ) |
                                         (B == 0 ? Z80_FLAG_ZERO : 0);
                                                                 CYCLES (16);    break;
         case 0xa8: /* LDD        */ memory_write (DE, memory_read (HL));
@@ -438,12 +438,10 @@ uint32_t z80_extended_instruction ()
                                                                 CYCLES (16);    break;
 
         case 0xb0: /* LDIR       */ memory_write (DE, memory_read (HL));
-                                    HL++; DE++;
-                                    BC--;
-                                    PC -= BC ? 2 : 0;
+                                    HL++; DE++; BC--;
                                     F = (F & (Z80_FLAG_CARRY | Z80_FLAG_ZERO | Z80_FLAG_SIGN)) |
                                         (BC ? Z80_FLAG_OVERFLOW : 0);
-                                    if (BC) {                   CYCLES (21); }
+                                    if (BC) { PC -= 2;          CYCLES (21); }
                                     else    {                   CYCLES (16); }  break;
         case 0xb1: /* CPIR       */ temp_1 = memory_read (HL);
                                     HL++; BC--;
@@ -453,23 +451,23 @@ uint32_t z80_extended_instruction ()
                                     SET_FLAGS_CPD_CPI (temp_1);                 break;
         case 0xb3: /* OTIR       */ io_write (C, memory_read(HL)),
                                     HL++; B--;
-                                    PC -= B ? 2 : 0;
                                     F = (F & Z80_FLAG_CARRY) |
                                                  (Z80_FLAG_SUB | Z80_FLAG_ZERO);
-                                    if (B) {                    CYCLES (21); }
+                                    if (B) { PC -= 2;           CYCLES (21); }
                                     else   {                    CYCLES (16); }  break;
         case 0xb8: /* LDDR       */ memory_write (DE, memory_read (HL));
                                     HL--; DE--; BC--;
                                     F = (F & (Z80_FLAG_CARRY | Z80_FLAG_ZERO | Z80_FLAG_SIGN)) |
                                         (BC ? Z80_FLAG_OVERFLOW : 0);
-                                    PC -= BC ? 2 : 0;
-                                    if (BC) {                   CYCLES (21); }
+                                    if (BC) { PC -= 2;          CYCLES (21); }
                                     else    {                   CYCLES (16); }  break;
         case 0xb9: /* CPDR       */ temp_1 = memory_read (HL);
                                     HL--;
                                     BC--;
-                                    PC -= (BC == 0 || A == temp_1) ? 0 : 2;
-                                    SET_FLAGS_CPD_CPI (temp_1);                 break;
+                                    SET_FLAGS_CPD_CPI (temp_1);
+                                    if (BC != 0 && A != temp_1) {
+                                        PC -= 2;                CYCLES (21); }
+                                    else {                      CYCLES (16); }  break;
 
         default:
         fprintf (stderr, "Unknown extended instruction: \"%s\" (%02x).\n",
@@ -1312,6 +1310,7 @@ void z80_instruction ()
                                     else {                      CYCLES (10); }  break;
         case 0xc5: /* PUSH BC    */ PUSH_16 (B, C);             CYCLES (11);    break;
         case 0xc6: /* ADD A,*    */ ADD (A, N);                 CYCLES (7);     break;
+        case 0xc7: /* RST 00h    */ CALL (0x00);                CYCLES (11);    break;
         case 0xc8: /* RET Z      */ if (F & Z80_FLAG_ZERO) {
                                         RET ();                 CYCLES (11); }
                                     else {                      CYCLES (5);  }  break;
