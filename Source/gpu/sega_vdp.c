@@ -40,14 +40,20 @@ void vdp_init (void)
 
 static bool first_byte_received = false;
 
+uint8_t read_buffer = 0x00;
+
 uint8_t vdp_data_read ()
 {
+    uint8_t data = read_buffer;
+
     first_byte_received = false;
 
-    fprintf (stdout,"[DEBUG(vdp)]: vdp_data_read () not implemented.\n");
+    read_buffer = vram[vdp_regs.address];
 
-    /* DEFAULT */
-    return 0xff;
+    vdp_regs.address = (vdp_regs.address + 1) & 0x3fff;
+
+    return data;
+
 }
 
 void vdp_data_write (uint8_t value)
