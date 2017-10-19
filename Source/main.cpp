@@ -271,7 +271,7 @@ int main (int argc, char **argv)
 
     /* Initialize Snepulator state */
     memset (&snepulator, 0, sizeof (snepulator));
-    snepulator.video_filter = VIDEO_FILTER_NEAREST;
+    snepulator.video_filter = VIDEO_FILTER_SCANLINES;
     player_1_joystick_id = -1;
     player_2_joystick_id = -1;
 
