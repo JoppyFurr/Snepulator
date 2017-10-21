@@ -30,7 +30,6 @@ int player_2_joystick_id;
 void snepulator_render_menubar (void)
 {
     bool open_modal = false;
-    bool debug_modal = false;
 
     /* What colour should this be? A "Snepulator" theme, or should it blend in with the overscan colour? */
     /* TODO: Some measure should be taken to prevent the menu from obscuring the gameplay */
@@ -115,12 +114,6 @@ void snepulator_render_menubar (void)
             ImGui::EndMenu();
         }
 
-        if (ImGui::BeginMenu("Debug"))
-        {
-            if (ImGui::MenuItem("Debug Console", NULL)) { snepulator.running = false; debug_modal = true; }
-            ImGui::EndMenu();
-        }
-
         ImGui::EndMainMenuBar();
     }
 
@@ -128,8 +121,6 @@ void snepulator_render_menubar (void)
     if (open_modal)
         ImGui::OpenPopup("Open ROM...");
 
-    if (debug_modal)
-        ImGui::OpenPopup("Debug Console");
 }
 
 void snepulator_render_open_modal (void)
@@ -164,82 +155,6 @@ void snepulator_render_open_modal (void)
             ImGui::CloseCurrentPopup();
         }
 
-        ImGui::EndPopup();
-    }
-}
-
-/* TODO: Debug should get its own file */
-/* TODO: Or the sms_init function should register debug functions  (md.b, vd.b, etc. */
-/* TODO: Allow resizing and scrollback */
-extern "C" {
-    uint8_t sms_memory_read (uint16_t addr);
-}
-
-int snepulator_debug_modal_text_callback (ImGuiTextEditCallbackData *data)
-{
-    return 0;
-}
-
-void snepulator_render_debug_modal (void)
-{
-    static char input_line[160] = { '\0' };
-    static char output_line[10][160] = { "Snepulator <version> Debug Console",
-                                         "----------------------------------"};
-    static uint32_t next_line = 2;
-
-    /* TODO: CallbackCompletion */
-    /* TODO: CallbackHistory */
-    if (ImGui::BeginPopupModal ("Debug Console", NULL, ImGuiWindowFlags_AlwaysAutoResize))
-    {
-        for (int i = 0; i < 10; i++)
-            ImGui::TextUnformatted (output_line [(next_line < 10) ? i : ((next_line + i) % 10)]);
-
-        ImGui::Separator ();
-
-        /* Input field */
-        ImGui::PushItemWidth (ImGui::GetContentRegionAvailWidth ());
-        if (ImGui::InputText ("", input_line, sizeof (input_line),
-                ImGuiInputTextFlags_EnterReturnsTrue,
-                snepulator_debug_modal_text_callback))
-        {
-            sprintf (output_line[next_line++ % 10], "%s", input_line);
-
-            if (!strncmp (input_line, "exit", 5))
-                ImGui::CloseCurrentPopup ();
-
-            /* Memory Display */
-            else if (!strncmp (input_line, "md.b", 4))
-            {
-                unsigned int address;
-                unsigned int count;
-                int ret = sscanf (input_line, "md.b %x %x", &address, &count);
-
-                if (ret < 2)
-                    count = 1;
-
-                if (ret >= 1)
-                {
-                    for (unsigned int i = 0; i < count; i++)
-                    {
-                        /* TODO: Display up to 16 bytes per line */
-                        sprintf (output_line [next_line++ % 10], "%04x: %02x", address + i, sms_memory_read (address + i));
-                    }
-                }
-                else
-                    sprintf (output_line[next_line++ % 10], "Usage: md.b <addr> <count>");
-
-            }
-
-            else
-            {
-                sprintf (output_line[next_line++ % 10], "No such command.");
-            }
-
-            input_line[0] = '\0';
-        }
-        ImGui::PopItemWidth ();
-
-        ImGui::SetKeyboardFocusHere (-1); /* Focus the keyboard */
         ImGui::EndPopup();
     }
 }
@@ -470,7 +385,6 @@ int main (int argc, char **argv)
         ImGui_ImplSdlGL3_NewFrame (window);
         snepulator_render_menubar ();
         snepulator_render_open_modal ();
-        snepulator_render_debug_modal ();
 
         /* Window Contents */
         {
