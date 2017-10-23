@@ -198,15 +198,15 @@ int main (int argc, char **argv)
             /* BIOS to load */
             snepulator.bios_filename = *(++argv);
         }
-        else if (!strcmp ("-r", *argv))
+        else if (!snepulator.cart_filename)
         {
             /* ROM to load */
-            snepulator.cart_filename = *(++argv);
+            snepulator.cart_filename = *(argv);
         }
         else
         {
             /* Display usage */
-            fprintf (stdout, "Usage: Snepulator [-b bios.sms] [-r rom.sms]\n");
+            fprintf (stdout, "Usage: Snepulator [-b bios.sms] rom.sms\n");
             return EXIT_FAILURE;
         }
     }
