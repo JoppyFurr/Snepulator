@@ -346,9 +346,16 @@ void sms_init (char *bios_filename, char *cart_filename)
     vdp_init ();
     sn79489_init ();
 
+    /* Initialize input */
     memset (&gamepad_1, 0, sizeof (gamepad_1));
     memset (&gamepad_2, 0, sizeof (gamepad_2));
     pause_button = false;
+
+    /* If no BIOS has been supplied, jump straight to the cartridge */
+    if (!bios_filename)
+    {
+        memory_control |= SMS_MEMORY_CTRL_BIOS_DISABLE;
+    }
 
     next_frame_cycle = 0;
 }
