@@ -40,15 +40,13 @@ void vdp_init (void)
 
 static bool first_byte_received = false;
 
-uint8_t read_buffer = 0x00;
-
 uint8_t vdp_data_read ()
 {
-    uint8_t data = read_buffer;
+    uint8_t data = vdp_regs.read_buffer;
 
     first_byte_received = false;
 
-    read_buffer = vram[vdp_regs.address];
+    vdp_regs.read_buffer = vram[vdp_regs.address];
 
     vdp_regs.address = (vdp_regs.address + 1) & 0x3fff;
 
