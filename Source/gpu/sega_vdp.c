@@ -127,8 +127,6 @@ void vdp_control_write (uint8_t value)
 
 /* TODO: For now, assuming 256x192 PAL */
 /* 50 frames per second, 313 scanlines per frame */
-
-/* TODO: Copy the frame to the GPU code once we hit vertical blanking */
 /* TODO: Implement some kind of "Run CPU until frame completes" code */
 
 /* 192 - Active display
@@ -248,8 +246,6 @@ void vdp_render_line_mode4_pattern (uint16_t line, Vdp_Pattern *pattern_base, Vd
         if (x + offset.x >= 256)
             continue;
 
-        /* TODO: This seems to be chopping off a little too much */
-        /* TODO: To make this blend in better, should it use the darkened version? */
         /* Don't draw the left-most eight pixels if BIT_5 of CTRL_1 is set */
         if (vdp_regs.mode_ctrl_1 & VDP_MODE_CTRL_1_MASK_COL_1 && x + offset.x < 8)
             continue;
@@ -362,8 +358,7 @@ void vdp_render_line_mode4_sprites (uint16_t line)
             position.y = y + 1;
 
         /* Skip sprites not on this line */
-        /* TODO: Some more optimization could be done here */
-        if (line < position.y || line > position.y + 16)
+        if (line < position.y || line > position.y + 32)
             continue;
 
         if (vdp_regs.mode_ctrl_2 & VDP_MODE_CTRL_2_SPRITE_TALL)
