@@ -355,7 +355,11 @@ void vdp_render_line_mode4_sprites (uint16_t line)
             break;
 
         position.x = x;
-        position.y = y + 1;
+
+        if (y >= 0xe0)
+            position.y = ((int8_t) y) + 1;
+        else
+            position.y = y + 1;
 
         /* Skip sprites not on this line */
         /* TODO: Some more optimization could be done here */
