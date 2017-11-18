@@ -159,6 +159,10 @@ void snepulator_render_open_modal (void)
     }
 }
 
+typedef struct Float3_t {
+    float data [3];
+} Float3;
+
 #define VDP_STRIDE_Y (256 * 3)
 int main (int argc, char **argv)
 {
@@ -360,24 +364,33 @@ int main (int argc, char **argv)
                 /* TODO: Scanlines should also cover the overscan area */
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+                Float3 *source = (Float3 *) snepulator.sms_vdp_texture_data;
+                Float3 *dest   = (Float3 *) snepulator.sms_vdp_texture_data_output;
+
                 for (int y = 0; y < 192; y++)
                 {
-                    float *line_three = &snepulator.sms_vdp_texture_data_scanlines [(3 * y + 2) * VDP_STRIDE_Y];
-
-                    memcpy (&snepulator.sms_vdp_texture_data_scanlines [(3 * y + 0) * VDP_STRIDE_Y],
-                            &snepulator.sms_vdp_texture_data           [     y      * VDP_STRIDE_Y],
-                            sizeof (float) * 256 * 3);
-                    memcpy (&snepulator.sms_vdp_texture_data_scanlines [(3 * y + 1) * VDP_STRIDE_Y],
-                            &snepulator.sms_vdp_texture_data           [     y      * VDP_STRIDE_Y],
-                            sizeof (float) * 256 * 3);
-
-                    for (int x = 0; x < 256 * 3; x++)
+                    for (int x = 0; x < 256; x++)
                     {
-                        line_three[x] = 0.5 * snepulator.sms_vdp_texture_data [y * VDP_STRIDE_Y + x];
+                        /* Prescale 2×3 */
+                        dest [x * 2 + 0 + (3 * y + 0) * 512] = source [x + y * 256];
+                        dest [x * 2 + 1 + (3 * y + 0) * 512] = source [x + y * 256];
+                        dest [x * 2 + 0 + (3 * y + 1) * 512] = source [x + y * 256];
+                        dest [x * 2 + 1 + (3 * y + 1) * 512] = source [x + y * 256];
+                        dest [x * 2 + 0 + (3 * y + 2) * 512] = source [x + y * 256];
+                        dest [x * 2 + 1 + (3 * y + 2) * 512] = source [x + y * 256];
+
+                        /* Scanlines (40%) */
+                        dest [x * 2 + 0 + (3 * y + 2) * 512].data[0] *= (1.0 - 0.4);
+                        dest [x * 2 + 1 + (3 * y + 2) * 512].data[0] *= (1.0 - 0.4);
+                        dest [x * 2 + 0 + (3 * y + 2) * 512].data[1] *= (1.0 - 0.4);
+                        dest [x * 2 + 1 + (3 * y + 2) * 512].data[1] *= (1.0 - 0.4);
+                        dest [x * 2 + 0 + (3 * y + 2) * 512].data[2] *= (1.0 - 0.4);
+                        dest [x * 2 + 1 + (3 * y + 2) * 512].data[2] *= (1.0 - 0.4);
                     }
                 }
-                glTexImage2D    (GL_TEXTURE_2D, 0, GL_RGB, 256, 192 * 3, 0, GL_RGB, GL_FLOAT,
-                                 snepulator.sms_vdp_texture_data_scanlines);
+                glTexImage2D    (GL_TEXTURE_2D, 0, GL_RGB, 256 * 2, 192 * 3, 0, GL_RGB, GL_FLOAT,
+                                 snepulator.sms_vdp_texture_data_output);
                 break;
         }
 

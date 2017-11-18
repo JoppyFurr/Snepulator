@@ -17,7 +17,7 @@ typedef struct Snepulator_t {
     Video_Filter video_filter;
     float        video_background [4];
     float        sms_vdp_texture_data [256 * 192 * 3];
-    float        sms_vdp_texture_data_scanlines [256 * 192 * 3 * 3];
+    float        sms_vdp_texture_data_output [256 * 192 * 3 * 3 * 2];
 
 } Snepulator;
 
