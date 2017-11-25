@@ -328,6 +328,7 @@ uint32_t z80_extended_instruction ()
                                     z80_regs.pc_h = memory_read (SP++);
                                     IFF1 = IFF2;                CYCLES (14);    break;
         case 0x47: /* LD I, A    */ I = A;                      CYCLES (9);     break;
+        case 0x48: /* IN C,(C)   */ IN_C (C);                   CYCLES (12);    break;
         case 0x4a: /* ADC HL,BC  */ temp_16 = BC + CARRY_BIT;
                                     SET_FLAGS_ADC_16 (BC);
                                     HL += temp_16;              CYCLES (15);    break;
