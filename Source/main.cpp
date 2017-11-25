@@ -15,6 +15,7 @@ extern "C" {
 #include "gpu/sega_vdp.h"
 #include "sms.h"
     extern SMS_Gamepad gamepad_1;
+    extern SMS_Region region;
     extern bool pause_button;
 }
 
@@ -77,6 +78,29 @@ void snepulator_render_menubar (void)
                 if (ImGui::MenuItem("Scanlines",  NULL, snepulator.video_filter == VIDEO_FILTER_SCANLINES))
                 {
                     snepulator.video_filter = VIDEO_FILTER_SCANLINES;
+                }
+                ImGui::EndMenu();
+            }
+            ImGui::EndMenu();
+        }
+
+        if (ImGui::BeginMenu("Console"))
+        {
+            if (ImGui::MenuItem("Hard Reset"))
+            {
+                sms_init (snepulator.bios_filename, snepulator.cart_filename);
+            }
+            ImGui::Separator();
+
+            if (ImGui::BeginMenu("Region"))
+            {
+                if (ImGui::MenuItem("Japan", NULL, region == REGION_JAPAN))
+                {
+                    region = REGION_JAPAN;
+                }
+                if (ImGui::MenuItem("World",  NULL, region == REGION_WORLD))
+                {
+                    region = REGION_WORLD;
                 }
                 ImGui::EndMenu();
             }

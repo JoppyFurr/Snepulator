@@ -19,6 +19,7 @@ uint8_t *bios = NULL;
 uint8_t *cart = NULL;
 static uint32_t bios_size = 0;
 static uint32_t cart_size = 0;
+SMS_Region region = REGION_WORLD;
 
 uint8_t ram[8 << 10];
 uint8_t memory_control = 0x00;
@@ -135,17 +136,13 @@ static void sms_io_write (uint8_t addr, uint8_t data)
             /* Memory Control Register */
             memory_control = data;
             fprintf (stderr, "[DEBUG(sms)]: Memory Control Register <- %02x:\n", memory_control);
-            fprintf (stderr, "              -> PC is %04x.\n", z80_regs.pc);
             fprintf (stderr, "              -> Cartridge is %s.\n", (memory_control & 0x40) ? "DISABLED" : "ENABLED");
-            fprintf (stderr, "              -> Work RAM is  %s.\n", (memory_control & 0x10) ? "DISABLED" : "ENABLED");
             fprintf (stderr, "              -> BIOS ROM is  %s.\n", (memory_control & 0x08) ? "DISABLED" : "ENABLED");
-            fprintf (stderr, "              -> I/O Chip is  %s.\n", (memory_control & 0x04) ? "DISABLED" : "ENABLED");
         }
         else
         {
             /* I/O Control Register */
             io_control = data;
-            fprintf (stderr, "[DEBUG(sms)] I/O control register not implemented.\n");
         }
 
     }
@@ -242,8 +239,26 @@ static uint8_t sms_io_read (uint8_t addr)
         }
         else
         {
+            bool port_1_th = false;
+            bool port_2_th = false;
+
+            if (region == REGION_WORLD)
+            {
+                if ((io_control & SMS_IO_TH_A_DIRECTION) == 0)
+                    port_1_th = io_control & SMS_IO_TH_A_LEVEL;
+
+                if ((io_control & SMS_IO_TH_B_DIRECTION) == 0)
+                    port_2_th = io_control & SMS_IO_TH_B_LEVEL;
+            }
+
             /* I/O Port B/misc */
-            return 0xff;
+            return (gamepad_2.left      ? 0 : BIT_0) |
+                   (gamepad_2.right     ? 0 : BIT_1) |
+                   (gamepad_2.button_1  ? 0 : BIT_2) |
+                   (gamepad_2.button_2  ? 0 : BIT_3) |
+                   (/* TODO: RESET */ 0 ? 0 : BIT_4) |
+                   (port_1_th           ? BIT_6 : 0) |
+                   (port_2_th           ? BIT_7 : 0);
         }
     }
 
