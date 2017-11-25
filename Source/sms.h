@@ -11,6 +11,11 @@ typedef struct SMS_Gamepad_t {
     bool button_2;
 } SMS_Gamepad;
 
+typedef enum SMS_Region_t {
+    REGION_JAPAN,
+    REGION_WORLD
+} SMS_Region;
+
 void sms_audio_callback (void *userdata, uint8_t *stream, int len);
 void sms_run_frame (void);
 void sms_init (char *bios_filename, char *cart_filename);

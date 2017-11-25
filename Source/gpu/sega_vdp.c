@@ -276,7 +276,6 @@ void vdp_render_line_mode4_pattern (uint16_t line, Vdp_Pattern *pattern_base, Vd
 #define VDP_PATTERN_HORIZONTAL_FLIP     BIT_9
 #define VDP_PATTERN_VERTICAL_FLIP       BIT_10
 
-/* TODO: Confirm left-edge behaviour or a real Master System */
 /* TODO: Optimize this for one-line-at-a-time rendering */
 void vdp_render_line_mode4_background (uint16_t line, bool priority)
 {
