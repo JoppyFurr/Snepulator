@@ -14,8 +14,10 @@ extern "C" {
 #include "snepulator.h"
 #include "gpu/sega_vdp.h"
 #include "sms.h"
+    /* TODO: Move this into a struct */
     extern SMS_Gamepad gamepad_1;
     extern SMS_Region region;
+    extern SMS_Framerate framerate;
     extern bool pause_button;
 }
 
@@ -92,18 +94,12 @@ void snepulator_render_menubar (void)
             }
             ImGui::Separator();
 
-            if (ImGui::BeginMenu("Region"))
-            {
-                if (ImGui::MenuItem("Japan", NULL, region == REGION_JAPAN))
-                {
-                    region = REGION_JAPAN;
-                }
-                if (ImGui::MenuItem("World",  NULL, region == REGION_WORLD))
-                {
-                    region = REGION_WORLD;
-                }
-                ImGui::EndMenu();
-            }
+            if (ImGui::MenuItem("World", NULL, region == REGION_WORLD)) { region = REGION_WORLD; }
+            if (ImGui::MenuItem("Japan", NULL, region == REGION_JAPAN)) { region = REGION_JAPAN; }
+            ImGui::Separator();
+
+            if (ImGui::MenuItem("NTSC", NULL, framerate == FRAMERATE_NTSC)) { framerate = FRAMERATE_NTSC; }
+            if (ImGui::MenuItem("PAL",  NULL, framerate == FRAMERATE_PAL))  { framerate = FRAMERATE_PAL; }
             ImGui::EndMenu();
         }
 
