@@ -467,8 +467,11 @@ int main (int argc, char **argv)
         static int host_previous_completion_time = 0;
         static int host_current_time = 0;
         host_current_time = SDL_GetTicks();
-        snepulator.host_framerate *= 0.95;
-        snepulator.host_framerate += 0.05 * (1000.0 / (host_current_time - host_previous_completion_time));
+        if (host_previous_completion_time)
+        {
+            snepulator.host_framerate *= 0.95;
+            snepulator.host_framerate += 0.05 * (1000.0 / (host_current_time - host_previous_completion_time));
+        }
         host_previous_completion_time = host_current_time;
     }
 

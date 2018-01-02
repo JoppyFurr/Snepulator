@@ -365,9 +365,10 @@ void sms_init (char *bios_filename, char *cart_filename)
     memset (&gamepad_2, 0, sizeof (gamepad_2));
     pause_button = false;
 
-    /* If no BIOS has been supplied, jump straight to the cartridge */
+    /* Minimal alternative to the BIOS */
     if (!bios_filename)
     {
+        z80_regs.im = 1;
         memory_control |= SMS_MEMORY_CTRL_BIOS_DISABLE;
     }
 }

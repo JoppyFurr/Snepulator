@@ -187,8 +187,11 @@ void vdp_clock_update (uint64_t cycles)
             static int vdp_previous_completion_time = 0;
             static int vdp_current_time = 0;
             vdp_current_time = SDL_GetTicks();
-            snepulator.vdp_framerate *= 0.95;
-            snepulator.vdp_framerate += 0.05 * (1000.0 / (vdp_current_time - vdp_previous_completion_time));
+            if (vdp_previous_completion_time)
+            {
+                snepulator.vdp_framerate *= 0.95;
+                snepulator.vdp_framerate += 0.05 * (1000.0 / (vdp_current_time - vdp_previous_completion_time));
+            }
             vdp_previous_completion_time = vdp_current_time;
         }
 
