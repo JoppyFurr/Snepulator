@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "../sms.h"
 #include "sn79489.h"
 
 /* State */
@@ -111,7 +112,7 @@ void sn79489_init (void)
 
 }
 
-#define PSG_CLOCK_RATE_PAL  (3546895 >> 4)
+#define PSG_CLOCK_RATE_PAL  (sms_get_clock_rate() >> 4)
 #define PSG_RING_SIZE 16386
 #define BASE_VOLUME 100
 

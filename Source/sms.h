@@ -12,9 +12,18 @@ typedef struct SMS_Gamepad_t {
 } SMS_Gamepad;
 
 typedef enum SMS_Region_t {
-    REGION_JAPAN,
-    REGION_WORLD
+    REGION_WORLD,
+    REGION_JAPAN
 } SMS_Region;
+
+typedef enum SMS_Framerate_t {
+    FRAMERATE_NTSC,
+    FRAMERATE_PAL
+} SMS_Framerate;
+
+uint32_t sms_get_clock_rate ();
+uint32_t sms_get_clocks_per_frame ();
+uint32_t sms_get_clocks_per_line ();
 
 void sms_audio_callback (void *userdata, uint8_t *stream, int len);
 void sms_run (double ms);

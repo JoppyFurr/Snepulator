@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "../snepulator.h"
+#include "../sms.h"
 extern Snepulator snepulator;
 
 #include "sega_vdp.h"
@@ -128,8 +129,11 @@ void vdp_control_write (uint8_t value)
 /* TODO: For now, assuming 256x192 PAL */
 /* 50 frames per second, 313 scanlines per frame */
 /* TODO: Implement some kind of "Run CPU until frame completes" code */
+/* TODO: We seem to run a touch faster than real hardware. It looks like the clock rate doesn't divide evenly into
+ *       frames/lines, should we do the timing calculations with floats? */
 
-/* 192 - Active display
+/* PAL 256x192:
+ * 192 - Active display
  *  48 - Bottom border
  *   3 - Bottom blanking
  *   3 - Vertical blanking
@@ -139,16 +143,24 @@ void vdp_control_write (uint8_t value)
  *  0x00 -> 0xf2, 0xba -> 0xff
  */
 
-#define SMS_CLOCK_RATE_PAL  3546895
-#define SMS_CLOCK_PER_FRAME_PAL (SMS_CLOCK_RATE_PAL / 50)
-#define SMS_CLOCK_PER_LINE_PAL (SMS_CLOCK_RATE_PAL / (50 * 313))
+/* NTSC 256x192:
+ * 192 - Active display
+ *  24 - Bottom border
+ *   3 - Bottom blanking
+ *   3 - Vertical blanking
+ *  13 - Top blanking
+ *  27 - Top border
+ *
+ *  0x00 -> 0xda, 0xd5 -> 0xff
+ */
 
 /* TEMP */
 #include <SDL2/SDL.h>
+extern SMS_Framerate framerate;
 
 void vdp_render_line (uint16_t line);
 
-/* TODO: For now, assuming PAL (313 scanlines) */
+/* TODO: For now, assuming 256x192 */
 void vdp_clock_update (uint64_t cycles)
 {
     static uint64_t previous_cycles = 0;
@@ -159,16 +171,15 @@ void vdp_clock_update (uint64_t cycles)
     previous_cycles = cycles;
 
     /* Has a line just completed? */
-    while (cycles_unprocessed > SMS_CLOCK_PER_LINE_PAL)
+    while (cycles_unprocessed > sms_get_clocks_per_line ())
     {
         /* Render the  line to the buffer */
         if (v_counter_16 < 192)
             vdp_render_line (v_counter_16);
 
         /* Copy a complete frame to the buffer */
-        /* TODO: Would it be better to ignore the bottom-border and copy early to reduce latency? */
         /* TODO: This is okay for single-threaded code, but locking may be needed if multi-threading is added */
-        if (v_counter_16 == 240)
+        if (v_counter_16 == 192)
         {
             memcpy (vdp_frame_complete, vdp_frame_current, sizeof (vdp_frame_current));
 
@@ -200,9 +211,17 @@ void vdp_clock_update (uint64_t cycles)
         }
 
         /* Update values for the next line */
-        v_counter_16 = (v_counter_16 + 1) % 313;
-        v_counter = (v_counter_16 <= 0xf2) ? v_counter_16 : (v_counter_16 - 0xf3) + 0xba;
-        cycles_unprocessed -= SMS_CLOCK_PER_LINE_PAL;
+        if (framerate == FRAMERATE_NTSC)
+        {
+            v_counter_16 = (v_counter_16 + 1) % 262;
+            v_counter = (v_counter_16 <= 0xda) ? v_counter_16 : (v_counter_16 - 0xdb) + 0xd5;
+        }
+        else if (framerate == FRAMERATE_PAL)
+        {
+            v_counter_16 = (v_counter_16 + 1) % 313;
+            v_counter = (v_counter_16 <= 0xf2) ? v_counter_16 : (v_counter_16 - 0xf3) + 0xba;
+        }
+        cycles_unprocessed -= sms_get_clocks_per_line ();
     }
 }
 
