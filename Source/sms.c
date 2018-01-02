@@ -332,8 +332,6 @@ void sms_audio_callback (void *userdata, uint8_t *stream, int len)
         memset (stream, 0, len);
 }
 
-uint64_t next_frame_cycle = 0;
-
 void sms_init (char *bios_filename, char *cart_filename)
 {
     /* Load BIOS */
@@ -371,12 +369,9 @@ void sms_init (char *bios_filename, char *cart_filename)
     {
         memory_control |= SMS_MEMORY_CTRL_BIOS_DISABLE;
     }
-
-    next_frame_cycle = 0;
 }
 
-void sms_run_frame ()
+void sms_run (double ms)
 {
-    z80_run_until_cycle (next_frame_cycle);
-    next_frame_cycle = z80_cycle + (SMS_CLOCK_RATE_PAL / 50);
+    z80_run_until_cycle (z80_cycle + (SMS_CLOCK_RATE_PAL * ms) / 1000.0);
 }

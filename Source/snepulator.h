@@ -19,5 +19,9 @@ typedef struct Snepulator_t {
     float        sms_vdp_texture_data [256 * 192 * 3];
     float        sms_vdp_texture_data_output [256 * 192 * 3 * 3 * 2];
 
+    /* Statistics */
+    double host_framerate;
+    double vdp_framerate;
+
 } Snepulator;
 

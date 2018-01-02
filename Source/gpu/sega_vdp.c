@@ -143,6 +143,9 @@ void vdp_control_write (uint8_t value)
 #define SMS_CLOCK_PER_FRAME_PAL (SMS_CLOCK_RATE_PAL / 50)
 #define SMS_CLOCK_PER_LINE_PAL (SMS_CLOCK_RATE_PAL / (50 * 313))
 
+/* TEMP */
+#include <SDL2/SDL.h>
+
 void vdp_render_line (uint16_t line);
 
 /* TODO: For now, assuming PAL (313 scanlines) */
@@ -168,6 +171,14 @@ void vdp_clock_update (uint64_t cycles)
         if (v_counter_16 == 240)
         {
             memcpy (vdp_frame_complete, vdp_frame_current, sizeof (vdp_frame_current));
+
+            /* Update statistics (rolling average) */
+            static int vdp_previous_completion_time = 0;
+            static int vdp_current_time = 0;
+            vdp_current_time = SDL_GetTicks();
+            snepulator.vdp_framerate *= 0.95;
+            snepulator.vdp_framerate += 0.05 * (1000.0 / (vdp_current_time - vdp_previous_completion_time));
+            vdp_previous_completion_time = vdp_current_time;
         }
 
         /* Check for frame interrupt */
