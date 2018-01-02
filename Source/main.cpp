@@ -138,6 +138,13 @@ void snepulator_render_menubar (void)
             ImGui::EndMenu();
         }
 
+        if (ImGui::BeginMenu("Statistics"))
+        {
+            ImGui::Text ("Host: %.2f fps", snepulator.host_framerate);
+            ImGui::Text ("VDP:  %.2f fps", snepulator.vdp_framerate);
+            ImGui::EndMenu();
+        }
+
         ImGui::EndMainMenuBar();
     }
 
@@ -361,10 +368,10 @@ int main (int argc, char **argv)
 
         /* EMULATE */
         if (snepulator.running)
-            sms_run_frame ();
+            sms_run (1000.0 / 60.0); /* Simulate 1/60 of a second */
 
         /* RENDER VDP */
-        vdp_render ();
+        vdp_render (); /* TODO: Perhaps rename to vdp_get_latest_frame */
         glBindTexture (GL_TEXTURE_2D, sms_vdp_texture);
         glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, snepulator.video_filter);
         glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, snepulator.video_filter);
@@ -459,6 +466,14 @@ int main (int argc, char **argv)
         ImGui::Render();
 
         SDL_GL_SwapWindow (window);
+
+        /* Update statistics (rolling average) */
+        static int host_previous_completion_time = 0;
+        static int host_current_time = 0;
+        host_current_time = SDL_GetTicks();
+        snepulator.host_framerate *= 0.95;
+        snepulator.host_framerate += 0.05 * (1000.0 / (host_current_time - host_previous_completion_time));
+        host_previous_completion_time = host_current_time;
     }
 
     fprintf (stdout, "EMULATION ENDED.\n");

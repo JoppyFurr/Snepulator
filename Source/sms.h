@@ -17,6 +17,6 @@ typedef enum SMS_Region_t {
 } SMS_Region;
 
 void sms_audio_callback (void *userdata, uint8_t *stream, int len);
-void sms_run_frame (void);
+void sms_run (double ms);
 void sms_init (char *bios_filename, char *cart_filename);
 bool sms_nmi_check();
