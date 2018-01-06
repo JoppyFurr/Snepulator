@@ -20,7 +20,7 @@ typedef struct SN79489_Regs_t {
     int16_t counter_1;
     int16_t counter_2;
     int16_t counter_3;
-    int16_t lfsr;
+    uint16_t lfsr;
 
     /* Outputs */
     int16_t output_0;
@@ -31,6 +31,10 @@ typedef struct SN79489_Regs_t {
 
 } SN79489_Regs;
 
-void sn79489_get_samples (int16_t *stream, int len);
-void sn79489_data_write (uint8_t data);
+#define BASE_VOLUME 100
+#define PSG_RING_SIZE 16386
+
 void sn79489_init (void);
+void sn79489_data_write (uint8_t data);
+void sn79489_get_samples (int16_t *stream, int len);
+void psg_run_cycles (uint64_t cycles);

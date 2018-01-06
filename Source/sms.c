@@ -394,6 +394,7 @@ void sms_run (double ms)
     {
         /* 228 CPU cycles per scanline */
         z80_run_cycles (228);
+        psg_run_cycles (228);
         vdp_run_scanline ();
     }
 }
