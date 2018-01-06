@@ -45,8 +45,7 @@ Z80_Regs z80_regs;
 #define N  param.l
 #define NN param.w
 
-/* Cycle count */
-/* TODO: At some point this will wrap around… */
+/* Cycle count (reset each time z80_run_cycles() completes) */
 uint64_t z80_cycle = 0;
 #define CYCLES(X) { z80_cycle += (X); }
 
@@ -1436,8 +1435,11 @@ void z80_instruction ()
 extern bool vdp_get_interrupt (void);
 extern bool sms_nmi_check (void);
 
-void z80_run_until_cycle (uint64_t run_until)
+void z80_run_cycles (uint64_t cycles)
 {
+    static uint64_t excess_cycles = 0;
+    uint64_t run_until = z80_cycle + cycles - excess_cycles;
+
     while (z80_cycle < run_until)
     {
         /* TIMING DEBUG */
@@ -1542,4 +1544,7 @@ void z80_run_until_cycle (uint64_t run_until)
         }
 
     }
+
+    excess_cycles = z80_cycle - run_until;
+    z80_cycle = 0; /* Prevent overflow */
 }

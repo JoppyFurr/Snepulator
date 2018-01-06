@@ -51,8 +51,6 @@ bool pause_button;
 #define SMS_MEMORY_CTRL_CART_DISABLE 0x40
 #define SMS_MEMORY_CTRL_IO_DISABLE   0x04
 
-extern uint64_t z80_cycle;
-
 static void sms_memory_write (uint16_t addr, uint8_t data)
 {
     /* No early breaks - Register writes also affect RAM */
@@ -390,12 +388,12 @@ uint32_t sms_get_clock_rate ()
 
 void sms_run (double ms)
 {
-    uint64_t run_until = z80_cycle + (sms_get_clock_rate () * ms) / 1000.0;
+    int lines = (ms * sms_get_clock_rate () / 228.0) / 1000.0;
 
-    while (z80_cycle < run_until)
+    while (lines--)
     {
         /* 228 CPU cycles per scanline */
-        z80_run_until_cycle (z80_cycle + 228); /* Note: This could run for slightly more cycles than we want */
+        z80_run_cycles (228);
         vdp_run_scanline ();
     }
 }
