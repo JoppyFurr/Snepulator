@@ -367,7 +367,7 @@ int main (int argc, char **argv)
             sms_run (1000.0 / 60.0); /* Simulate 1/60 of a second */
 
         /* RENDER VDP */
-        vdp_render (); /* TODO: Perhaps rename to vdp_get_latest_frame */
+        vdp_copy_latest_frame ();
         glBindTexture (GL_TEXTURE_2D, sms_vdp_texture);
         glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, snepulator.video_filter);
         glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, snepulator.video_filter);

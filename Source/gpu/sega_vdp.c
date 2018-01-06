@@ -161,70 +161,60 @@ extern SMS_Framerate framerate;
 void vdp_render_line (uint16_t line);
 
 /* TODO: For now, assuming 256x192 */
-void vdp_clock_update (uint64_t cycles)
+void vdp_run_scanline ()
 {
-    static uint64_t previous_cycles = 0;
-    static uint64_t cycles_unprocessed = 0;
     static uint16_t v_counter_16 = 0;
 
-    cycles_unprocessed += (cycles - previous_cycles);
-    previous_cycles = cycles;
+    /* If this is an active line, render it */
+    if (v_counter_16 < 192)
+        vdp_render_line (v_counter_16);
 
-    /* Has a line just completed? */
-    while (cycles_unprocessed > sms_get_clocks_per_line ())
+    /* If this the final active line, copy to the frame buffer */
+    /* TODO: This is okay for single-threaded code, but locking may be needed if multi-threading is added */
+    if (v_counter_16 == 191)
     {
-        /* Render the  line to the buffer */
-        if (v_counter_16 < 192)
-            vdp_render_line (v_counter_16);
+        memcpy (vdp_frame_complete, vdp_frame_current, sizeof (vdp_frame_current));
 
-        /* Copy a complete frame to the buffer */
-        /* TODO: This is okay for single-threaded code, but locking may be needed if multi-threading is added */
-        if (v_counter_16 == 192)
+        /* Update statistics (rolling average) */
+        static int vdp_previous_completion_time = 0;
+        static int vdp_current_time = 0;
+        vdp_current_time = SDL_GetTicks();
+        if (vdp_previous_completion_time)
         {
-            memcpy (vdp_frame_complete, vdp_frame_current, sizeof (vdp_frame_current));
-
-            /* Update statistics (rolling average) */
-            static int vdp_previous_completion_time = 0;
-            static int vdp_current_time = 0;
-            vdp_current_time = SDL_GetTicks();
-            if (vdp_previous_completion_time)
-            {
-                snepulator.vdp_framerate *= 0.95;
-                snepulator.vdp_framerate += 0.05 * (1000.0 / (vdp_current_time - vdp_previous_completion_time));
-            }
-            vdp_previous_completion_time = vdp_current_time;
+            snepulator.vdp_framerate *= 0.95;
+            snepulator.vdp_framerate += 0.05 * (1000.0 / (vdp_current_time - vdp_previous_completion_time));
         }
+        vdp_previous_completion_time = vdp_current_time;
+    }
 
-        /* Check for frame interrupt */
-        if (v_counter_16 == 193)
-            vdp_regs.status |= VDP_STATUS_INT;
+    /* Check for frame interrupt */
+    if (v_counter_16 == 193)
+        vdp_regs.status |= VDP_STATUS_INT;
 
-        /* Decrement the line interrupt counter during the active display period.
-         * Reset outside of the active display period (but not the first line after) */
-        if (v_counter_16 <= 192)
-            vdp_regs.line_interrupt_counter--;
-        else
-            vdp_regs.line_interrupt_counter = vdp_regs.line_counter;
+    /* Decrement the line interrupt counter during the active display period.
+     * Reset outside of the active display period (but not the first line after) */
+    if (v_counter_16 <= 192)
+        vdp_regs.line_interrupt_counter--;
+    else
+        vdp_regs.line_interrupt_counter = vdp_regs.line_counter;
 
-        /* On underflow, we reset the line interrupt counter and set the pending flag */
-        if (v_counter_16 <= 192 && vdp_regs.line_interrupt_counter == 0xff)
-        {
-            vdp_regs.line_interrupt_counter = vdp_regs.line_counter;
-            vdp_regs.line_interrupt = true;
-        }
+    /* On underflow, we reset the line interrupt counter and set the pending flag */
+    if (v_counter_16 <= 192 && vdp_regs.line_interrupt_counter == 0xff)
+    {
+        vdp_regs.line_interrupt_counter = vdp_regs.line_counter;
+        vdp_regs.line_interrupt = true;
+    }
 
-        /* Update values for the next line */
-        if (framerate == FRAMERATE_NTSC)
-        {
-            v_counter_16 = (v_counter_16 + 1) % 262;
-            v_counter = (v_counter_16 <= 0xda) ? v_counter_16 : (v_counter_16 - 0xdb) + 0xd5;
-        }
-        else if (framerate == FRAMERATE_PAL)
-        {
-            v_counter_16 = (v_counter_16 + 1) % 313;
-            v_counter = (v_counter_16 <= 0xf2) ? v_counter_16 : (v_counter_16 - 0xf3) + 0xba;
-        }
-        cycles_unprocessed -= sms_get_clocks_per_line ();
+    /* Update values for the next line */
+    if (framerate == FRAMERATE_NTSC)
+    {
+        v_counter_16 = (v_counter_16 + 1) % 262;
+        v_counter = (v_counter_16 <= 0xda) ? v_counter_16 : (v_counter_16 - 0xdb) + 0xd5;
+    }
+    else if (framerate == FRAMERATE_PAL)
+    {
+        v_counter_16 = (v_counter_16 + 1) % 313;
+        v_counter = (v_counter_16 <= 0xf2) ? v_counter_16 : (v_counter_16 - 0xf3) + 0xba;
     }
 }
 
@@ -463,7 +453,7 @@ void vdp_render_line (uint16_t line)
 
 /* Note: For now, we will assume 192 lines, as this is what the vast majority of
  *       SMS games actually use */
-void vdp_render (void)
+void vdp_copy_latest_frame (void)
 {
     memcpy (snepulator.sms_vdp_texture_data, vdp_frame_complete, sizeof (vdp_frame_complete));
 }

@@ -68,14 +68,14 @@ typedef struct Vdp_Pattern_t {
 } Vdp_Pattern;
 
 
-/* Functions */
+/* I/O Functions */
 uint8_t vdp_data_read ();
 void vdp_data_write (uint8_t value);
 uint8_t vdp_status_read ();
 void vdp_control_write (uint8_t value);
+uint8_t vdp_get_v_counter (void);
 
 void vdp_init (void);
-void vdp_render (void);
-void vdp_clock_update (uint64_t cycles);
+void vdp_run_scanline (void);
+void vdp_copy_latest_frame (void);
 bool vdp_get_interrupt (void);
-uint8_t vdp_get_v_counter (void);

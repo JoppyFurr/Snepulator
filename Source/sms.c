@@ -388,41 +388,14 @@ uint32_t sms_get_clock_rate ()
     return SMS_CLOCK_RATE_NTSC;
 }
 
-uint32_t sms_get_clocks_per_frame ()
-{
-    uint32_t freq = sms_get_clock_rate ();
-
-    if (framerate == FRAMERATE_NTSC)
-    {
-        return freq / 60;
-    }
-    else if (framerate == FRAMERATE_PAL)
-    {
-        return freq / 50;
-    }
-
-    fprintf (stderr, "Error: Framerate is neither NTSC or PAL.\n");
-    return freq / 60;
-}
-
-uint32_t sms_get_clocks_per_line ()
-{
-    uint32_t freq = sms_get_clock_rate ();
-
-    if (framerate == FRAMERATE_NTSC)
-    {
-        return freq / (60 * 262);
-    }
-    else if (framerate == FRAMERATE_PAL)
-    {
-        return freq / (50 * 313);
-    }
-
-    fprintf (stderr, "Error: Framerate is neither NTSC or PAL.\n");
-    return freq / (60 * 262);
-}
-
 void sms_run (double ms)
 {
-    z80_run_until_cycle (z80_cycle + (sms_get_clock_rate() * ms) / 1000.0);
+    uint64_t run_until = z80_cycle + (sms_get_clock_rate () * ms) / 1000.0;
+
+    while (z80_cycle < run_until)
+    {
+        /* 228 CPU cycles per scanline */
+        z80_run_until_cycle (z80_cycle + 228); /* Note: This could run for slightly more cycles than we want */
+        vdp_run_scanline ();
+    }
 }
