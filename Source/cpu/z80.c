@@ -1433,7 +1433,6 @@ void z80_instruction ()
 }
 
 /* TODO: Remove knowledge of the VDP from here */
-extern void vdp_clock_update (uint64_t cycles);
 extern bool vdp_get_interrupt (void);
 extern bool sms_nmi_check (void);
 
@@ -1496,10 +1495,6 @@ void z80_run_until_cycle (uint64_t run_until)
             snepulator.abort = true;
         }
         /* END TIMING DEBUG */
-
-        /* Time has passed, update the VDP state */
-        /* TODO: This shouldn't really be in the z80 code. Perhaps a register-able time-passed function? */
-        vdp_clock_update (z80_cycle);
 
         /* Check for interrupts */
         if (instructions_before_interrupts)
