@@ -32,7 +32,7 @@ typedef struct SN79489_Regs_t {
 } SN79489_Regs;
 
 #define BASE_VOLUME 100
-#define PSG_RING_SIZE 16386
+#define PSG_RING_SIZE 32768
 
 void sn79489_init (void);
 void sn79489_data_write (uint8_t data);
