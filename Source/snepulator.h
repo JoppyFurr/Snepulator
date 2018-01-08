@@ -22,6 +22,7 @@ typedef struct Snepulator_t {
     /* Statistics */
     double host_framerate;
     double vdp_framerate;
+    double audio_ring_utilisation;
 
 } Snepulator;
 

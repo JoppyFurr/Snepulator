@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -392,6 +393,8 @@ void sms_run (double ms)
 
     while (lines--)
     {
+        assert (lines >= 0);
+
         /* 228 CPU cycles per scanline */
         z80_run_cycles (228);
         psg_run_cycles (228);

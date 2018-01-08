@@ -1,14 +1,19 @@
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <pthread.h>
 
+#include "../snepulator.h"
 #include "../sms.h"
 #include "sn79489.h"
+extern Snepulator snepulator;
 
 /* State */
 SN79489_Regs psg_regs;
+pthread_mutex_t psg_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 
 void sn79489_data_write (uint8_t data)
@@ -116,8 +121,10 @@ static int16_t psg_sample_ring[PSG_RING_SIZE];
 static uint64_t read_index = 0;
 static uint64_t write_index = 0;
 
-void psg_run_cycles (uint64_t cycles)
+/* Run the PSG for a number of CPU clock cycles */
+void _psg_run_cycles (uint64_t cycles)
 {
+
     static int excess = 0;
     cycles += excess;
 
@@ -125,13 +132,29 @@ void psg_run_cycles (uint64_t cycles)
     int psg_cycles = cycles >> 4;
     excess = cycles - (psg_cycles << 4);
 
-    /* Make sure we don't overflow the ring, if psg_cycles would overflow it, just
-     * use half of the remaining space instead. */
-    if (write_index + cycles > read_index + PSG_RING_SIZE)
-        psg_cycles = (PSG_RING_SIZE - (write_index - read_index)) / 2;
+    /* Aim to keep the ring about half-full */
+    if (write_index + psg_cycles > read_index + (PSG_RING_SIZE / 2))
+    {
+        psg_cycles *= 0.80;
+    }
+
+    /* Abort our cycles if they would cause an overflow */
+    if (write_index + psg_cycles > read_index + PSG_RING_SIZE)
+    {
+        psg_cycles = 0;
+    }
+
+    /* Ensure that the next read-index is always valid by the time we return */
+    if (read_index >= write_index)
+    {
+        if (psg_cycles < read_index - write_index + 1)
+            psg_cycles = read_index - write_index + 1;
+    }
 
     while (psg_cycles--)
     {
+        assert (psg_cycles >= 0);
+
         psg_regs.counter_0--;
         psg_regs.counter_1--;
         psg_regs.counter_2--;
@@ -195,6 +218,20 @@ void psg_run_cycles (uint64_t cycles)
                                                        + psg_regs.output_lfsr * (0x0f - psg_regs.vol_3) * BASE_VOLUME;
 
     }
+
+    /* Update statistics (rolling average) */
+    snepulator.audio_ring_utilisation *= 0.999;
+    snepulator.audio_ring_utilisation += 0.001 * ((write_index - read_index) / (double) PSG_RING_SIZE);
+}
+
+/* Requests to run the PSG may come either from the main emulation loop, or as a request to pass
+ * more samples to the sound card. Use a mutex to prevent these two threads from trampling one
+ * another. */
+void psg_run_cycles (uint64_t cycles)
+{
+    pthread_mutex_lock (&psg_mutex);
+    _psg_run_cycles (cycles);
+    pthread_mutex_unlock (&psg_mutex);
 }
 
 /* TODO: Currently assuming 48 KHz for the sound card */
@@ -210,11 +247,11 @@ void sn79489_get_samples (int16_t *stream, int count)
         if (read_index >= write_index)
         {
             /* Generate samples until we can meet the read_index */
-            psg_run_cycles ((read_index - write_index + 1) << 4);
+            psg_run_cycles (0);
         }
 
         stream[i] = psg_sample_ring [read_index % PSG_RING_SIZE];
 
         soundcard_sample_count++;
-    }
+   }
 }
