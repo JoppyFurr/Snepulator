@@ -1193,7 +1193,7 @@ void z80_instruction ()
         case 0x73: /* LD (HL),E  */ memory_write (HL, E);       CYCLES (7);     break;
         case 0x74: /* LD (HL),H  */ memory_write (HL, H);       CYCLES (7);     break;
         case 0x75: /* LD (HL),L  */ memory_write (HL, L);       CYCLES (7);     break;
-        case 0x76: /* HALT       */ z80_regs.halt = true;       CYCLES (4);     break;
+        case 0x76: /* HALT       */ PC--; z80_regs.halt = true; CYCLES (4);     break;
         case 0x77: /* LD (HL),A  */ memory_write (HL, A);       CYCLES (7);     break;
         case 0x78: /* LD A,B     */ LD (A, B);                  CYCLES (4);     break;
         case 0x79: /* LD A,C     */ LD (A, C);                  CYCLES (4);     break;
