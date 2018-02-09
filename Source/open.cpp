@@ -31,7 +31,6 @@ void snepulator_render_open_modal (void)
         static char cwd_path_buf[240]; /* TODO: Can we make this dynamic? */
         static const char *cwd_path = NULL;
         static std::vector<char *> file_list;
-        static int hovered_file = 0;
         static int selected_file = 0;
 
         if (!cwd_cached)
@@ -80,15 +79,21 @@ void snepulator_render_open_modal (void)
         ImGui::BeginChild ("Files", ImVec2 (350, 400), true);
         for (int i = 0; i < file_list.size() ; i++)
         {
-            /* Update the currently hovered item */
+            /* TODO: Can we get the text height rather than hard-coding it? */
             ImVec2 draw_cursor = ImGui::GetCursorScreenPos ();
-            if (ImGui::IsMouseHoveringRect (draw_cursor, ImVec2 (draw_cursor.x + 350, draw_cursor.y + 16))) /* TODO: dynamic values */
+            bool hovering = ImGui::IsMouseHoveringRect (draw_cursor, ImVec2 (draw_cursor.x + 350, draw_cursor.y + 16));
+
+            if (hovering && ImGui::IsMouseClicked(0))
             {
-                    hovered_file = i;
+                selected_file = i;
             }
 
-            /* Render the currently hovered item with yellow text */
-            if (i == hovered_file)
+            /* Render the selected file in green, hovered file in yellow, and others with the text default */
+            if (i == selected_file)
+            {
+                ImGui::TextColored (ImVec4 (0.5f, 1.0f, 0.5f, 1.0f), "%s", file_list[i]);
+            }
+            else if (hovering)
             {
                 ImGui::TextColored (ImVec4 (1.0f, 1.0f, 0.5f, 1.0f), "%s", file_list[i]);
             }
