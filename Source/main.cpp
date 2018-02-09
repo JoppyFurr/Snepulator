@@ -30,6 +30,9 @@ SDL_Joystick *player_2_joystick;
 int player_1_joystick_id;
 int player_2_joystick_id;
 
+/* Implementation in open.cpp */
+void snepulator_render_open_modal (void);
+
 void snepulator_render_menubar (void)
 {
     bool open_modal = false;
@@ -153,42 +156,6 @@ void snepulator_render_menubar (void)
     if (open_modal)
         ImGui::OpenPopup("Open ROM...");
 
-}
-
-void snepulator_render_open_modal (void)
-{
-    static float f;
-    if (ImGui::BeginPopupModal ("Open ROM...", NULL, ImGuiWindowFlags_AlwaysAutoResize))
-    {
-        /* TODO: Something other than hard coded values */
-
-        ImGui::Text("/home/joppy/ROMs/Master System/");
-
-        /* ROM Directories */
-        ImGui::BeginChild ("Directories", ImVec2 (150, 400), true);
-            ImGui::Button ("Master System", ImVec2 (ImGui::GetContentRegionAvailWidth (), 24));
-            ImGui::Button ("SG-1000",       ImVec2 (ImGui::GetContentRegionAvailWidth (), 24));
-        ImGui::EndChild ();
-
-        ImGui::SameLine ();
-
-        /* Directory Contents */
-        ImGui::BeginChild ("Files", ImVec2 (350, 400), true);
-        ImGui::EndChild ();
-
-        /* Buttons */
-        if (ImGui::Button ("Cancel", ImVec2 (120,0))) {
-            snepulator.running = true;
-            ImGui::CloseCurrentPopup();
-        }
-        ImGui::SameLine ();
-        if (ImGui::Button ("Open", ImVec2(120,0))) {
-            snepulator.running = true;
-            ImGui::CloseCurrentPopup();
-        }
-
-        ImGui::EndPopup();
-    }
 }
 
 typedef struct Float3_t {

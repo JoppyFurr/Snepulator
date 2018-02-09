@@ -13,7 +13,8 @@ gcc -c Source/sms.c             -o Work/sms.o       -std=c11 -Wall -Werror
 gcc -c Source/audio/sn79489.c   -o Work/sn79489.o   -std=c11 -Wall -Werror
 
 # Compile C++11 GUI and link to the rest of the code.
-g++ Source/main.cpp Work/*.o \
+g++ Source/*.cpp \
+    Work/*.o \
     Libraries/imgui-1.49/*.cpp \
     Libraries/imgui-1.49/examples/libs/gl3w/GL/gl3w.c \
     Libraries/imgui-1.49/examples/sdl_opengl3_example/imgui_impl_sdl_gl3.cpp \
