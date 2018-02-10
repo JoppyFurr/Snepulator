@@ -199,12 +199,12 @@ int main (int argc, char **argv)
         if (!strcmp ("-b", *argv))
         {
             /* BIOS to load */
-            snepulator.bios_filename = *(++argv);
+            snepulator.bios_filename = strdup(*(++argv));
         }
         else if (!snepulator.cart_filename)
         {
             /* ROM to load */
-            snepulator.cart_filename = *(argv);
+            snepulator.cart_filename = strdup(*(argv));
         }
         else
         {

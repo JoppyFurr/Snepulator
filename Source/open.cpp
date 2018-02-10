@@ -7,6 +7,7 @@
 #include <unistd.h>
 
 #include <algorithm>
+#include <regex>
 #include <string>
 #include <vector>
 
@@ -18,6 +19,7 @@
 
 extern "C" {
 #include "snepulator.h"
+#include "sms.h"
 }
 
 /* Global state */
@@ -34,6 +36,9 @@ void snepulator_render_open_modal (void)
         static const char *cwd_path = NULL;
         static std::vector<std::string> file_list;
         static int selected_file = 0;
+        bool open_action = false;
+
+        std::regex sms_regex(".*\\.(BIN|bin|SMS|sms)$");
 
         if (!cwd_cached)
         {
@@ -47,6 +52,7 @@ void snepulator_render_open_modal (void)
             /* File listing */
             DIR *dir = opendir (".");
             struct dirent *entry = NULL;
+            std::string entry_string;
 
             if (dir != NULL)
             {
@@ -57,7 +63,20 @@ void snepulator_render_open_modal (void)
                         continue;
                     }
 
-                    file_list.push_back (std::string (entry->d_name));
+                    entry_string = std::string (entry->d_name);
+
+                    /* Show directories as ending with '/' */
+                    if (entry->d_type == DT_DIR)
+                    {
+                        entry_string += '/';
+                    }
+                    /* Only list files that have a valid ROM extension */
+                    else if (!std::regex_match(entry_string, sms_regex))
+                    {
+                            continue;
+                    }
+
+                    file_list.push_back (entry_string);
                 }
                 std::sort (file_list.begin(), file_list.end());
             }
@@ -91,9 +110,16 @@ void snepulator_render_open_modal (void)
             ImVec2 draw_cursor = ImGui::GetCursorScreenPos ();
             bool hovering = ImGui::IsMouseHoveringRect (draw_cursor, ImVec2 (draw_cursor.x + 350, draw_cursor.y + 16));
 
+            /* Click to select */
             if (hovering && ImGui::IsMouseClicked(0))
             {
                 selected_file = i;
+            }
+
+            /* Double-click to open */
+            if (hovering && ImGui::IsMouseDoubleClicked(0))
+            {
+                open_action = true;
             }
 
             /* Render the selected file in green, hovered file in yellow, and others with the text default */
@@ -119,9 +145,30 @@ void snepulator_render_open_modal (void)
             ImGui::CloseCurrentPopup ();
         }
         ImGui::SameLine ();
-        if (ImGui::Button ("Open", ImVec2(120,0))) {
-            snepulator.running = true;
-            ImGui::CloseCurrentPopup ();
+        if (ImGui::Button ("Open", ImVec2(120,0))) { /* TODO: Do we want an "Open BIOS"? */
+            open_action = true;
+        }
+
+        /* Open action */
+        if (open_action)
+        {
+            /* Directory */
+            if (file_list[selected_file].back() == '/')
+            {
+                chdir (file_list[selected_file].c_str());
+            }
+            /* ROM */
+            else
+            {
+                free (snepulator.cart_filename);
+                snepulator.cart_filename = strdup(file_list[selected_file].c_str());
+                sms_init (snepulator.bios_filename, snepulator.cart_filename);
+                snepulator.running = true;
+
+                ImGui::CloseCurrentPopup ();
+            }
+            cwd_cached = false;
+            file_list.clear();
         }
 
         ImGui::EndPopup ();
