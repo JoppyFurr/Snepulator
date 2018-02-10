@@ -334,6 +334,18 @@ void sms_audio_callback (void *userdata, uint8_t *stream, int len)
 
 void sms_init (char *bios_filename, char *cart_filename)
 {
+    /* Free the previous ROMs */
+    if (bios != NULL)
+    {
+        free (bios);
+        bios = NULL;
+    }
+    if (cart != NULL)
+    {
+        free (cart);
+        cart = NULL;
+    }
+
     /* Load BIOS */
     if (bios_filename)
     {
