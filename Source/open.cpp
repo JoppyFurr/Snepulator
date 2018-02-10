@@ -6,6 +6,8 @@
 #include <errno.h>
 #include <unistd.h>
 
+#include <algorithm>
+#include <string>
 #include <vector>
 
 #include "SDL2/SDL.h"
@@ -30,7 +32,7 @@ void snepulator_render_open_modal (void)
         static bool cwd_cached = false;
         static char cwd_path_buf[240]; /* TODO: Can we make this dynamic? */
         static const char *cwd_path = NULL;
-        static std::vector<char *> file_list;
+        static std::vector<std::string> file_list;
         static int selected_file = 0;
 
         if (!cwd_cached)
@@ -50,8 +52,14 @@ void snepulator_render_open_modal (void)
             {
                 for (entry = readdir (dir); entry != NULL; entry = readdir (dir))
                 {
-                    file_list.push_back (strdup (entry->d_name));
+                    if (!strcmp (".", entry->d_name))
+                    {
+                        continue;
+                    }
+
+                    file_list.push_back (std::string (entry->d_name));
                 }
+                std::sort (file_list.begin(), file_list.end());
             }
 
             cwd_cached = true;
@@ -91,15 +99,15 @@ void snepulator_render_open_modal (void)
             /* Render the selected file in green, hovered file in yellow, and others with the text default */
             if (i == selected_file)
             {
-                ImGui::TextColored (ImVec4 (0.5f, 1.0f, 0.5f, 1.0f), "%s", file_list[i]);
+                ImGui::TextColored (ImVec4 (0.5f, 1.0f, 0.5f, 1.0f), "%s", file_list[i].c_str());
             }
             else if (hovering)
             {
-                ImGui::TextColored (ImVec4 (1.0f, 1.0f, 0.5f, 1.0f), "%s", file_list[i]);
+                ImGui::TextColored (ImVec4 (1.0f, 1.0f, 0.5f, 1.0f), "%s", file_list[i].c_str());
             }
             else
             {
-                ImGui::Text ("%s", file_list[i]);
+                ImGui::Text ("%s", file_list[i].c_str());
             }
 
         }
