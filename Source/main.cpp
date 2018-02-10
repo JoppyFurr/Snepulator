@@ -267,10 +267,13 @@ int main (int argc, char **argv)
 
     SDL_PauseAudioDevice (audio_device_id, 0);
 
-    /* Initialise SMS */
-    sms_init (snepulator.bios_filename, snepulator.cart_filename);
-
-    snepulator.running = true;
+    /* If we have a valid ROM to run, start emulation */
+    /* TODO: Only allow unpause if we have a ROM to run */
+    if (snepulator.bios_filename || snepulator.cart_filename)
+    {
+        sms_init (snepulator.bios_filename, snepulator.cart_filename);
+        snepulator.running = true;
+    }
 
     /* Main loop */
     while (!snepulator.abort)
