@@ -27,7 +27,6 @@ extern Snepulator snepulator;
 
 void snepulator_render_open_modal (void)
 {
-    static float f;
     if (ImGui::BeginPopupModal ("Open ROM...", NULL, ImGuiWindowFlags_AlwaysAutoResize))
     {
         /* State */
@@ -82,14 +81,6 @@ void snepulator_render_open_modal (void)
             }
 
             cwd_cached = true;
-
-#if 0
-            /* Only upon changing directories, unset cwd_cached and free the listing */
-            for (int i = 0; i < file_list.size(); i++)
-            {
-                free ((void *) file_list[i]);
-            }
-#endif
         }
 
         ImGui::Text ("%s", cwd_path);

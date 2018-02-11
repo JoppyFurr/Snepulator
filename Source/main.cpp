@@ -32,10 +32,12 @@ int player_2_joystick_id;
 
 /* Implementation in open.cpp */
 void snepulator_render_open_modal (void);
+void snepulator_render_input_modal (void);
 
 void snepulator_render_menubar (void)
 {
     bool open_modal = false;
+    bool input_modal = false;
 
     /* What colour should this be? A "Snepulator" theme, or should it blend in with the overscan colour? */
     /* TODO: Some measure should be taken to prevent the menu from obscuring the gameplay */
@@ -43,7 +45,7 @@ void snepulator_render_menubar (void)
     {
         if (ImGui::BeginMenu("File"))
         {
-            if (ImGui::MenuItem("Open", NULL)) { snepulator.running = false; open_modal = true; }
+            if (ImGui::MenuItem("Open...", NULL)) { snepulator.running = false; open_modal = true; }
             if (ImGui::MenuItem("Pause", NULL, !snepulator.running)) { snepulator.running = !snepulator.running; }
             ImGui::Separator();
             if (ImGui::MenuItem("Quit", NULL)) { snepulator.abort = true; }
@@ -134,6 +136,8 @@ void snepulator_render_menubar (void)
                 if (ImGui::MenuItem("Not Implemented", NULL)) { };
                 ImGui::EndMenu();
             }
+
+            if (ImGui::MenuItem("Configure...", NULL)) { snepulator.running = false; input_modal = true; }
             ImGui::EndMenu();
         }
 
@@ -155,6 +159,8 @@ void snepulator_render_menubar (void)
     /* Open any popups requested */
     if (open_modal)
         ImGui::OpenPopup("Open ROM...");
+    if (input_modal)
+        ImGui::OpenPopup("Configure input...");
 
 }
 
@@ -400,6 +406,7 @@ int main (int argc, char **argv)
         ImGui_ImplSdlGL3_NewFrame (window);
         snepulator_render_menubar ();
         snepulator_render_open_modal ();
+        snepulator_render_input_modal ();
 
         /* Window Contents */
         {
