@@ -168,6 +168,33 @@ typedef struct Float3_t {
     float data [3];
 } Float3;
 
+typedef struct ButtonMapping_t {
+    uint32_t type;
+    uint32_t value;
+    bool negative;
+} ButtonMapping;
+
+typedef struct GamepadMapping_t {
+    ButtonMapping direction_up;
+    ButtonMapping direction_down;
+    ButtonMapping direction_left;
+    ButtonMapping direction_right;
+    ButtonMapping button_1;
+    ButtonMapping button_2;
+    ButtonMapping pause;
+} GamepadMapping;
+
+/* A hard-coded mapping for a USB gamepad I have laying around */
+GamepadMapping test_gamepad = {
+    .direction_up    = { .type = SDL_JOYAXISMOTION, .value = 1, .negative = true  },
+    .direction_down  = { .type = SDL_JOYAXISMOTION, .value = 1, .negative = false },
+    .direction_left  = { .type = SDL_JOYAXISMOTION, .value = 0, .negative = true  },
+    .direction_right = { .type = SDL_JOYAXISMOTION, .value = 0, .negative = false },
+    .button_1        = { .type = SDL_JOYBUTTONDOWN, .value = 2 },
+    .button_2        = { .type = SDL_JOYBUTTONDOWN, .value = 1 },
+    .pause           = { .type = SDL_JOYBUTTONDOWN, .value = 9 }
+};
+
 #define VDP_STRIDE_Y (256 * 3)
 int main (int argc, char **argv)
 {
@@ -300,43 +327,28 @@ int main (int argc, char **argv)
             }
 
             /* Player 1 Gamepad input */
-            else if (event.type == SDL_JOYAXISMOTION && event.jaxis.which == player_1_joystick_id)
+            else if ((event.type == SDL_JOYAXISMOTION) && event.jaxis.which == player_1_joystick_id)
             {
-                switch (event.jaxis.axis)
-                {
-                    case 0: /* Left-right */
-                        gamepad_1.left = event.jaxis.value < -1000;
-                        gamepad_1.right = event.jaxis.value > 1000;
-                        break;
-                    case 1: /* Up-down */
-                        gamepad_1.up = event.jaxis.value < -1000;
-                        gamepad_1.down = event.jaxis.value > 1000;
-                        break;
-                    default:
-                        break;
-                }
+                /* TODO: Make the deadzone configurable */
+                /* TODO: Shorten these lines via macros */
+                if (test_gamepad.direction_up.type    == SDL_JOYAXISMOTION && event.jaxis.axis == test_gamepad.direction_up.value)    { gamepad_1.up       = (test_gamepad.direction_up.negative    ? -event.jaxis.value : event.jaxis.value) > 1000; }
+                if (test_gamepad.direction_down.type  == SDL_JOYAXISMOTION && event.jaxis.axis == test_gamepad.direction_down.value)  { gamepad_1.down     = (test_gamepad.direction_down.negative  ? -event.jaxis.value : event.jaxis.value) > 1000; }
+                if (test_gamepad.direction_left.type  == SDL_JOYAXISMOTION && event.jaxis.axis == test_gamepad.direction_left.value)  { gamepad_1.left     = (test_gamepad.direction_left.negative  ? -event.jaxis.value : event.jaxis.value) > 1000; }
+                if (test_gamepad.direction_right.type == SDL_JOYAXISMOTION && event.jaxis.axis == test_gamepad.direction_right.value) { gamepad_1.right    = (test_gamepad.direction_right.negative ? -event.jaxis.value : event.jaxis.value) > 1000; }
+                if (test_gamepad.button_1.type        == SDL_JOYAXISMOTION && event.jaxis.axis == test_gamepad.button_1.value)        { gamepad_1.button_1 = (test_gamepad.button_1.negative        ? -event.jaxis.value : event.jaxis.value) > 1000; }
+                if (test_gamepad.button_2.type        == SDL_JOYAXISMOTION && event.jaxis.axis == test_gamepad.button_2.value)        { gamepad_1.button_2 = (test_gamepad.button_2.negative        ? -event.jaxis.value : event.jaxis.value) > 1000; }
+                if (test_gamepad.pause.type           == SDL_JOYAXISMOTION && event.jaxis.axis == test_gamepad.pause.value)           { pause_button       = (test_gamepad.pause.negative           ? -event.jaxis.value : event.jaxis.value) > 1000; }
             }
 
-            else if ((event.type == SDL_JOYBUTTONUP || SDL_JOYBUTTONDOWN) &&
-                      event.jbutton.which == player_1_joystick_id)
+            else if ((event.type == SDL_JOYBUTTONUP || event.type == SDL_JOYBUTTONDOWN) && event.jbutton.which == player_1_joystick_id)
             {
-                switch (event.jbutton.button)
-                {
-                    case 2: /* "B" on my USB Saturn gamepad */
-                        gamepad_1.button_1 = (event.type == SDL_JOYBUTTONDOWN) ? true : false;
-                        break;
-                    case 1: /* "C" on my USB Saturn gamepad */
-                        gamepad_1.button_2 = (event.type == SDL_JOYBUTTONDOWN) ? true : false;
-                        break;
-                    case 9:
-                        pause_button = (event.type == SDL_JOYBUTTONDOWN) ? true : false;
-                    default: /* Don't care */
-                        break;
-                }
-            }
-
-            else if (event.type == SDL_JOYBUTTONUP && event.jbutton.which == player_1_joystick_id)
-            {
+                if (test_gamepad.direction_up.type    == SDL_JOYBUTTONDOWN && event.jbutton.button == test_gamepad.direction_up.value)    { gamepad_1.up       = (event.type == SDL_JOYBUTTONDOWN); }
+                if (test_gamepad.direction_down.type  == SDL_JOYBUTTONDOWN && event.jbutton.button == test_gamepad.direction_down.value)  { gamepad_1.down     = (event.type == SDL_JOYBUTTONDOWN); }
+                if (test_gamepad.direction_left.type  == SDL_JOYBUTTONDOWN && event.jbutton.button == test_gamepad.direction_left.value)  { gamepad_1.left     = (event.type == SDL_JOYBUTTONDOWN); }
+                if (test_gamepad.direction_right.type == SDL_JOYBUTTONDOWN && event.jbutton.button == test_gamepad.direction_right.value) { gamepad_1.right    = (event.type == SDL_JOYBUTTONDOWN); }
+                if (test_gamepad.button_1.type        == SDL_JOYBUTTONDOWN && event.jbutton.button == test_gamepad.button_1.value)        { gamepad_1.button_1 = (event.type == SDL_JOYBUTTONDOWN); }
+                if (test_gamepad.button_2.type        == SDL_JOYBUTTONDOWN && event.jbutton.button == test_gamepad.button_2.value)        { gamepad_1.button_2 = (event.type == SDL_JOYBUTTONDOWN); }
+                if (test_gamepad.pause.type           == SDL_JOYBUTTONDOWN && event.jbutton.button == test_gamepad.pause.value)           { pause_button       = (event.type == SDL_JOYBUTTONDOWN); }
             }
 
             else if (event.type == SDL_JOYDEVICEREMOVED && event.jdevice.which == player_1_joystick_id)
