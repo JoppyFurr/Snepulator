@@ -195,6 +195,17 @@ GamepadMapping test_gamepad = {
     .pause           = { .type = SDL_JOYBUTTONDOWN, .value = 9 }
 };
 
+/* Something to suit a Dvorak 60% keyboard */
+GamepadMapping test_keyboard = {
+    .direction_up    = { .type = SDL_KEYDOWN, .value = SDLK_COMMA },
+    .direction_down  = { .type = SDL_KEYDOWN, .value = SDLK_o },
+    .direction_left  = { .type = SDL_KEYDOWN, .value = SDLK_a },
+    .direction_right = { .type = SDL_KEYDOWN, .value = SDLK_e },
+    .button_1        = { .type = SDL_KEYDOWN, .value = SDLK_v },
+    .button_2        = { .type = SDL_KEYDOWN, .value = SDLK_z },
+    .pause           = { .type = SDL_KEYDOWN, .value = SDLK_RETURN }
+};
+
 #define VDP_STRIDE_Y (256 * 3)
 int main (int argc, char **argv)
 {
@@ -349,6 +360,17 @@ int main (int argc, char **argv)
                 if (test_gamepad.button_1.type        == SDL_JOYBUTTONDOWN && event.jbutton.button == test_gamepad.button_1.value)        { gamepad_1.button_1 = (event.type == SDL_JOYBUTTONDOWN); }
                 if (test_gamepad.button_2.type        == SDL_JOYBUTTONDOWN && event.jbutton.button == test_gamepad.button_2.value)        { gamepad_1.button_2 = (event.type == SDL_JOYBUTTONDOWN); }
                 if (test_gamepad.pause.type           == SDL_JOYBUTTONDOWN && event.jbutton.button == test_gamepad.pause.value)           { pause_button       = (event.type == SDL_JOYBUTTONDOWN); }
+            }
+
+            else if ((event.type == SDL_KEYUP || event.type == SDL_KEYDOWN))
+            {
+                if (test_keyboard.direction_up.type    == SDL_KEYDOWN && event.key.keysym.sym == test_keyboard.direction_up.value)    { gamepad_1.up       = (event.type == SDL_KEYDOWN); }
+                if (test_keyboard.direction_down.type  == SDL_KEYDOWN && event.key.keysym.sym == test_keyboard.direction_down.value)  { gamepad_1.down     = (event.type == SDL_KEYDOWN); }
+                if (test_keyboard.direction_left.type  == SDL_KEYDOWN && event.key.keysym.sym == test_keyboard.direction_left.value)  { gamepad_1.left     = (event.type == SDL_KEYDOWN); }
+                if (test_keyboard.direction_right.type == SDL_KEYDOWN && event.key.keysym.sym == test_keyboard.direction_right.value) { gamepad_1.right    = (event.type == SDL_KEYDOWN); }
+                if (test_keyboard.button_1.type        == SDL_KEYDOWN && event.key.keysym.sym == test_keyboard.button_1.value)        { gamepad_1.button_1 = (event.type == SDL_KEYDOWN); }
+                if (test_keyboard.button_2.type        == SDL_KEYDOWN && event.key.keysym.sym == test_keyboard.button_2.value)        { gamepad_1.button_2 = (event.type == SDL_KEYDOWN); }
+                if (test_keyboard.pause.type           == SDL_KEYDOWN && event.key.keysym.sym == test_keyboard.pause.value)           { pause_button       = (event.type == SDL_KEYDOWN); }
             }
 
             else if (event.type == SDL_JOYDEVICEREMOVED && event.jdevice.which == player_1_joystick_id)
