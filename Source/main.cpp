@@ -23,6 +23,7 @@ extern "C" {
 
 /* Global state */
 Snepulator snepulator;
+bool config_capture_events = false;
 
 /* Gamepads */
 SDL_Joystick *player_1_joystick;
@@ -32,6 +33,9 @@ int player_2_joystick_id;
 
 /* Implementation in open.cpp */
 void snepulator_render_open_modal (void);
+
+/* Implementation in input.cpp */
+bool input_modal_consume_event (SDL_Event event);
 void snepulator_render_input_modal (void);
 
 void snepulator_render_menubar (void)
@@ -158,9 +162,14 @@ void snepulator_render_menubar (void)
 
     /* Open any popups requested */
     if (open_modal)
+    {
         ImGui::OpenPopup("Open ROM...");
+    }
     if (input_modal)
+    {
+        config_capture_events = true;
         ImGui::OpenPopup("Configure input...");
+    }
 
 }
 
@@ -319,6 +328,15 @@ int main (int argc, char **argv)
             if (event.type == SDL_QUIT)
             {
                 snepulator.abort = true;
+            }
+
+            /* Allow the input configuration dialogue to sample input */
+            if (config_capture_events)
+            {
+                if (input_modal_consume_event (event))
+                {
+                    continue;
+                }
             }
 
             /* Player 1 Gamepad input */
