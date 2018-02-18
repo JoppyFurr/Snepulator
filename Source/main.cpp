@@ -168,24 +168,8 @@ typedef struct Float3_t {
     float data [3];
 } Float3;
 
-typedef struct ButtonMapping_t {
-    uint32_t type;
-    uint32_t value;
-    bool negative;
-} ButtonMapping;
-
-typedef struct GamepadMapping_t {
-    ButtonMapping direction_up;
-    ButtonMapping direction_down;
-    ButtonMapping direction_left;
-    ButtonMapping direction_right;
-    ButtonMapping button_1;
-    ButtonMapping button_2;
-    ButtonMapping pause;
-} GamepadMapping;
-
 /* A hard-coded mapping for a USB gamepad I have laying around */
-GamepadMapping test_gamepad = {
+Gamepad_Mapping test_gamepad = {
     .direction_up    = { .type = SDL_JOYAXISMOTION, .value = 1, .negative = true  },
     .direction_down  = { .type = SDL_JOYAXISMOTION, .value = 1, .negative = false },
     .direction_left  = { .type = SDL_JOYAXISMOTION, .value = 0, .negative = true  },
@@ -196,7 +180,7 @@ GamepadMapping test_gamepad = {
 };
 
 /* Something to suit a Dvorak 60% keyboard */
-GamepadMapping test_keyboard = {
+Gamepad_Mapping test_keyboard = {
     .direction_up    = { .type = SDL_KEYDOWN, .value = SDLK_COMMA },
     .direction_down  = { .type = SDL_KEYDOWN, .value = SDLK_o },
     .direction_left  = { .type = SDL_KEYDOWN, .value = SDLK_a },

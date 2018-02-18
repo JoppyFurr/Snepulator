@@ -1,4 +1,20 @@
 
+typedef struct Button_Mapping_t {
+    uint32_t type;
+    uint32_t value;
+    bool negative;
+} Button_Mapping;
+
+typedef struct Gamepad_Mapping_t {
+    Button_Mapping direction_up;
+    Button_Mapping direction_down;
+    Button_Mapping direction_left;
+    Button_Mapping direction_right;
+    Button_Mapping button_1;
+    Button_Mapping button_2;
+    Button_Mapping pause;
+} Gamepad_Mapping;
+
 typedef enum Video_Filter_t {
     VIDEO_FILTER_NEAREST,
     VIDEO_FILTER_LINEAR,
