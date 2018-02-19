@@ -116,6 +116,11 @@ void snepulator_render_menubar (void)
         {
             if (ImGui::BeginMenu("Player 1"))
             {
+                if (ImGui::MenuItem("Keyboard", NULL, player_1_joystick_id == ID_KEYBOARD) && player_1_joystick_id != ID_KEYBOARD)
+                {
+                    player_1_joystick_id = ID_KEYBOARD;
+                }
+
                 for (int i = 0; i < SDL_NumJoysticks (); i++)
                 {
                     const char *joystick_name = SDL_JoystickNameForIndex (i);
@@ -227,8 +232,8 @@ int main (int argc, char **argv)
     /* Initialize Snepulator state */
     memset (&snepulator, 0, sizeof (snepulator));
     snepulator.video_filter = VIDEO_FILTER_SCANLINES;
-    player_1_joystick_id = -1;
-    player_2_joystick_id = -1;
+    player_1_joystick_id = ID_KEYBOARD;
+    player_2_joystick_id = ID_NONE;
 
     /* Parse all CLI arguments */
     while (*(++argv))
@@ -353,7 +358,7 @@ int main (int argc, char **argv)
                 if (test_gamepad.pause.type           == SDL_JOYAXISMOTION && event.jaxis.axis == test_gamepad.pause.value)           { pause_button       = (test_gamepad.pause.negative           ? -event.jaxis.value : event.jaxis.value) > 1000; }
             }
 
-            else if ((event.type == SDL_JOYBUTTONUP || event.type == SDL_JOYBUTTONDOWN) && event.jbutton.which == player_1_joystick_id)
+            else if ((event.type == SDL_JOYBUTTONDOWN || event.type == SDL_JOYBUTTONUP) && event.jbutton.which == player_1_joystick_id)
             {
                 if (test_gamepad.direction_up.type    == SDL_JOYBUTTONDOWN && event.jbutton.button == test_gamepad.direction_up.value)    { gamepad_1.up       = (event.type == SDL_JOYBUTTONDOWN); }
                 if (test_gamepad.direction_down.type  == SDL_JOYBUTTONDOWN && event.jbutton.button == test_gamepad.direction_down.value)  { gamepad_1.down     = (event.type == SDL_JOYBUTTONDOWN); }
@@ -364,7 +369,7 @@ int main (int argc, char **argv)
                 if (test_gamepad.pause.type           == SDL_JOYBUTTONDOWN && event.jbutton.button == test_gamepad.pause.value)           { pause_button       = (event.type == SDL_JOYBUTTONDOWN); }
             }
 
-            else if ((event.type == SDL_KEYUP || event.type == SDL_KEYDOWN))
+            else if ((event.type == SDL_KEYDOWN || event.type == SDL_KEYUP) && player_1_joystick_id == ID_KEYBOARD)
             {
                 if (test_keyboard.direction_up.type    == SDL_KEYDOWN && event.key.keysym.sym == test_keyboard.direction_up.value)    { gamepad_1.up       = (event.type == SDL_KEYDOWN); }
                 if (test_keyboard.direction_down.type  == SDL_KEYDOWN && event.key.keysym.sym == test_keyboard.direction_down.value)  { gamepad_1.down     = (event.type == SDL_KEYDOWN); }

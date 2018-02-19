@@ -42,3 +42,5 @@ typedef struct Snepulator_t {
 
 } Snepulator;
 
+#define ID_NONE     -1
+#define ID_KEYBOARD -2

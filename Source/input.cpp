@@ -210,8 +210,8 @@ void snepulator_render_input_modal (void)
 
         /* Buttons */
         if (ImGui::Button ("Cancel", ImVec2 (120,0))) {
+            remap_state = REMAP_STATE_DEFAULT;
             snepulator.running = true;
-
             config_capture_events = false;
             ImGui::CloseCurrentPopup ();
         }
@@ -227,9 +227,10 @@ void snepulator_render_input_modal (void)
             remap_state = REMAP_STATE_UP;
         }
         ImGui::SameLine ();
-        if (ImGui::Button ("Apply", ImVec2(120,0))) {
+        if (ImGui::Button ("OK", ImVec2(120,0))) {
             snepulator.running = true; /* TODO: Rather than going to "Running", restore to what the state was previously */
 
+            remap_state = REMAP_STATE_DEFAULT;
             config_capture_events = false;
             ImGui::CloseCurrentPopup ();
         }
