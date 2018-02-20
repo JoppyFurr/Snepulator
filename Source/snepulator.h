@@ -6,6 +6,7 @@ typedef struct Button_Mapping_t {
 } Button_Mapping;
 
 typedef struct Gamepad_Mapping_t {
+    int32_t device_id;
     Button_Mapping direction_up;
     Button_Mapping direction_down;
     Button_Mapping direction_left;

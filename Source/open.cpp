@@ -95,7 +95,7 @@ void snepulator_render_open_modal (void)
 
         /* Current directory contents */
         ImGui::BeginChild ("Files", ImVec2 (350, 400), true);
-        for (int i = 0; i < file_list.size() ; i++)
+        for (int i = 0; i < file_list.size (); i++)
         {
             /* TODO: Can we get the text height rather than hard-coding it? */
             ImVec2 draw_cursor = ImGui::GetCursorScreenPos ();

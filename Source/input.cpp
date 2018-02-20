@@ -36,7 +36,7 @@ typedef enum Remap_State_t {
 
 /* Global state */
 extern Snepulator snepulator;
-extern Gamepad_Mapping test_keyboard;
+extern Gamepad_Mapping player_1_mapping;
 Remap_State remap_state = REMAP_STATE_DEFAULT;
 
 /* Returns true when an event is consumed */
@@ -54,31 +54,31 @@ bool input_modal_consume_event (SDL_Event event)
         switch (remap_state)
         {
             case REMAP_STATE_UP:
-                test_keyboard.direction_up.value = event.key.keysym.sym;
+                player_1_mapping.direction_up.value = event.key.keysym.sym;
                 remap_state = REMAP_STATE_DOWN;
                 break;
             case REMAP_STATE_DOWN:
-                test_keyboard.direction_down.value = event.key.keysym.sym;
+                player_1_mapping.direction_down.value = event.key.keysym.sym;
                 remap_state = REMAP_STATE_LEFT;
                 break;
             case REMAP_STATE_LEFT:
-                test_keyboard.direction_left.value = event.key.keysym.sym;
+                player_1_mapping.direction_left.value = event.key.keysym.sym;
                 remap_state = REMAP_STATE_RIGHT;
                 break;
             case REMAP_STATE_RIGHT:
-                test_keyboard.direction_right.value = event.key.keysym.sym;
+                player_1_mapping.direction_right.value = event.key.keysym.sym;
                 remap_state = REMAP_STATE_BUTTON_1;
                 break;
             case REMAP_STATE_BUTTON_1:
-                test_keyboard.button_1.value = event.key.keysym.sym;
+                player_1_mapping.button_1.value = event.key.keysym.sym;
                 remap_state = REMAP_STATE_BUTTON_2;
                 break;
             case REMAP_STATE_BUTTON_2:
-                test_keyboard.button_2.value = event.key.keysym.sym;
+                player_1_mapping.button_2.value = event.key.keysym.sym;
                 remap_state = REMAP_STATE_PAUSE;
                 break;
             case REMAP_STATE_PAUSE:
-                test_keyboard.pause.value = event.key.keysym.sym;
+                player_1_mapping.pause.value = event.key.keysym.sym;
                 remap_state = REMAP_STATE_DEFAULT;
                 break;
             default:
@@ -88,6 +88,31 @@ bool input_modal_consume_event (SDL_Event event)
     }
 
     return false;
+}
+
+const char *button_mapping_to_string (Button_Mapping b)
+{
+    static char *buff = NULL;
+
+    if (buff == NULL)
+    {
+        buff = (char *) malloc (80);
+    }
+
+    switch (b.type)
+    {
+        case SDL_KEYDOWN:
+            return SDL_GetKeyName (b.value);
+        case SDL_JOYAXISMOTION:
+            sprintf (buff, "Axis %d %s", b.value, b.negative ? "-" : "+");
+            break;
+        case SDL_JOYBUTTONDOWN:
+            sprintf (buff, "Button %d", b.value);
+            break;
+        default:
+            return "Unknown";
+    }
+    return buff;
 }
 
 void snepulator_render_input_modal (void)
@@ -185,25 +210,25 @@ void snepulator_render_input_modal (void)
 
             ImGui::TextColored (
                 (remap_state == REMAP_STATE_UP )       ? ButtonWaiting_V : White_V,
-                "  Up:        %s", SDL_GetKeyName (test_keyboard.direction_up.value));
+                "  Up:        %s", button_mapping_to_string (player_1_mapping.direction_up));
             ImGui::TextColored (
                 (remap_state == REMAP_STATE_DOWN )     ? ButtonWaiting_V : White_V,
-                "  Down:      %s", SDL_GetKeyName (test_keyboard.direction_down.value));
+                "  Down:      %s", button_mapping_to_string (player_1_mapping.direction_down));
             ImGui::TextColored (
                 (remap_state == REMAP_STATE_LEFT )     ? ButtonWaiting_V : White_V,
-                "  Left:      %s", SDL_GetKeyName (test_keyboard.direction_left.value));
+                "  Left:      %s", button_mapping_to_string (player_1_mapping.direction_left));
             ImGui::TextColored (
                 (remap_state == REMAP_STATE_RIGHT )    ? ButtonWaiting_V : White_V,
-                "  Right:     %s", SDL_GetKeyName (test_keyboard.direction_right.value));
+                "  Right:     %s", button_mapping_to_string (player_1_mapping.direction_right));
             ImGui::TextColored (
                 (remap_state == REMAP_STATE_BUTTON_1 ) ? ButtonWaiting_V : White_V,
-                "  Button 1:  %s", SDL_GetKeyName (test_keyboard.button_1.value));
+                "  Button 1:  %s", button_mapping_to_string (player_1_mapping.button_1));
             ImGui::TextColored (
                 (remap_state == REMAP_STATE_BUTTON_2 ) ? ButtonWaiting_V : White_V,
-                "  Button 2:  %s", SDL_GetKeyName (test_keyboard.button_2.value));
+                "  Button 2:  %s", button_mapping_to_string (player_1_mapping.button_2));
             ImGui::TextColored (
                 (remap_state == REMAP_STATE_PAUSE )    ? ButtonWaiting_V : White_V,
-                "  Pause:     %s", SDL_GetKeyName (test_keyboard.pause.value));
+                "  Pause:     %s", button_mapping_to_string (player_1_mapping.pause));
         }
 
         ImGui::EndChild ();
@@ -217,13 +242,13 @@ void snepulator_render_input_modal (void)
         }
         ImGui::SameLine ();
         if (ImGui::Button ("Remap Device", ImVec2 (120,0))) {
-            test_keyboard.direction_up.value    = SDLK_UNKNOWN;
-            test_keyboard.direction_down.value  = SDLK_UNKNOWN;
-            test_keyboard.direction_left.value  = SDLK_UNKNOWN;
-            test_keyboard.direction_right.value = SDLK_UNKNOWN;
-            test_keyboard.button_1.value        = SDLK_UNKNOWN;
-            test_keyboard.button_2.value        = SDLK_UNKNOWN;
-            test_keyboard.pause.value           = SDLK_UNKNOWN;
+            player_1_mapping.direction_up.value    = SDLK_UNKNOWN;
+            player_1_mapping.direction_down.value  = SDLK_UNKNOWN;
+            player_1_mapping.direction_left.value  = SDLK_UNKNOWN;
+            player_1_mapping.direction_right.value = SDLK_UNKNOWN;
+            player_1_mapping.button_1.value        = SDLK_UNKNOWN;
+            player_1_mapping.button_2.value        = SDLK_UNKNOWN;
+            player_1_mapping.pause.value           = SDLK_UNKNOWN;
             remap_state = REMAP_STATE_UP;
         }
         ImGui::SameLine ();
