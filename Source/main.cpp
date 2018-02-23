@@ -129,7 +129,7 @@ void snepulator_render_menubar (void)
                     }
                     else
                     {
-                        joystick_name = SDL_JoystickNameForIndex (i);
+                        joystick_name = SDL_JoystickNameForIndex (input_devices[i].device_id);
                         if (joystick_name == NULL)
                         {
                             joystick_name = "Unknown Joystick";
@@ -320,10 +320,11 @@ int main (int argc, char **argv)
     SDL_GL_SetAttribute (SDL_GL_STENCIL_SIZE, 8); /* Do we need this? */
     SDL_GL_SetAttribute (SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute (SDL_GL_CONTEXT_MINOR_VERSION, 2);
-    /* TODO: Consider a slightly larger window to expose overscan / the menu bar */
-    /* TODO: Need to fit the config and open dialogues */
+
+    /* Twice the Master System resolution, plus enough extra for 16 px boarders */
+    /* TODO: Make dialogues fit (full-screen?) and consider hiding the menubar during gameplay */
     window = SDL_CreateWindow ("Snepulator", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-                      256, 192, SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL);
+                      256 * 2 + 32, 192 * 2 + 32, SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL);
     if (window == NULL)
     {
         fprintf (stderr, "Error: SDL_CreateWindowfailed.\n");
