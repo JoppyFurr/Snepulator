@@ -49,40 +49,92 @@ bool input_modal_consume_event (SDL_Event event)
     }
 
     /* For now, hard-code that we are only interested in the keyboard */
-    if (event.type == SDL_KEYDOWN)
+    if (player_1_mapping.device_id == ID_KEYBOARD && event.type == SDL_KEYDOWN)
     {
         switch (remap_state)
         {
-            case REMAP_STATE_UP:
-                player_1_mapping.direction_up.value = event.key.keysym.sym;
-                remap_state = REMAP_STATE_DOWN;
-                break;
-            case REMAP_STATE_DOWN:
-                player_1_mapping.direction_down.value = event.key.keysym.sym;
-                remap_state = REMAP_STATE_LEFT;
-                break;
-            case REMAP_STATE_LEFT:
-                player_1_mapping.direction_left.value = event.key.keysym.sym;
-                remap_state = REMAP_STATE_RIGHT;
-                break;
-            case REMAP_STATE_RIGHT:
-                player_1_mapping.direction_right.value = event.key.keysym.sym;
-                remap_state = REMAP_STATE_BUTTON_1;
-                break;
-            case REMAP_STATE_BUTTON_1:
-                player_1_mapping.button_1.value = event.key.keysym.sym;
-                remap_state = REMAP_STATE_BUTTON_2;
-                break;
-            case REMAP_STATE_BUTTON_2:
-                player_1_mapping.button_2.value = event.key.keysym.sym;
-                remap_state = REMAP_STATE_PAUSE;
-                break;
-            case REMAP_STATE_PAUSE:
-                player_1_mapping.pause.value = event.key.keysym.sym;
-                remap_state = REMAP_STATE_DEFAULT;
-                break;
-            default:
-                return false;
+            case REMAP_STATE_UP:       player_1_mapping.direction_up.value    = event.key.keysym.sym; remap_state = REMAP_STATE_DOWN;     break;
+            case REMAP_STATE_DOWN:     player_1_mapping.direction_down.value  = event.key.keysym.sym; remap_state = REMAP_STATE_LEFT;     break;
+            case REMAP_STATE_LEFT:     player_1_mapping.direction_left.value  = event.key.keysym.sym; remap_state = REMAP_STATE_RIGHT;    break;
+            case REMAP_STATE_RIGHT:    player_1_mapping.direction_right.value = event.key.keysym.sym; remap_state = REMAP_STATE_BUTTON_1; break;
+            case REMAP_STATE_BUTTON_1: player_1_mapping.button_1.value        = event.key.keysym.sym; remap_state = REMAP_STATE_BUTTON_2; break;
+            case REMAP_STATE_BUTTON_2: player_1_mapping.button_2.value        = event.key.keysym.sym; remap_state = REMAP_STATE_PAUSE;    break;
+            case REMAP_STATE_PAUSE:    player_1_mapping.pause.value           = event.key.keysym.sym; remap_state = REMAP_STATE_DEFAULT;  break;
+            default: return false;
+        }
+        return true;
+    }
+
+    else if (event.type == SDL_JOYBUTTONDOWN && event.jbutton.which == player_1_mapping.device_id)
+    {
+        switch (remap_state)
+        {
+            case REMAP_STATE_UP:       player_1_mapping.direction_up.type     = event.type;
+                                       player_1_mapping.direction_up.value    = event.jbutton.button;
+                                       remap_state = REMAP_STATE_DOWN;          break;
+            case REMAP_STATE_DOWN:     player_1_mapping.direction_down.type   = event.type;
+                                       player_1_mapping.direction_down.value  = event.jbutton.button;
+                                       remap_state = REMAP_STATE_LEFT;          break;
+            case REMAP_STATE_LEFT:     player_1_mapping.direction_left.type   = event.type;
+                                       player_1_mapping.direction_left.value  = event.jbutton.button;
+                                       remap_state = REMAP_STATE_RIGHT;         break;
+            case REMAP_STATE_RIGHT:    player_1_mapping.direction_right.type  = event.type;
+                                       player_1_mapping.direction_right.value = event.jbutton.button;
+                                       remap_state = REMAP_STATE_BUTTON_1;      break;
+            case REMAP_STATE_BUTTON_1: player_1_mapping.button_1.type         = event.type;
+                                       player_1_mapping.button_1.value        = event.jbutton.button;
+                                       remap_state = REMAP_STATE_BUTTON_2;      break;
+            case REMAP_STATE_BUTTON_2: player_1_mapping.button_2.type         = event.type;
+                                       player_1_mapping.button_2.value        = event.jbutton.button;
+                                       remap_state = REMAP_STATE_PAUSE;         break;
+            case REMAP_STATE_PAUSE:    player_1_mapping.pause.type            = event.type;
+                                       player_1_mapping.pause.value           = event.jbutton.button;
+                                       remap_state = REMAP_STATE_DEFAULT;       break;
+            default: return false;
+        }
+        return true;
+    }
+
+    else if (event.type == SDL_JOYAXISMOTION && event.jaxis.which == player_1_mapping.device_id)
+    {
+        if (event.jaxis.value > -1000 && event.jaxis.value < 1000)
+        {
+            return false;
+        }
+
+        bool negative = event.jaxis.value < 0;
+
+        switch (remap_state)
+        {
+            case REMAP_STATE_UP:       player_1_mapping.direction_up.type        = event.type;
+                                       player_1_mapping.direction_up.value       = event.jaxis.axis;
+                                       player_1_mapping.direction_up.negative    = negative;
+                                       remap_state = REMAP_STATE_DOWN;      break;
+            case REMAP_STATE_DOWN:     player_1_mapping.direction_down.type      = event.type;
+                                       player_1_mapping.direction_down.value     = event.jaxis.axis;
+                                       player_1_mapping.direction_down.negative  = negative;
+                                       remap_state = REMAP_STATE_LEFT;      break;
+            case REMAP_STATE_LEFT:     player_1_mapping.direction_left.type      = event.type;
+                                       player_1_mapping.direction_left.value     = event.jaxis.axis;
+                                       player_1_mapping.direction_left.negative  = negative;
+                                       remap_state = REMAP_STATE_RIGHT;     break;
+            case REMAP_STATE_RIGHT:    player_1_mapping.direction_right.type     = event.type;
+                                       player_1_mapping.direction_right.value    = event.jaxis.axis;
+                                       player_1_mapping.direction_right.negative = negative;
+                                       remap_state = REMAP_STATE_BUTTON_1;  break;
+            case REMAP_STATE_BUTTON_1: player_1_mapping.button_1.type            = event.type;
+                                       player_1_mapping.button_1.value           = event.jaxis.axis;
+                                       player_1_mapping.button_1.negative        = negative;
+                                       remap_state = REMAP_STATE_BUTTON_2;  break;
+            case REMAP_STATE_BUTTON_2: player_1_mapping.button_2.type            = event.type;
+                                       player_1_mapping.button_2.value           = event.jaxis.axis;
+                                       player_1_mapping.button_2.negative        = negative;
+                                       remap_state = REMAP_STATE_PAUSE;     break;
+            case REMAP_STATE_PAUSE:    player_1_mapping.pause.type               = event.type;
+                                       player_1_mapping.pause.value              = event.jaxis.axis;
+                                       player_1_mapping.pause.negative           = negative;
+                                       remap_state = REMAP_STATE_DEFAULT;   break;
+            default: return false;
         }
         return true;
     }
