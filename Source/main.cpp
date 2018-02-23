@@ -260,8 +260,6 @@ int main (int argc, char **argv)
     SDL_Window *window = NULL;
     SDL_GLContext glcontext = NULL;
     GLuint sms_vdp_texture = 0;
-    int window_width;
-    int window_height;
 
     /* Audio */
     /* TODO: Will we ever want to change the SDL audio driver? */
@@ -373,7 +371,7 @@ int main (int argc, char **argv)
     while (!snepulator.abort)
     {
         /* INPUT */
-        SDL_GetWindowSize (window, &window_width, &window_height);
+        SDL_GetWindowSize (window, &snepulator.host_width, &snepulator.host_height);
         SDL_Event event;
 
         /* TODO: For now, we hard-code the USB Saturn gamepad on my desk. A "Configure gamepad" option needs to be created. */
@@ -505,11 +503,11 @@ int main (int argc, char **argv)
         /* Window Contents */
         {
             /* Scale the image to a multiple of SMS resolution */
-            uint8_t scale = (window_width / 256) > (window_height / 192) ? (window_height / 192) : (window_width / 256);
+            uint8_t scale = (snepulator.host_width / 256) > (snepulator.host_height / 192) ? (snepulator.host_height / 192) : (snepulator.host_width / 256);
             if (scale < 1)
                 scale = 1;
             ImGui::PushStyleColor (ImGuiCol_WindowBg, ImColor (0.0f, 0.0f, 0.0f, 0.0f));
-            ImGui::SetNextWindowSize (ImVec2 (window_width, window_height));
+            ImGui::SetNextWindowSize (ImVec2 (snepulator.host_width, snepulator.host_height));
             ImGui::Begin ("VDP Output", NULL, ImGuiWindowFlags_NoTitleBar |
                                               ImGuiWindowFlags_NoResize |
                                               ImGuiWindowFlags_NoScrollbar |
@@ -519,8 +517,8 @@ int main (int argc, char **argv)
                                               ImGuiWindowFlags_NoBringToFrontOnFocus);
 
             /* Centre VDP output */
-            ImGui::SetCursorPosX (window_width / 2 - (256 * scale) / 2);
-            ImGui::SetCursorPosY (window_height / 2 - (192 * scale) / 2);
+            ImGui::SetCursorPosX (snepulator.host_width / 2 - (256 * scale) / 2);
+            ImGui::SetCursorPosY (snepulator.host_height / 2 - (192 * scale) / 2);
             ImGui::Image ((void *) (uintptr_t) sms_vdp_texture, ImVec2 (256 * scale, 192 * scale),
                           /* uv0 */  ImVec2 (0, 0),
                           /* uv1 */  ImVec2 (1, 1),

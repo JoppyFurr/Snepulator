@@ -27,8 +27,13 @@ extern Snepulator snepulator;
 
 void snepulator_render_open_modal (void)
 {
-    if (ImGui::BeginPopupModal ("Open ROM...", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+    if (ImGui::BeginPopupModal ("Open ROM...", NULL, ImGuiWindowFlags_AlwaysAutoResize |
+                                                     ImGuiWindowFlags_NoMove |
+                                                     ImGuiWindowFlags_NoScrollbar))
     {
+        int width = (snepulator.host_width / 2 > 512) ? snepulator.host_width / 2 : 512;
+        int height = (snepulator.host_height / 2 > 384) ? snepulator.host_width / 2 : 384;
+
         /* State */
         static bool cwd_cached = false;
         static char cwd_path_buf[240]; /* TODO: Can we make this dynamic? */
@@ -85,6 +90,7 @@ void snepulator_render_open_modal (void)
 
         ImGui::Text ("%s", cwd_path);
 
+#if 0
         /* Placeholder - Configured ROM Directories */
         ImGui::BeginChild ("Directories", ImVec2 (150, 400), true);
             ImGui::Button ("Master System", ImVec2 (ImGui::GetContentRegionAvailWidth (), 24));
@@ -92,9 +98,10 @@ void snepulator_render_open_modal (void)
         ImGui::EndChild ();
 
         ImGui::SameLine ();
+#endif
 
         /* Current directory contents */
-        ImGui::BeginChild ("Files", ImVec2 (350, 400), true);
+        ImGui::BeginChild ("Files", ImVec2 (width, height - 64), true);
         for (int i = 0; i < file_list.size (); i++)
         {
             /* TODO: Can we get the text height rather than hard-coding it? */
