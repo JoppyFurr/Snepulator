@@ -167,15 +167,22 @@ const char *button_mapping_to_string (Button_Mapping b)
     return buff;
 }
 
+/* TODO: It would be nice to re-centre upon window resizing */
 void snepulator_render_input_modal (void)
 {
-    if (ImGui::BeginPopupModal ("Configure input...", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+    if (ImGui::BeginPopupModal ("Configure input...", NULL, ImGuiWindowFlags_AlwaysAutoResize |
+                                                            ImGuiWindowFlags_NoMove |
+                                                            ImGuiWindowFlags_NoScrollbar))
     {
+        int width = 512; /* TODO: Something more responsive */
+        int height = 384;
+
+        /* TODO: Show name of the device we're configuring */
         /* Master System gamepad */
-        ImGui::BeginChild ("SMS Gamepad", ImVec2 (450, 400), true);
+        ImGui::BeginChild ("SMS Gamepad", ImVec2 (width, height - 64), true);
         {
             ImVec2 origin = ImGui::GetCursorScreenPos ();
-            float scale = 400;
+            float scale = width * 0.9;
             origin.x += 10;
             origin.y += 10;
 
@@ -258,8 +265,7 @@ void snepulator_render_input_modal (void)
                 ImVec2 (origin.x + scale * 0.87, origin.y + scale * 0.25), scale * 0.06, White, 32);
 
             /* Move cursor to below gamepad diagram */
-            ImGui::SetCursorScreenPos (ImVec2 (origin.x - 10, origin.y + scale * 0.5));
-
+            ImGui::SetCursorScreenPos (ImVec2 (origin.x - 10, origin.y + scale * 0.4 + 16));
             ImGui::TextColored (
                 (remap_state == REMAP_STATE_UP )       ? ButtonWaiting_V : White_V,
                 "  Up:        %s", button_mapping_to_string (player_1_mapping.direction_up));
@@ -272,12 +278,16 @@ void snepulator_render_input_modal (void)
             ImGui::TextColored (
                 (remap_state == REMAP_STATE_RIGHT )    ? ButtonWaiting_V : White_V,
                 "  Right:     %s", button_mapping_to_string (player_1_mapping.direction_right));
+
+            ImGui::SetCursorScreenPos (ImVec2 (origin.x + scale * 0.5, origin.y + scale * 0.4 + 16));
             ImGui::TextColored (
                 (remap_state == REMAP_STATE_BUTTON_1 ) ? ButtonWaiting_V : White_V,
                 "  Button 1:  %s", button_mapping_to_string (player_1_mapping.button_1));
+            ImGui::SetCursorScreenPos (ImVec2 (origin.x + scale * 0.5, origin.y + scale * 0.4 + 33));
             ImGui::TextColored (
                 (remap_state == REMAP_STATE_BUTTON_2 ) ? ButtonWaiting_V : White_V,
                 "  Button 2:  %s", button_mapping_to_string (player_1_mapping.button_2));
+            ImGui::SetCursorScreenPos (ImVec2 (origin.x + scale * 0.5, origin.y + scale * 0.4 + 50));
             ImGui::TextColored (
                 (remap_state == REMAP_STATE_PAUSE )    ? ButtonWaiting_V : White_V,
                 "  Pause:     %s", button_mapping_to_string (player_1_mapping.pause));

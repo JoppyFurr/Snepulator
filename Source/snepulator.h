@@ -35,6 +35,8 @@ typedef struct Snepulator_t {
     float        video_background [4];
     float        sms_vdp_texture_data [256 * 192 * 3];
     float        sms_vdp_texture_data_output [256 * 192 * 3 * 3 * 2];
+    int          host_width;
+    int          host_height;
 
     /* Statistics */
     double host_framerate;
