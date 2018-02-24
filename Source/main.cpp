@@ -343,6 +343,21 @@ int main (int argc, char **argv)
     gl3wInit();
     ImGui_ImplSdlGL3_Init (window);
 
+    /* Style */
+    ImGui::PushStyleColor (ImGuiCol_MenuBarBg,     ImVec4 (0.5, 0.0, 0.0, 1.0));
+    ImGui::PushStyleColor (ImGuiCol_TitleBgActive, ImVec4 (0.5, 0.0, 0.0, 1.0));
+    ImGui::PushStyleColor (ImGuiCol_PopupBg,       ImVec4 (0.2, 0.0, 0.0, 1.0));
+    ImGui::PushStyleColor (ImGuiCol_Header,        ImVec4 (0.8, 0.0, 0.0, 1.0));
+    ImGui::PushStyleColor (ImGuiCol_HeaderHovered, ImVec4 (0.8, 0.0, 0.0, 1.0));
+    ImGui::PushStyleColor (ImGuiCol_ScrollbarBg,   ImVec4 (0.1, 0.0, 0.0, 1.0));
+    ImGui::PushStyleColor (ImGuiCol_ScrollbarGrab, ImVec4 (0.5, 0.0, 0.0, 1.0));
+    ImGui::PushStyleColor (ImGuiCol_ScrollbarGrabHovered, ImVec4 (0.8, 0.0, 0.0, 1.0));
+    ImGui::PushStyleColor (ImGuiCol_ScrollbarGrabActive,  ImVec4 (0.9, 0.0, 0.0, 1.0));
+    ImGui::PushStyleColor (ImGuiCol_Button,        ImVec4 (0.5, 0.0, 0.0, 1.0));
+    ImGui::PushStyleColor (ImGuiCol_ButtonHovered, ImVec4 (0.8, 0.0, 0.0, 1.0));
+    ImGui::PushStyleColor (ImGuiCol_ButtonActive,  ImVec4 (0.9, 0.0, 0.0, 1.0));
+    ImGui::PushStyleVar (ImGuiStyleVar_WindowRounding, 4.0);
+
     /* Create texture for VDP output */
     glGenTextures (1, &sms_vdp_texture);
     glBindTexture (GL_TEXTURE_2D, sms_vdp_texture);

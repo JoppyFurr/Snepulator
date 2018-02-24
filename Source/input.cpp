@@ -190,8 +190,8 @@ void snepulator_render_input_modal (void)
             ImVec4 White_V         = ImVec4 (1.0f, 1.0f, 1.0f, 1.0f);
             ImVec4 Dark_V          = ImVec4 (0.1f, 0.1f, 0.1f, 1.0f);
             ImVec4 ButtonDefault_V = ImVec4 (0.2f, 0.2f, 0.2f, 1.0f);
-            ImVec4 ButtonWaiting_V = ImVec4 (0.2f, 0.5f, 0.2f, 1.0f);
-            ImVec4 ButtonPressed_V = ImVec4 (0.5f, 0.2f, 0.2f, 1.0f);
+            ImVec4 ButtonWaiting_V = ImVec4 (0.8f, 0.5f, 0.1f, 1.0f);
+            ImVec4 ButtonPressed_V = ImVec4 (0.8f, 0.5f, 0.1f, 1.0f);
 
             const ImU32 White         = ImColor (White_V);
             const ImU32 Dark          = ImColor (Dark_V);
