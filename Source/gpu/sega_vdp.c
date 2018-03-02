@@ -25,11 +25,8 @@ static Vdp_Regs vdp_regs;
 static uint8_t v_counter = 0; /* Should this be added to the register struct? */
 static uint8_t cram [VDP_CRAM_SIZE];
 static uint8_t vram [VDP_VRAM_SIZE];
-float vdp_frame_complete [256 * 192 * 3];
-float vdp_frame_current  [256 * 192 * 3];
-
-/* TODO: Make this line accurate */
-/* TODO: Add interrupts */
+float vdp_frame_complete [(256 + VDP_BORDER * 2) * (192 + VDP_BORDER * 2) * 3];
+float vdp_frame_current  [(256 + VDP_BORDER * 2) * (192 + VDP_BORDER * 2) * 3];
 
 void vdp_init (void)
 {
@@ -242,9 +239,6 @@ bool vdp_get_interrupt (void)
     return interrupt;
 }
 
-#define VDP_STRIDE_X (3)
-#define VDP_STRIDE_Y (256 * 3)
-
 typedef struct Point2D_s {
     int32_t x;
     int32_t y;
@@ -270,6 +264,7 @@ void vdp_render_line_mode4_pattern (uint16_t line, Vdp_Pattern *pattern_base, Vd
             continue;
 
         /* Don't draw the left-most eight pixels if BIT_5 of CTRL_1 is set */
+        /* TODO: Do we want to dim the background in this case? */
         if (vdp_regs.mode_ctrl_1 & VDP_MODE_CTRL_1_MASK_COL_1 && x + offset.x < 8)
             continue;
 
@@ -290,9 +285,9 @@ void vdp_render_line_mode4_pattern (uint16_t line, Vdp_Pattern *pattern_base, Vd
 
         uint8_t pixel = cram[((palette == VDP_PALETTE_SPRITE) ? 16 : 0) + (bit0 | bit1 | bit2 | bit3)];
 
-        vdp_frame_current [(offset.x + x) * VDP_STRIDE_X + line * VDP_STRIDE_Y + 0] = VDP_TO_RED   (pixel) / 256.0f;
-        vdp_frame_current [(offset.x + x) * VDP_STRIDE_X + line * VDP_STRIDE_Y + 1] = VDP_TO_GREEN (pixel) / 256.0f;
-        vdp_frame_current [(offset.x + x) * VDP_STRIDE_X + line * VDP_STRIDE_Y + 2] = VDP_TO_BLUE  (pixel) / 256.0f;
+        vdp_frame_current [(offset.x + x + VDP_BORDER) * VDP_STRIDE_X_SUBPIX + (line + VDP_BORDER) * VDP_STRIDE_Y_SUBPIX + 0] = VDP_TO_RED   (pixel) / 256.0f;
+        vdp_frame_current [(offset.x + x + VDP_BORDER) * VDP_STRIDE_X_SUBPIX + (line + VDP_BORDER) * VDP_STRIDE_Y_SUBPIX + 1] = VDP_TO_GREEN (pixel) / 256.0f;
+        vdp_frame_current [(offset.x + x + VDP_BORDER) * VDP_STRIDE_X_SUBPIX + (line + VDP_BORDER) * VDP_STRIDE_Y_SUBPIX + 2] = VDP_TO_BLUE  (pixel) / 256.0f;
     }
 }
 
@@ -353,7 +348,6 @@ void vdp_render_line_mode4_background (uint16_t line, bool priority)
 /* TODO: VDP Flag BIT_3 of ctrl_1 subtracts 8 from x position of sprites */
 /* TODO: Pixel-doubling */
 /* TODO: Draw order: the first entry in the line's sprite buffer with a non-transparent pixel is the one that sticks */
-/* TODO: Actually render as-per the clock cycles. May need to double-buffer to prevent tearing */
 void vdp_render_line_mode4_sprites (uint16_t line)
 {
     uint16_t sprite_attribute_table_base = (((uint16_t) vdp_regs.sprite_attr_table_addr) << 7) & 0x3f00;
@@ -399,15 +393,67 @@ void vdp_render_line_mode4_sprites (uint16_t line)
 
 void vdp_render_line_mode4_192 (uint16_t line)
 {
+    float video_background [3] = { 0.0f, 0.0f, 0.0f };
+
+    uint32_t line_width = 256 + VDP_BORDER * 2;
+
     /* Background */
-    for (int x = 0; x < 256; x++)
+    if (!(vdp_regs.mode_ctrl_2 & VDP_MODE_CTRL_2_BLANK))
     {
-            vdp_frame_current [x * VDP_STRIDE_X + line * VDP_STRIDE_Y + 0] = snepulator.video_background[0];
-            vdp_frame_current [x * VDP_STRIDE_X + line * VDP_STRIDE_Y + 1] = snepulator.video_background[1];
-            vdp_frame_current [x * VDP_STRIDE_X + line * VDP_STRIDE_Y + 2] = snepulator.video_background[2];
+        /* Display is blanked */
+        video_background [0] = 0.0f;
+        video_background [1] = 0.0f;
+        video_background [2] = 0.0f;
+    }
+    else
+    {
+        /* Overscan colour. Is this mode4-specific? */
+        uint8_t bg_colour;
+        bg_colour = cram [16 + (vdp_regs.background_colour & 0x0f)];
+        video_background [0] = VDP_TO_RED (bg_colour) / 256.0f;
+        video_background [1] = VDP_TO_GREEN (bg_colour) / 256.0f;
+        video_background [2] = VDP_TO_BLUE (bg_colour) / 256.0f;
     }
 
-    /* Early return if the display is blanked */
+    /* TODO: For now we just copy the background from the first and last active lines.
+     *       Do any games use these lines differently? */
+
+    /* TODO: Avoid working with subpixels where possible */
+
+    /* Fill in the border with the background colour */
+    if (line == 0)
+    {
+        for (int top_line = 0; top_line < VDP_BORDER; top_line++)
+        {
+            for (int x = 0; x < line_width; x++)
+            {
+                vdp_frame_current [x * VDP_STRIDE_X_SUBPIX + top_line * VDP_STRIDE_Y_SUBPIX + 0] = video_background[0] * 0.5;
+                vdp_frame_current [x * VDP_STRIDE_X_SUBPIX + top_line * VDP_STRIDE_Y_SUBPIX + 1] = video_background[1] * 0.5;
+                vdp_frame_current [x * VDP_STRIDE_X_SUBPIX + top_line * VDP_STRIDE_Y_SUBPIX + 2] = video_background[2] * 0.5;
+            }
+        }
+    }
+    for (int x = 0; x < line_width; x++)
+    {
+        bool border = x < VDP_BORDER || x >= VDP_BORDER + 256;
+        vdp_frame_current [x * VDP_STRIDE_X_SUBPIX + (VDP_BORDER + line) * VDP_STRIDE_Y_SUBPIX + 0] = video_background[0] * (border ? 0.5 : 1.0);
+        vdp_frame_current [x * VDP_STRIDE_X_SUBPIX + (VDP_BORDER + line) * VDP_STRIDE_Y_SUBPIX + 1] = video_background[1] * (border ? 0.5 : 1.0);
+        vdp_frame_current [x * VDP_STRIDE_X_SUBPIX + (VDP_BORDER + line) * VDP_STRIDE_Y_SUBPIX + 2] = video_background[2] * (border ? 0.5 : 1.0);
+    }
+    if (line == 191)
+    {
+        for (int bottom_line = VDP_BORDER + 192; bottom_line < VDP_BORDER + 192 + VDP_BORDER; bottom_line++)
+        {
+            for (int x = 0; x < line_width; x++)
+            {
+                vdp_frame_current [x * VDP_STRIDE_X_SUBPIX + bottom_line * VDP_STRIDE_Y_SUBPIX + 0] = video_background[0] * 0.5;
+                vdp_frame_current [x * VDP_STRIDE_X_SUBPIX + bottom_line * VDP_STRIDE_Y_SUBPIX + 1] = video_background[1] * 0.5;
+                vdp_frame_current [x * VDP_STRIDE_X_SUBPIX + bottom_line * VDP_STRIDE_Y_SUBPIX + 2] = video_background[2] * 0.5;
+            }
+        }
+    }
+
+    /* Return without rendering patterns if BLANK is enabled */
     if (!(vdp_regs.mode_ctrl_2 & VDP_MODE_CTRL_2_BLANK))
     {
         return;
@@ -420,23 +466,6 @@ void vdp_render_line_mode4_192 (uint16_t line)
 
 void vdp_render_line (uint16_t line)
 {
-    if (!(vdp_regs.mode_ctrl_2 & VDP_MODE_CTRL_2_BLANK))
-    {
-        /* Display is blanked */
-        snepulator.video_background [0] = 0.0f;
-        snepulator.video_background [1] = 0.0f;
-        snepulator.video_background [2] = 0.0f;
-    }
-    else
-    {
-        /* Overscan colour. Is this mode4-specific? */
-        uint8_t bg_colour;
-        bg_colour = cram [16 + (vdp_regs.background_colour & 0x0f)];
-        snepulator.video_background [0] = VDP_TO_RED (bg_colour) / 256.0f;
-        snepulator.video_background [1] = VDP_TO_GREEN (bg_colour) / 256.0f;
-        snepulator.video_background [2] = VDP_TO_BLUE (bg_colour) / 256.0f;
-    }
-
     switch (vdp_regs.mode_ctrl_1 & VDP_MODE_CTRL_1_MODE_4)
     {
         /* Mode 4 */

@@ -1,4 +1,13 @@
 
+#define VDP_BORDER 8
+#define VDP_STRIDE_Y (256 + VDP_BORDER * 2)
+#define VDP_STRIDE_X_SUBPIX (3)
+#define VDP_STRIDE_Y_SUBPIX (3 * (256 + VDP_BORDER * 2))
+
+
+#define ID_NONE     -1
+#define ID_KEYBOARD -2
+
 typedef struct Button_Mapping_t {
     uint32_t type;
     uint32_t value;
@@ -32,9 +41,8 @@ typedef struct Snepulator_t {
 
     /* Video */
     Video_Filter video_filter;
-    float        video_background [4];
-    float        sms_vdp_texture_data [256 * 192 * 3];
-    float        sms_vdp_texture_data_output [256 * 192 * 3 * 3 * 2];
+    float        sms_vdp_texture_data        [(256 + VDP_BORDER * 2) * (192 + VDP_BORDER * 2) * 3];
+    float        sms_vdp_texture_data_output [(256 + VDP_BORDER * 2) * 2 * (192 + VDP_BORDER * 2) * 3 * 3];
     int          host_width;
     int          host_height;
 
@@ -45,5 +53,3 @@ typedef struct Snepulator_t {
 
 } Snepulator;
 
-#define ID_NONE     -1
-#define ID_KEYBOARD -2
