@@ -210,7 +210,6 @@ typedef struct Float3_t {
     float data [3];
 } Float3;
 
-
 /* Note: It'd be nice to automatically add/remove mappings as devices are plugged in and removed */
 void snepulator_init_input_devices (void)
 {
@@ -253,7 +252,6 @@ void snepulator_init_input_devices (void)
     player_2_mapping = no_gamepad;
 }
 
-#define VDP_STRIDE_Y (256 * 3)
 int main (int argc, char **argv)
 {
     /* Video */
@@ -361,9 +359,10 @@ int main (int argc, char **argv)
     /* Create texture for VDP output */
     glGenTextures (1, &sms_vdp_texture);
     glBindTexture (GL_TEXTURE_2D, sms_vdp_texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-    glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, snepulator.video_background);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    float Float4_Black[4] = { 0.0, 0.0, 0.0, 0.0 };
+    glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, Float4_Black);
 
     /* Open the default audio device */
     audio_device_id = SDL_OpenAudioDevice (NULL, 0, &desired_audiospec, &obtained_audiospec,
@@ -459,20 +458,20 @@ int main (int argc, char **argv)
         glBindTexture (GL_TEXTURE_2D, sms_vdp_texture);
         glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, snepulator.video_filter);
         glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, snepulator.video_filter);
-        glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, snepulator.video_background);
+        glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, Float4_Black);
 
         switch (snepulator.video_filter)
         {
             case VIDEO_FILTER_NEAREST:
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-                glTexImage2D    (GL_TEXTURE_2D, 0, GL_RGB, 256, 192, 0, GL_RGB, GL_FLOAT,
+                glTexImage2D    (GL_TEXTURE_2D, 0, GL_RGB, 256 + VDP_BORDER * 2, 192 + VDP_BORDER * 2, 0, GL_RGB, GL_FLOAT,
                                  snepulator.sms_vdp_texture_data);
                 break;
             case VIDEO_FILTER_LINEAR:
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-                glTexImage2D    (GL_TEXTURE_2D, 0, GL_RGB, 256, 192, 0, GL_RGB, GL_FLOAT,
+                glTexImage2D    (GL_TEXTURE_2D, 0, GL_RGB, 256 + VDP_BORDER * 2, 192 + VDP_BORDER * 2, 0, GL_RGB, GL_FLOAT,
                                  snepulator.sms_vdp_texture_data);
                 break;
             case VIDEO_FILTER_SCANLINES:
@@ -483,28 +482,28 @@ int main (int argc, char **argv)
                 Float3 *source = (Float3 *) snepulator.sms_vdp_texture_data;
                 Float3 *dest   = (Float3 *) snepulator.sms_vdp_texture_data_output;
 
-                for (int y = 0; y < 192; y++)
+                for (int y = 0; y < (192 + VDP_BORDER * 2); y++)
                 {
-                    for (int x = 0; x < 256; x++)
+                    for (int x = 0; x < (256 + VDP_BORDER * 2); x++)
                     {
                         /* Prescale 2×3 */
-                        dest [x * 2 + 0 + (3 * y + 0) * 512] = source [x + y * 256];
-                        dest [x * 2 + 1 + (3 * y + 0) * 512] = source [x + y * 256];
-                        dest [x * 2 + 0 + (3 * y + 1) * 512] = source [x + y * 256];
-                        dest [x * 2 + 1 + (3 * y + 1) * 512] = source [x + y * 256];
-                        dest [x * 2 + 0 + (3 * y + 2) * 512] = source [x + y * 256];
-                        dest [x * 2 + 1 + (3 * y + 2) * 512] = source [x + y * 256];
+                        dest [x * 2 + 0 + (3 * y + 0) * VDP_STRIDE_Y * 2] = source [x + y * VDP_STRIDE_Y];
+                        dest [x * 2 + 1 + (3 * y + 0) * VDP_STRIDE_Y * 2] = source [x + y * VDP_STRIDE_Y];
+                        dest [x * 2 + 0 + (3 * y + 1) * VDP_STRIDE_Y * 2] = source [x + y * VDP_STRIDE_Y];
+                        dest [x * 2 + 1 + (3 * y + 1) * VDP_STRIDE_Y * 2] = source [x + y * VDP_STRIDE_Y];
+                        dest [x * 2 + 0 + (3 * y + 2) * VDP_STRIDE_Y * 2] = source [x + y * VDP_STRIDE_Y];
+                        dest [x * 2 + 1 + (3 * y + 2) * VDP_STRIDE_Y * 2] = source [x + y * VDP_STRIDE_Y];
 
                         /* Scanlines (40%) */
-                        dest [x * 2 + 0 + (3 * y + 2) * 512].data[0] *= (1.0 - 0.4);
-                        dest [x * 2 + 1 + (3 * y + 2) * 512].data[0] *= (1.0 - 0.4);
-                        dest [x * 2 + 0 + (3 * y + 2) * 512].data[1] *= (1.0 - 0.4);
-                        dest [x * 2 + 1 + (3 * y + 2) * 512].data[1] *= (1.0 - 0.4);
-                        dest [x * 2 + 0 + (3 * y + 2) * 512].data[2] *= (1.0 - 0.4);
-                        dest [x * 2 + 1 + (3 * y + 2) * 512].data[2] *= (1.0 - 0.4);
+                        dest [x * 2 + 0 + (3 * y + 2) * VDP_STRIDE_Y * 2].data[0] *= (1.0 - 0.4);
+                        dest [x * 2 + 1 + (3 * y + 2) * VDP_STRIDE_Y * 2].data[0] *= (1.0 - 0.4);
+                        dest [x * 2 + 0 + (3 * y + 2) * VDP_STRIDE_Y * 2].data[1] *= (1.0 - 0.4);
+                        dest [x * 2 + 1 + (3 * y + 2) * VDP_STRIDE_Y * 2].data[1] *= (1.0 - 0.4);
+                        dest [x * 2 + 0 + (3 * y + 2) * VDP_STRIDE_Y * 2].data[2] *= (1.0 - 0.4);
+                        dest [x * 2 + 1 + (3 * y + 2) * VDP_STRIDE_Y * 2].data[2] *= (1.0 - 0.4);
                     }
                 }
-                glTexImage2D    (GL_TEXTURE_2D, 0, GL_RGB, 256 * 2, 192 * 3, 0, GL_RGB, GL_FLOAT,
+                glTexImage2D    (GL_TEXTURE_2D, 0, GL_RGB, (256 + VDP_BORDER * 2) * 2, (192 + VDP_BORDER * 2) * 3, 0, GL_RGB, GL_FLOAT,
                                  snepulator.sms_vdp_texture_data_output);
                 break;
         }
@@ -531,12 +530,21 @@ int main (int argc, char **argv)
                                               ImGuiWindowFlags_NoFocusOnAppearing |
                                               ImGuiWindowFlags_NoBringToFrontOnFocus);
 
-            /* Centre VDP output */
-            ImGui::SetCursorPosX (snepulator.host_width / 2 - (256 * scale) / 2);
-            ImGui::SetCursorPosY (snepulator.host_height / 2 - (192 * scale) / 2);
-            ImGui::Image ((void *) (uintptr_t) sms_vdp_texture, ImVec2 (256 * scale, 192 * scale),
-                          /* uv0 */  ImVec2 (0, 0),
-                          /* uv1 */  ImVec2 (1, 1),
+            /* First, draw the background, taken from the leftmost slice of the actual image */
+            ImGui::SetCursorPosX (0);
+            ImGui::SetCursorPosY (snepulator.host_height / 2 - ((192 + VDP_BORDER * 2) * scale) / 2);
+            ImGui::Image ((void *) (uintptr_t) sms_vdp_texture, ImVec2 (snepulator.host_width, (192 + VDP_BORDER * 2) * scale),
+                          /* uv0 */  ImVec2 (0.00, 0.0),
+                          /* uv1 */  ImVec2 (0.01, 1.0),
+                          /* tint */ ImColor (255, 255, 255, 255),
+                          /* border */ ImColor (0, 0, 0, 0));
+
+            /* Now, draw the actual image */
+            ImGui::SetCursorPosX (snepulator.host_width / 2 - ((256 + VDP_BORDER * 2) * scale) / 2);
+            ImGui::SetCursorPosY (snepulator.host_height / 2 - ((192 + VDP_BORDER * 2) * scale) / 2);
+            ImGui::Image ((void *) (uintptr_t) sms_vdp_texture, ImVec2 ((256 + VDP_BORDER * 2) * scale, (192 + VDP_BORDER * 2) * scale),
+                          /* uv0 */  ImVec2 (0.0, 0.0),
+                          /* uv1 */  ImVec2 (1.0, 1.0),
                           /* tint */ ImColor (255, 255, 255, 255),
                           /* border */ ImColor (0, 0, 0, 0));
             ImGui::End();
@@ -545,8 +553,7 @@ int main (int argc, char **argv)
 
         /* Draw to HW */
         glViewport(0, 0, (int)ImGui::GetIO().DisplaySize.x, (int)ImGui::GetIO().DisplaySize.y);
-        /* A thought: What about the option to dim the background? */
-        glClearColor(snepulator.video_background[0] * 0.80, snepulator.video_background[1] * 0.80, snepulator.video_background[2] * 0.80, 0);
+        glClearColor(0.0, 0.0, 0.0, 0.0);
         glClear(GL_COLOR_BUFFER_BIT);
         ImGui::Render();
 
