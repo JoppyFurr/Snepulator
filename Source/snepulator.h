@@ -1,12 +1,15 @@
 
 #define VDP_BORDER 8
-#define VDP_STRIDE_Y (256 + VDP_BORDER * 2)
-#define VDP_STRIDE_X_SUBPIX (3)
-#define VDP_STRIDE_Y_SUBPIX (3 * (256 + VDP_BORDER * 2))
+#define VDP_STRIDE (256 + VDP_BORDER * 2)
 
 
 #define ID_NONE     -1
 #define ID_KEYBOARD -2
+
+typedef struct Float3_t {
+    float data [3];
+} Float3;
+
 
 typedef struct Button_Mapping_t {
     uint32_t type;
