@@ -25,8 +25,8 @@ static Vdp_Regs vdp_regs;
 static uint8_t v_counter = 0; /* Should this be added to the register struct? */
 static uint8_t cram [VDP_CRAM_SIZE];
 static uint8_t vram [VDP_VRAM_SIZE];
-float vdp_frame_complete [(256 + VDP_BORDER * 2) * (192 + VDP_BORDER * 2) * 3];
-float vdp_frame_current  [(256 + VDP_BORDER * 2) * (192 + VDP_BORDER * 2) * 3];
+Float3 vdp_frame_complete [(256 + VDP_BORDER * 2) * (192 + VDP_BORDER * 2)];
+Float3 vdp_frame_current  [(256 + VDP_BORDER * 2) * (192 + VDP_BORDER * 2)];
 
 void vdp_init (void)
 {
@@ -285,9 +285,9 @@ void vdp_render_line_mode4_pattern (uint16_t line, Vdp_Pattern *pattern_base, Vd
 
         uint8_t pixel = cram[((palette == VDP_PALETTE_SPRITE) ? 16 : 0) + (bit0 | bit1 | bit2 | bit3)];
 
-        vdp_frame_current [(offset.x + x + VDP_BORDER) * VDP_STRIDE_X_SUBPIX + (line + VDP_BORDER) * VDP_STRIDE_Y_SUBPIX + 0] = VDP_TO_RED   (pixel) / 256.0f;
-        vdp_frame_current [(offset.x + x + VDP_BORDER) * VDP_STRIDE_X_SUBPIX + (line + VDP_BORDER) * VDP_STRIDE_Y_SUBPIX + 1] = VDP_TO_GREEN (pixel) / 256.0f;
-        vdp_frame_current [(offset.x + x + VDP_BORDER) * VDP_STRIDE_X_SUBPIX + (line + VDP_BORDER) * VDP_STRIDE_Y_SUBPIX + 2] = VDP_TO_BLUE  (pixel) / 256.0f;
+        vdp_frame_current [(offset.x + x + VDP_BORDER) + (line + VDP_BORDER) * VDP_STRIDE].data[0] = VDP_TO_RED   (pixel) / 256.0f;
+        vdp_frame_current [(offset.x + x + VDP_BORDER) + (line + VDP_BORDER) * VDP_STRIDE].data[1] = VDP_TO_GREEN (pixel) / 256.0f;
+        vdp_frame_current [(offset.x + x + VDP_BORDER) + (line + VDP_BORDER) * VDP_STRIDE].data[2] = VDP_TO_BLUE  (pixel) / 256.0f;
     }
 }
 
@@ -395,32 +395,31 @@ void vdp_render_line_mode4_sprites (uint16_t line)
 
 void vdp_render_line_mode4_192 (uint16_t line)
 {
-    float video_background [3] = { 0.0f, 0.0f, 0.0f };
+    Float3 video_background = { .data = { 0.0f, 0.0f, 0.0f } };
+    Float3 video_background_dim = { .data = { 0.0f, 0.0f, 0.0f } };
 
     uint32_t line_width = 256 + VDP_BORDER * 2;
 
     /* Background */
     if (!(vdp_regs.mode_ctrl_2 & VDP_MODE_CTRL_2_BLANK))
     {
-        /* Display is blanked */
-        video_background [0] = 0.0f;
-        video_background [1] = 0.0f;
-        video_background [2] = 0.0f;
+        /* Display is blank */
     }
     else
     {
         /* Overscan colour. Is this mode4-specific? */
         uint8_t bg_colour;
         bg_colour = cram [16 + (vdp_regs.background_colour & 0x0f)];
-        video_background [0] = VDP_TO_RED (bg_colour) / 256.0f;
-        video_background [1] = VDP_TO_GREEN (bg_colour) / 256.0f;
-        video_background [2] = VDP_TO_BLUE (bg_colour) / 256.0f;
+        video_background.data[0] = VDP_TO_RED   (bg_colour) / 256.0f;
+        video_background.data[1] = VDP_TO_GREEN (bg_colour) / 256.0f;
+        video_background.data[2] = VDP_TO_BLUE  (bg_colour) / 256.0f;
+        video_background_dim.data[0] = video_background.data[0] * 0.5;
+        video_background_dim.data[1] = video_background.data[1] * 0.5;
+        video_background_dim.data[2] = video_background.data[2] * 0.5;
     }
 
     /* TODO: For now we just copy the background from the first and last active lines.
      *       Do any games use these lines differently? */
-
-    /* TODO: Avoid working with subpixels where possible */
 
     /* Fill in the border with the background colour */
     if (line == 0)
@@ -429,18 +428,14 @@ void vdp_render_line_mode4_192 (uint16_t line)
         {
             for (int x = 0; x < line_width; x++)
             {
-                vdp_frame_current [x * VDP_STRIDE_X_SUBPIX + top_line * VDP_STRIDE_Y_SUBPIX + 0] = video_background[0] * 0.5;
-                vdp_frame_current [x * VDP_STRIDE_X_SUBPIX + top_line * VDP_STRIDE_Y_SUBPIX + 1] = video_background[1] * 0.5;
-                vdp_frame_current [x * VDP_STRIDE_X_SUBPIX + top_line * VDP_STRIDE_Y_SUBPIX + 2] = video_background[2] * 0.5;
+                vdp_frame_current [x + top_line * VDP_STRIDE] = video_background_dim;
             }
         }
     }
     for (int x = 0; x < line_width; x++)
     {
         bool border = x < VDP_BORDER || x >= VDP_BORDER + 256;
-        vdp_frame_current [x * VDP_STRIDE_X_SUBPIX + (VDP_BORDER + line) * VDP_STRIDE_Y_SUBPIX + 0] = video_background[0] * (border ? 0.5 : 1.0);
-        vdp_frame_current [x * VDP_STRIDE_X_SUBPIX + (VDP_BORDER + line) * VDP_STRIDE_Y_SUBPIX + 1] = video_background[1] * (border ? 0.5 : 1.0);
-        vdp_frame_current [x * VDP_STRIDE_X_SUBPIX + (VDP_BORDER + line) * VDP_STRIDE_Y_SUBPIX + 2] = video_background[2] * (border ? 0.5 : 1.0);
+        vdp_frame_current [x + (VDP_BORDER + line) * VDP_STRIDE] = (border ? video_background_dim : video_background);
     }
     if (line == 191)
     {
@@ -448,9 +443,7 @@ void vdp_render_line_mode4_192 (uint16_t line)
         {
             for (int x = 0; x < line_width; x++)
             {
-                vdp_frame_current [x * VDP_STRIDE_X_SUBPIX + bottom_line * VDP_STRIDE_Y_SUBPIX + 0] = video_background[0] * 0.5;
-                vdp_frame_current [x * VDP_STRIDE_X_SUBPIX + bottom_line * VDP_STRIDE_Y_SUBPIX + 1] = video_background[1] * 0.5;
-                vdp_frame_current [x * VDP_STRIDE_X_SUBPIX + bottom_line * VDP_STRIDE_Y_SUBPIX + 2] = video_background[2] * 0.5;
+                vdp_frame_current [x + bottom_line * VDP_STRIDE] = video_background_dim;
             }
         }
     }

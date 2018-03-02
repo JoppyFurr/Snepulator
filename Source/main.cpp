@@ -206,10 +206,6 @@ void snepulator_render_menubar (void)
 
 }
 
-typedef struct Float3_t {
-    float data [3];
-} Float3;
-
 /* Note: It'd be nice to automatically add/remove mappings as devices are plugged in and removed */
 void snepulator_init_input_devices (void)
 {
@@ -482,25 +478,35 @@ int main (int argc, char **argv)
                 Float3 *source = (Float3 *) snepulator.sms_vdp_texture_data;
                 Float3 *dest   = (Float3 *) snepulator.sms_vdp_texture_data_output;
 
-                for (int y = 0; y < (192 + VDP_BORDER * 2); y++)
+                /* Prescale by 2x3 and add scanlines */
+                uint32_t output_width  = (256 + VDP_BORDER * 2) * 2;
+                uint32_t output_height = (192 + VDP_BORDER * 2) * 3;
+                for (int y = 0; y < output_height; y++)
                 {
-                    for (int x = 0; x < (256 + VDP_BORDER * 2); x++)
+                    for (int x = 0; x < output_width; x++)
                     {
                         /* Prescale 2×3 */
-                        dest [x * 2 + 0 + (3 * y + 0) * VDP_STRIDE_Y * 2] = source [x + y * VDP_STRIDE_Y];
-                        dest [x * 2 + 1 + (3 * y + 0) * VDP_STRIDE_Y * 2] = source [x + y * VDP_STRIDE_Y];
-                        dest [x * 2 + 0 + (3 * y + 1) * VDP_STRIDE_Y * 2] = source [x + y * VDP_STRIDE_Y];
-                        dest [x * 2 + 1 + (3 * y + 1) * VDP_STRIDE_Y * 2] = source [x + y * VDP_STRIDE_Y];
-                        dest [x * 2 + 0 + (3 * y + 2) * VDP_STRIDE_Y * 2] = source [x + y * VDP_STRIDE_Y];
-                        dest [x * 2 + 1 + (3 * y + 2) * VDP_STRIDE_Y * 2] = source [x + y * VDP_STRIDE_Y];
+                        dest [x + y * output_width] = source [x / 2 + y / 3 * VDP_STRIDE];
 
                         /* Scanlines (40%) */
-                        dest [x * 2 + 0 + (3 * y + 2) * VDP_STRIDE_Y * 2].data[0] *= (1.0 - 0.4);
-                        dest [x * 2 + 1 + (3 * y + 2) * VDP_STRIDE_Y * 2].data[0] *= (1.0 - 0.4);
-                        dest [x * 2 + 0 + (3 * y + 2) * VDP_STRIDE_Y * 2].data[1] *= (1.0 - 0.4);
-                        dest [x * 2 + 1 + (3 * y + 2) * VDP_STRIDE_Y * 2].data[1] *= (1.0 - 0.4);
-                        dest [x * 2 + 0 + (3 * y + 2) * VDP_STRIDE_Y * 2].data[2] *= (1.0 - 0.4);
-                        dest [x * 2 + 1 + (3 * y + 2) * VDP_STRIDE_Y * 2].data[2] *= (1.0 - 0.4);
+                        if (y % 3 == 2)
+                        {
+                            /* The space between scanlines inherits light from the scanline above and the scanline below */
+                            /* TODO: Better math for blending colours? */
+                            if (y != output_height - 1)
+                            {
+                                dest [x + y * output_width].data[0] = dest [x + (y + 0) * output_width].data[0] * 0.5 +
+                                                                      dest [x + (y + 1) * output_width].data[0] * 0.5;
+                                dest [x + y * output_width].data[1] = dest [x + (y + 0) * output_width].data[1] * 0.5 +
+                                                                      dest [x + (y + 1) * output_width].data[1] * 0.5;
+                                dest [x + y * output_width].data[2] = dest [x + (y + 0) * output_width].data[2] * 0.5 +
+                                                                      dest [x + (y + 1) * output_width].data[2] * 0.5;
+                            }
+
+                            dest [x + y * VDP_STRIDE * 2].data[0] *= (1.0 - 0.4);
+                            dest [x + y * VDP_STRIDE * 2].data[1] *= (1.0 - 0.4);
+                            dest [x + y * VDP_STRIDE * 2].data[2] *= (1.0 - 0.4);
+                        }
                     }
                 }
                 glTexImage2D    (GL_TEXTURE_2D, 0, GL_RGB, (256 + VDP_BORDER * 2) * 2, (192 + VDP_BORDER * 2) * 3, 0, GL_RGB, GL_FLOAT,
