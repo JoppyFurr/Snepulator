@@ -470,6 +470,13 @@ uint32_t z80_extended_instruction ()
                                     if (BC != 0 && A != temp_1) {
                                         PC -= 2;                CYCLES (21); }
                                     else {                      CYCLES (16); }  break;
+        case 0xbb: /* OTDR       */ io_write (C, memory_read(HL));
+                                    HL--; B--;
+                                    F = (F & Z80_FLAG_CARRY) |
+                                                 (Z80_FLAG_SUB | Z80_FLAG_ZERO);
+                                    if (B) { PC -= 2;           CYCLES (21); }
+                                    else   {                    CYCLES (16); }  break;
+
 
         default:
         fprintf (stderr, "Unknown extended instruction: \"%s\" (%02x).\n",
@@ -692,24 +699,24 @@ uint16_t z80_ix_iy_instruction (uint16_t reg_ix_iy_in)
                                                                 CYCLES (19);    break;
         case 0x5f: /* -            */ FALL_THROUGH ();                          break;
 
-        case 0x60: /* LD IXH,B     */ reg_ix_iy.h = B;                          break;
-        case 0x61: /* LD IXH,C     */ reg_ix_iy.h = C;                          break;
-        case 0x62: /* LD IXH,D     */ reg_ix_iy.h = D;                          break;
-        case 0x63: /* LD IXH,E     */ reg_ix_iy.h = E;                          break;
-        case 0x64: /* LD IXH,IXH   */ reg_ix_iy.h = reg_ix_iy.h;                break;
-        case 0x65: /* LD IXH,IXL   */ reg_ix_iy.h = reg_ix_iy.l;                break;
+        case 0x60: /* LD IXH,B     */ reg_ix_iy.h = B;          CYCLES (8);     break;
+        case 0x61: /* LD IXH,C     */ reg_ix_iy.h = C;          CYCLES (8);     break;
+        case 0x62: /* LD IXH,D     */ reg_ix_iy.h = D;          CYCLES (8);     break;
+        case 0x63: /* LD IXH,E     */ reg_ix_iy.h = E;          CYCLES (8);     break;
+        case 0x64: /* LD IXH,IXH   */ reg_ix_iy.h = reg_ix_iy.h; CYCLES (8);    break;
+        case 0x65: /* LD IXH,IXL   */ reg_ix_iy.h = reg_ix_iy.l; CYCLES (8);    break;
         case 0x66: /* LD H,(IX+*)  */ H = memory_read (reg_ix_iy.w + (int8_t) N);
                                                                 CYCLES (19);    break;
-        case 0x67: /* LD IXH,A     */ reg_ix_iy.h = A;                          break;
-        case 0x68: /* LD IXH,B     */ reg_ix_iy.l = B;                          break;
-        case 0x69: /* LD IXH,C     */ reg_ix_iy.l = C;                          break;
-        case 0x6a: /* LD IXH,D     */ reg_ix_iy.l = D;                          break;
-        case 0x6b: /* LD IXH,E     */ reg_ix_iy.l = E;                          break;
-        case 0x6c: /* LD IXL,IXH   */ reg_ix_iy.l = reg_ix_iy.h;                break;
-        case 0x6d: /* LD IXL,IXL   */ reg_ix_iy.l = reg_ix_iy.l;                break;
+        case 0x67: /* LD IXH,A     */ reg_ix_iy.h = A;          CYCLES (8);     break;
+        case 0x68: /* LD IXL,B     */ reg_ix_iy.l = B;          CYCLES (8);     break;
+        case 0x69: /* LD IXL,C     */ reg_ix_iy.l = C;          CYCLES (8);     break;
+        case 0x6a: /* LD IXL,D     */ reg_ix_iy.l = D;          CYCLES (8);     break;
+        case 0x6b: /* LD IXL,E     */ reg_ix_iy.l = E;          CYCLES (8);     break;
+        case 0x6c: /* LD IXL,IXH   */ reg_ix_iy.l = reg_ix_iy.h; CYCLES (8);    break;
+        case 0x6d: /* LD IXL,IXL   */ reg_ix_iy.l = reg_ix_iy.l; CYCLES (8);    break;
         case 0x6e: /* LD L,(IX+*)  */ L = memory_read (reg_ix_iy.w + (int8_t) N);
                                                                 CYCLES (19);    break;
-        case 0x6f: /* LD IXL,A     */ reg_ix_iy.l = A;                          break;
+        case 0x6f: /* LD IXL,A     */ reg_ix_iy.l = A;          CYCLES (8);     break;
 
         case 0x70: /* LD (IX+*),B  */ memory_write (reg_ix_iy.w + (int8_t) N, B);
                                                                 CYCLES (19);    break;
@@ -729,8 +736,8 @@ uint16_t z80_ix_iy_instruction (uint16_t reg_ix_iy_in)
         case 0x79: /* -            */ FALL_THROUGH ();                          break;
         case 0x7a: /* -            */ FALL_THROUGH ();                          break;
         case 0x7b: /* -            */ FALL_THROUGH ();                          break;
-        case 0x7c: /* LD A,IXH     */ A = reg_ix_iy.h;                          break;
-        case 0x7d: /* LD A,IXL     */ A = reg_ix_iy.l;                          break;
+        case 0x7c: /* LD A,IXH     */ A = reg_ix_iy.h;          CYCLES (8);     break;
+        case 0x7d: /* LD A,IXL     */ A = reg_ix_iy.l;          CYCLES (8);     break;
         case 0x7e: /* LD A,(IX+*)  */ A = memory_read (reg_ix_iy.w + (int8_t) N);
                                                                 CYCLES (19);    break;
         case 0x7f: /* -            */ FALL_THROUGH ();                          break;

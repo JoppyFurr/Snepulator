@@ -355,6 +355,8 @@ void vdp_render_line_mode4_sprites (uint16_t line)
     Vdp_Pattern *pattern;
     Point2D position;
 
+    /* TODO: Once a pixel is set by a sprite, we should stop processing them for that pixel.
+     *       This could be emulated by traversing the sprite list backwards. */
     for (int i = 0; i < 64; i++)
     {
         uint8_t y = vram [sprite_attribute_table_base + i];
