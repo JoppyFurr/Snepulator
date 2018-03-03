@@ -492,7 +492,7 @@ int main (int argc, char **argv)
                         if (y % 3 == 2)
                         {
                             /* The space between scanlines inherits light from the scanline above and the scanline below */
-                            /* TODO: Better math for blending colours? */
+                            /* TODO: Better math for blending colours? This can make things darker than they should be. */
                             if (y != output_height - 1)
                             {
                                 dest [x + y * output_width].data[0] = dest [x + (y + 0) * output_width].data[0] * 0.5 +
