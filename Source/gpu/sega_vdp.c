@@ -264,7 +264,6 @@ void vdp_render_line_mode4_pattern (uint16_t line, Vdp_Pattern *pattern_base, Vd
             continue;
 
         /* Don't draw the left-most eight pixels if BIT_5 of CTRL_1 is set */
-        /* TODO: Do we want to dim the background in this case? */
         if (vdp_regs.mode_ctrl_1 & VDP_MODE_CTRL_1_MASK_COL_1 && x + offset.x < 8)
             continue;
 
@@ -434,7 +433,9 @@ void vdp_render_line_mode4_192 (uint16_t line)
     }
     for (int x = 0; x < line_width; x++)
     {
-        bool border = x < VDP_BORDER || x >= VDP_BORDER + 256;
+        bool border = x < VDP_BORDER || x >= VDP_BORDER + 256 ||
+                      (vdp_regs.mode_ctrl_1 & VDP_MODE_CTRL_1_MASK_COL_1 && x < VDP_BORDER + 8);
+
         vdp_frame_current [x + (VDP_BORDER + line) * VDP_STRIDE] = (border ? video_background_dim : video_background);
     }
     if (line == 191)
