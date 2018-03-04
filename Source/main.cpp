@@ -38,6 +38,7 @@ SDL_Joystick *player_2_joystick;
 void snepulator_render_open_modal (void);
 
 /* Implementation in input.cpp */
+extern Gamepad_Mapping map_to_edit;
 bool input_modal_consume_event (SDL_Event event);
 void snepulator_render_input_modal (void);
 
@@ -200,10 +201,26 @@ void snepulator_render_menubar (void)
     }
     if (input_modal)
     {
+        map_to_edit = player_1_mapping;
         config_capture_events = true;
         ImGui::OpenPopup("Configure input...");
     }
 
+}
+
+void snepulator_update_input_device (Gamepad_Mapping device)
+{
+    for (int i = 0; i < input_devices.size(); i++)
+    {
+        if (input_devices[i].device_id == device.device_id)
+        {
+            /* Replace the old entry with the new one */
+            input_devices[i] = device;
+            return;
+        }
+    }
+
+    fprintf (stderr, "Error: Unable to find device %d.\n", device.device_id);
 }
 
 /* Note: It'd be nice to automatically add/remove mappings as devices are plugged in and removed */
