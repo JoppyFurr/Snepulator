@@ -56,3 +56,4 @@ typedef struct Snepulator_t {
 
 } Snepulator;
 
+void snepulator_update_input_device (Gamepad_Mapping device);
