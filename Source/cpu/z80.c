@@ -511,11 +511,12 @@ uint32_t z80_ix_iy_bit_instruction (uint16_t reg_ix_iy_w)
         case 0x00: /* RLC (ix+*) */ data = (data << 1) | ((data & 0x80) ? 0x01 : 0x00);
                                     SET_FLAGS_RLC (data);       CYCLES (23);    break;
         case 0x08: /* RRC (ix+*) */ data = (data >> 1) | (data << 7);
-                                    SET_FLAGS_RRC (data);                       break;
+                                    SET_FLAGS_RRC (data);       CYCLES (23);    break;
         case 0x10: /* RL  (ix+*) */ temp = data;
                                     data = (data << 1) | ((F & Z80_FLAG_CARRY) ? 0x01 : 0x00);
                                     SET_FLAGS_RL (data);
-                                    F |= (temp & 0x80) ? Z80_FLAG_CARRY : 0;    break;
+                                    F |= (temp & 0x80) ? Z80_FLAG_CARRY : 0;
+                                                                CYCLES (23);    break;
         case 0x18: /* RR  (ix+*) */ temp = data;
                                     data = (data >> 1) | ((F & Z80_FLAG_CARRY) ? 0x80 : 0x00);
                                     SET_FLAGS_RR (data);
@@ -524,7 +525,8 @@ uint32_t z80_ix_iy_bit_instruction (uint16_t reg_ix_iy_w)
 
         case 0x20: /* SLA (ix+*) */ temp = data;
                                     data = (data << 1); SET_FLAGS_RL (data);
-                                    F |= (temp & 0x80) ? Z80_FLAG_CARRY : 0;    break;
+                                    F |= (temp & 0x80) ? Z80_FLAG_CARRY : 0;
+                                                                CYCLES (23);    break;
         case 0x28: /* SRA (ix+*) */ temp = data;
                                     data = (data >> 1) | (data & 0x80); SET_FLAGS_RR (data);
                                     F |= (temp & 0x01) ? Z80_FLAG_CARRY : 0;
@@ -532,10 +534,12 @@ uint32_t z80_ix_iy_bit_instruction (uint16_t reg_ix_iy_w)
 
         case 0x30: /* SLL (ix+*) */ temp = data;
                                     data = (data << 1) | 0x01; SET_FLAGS_RL (data);
-                                    F |= (temp & 0x80) ? Z80_FLAG_CARRY : 0;    break;
+                                    F |= (temp & 0x80) ? Z80_FLAG_CARRY : 0;
+                                                                CYCLES (23);    break;
         case 0x38: /* SRL (ix+*) */ temp = data;
                                     data = (data >> 1); SET_FLAGS_RR (data);
-                                    F |= (temp & 0x01) ? Z80_FLAG_CARRY : 0;    break;
+                                    F |= (temp & 0x01) ? Z80_FLAG_CARRY : 0;
+                                                                CYCLES (23);    break;
         case 0x40: case 0x48: case 0x50: case 0x58: /* BIT */
         case 0x60: case 0x68: case 0x70: case 0x78:
             F = (F & Z80_FLAG_CARRY) |
