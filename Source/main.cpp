@@ -15,12 +15,14 @@
 extern "C" {
 #include "snepulator.h"
 #include "gpu/sega_vdp.h"
+#include "cpu/z80.h"
 #include "sms.h"
     /* TODO: Move this into a struct */
     extern SMS_Gamepad gamepad_1;
     extern SMS_Region region;
     extern SMS_Framerate framerate;
     extern bool pause_button;
+    extern Z80_Regs z80_regs;
 }
 
 /* Global state */
@@ -187,6 +189,14 @@ void snepulator_render_menubar (void)
             ImGui::Separator();
             ImGui::Text ("Audio");
             ImGui::Text ("Ring buffer: %.2f%% full", snepulator.audio_ring_utilisation * 100.0);
+
+            ImGui::EndMenu();
+        }
+
+        if (ImGui::BeginMenu("DEBUG"))
+        {
+            ImGui::Text ("CPU Registers");
+            ImGui::Text ("PC : %04x", z80_regs.pc);
 
             ImGui::EndMenu();
         }
