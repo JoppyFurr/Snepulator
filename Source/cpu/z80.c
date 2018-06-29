@@ -415,7 +415,7 @@ uint32_t z80_extended_instruction ()
                                         (         Z80_FLAG_SUB  ) |
                                         (B == 0 ? Z80_FLAG_ZERO : 0);
                                                                 CYCLES (16);    break;
-        case 0xa3: /* OUTI       */ io_write (C, memory_read(HL)),
+        case 0xa3: /* OUTI       */ io_write (C, memory_read(HL));
                                     HL++; B--;
                                     F = (F      & Z80_FLAG_CARRY) |
                                         (         Z80_FLAG_SUB  ) |
@@ -451,7 +451,7 @@ uint32_t z80_extended_instruction ()
                                         PC -= 2;                CYCLES (21); }
                                     else {                      CYCLES (16); }
                                     SET_FLAGS_CPD_CPI (temp_1);                 break;
-        case 0xb3: /* OTIR       */ io_write (C, memory_read(HL)),
+        case 0xb3: /* OTIR       */ io_write (C, memory_read(HL));
                                     HL++; B--;
                                     F = (F & Z80_FLAG_CARRY) |
                                                  (Z80_FLAG_SUB | Z80_FLAG_ZERO);
