@@ -158,30 +158,35 @@ void _psg_run_cycles (uint64_t cycles)
     {
         assert (psg_cycles >= 0);
 
-        psg_regs.counter_0--;
-        psg_regs.counter_1--;
-        psg_regs.counter_2--;
-        psg_regs.counter_3--;
+        /* Decrement counters */
+        if (psg_regs.counter_0) { psg_regs.counter_0--; }
+        if (psg_regs.counter_1) { psg_regs.counter_1--; }
+        if (psg_regs.counter_2) { psg_regs.counter_2--; }
+        if (psg_regs.counter_3) { psg_regs.counter_3--; }
 
-        if (psg_regs.counter_0 <= 0)
+        /* Toggle outputs */
+        if (psg_regs.counter_0 == 0)
         {
             psg_regs.counter_0 = psg_regs.tone_0;
             psg_regs.output_0 *= -1;
         }
-
-        if (psg_regs.counter_1 <= 0)
+        if (psg_regs.counter_1 == 0)
         {
             psg_regs.counter_1 = psg_regs.tone_1;
             psg_regs.output_1 *= -1;
         }
-
-        if (psg_regs.counter_2 <= 0)
+        if (psg_regs.counter_2 == 0)
         {
             psg_regs.counter_2 = psg_regs.tone_2;
             psg_regs.output_2 *= -1;
         }
 
-        if (psg_regs.counter_3 <= 0)
+        /* Tone channels output +1 if their tone register is zero */
+        if (psg_regs.tone_0 == 0) { psg_regs.output_0 = 1; }
+        if (psg_regs.tone_1 == 0) { psg_regs.output_1 = 1; }
+        if (psg_regs.tone_2 == 0) { psg_regs.output_2 = 1; }
+
+        if (psg_regs.counter_3 == 0)
         {
             switch (psg_regs.noise & 0x03)
             {
