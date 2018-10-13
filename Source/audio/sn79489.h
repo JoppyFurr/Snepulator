@@ -16,10 +16,10 @@ typedef struct SN79489_Regs_t {
     uint8_t noise;
 
     /* Counters */
-    int16_t counter_0;
-    int16_t counter_1;
-    int16_t counter_2;
-    int16_t counter_3;
+    uint16_t counter_0;
+    uint16_t counter_1;
+    uint16_t counter_2;
+    uint16_t counter_3;
     uint16_t lfsr;
 
     /* Outputs */
