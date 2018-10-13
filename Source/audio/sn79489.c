@@ -19,83 +19,86 @@ pthread_mutex_t psg_mutex = PTHREAD_MUTEX_INITIALIZER;
 void sn79489_data_write (uint8_t data)
 {
     static uint8_t latch = 0x00;
+    uint16_t data_low = data & 0x0f;
+    uint16_t data_high = data << 4;
 
-    if (data & 0x80) /* LATCH + DATA */
+
+    if (data & 0x80) /* LATCH + LOW DATA */
     {
         latch = data & 0x70;
 
         switch (latch)
         {
-            /* Tone 0 */
+            /* Channel 0 (tone) */
             case 0x00:
-                psg_regs.tone_0 = (psg_regs.tone_0 & 0x03f0) | (data & 0x0f);
+                psg_regs.tone_0 = (psg_regs.tone_0 & 0x03f0) | data_low;
                 break;
             case 0x10:
-                psg_regs.vol_0 = data & 0x0f;
+                psg_regs.vol_0 = data_low;
                 break;
 
-            /* Tone 1 */
+            /* Channel 1 (tone) */
             case 0x20:
-                psg_regs.tone_1 = (psg_regs.tone_1 & 0x03f0) | (data & 0x0f);
+                psg_regs.tone_1 = (psg_regs.tone_1 & 0x03f0) | data_low;
                 break;
             case 0x30:
-                psg_regs.vol_1 = data & 0x0f;
+                psg_regs.vol_1 = data_low;
                 break;
 
-            /* Tone 2 */
+            /* Channel 2 (tone) */
             case 0x40:
-                psg_regs.tone_2 = (psg_regs.tone_2 & 0x03f0) | (data & 0x0f);
+                psg_regs.tone_2 = (psg_regs.tone_2 & 0x03f0) | data_low;
                 break;
             case 0x50:
-                psg_regs.vol_2 = data & 0x0f;
+                psg_regs.vol_2 = data_low;
                 break;
 
-            /* Noise */
+            /* Channel 3 (noise) */
             case 0x60:
-                psg_regs.noise = data & 0x0f;
+                psg_regs.noise = data_low;
                 psg_regs.lfsr  = 0x0001;
                 break;
             case 0x70:
-                psg_regs.vol_3 = data & 0x0f;
+                psg_regs.vol_3 = data_low;
             default:
                 break;
         }
     }
-    else /* DATA */
+    else /* HIGH DATA */
     {
         switch (latch)
         {
-            /* Tone 0 */
+            /* Channel 0 (tone) */
             case 0x00:
-                psg_regs.tone_0 = (psg_regs.tone_0 & 0x000f) | (((uint16_t) data & 0x3f) << 4);
+                psg_regs.tone_0 = (psg_regs.tone_0 & 0x000f) | data_high;
                 break;
             case 0x10:
-                psg_regs.vol_0 = data & 0x0f;
+                psg_regs.vol_0 = data_low;
                 break;
 
-            /* Tone 1 */
+            /* Channel 1 (tone) */
             case 0x20:
-                psg_regs.tone_1 = (psg_regs.tone_1 & 0x000f) | (((uint16_t) data & 0x3f) << 4);
+                psg_regs.tone_1 = (psg_regs.tone_1 & 0x000f) | data_high;
                 break;
             case 0x30:
-                psg_regs.vol_1 = data & 0x0f;
+                psg_regs.vol_1 = data_low;
                 break;
 
-            /* Tone 2 */
+            /* Channel 2 (tone) */
             case 0x40:
-                psg_regs.tone_2 = (psg_regs.tone_2 & 0x000f) | (((uint16_t) data & 0x3f) << 4);
+                psg_regs.tone_2 = (psg_regs.tone_2 & 0x000f) | data_high;
                 break;
             case 0x50:
-                psg_regs.vol_2 = data & 0x0f;
+                psg_regs.vol_2 = data_low;
                 break;
 
-            /* Noise */
+            /* Channel 3 (noise) */
             case 0x60:
-                psg_regs.noise = data & 0x0f;
+                psg_regs.noise = data_low;
                 psg_regs.lfsr  = 0x0001;
                 break;
             case 0x70:
-                psg_regs.vol_3 = data & 0x0f;
+                psg_regs.vol_3 = data_low;
             default:
                 break;
         }
