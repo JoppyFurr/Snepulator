@@ -135,9 +135,6 @@ static void sms_io_write (uint8_t addr, uint8_t data)
         {
             /* Memory Control Register */
             memory_control = data;
-            fprintf (stderr, "[DEBUG(sms)]: Memory Control Register <- %02x:\n", memory_control);
-            fprintf (stderr, "              -> Cartridge is %s.\n", (memory_control & 0x40) ? "DISABLED" : "ENABLED");
-            fprintf (stderr, "              -> BIOS ROM is  %s.\n", (memory_control & 0x08) ? "DISABLED" : "ENABLED");
         }
         else
         {
