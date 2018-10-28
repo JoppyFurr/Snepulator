@@ -671,8 +671,8 @@ uint16_t z80_ix_iy_instruction (uint16_t reg_ix_iy_in)
         case 0x41: /* -            */ FALL_THROUGH ();                          break;
         case 0x42: /* -            */ FALL_THROUGH ();                          break;
         case 0x43: /* -            */ FALL_THROUGH ();                          break;
-        case 0x44: /* LD B,IXH     */ B = reg_ix_iy.h;                          break;
-        case 0x45: /* LD B,IXL     */ B = reg_ix_iy.l;                          break;
+        case 0x44: /* LD B,IXH     */ B = reg_ix_iy.h;          CYCLES (8);     break;
+        case 0x45: /* LD B,IXL     */ B = reg_ix_iy.l;          CYCLES (8);     break;
         case 0x46: /* LD B,(IX+*)  */ B = memory_read (reg_ix_iy.w + (int8_t) N);
                                                                 CYCLES (19);    break;
         case 0x47: /* -            */ FALL_THROUGH ();                          break;
@@ -680,8 +680,8 @@ uint16_t z80_ix_iy_instruction (uint16_t reg_ix_iy_in)
         case 0x49: /* -            */ FALL_THROUGH ();                          break;
         case 0x4a: /* -            */ FALL_THROUGH ();                          break;
         case 0x4b: /* -            */ FALL_THROUGH ();                          break;
-        case 0x4c: /* LD C,IXH     */ C = reg_ix_iy.h;                          break;
-        case 0x4d: /* LD C,IXL     */ C = reg_ix_iy.l;                          break;
+        case 0x4c: /* LD C,IXH     */ C = reg_ix_iy.h;          CYCLES (8);     break;
+        case 0x4d: /* LD C,IXL     */ C = reg_ix_iy.l;          CYCLES (8);     break;
         case 0x4e: /* LD C,(IX+*)  */ C = memory_read (reg_ix_iy.w + (int8_t) N);
                                                                 CYCLES (19);    break;
         case 0x4f: /* -            */ PC--; z80_instruction ();                 break;
@@ -690,8 +690,8 @@ uint16_t z80_ix_iy_instruction (uint16_t reg_ix_iy_in)
         case 0x51: /* -            */ FALL_THROUGH ();                          break;
         case 0x52: /* -            */ FALL_THROUGH ();                          break;
         case 0x53: /* -            */ FALL_THROUGH ();                          break;
-        case 0x54: /* LD D,IXH     */ D = reg_ix_iy.h;                          break;
-        case 0x55: /* LD D,IXL     */ D = reg_ix_iy.l;                          break;
+        case 0x54: /* LD D,IXH     */ D = reg_ix_iy.h;          CYCLES (8);     break;
+        case 0x55: /* LD D,IXL     */ D = reg_ix_iy.l;          CYCLES (8);     break;
         case 0x56: /* LD D,(IX+*)  */ D = memory_read (reg_ix_iy.w + (int8_t) N);
                                                                 CYCLES (19);    break;
         case 0x57: /* -            */ FALL_THROUGH ();                          break;
@@ -699,8 +699,8 @@ uint16_t z80_ix_iy_instruction (uint16_t reg_ix_iy_in)
         case 0x59: /* -            */ FALL_THROUGH ();                          break;
         case 0x5a: /* -            */ FALL_THROUGH ();                          break;
         case 0x5b: /* -            */ FALL_THROUGH ();                          break;
-        case 0x5c: /* LD E,IXH     */ E = reg_ix_iy.h;                          break;
-        case 0x5d: /* LD E,IXL     */ E = reg_ix_iy.l;                          break;
+        case 0x5c: /* LD E,IXH     */ E = reg_ix_iy.h;          CYCLES (8);     break;
+        case 0x5d: /* LD E,IXL     */ E = reg_ix_iy.l;          CYCLES (8);     break;
         case 0x5e: /* LD E,(IX+*)  */ E = memory_read (reg_ix_iy.w + (int8_t) N);
                                                                 CYCLES (19);    break;
         case 0x5f: /* -            */ FALL_THROUGH ();                          break;
