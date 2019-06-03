@@ -181,22 +181,29 @@ void snepulator_render_menubar (void)
             ImGui::EndMenu ();
         }
 
-        if (ImGui::BeginMenu ("Statistics"))
-        {
-            ImGui::Text ("Video");
-            ImGui::Text ("Host: %.2f fps", snepulator.host_framerate);
-            ImGui::Text ("VDP:  %.2f fps", snepulator.vdp_framerate);
-            ImGui::Separator ();
-            ImGui::Text ("Audio");
-            ImGui::Text ("Ring buffer: %.2f%% full", snepulator.audio_ring_utilisation * 100.0);
-
-            ImGui::EndMenu ();
-        }
-
         if (ImGui::BeginMenu ("DEBUG"))
         {
-            ImGui::Text ("CPU Registers");
+            ImGui::Text ("CPU");
             ImGui::Text ("PC : %04x", z80_regs.pc);
+
+            ImGui::Separator ();
+
+            ImGui::Text ("VDP");
+            ImGui::Text ("Mode : %s", vdp_get_mode_name ());
+
+            ImGui::Separator ();
+
+            if (ImGui::BeginMenu ("Statistics"))
+            {
+                ImGui::Text ("Video");
+                ImGui::Text ("Host: %.2f fps", snepulator.host_framerate);
+                ImGui::Text ("VDP:  %.2f fps", snepulator.vdp_framerate);
+                ImGui::Separator ();
+                ImGui::Text ("Audio");
+                ImGui::Text ("Ring buffer: %.2f%% full", snepulator.audio_ring_utilisation * 100.0);
+
+                ImGui::EndMenu ();
+            }
 
             ImGui::EndMenu ();
         }

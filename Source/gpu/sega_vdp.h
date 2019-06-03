@@ -79,3 +79,4 @@ void vdp_init (void);
 void vdp_run_scanline (void);
 void vdp_copy_latest_frame (void);
 bool vdp_get_interrupt (void);
+const char *vdp_get_mode_name (void);
