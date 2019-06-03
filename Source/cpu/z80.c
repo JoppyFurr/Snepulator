@@ -45,7 +45,7 @@ Z80_Regs z80_regs;
 #define N  param.l
 #define NN param.w
 
-/* Cycle count (reset each time z80_run_cycles() completes) */
+/* Cycle count (reset each time z80_run_cycles () completes) */
 uint64_t z80_cycle = 0;
 #define CYCLES(X) { z80_cycle += (X); }
 
@@ -415,7 +415,7 @@ uint32_t z80_extended_instruction ()
                                         (         Z80_FLAG_SUB  ) |
                                         (B == 0 ? Z80_FLAG_ZERO : 0);
                                                                 CYCLES (16);    break;
-        case 0xa3: /* OUTI       */ io_write (C, memory_read(HL));
+        case 0xa3: /* OUTI       */ io_write (C, memory_read (HL));
                                     HL++; B--;
                                     F = (F      & Z80_FLAG_CARRY) |
                                         (         Z80_FLAG_SUB  ) |
@@ -451,7 +451,7 @@ uint32_t z80_extended_instruction ()
                                         PC -= 2;                CYCLES (21); }
                                     else {                      CYCLES (16); }
                                     SET_FLAGS_CPD_CPI (temp_1);                 break;
-        case 0xb3: /* OTIR       */ io_write (C, memory_read(HL));
+        case 0xb3: /* OTIR       */ io_write (C, memory_read (HL));
                                     HL++; B--;
                                     F = (F & Z80_FLAG_CARRY) |
                                                  (Z80_FLAG_SUB | Z80_FLAG_ZERO);
@@ -470,7 +470,7 @@ uint32_t z80_extended_instruction ()
                                     if (BC != 0 && A != temp_1) {
                                         PC -= 2;                CYCLES (21); }
                                     else {                      CYCLES (16); }  break;
-        case 0xbb: /* OTDR       */ io_write (C, memory_read(HL));
+        case 0xbb: /* OTDR       */ io_write (C, memory_read (HL));
                                     HL--; B--;
                                     F = (F & Z80_FLAG_CARRY) |
                                                  (Z80_FLAG_SUB | Z80_FLAG_ZERO);
@@ -583,7 +583,7 @@ uint32_t z80_ix_iy_bit_instruction (uint16_t reg_ix_iy_w)
 }
 
 void z80_instruction (void);
-#define FALL_THROUGH() { PC--; z80_instruction(); }
+#define FALL_THROUGH() { PC--; z80_instruction (); }
 uint16_t z80_ix_iy_instruction (uint16_t reg_ix_iy_in)
 {
     uint8_t instruction = memory_read (PC++);
@@ -1155,7 +1155,7 @@ void z80_instruction ()
         case 0x43: /* LD B,E     */ LD (B, E);                  CYCLES (4);     break;
         case 0x44: /* LD B,H     */ LD (B, H);                  CYCLES (4);     break;
         case 0x45: /* LD B,L     */ LD (B, L);                  CYCLES (4);     break;
-        case 0x46: /* LD B,(HL)  */ B = memory_read(HL);        CYCLES (7);     break;
+        case 0x46: /* LD B,(HL)  */ B = memory_read (HL);       CYCLES (7);     break;
         case 0x47: /* LD B,A     */ LD (B, A);                  CYCLES (4);     break;
         case 0x48: /* LD C,B     */ LD (C, B);                  CYCLES (4);     break;
         case 0x49: /* LD C,C     */ LD (C, C);                  CYCLES (4);     break;
@@ -1163,7 +1163,7 @@ void z80_instruction ()
         case 0x4b: /* LD C,E     */ LD (C, E);                  CYCLES (4);     break;
         case 0x4c: /* LD C,H     */ LD (C, H);                  CYCLES (4);     break;
         case 0x4d: /* LD C,L     */ LD (C, L);                  CYCLES (4);     break;
-        case 0x4e: /* LD C,(HL)  */ C = memory_read(HL);        CYCLES (7);     break;
+        case 0x4e: /* LD C,(HL)  */ C = memory_read (HL);       CYCLES (7);     break;
         case 0x4f: /* LD C,A     */ LD (C, A);                  CYCLES (4);     break;
 
         case 0x50: /* LD D,B     */ LD (D, B);                  CYCLES (4);     break;
@@ -1172,7 +1172,7 @@ void z80_instruction ()
         case 0x53: /* LD D,E     */ LD (D, E);                  CYCLES (4);     break;
         case 0x54: /* LD D,H     */ LD (D, H);                  CYCLES (4);     break;
         case 0x55: /* LD D,L     */ LD (D, L);                  CYCLES (4);     break;
-        case 0x56: /* LD D,(HL)  */ D = memory_read(HL);        CYCLES (7);     break;
+        case 0x56: /* LD D,(HL)  */ D = memory_read (HL);       CYCLES (7);     break;
         case 0x57: /* LD D,A     */ LD (D, A);                  CYCLES (4);     break;
         case 0x58: /* LD E,B     */ LD (E, B);                  CYCLES (4);     break;
         case 0x59: /* LD E,C     */ LD (E, C);                  CYCLES (4);     break;
@@ -1180,7 +1180,7 @@ void z80_instruction ()
         case 0x5b: /* LD E,E     */ LD (E, E);                  CYCLES (4);     break;
         case 0x5c: /* LD E,H     */ LD (E, H);                  CYCLES (4);     break;
         case 0x5d: /* LD E,L     */ LD (E, L);                  CYCLES (4);     break;
-        case 0x5e: /* LD E,(HL)  */ E = memory_read(HL);        CYCLES (7);     break;
+        case 0x5e: /* LD E,(HL)  */ E = memory_read (HL);       CYCLES (7);     break;
         case 0x5f: /* LD E,A     */ LD (E, A);                  CYCLES (4);     break;
 
         case 0x60: /* LD H,B     */ LD (H, B);                  CYCLES (4);     break;
@@ -1189,7 +1189,7 @@ void z80_instruction ()
         case 0x63: /* LD H,E     */ LD (H, E);                  CYCLES (4);     break;
         case 0x64: /* LD H,H     */ LD (H, H);                  CYCLES (4);     break;
         case 0x65: /* LD H,L     */ LD (H, L);                  CYCLES (4);     break;
-        case 0x66: /* LD H,(HL)  */ H = memory_read(HL);        CYCLES (7);     break;
+        case 0x66: /* LD H,(HL)  */ H = memory_read (HL);       CYCLES (7);     break;
         case 0x67: /* LD H,A     */ LD (H, A);                  CYCLES (4);     break;
         case 0x68: /* LD L,B     */ LD (L, B);                  CYCLES (4);     break;
         case 0x69: /* LD L,C     */ LD (L, C);                  CYCLES (4);     break;
@@ -1197,7 +1197,7 @@ void z80_instruction ()
         case 0x6b: /* LD L,E     */ LD (L, E);                  CYCLES (4);     break;
         case 0x6c: /* LD L,H     */ LD (L, H);                  CYCLES (4);     break;
         case 0x6d: /* LD L,L     */ LD (L, L);                  CYCLES (4);     break;
-        case 0x6e: /* LD L,(HL)  */ L = memory_read(HL);        CYCLES (7);     break;
+        case 0x6e: /* LD L,(HL)  */ L = memory_read (HL);       CYCLES (7);     break;
         case 0x6f: /* LD L,A     */ LD (L, A);                  CYCLES (4);     break;
 
         case 0x70: /* LD (HL),B  */ memory_write (HL, B);       CYCLES (7);     break;
@@ -1214,7 +1214,7 @@ void z80_instruction ()
         case 0x7b: /* LD A,E     */ LD (A, E);                  CYCLES (4);     break;
         case 0x7c: /* LD A,H     */ LD (A, H);                  CYCLES (4);     break;
         case 0x7d: /* LD A,L     */ LD (A, L);                  CYCLES (4);     break;
-        case 0x7e: /* LD A,(HL)  */ A = memory_read(HL);        CYCLES (7);     break;
+        case 0x7e: /* LD A,(HL)  */ A = memory_read (HL);       CYCLES (7);     break;
         case 0x7f: /* LD A,A     */ LD (A, A);                  CYCLES (4);     break;
 
         case 0x80: /* ADD A,B    */ ADD (A, B);                 CYCLES (4);     break;
@@ -1290,7 +1290,7 @@ void z80_instruction ()
         case 0xab: /* XOR A,E    */ XOR (A, E);                 CYCLES (4);     break;
         case 0xac: /* XOR A,H    */ XOR (A, H);                 CYCLES (4);     break;
         case 0xad: /* XOR A,L    */ XOR (A, L);                 CYCLES (4);     break;
-        case 0xae: /* XOR A,(HL) */ A ^= memory_read(HL); SET_FLAGS_OR_XOR;
+        case 0xae: /* XOR A,(HL) */ A ^= memory_read (HL); SET_FLAGS_OR_XOR;
                                                                 CYCLES (7);     break;
         case 0xaf: /* XOR A,A    */ XOR (A, A);                 CYCLES (4);     break;
 
@@ -1519,7 +1519,7 @@ void z80_run_cycles (uint64_t cycles)
         if (!instructions_before_interrupts)
         {
             /* First, check for non-maskable interrupts */
-            if (sms_nmi_check())
+            if (sms_nmi_check ())
             {
                 IFF1 = false;
                 /* TODO: Cycle count? */

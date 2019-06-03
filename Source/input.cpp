@@ -316,7 +316,7 @@ void snepulator_render_input_modal (void)
             remap_state = REMAP_STATE_UP;
         }
         ImGui::SameLine ();
-        if (ImGui::Button ("OK", ImVec2(120,0))) {
+        if (ImGui::Button ("OK", ImVec2 (120,0))) {
             /* Store and use the new configuration */
             snepulator_update_input_device (map_to_edit);
             player_1_mapping = map_to_edit;

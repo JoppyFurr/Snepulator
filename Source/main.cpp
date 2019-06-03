@@ -51,20 +51,20 @@ void snepulator_render_menubar (void)
 
     /* What colour should this be? A "Snepulator" theme, or should it blend in with the overscan colour? */
     /* TODO: Some measure should be taken to prevent the menu from obscuring the gameplay */
-    if (ImGui::BeginMainMenuBar())
+    if (ImGui::BeginMainMenuBar ())
     {
-        if (ImGui::BeginMenu("File"))
+        if (ImGui::BeginMenu ("File"))
         {
-            if (ImGui::MenuItem("Open...", NULL)) { snepulator.running = false; open_modal = true; }
-            if (ImGui::MenuItem("Pause", NULL, !snepulator.running)) { snepulator.running = !snepulator.running; }
-            ImGui::Separator();
-            if (ImGui::MenuItem("Quit", NULL)) { snepulator.abort = true; }
-            ImGui::EndMenu();
+            if (ImGui::MenuItem ("Open...", NULL)) { snepulator.running = false; open_modal = true; }
+            if (ImGui::MenuItem ("Pause", NULL, !snepulator.running)) { snepulator.running = !snepulator.running; }
+            ImGui::Separator ();
+            if (ImGui::MenuItem ("Quit", NULL)) { snepulator.abort = true; }
+            ImGui::EndMenu ();
         }
 
-        if (ImGui::BeginMenu("Audio"))
+        if (ImGui::BeginMenu ("Audio"))
         {
-            if (ImGui::BeginMenu("Device"))
+            if (ImGui::BeginMenu ("Device"))
             {
                 int count = SDL_GetNumAudioDevices (0);
                 for (int i = 0; i < count; i++)
@@ -73,55 +73,55 @@ void snepulator_render_menubar (void)
                     if (audio_device_name == NULL)
                         audio_device_name = "Unknown Audio Device";
 
-                    if (ImGui::MenuItem(audio_device_name, NULL)) { }
+                    if (ImGui::MenuItem (audio_device_name, NULL)) { }
                 }
-                ImGui::EndMenu();
+                ImGui::EndMenu ();
             }
-            ImGui::EndMenu();
+            ImGui::EndMenu ();
         }
 
-        if (ImGui::BeginMenu("Video"))
+        if (ImGui::BeginMenu ("Video"))
         {
-            if (ImGui::BeginMenu("Filter"))
+            if (ImGui::BeginMenu ("Filter"))
             {
-                if (ImGui::MenuItem("GL_NEAREST", NULL, snepulator.video_filter == VIDEO_FILTER_NEAREST))
+                if (ImGui::MenuItem ("GL_NEAREST", NULL, snepulator.video_filter == VIDEO_FILTER_NEAREST))
                 {
                     snepulator.video_filter = VIDEO_FILTER_NEAREST;
                 }
-                if (ImGui::MenuItem("GL_LINEAR",  NULL, snepulator.video_filter == VIDEO_FILTER_LINEAR))
+                if (ImGui::MenuItem ("GL_LINEAR",  NULL, snepulator.video_filter == VIDEO_FILTER_LINEAR))
                 {
                     snepulator.video_filter = VIDEO_FILTER_LINEAR;
                 }
-                if (ImGui::MenuItem("Scanlines",  NULL, snepulator.video_filter == VIDEO_FILTER_SCANLINES))
+                if (ImGui::MenuItem ("Scanlines",  NULL, snepulator.video_filter == VIDEO_FILTER_SCANLINES))
                 {
                     snepulator.video_filter = VIDEO_FILTER_SCANLINES;
                 }
-                ImGui::EndMenu();
+                ImGui::EndMenu ();
             }
-            ImGui::EndMenu();
+            ImGui::EndMenu ();
         }
 
-        if (ImGui::BeginMenu("Console"))
+        if (ImGui::BeginMenu ("Console"))
         {
-            if (ImGui::MenuItem("Hard Reset"))
+            if (ImGui::MenuItem ("Hard Reset"))
             {
                 sms_init (snepulator.bios_filename, snepulator.cart_filename);
             }
-            ImGui::Separator();
+            ImGui::Separator ();
 
-            if (ImGui::MenuItem("World", NULL, region == REGION_WORLD)) { region = REGION_WORLD; }
-            if (ImGui::MenuItem("Japan", NULL, region == REGION_JAPAN)) { region = REGION_JAPAN; }
-            ImGui::Separator();
+            if (ImGui::MenuItem ("World", NULL, region == REGION_WORLD)) { region = REGION_WORLD; }
+            if (ImGui::MenuItem ("Japan", NULL, region == REGION_JAPAN)) { region = REGION_JAPAN; }
+            ImGui::Separator ();
 
-            if (ImGui::MenuItem("NTSC", NULL, framerate == FRAMERATE_NTSC)) { framerate = FRAMERATE_NTSC; }
-            if (ImGui::MenuItem("PAL",  NULL, framerate == FRAMERATE_PAL))  { framerate = FRAMERATE_PAL; }
-            ImGui::EndMenu();
+            if (ImGui::MenuItem ("NTSC", NULL, framerate == FRAMERATE_NTSC)) { framerate = FRAMERATE_NTSC; }
+            if (ImGui::MenuItem ("PAL",  NULL, framerate == FRAMERATE_PAL))  { framerate = FRAMERATE_PAL; }
+            ImGui::EndMenu ();
         }
 
         /* TODO: Deal with joysticks being removed from the system mid-game. Maybe auto-pause? */
-        if (ImGui::BeginMenu("Input"))
+        if (ImGui::BeginMenu ("Input"))
         {
-            if (ImGui::BeginMenu("Player 1"))
+            if (ImGui::BeginMenu ("Player 1"))
             {
                 for (int i = 0; i < input_devices.size (); i++)
                 {
@@ -139,7 +139,7 @@ void snepulator_render_menubar (void)
                         }
                     }
 
-                    if (ImGui::MenuItem(joystick_name, NULL, player_1_mapping.device_id == input_devices[i].device_id))
+                    if (ImGui::MenuItem (joystick_name, NULL, player_1_mapping.device_id == input_devices[i].device_id))
                     {
                         /* Check that this is not already the active joystick */
                         if (player_1_mapping.device_id != input_devices[i].device_id)
@@ -169,58 +169,58 @@ void snepulator_render_menubar (void)
 
                     }
                 }
-                ImGui::EndMenu();
+                ImGui::EndMenu ();
             }
-            if (ImGui::BeginMenu("Player 2"))
+            if (ImGui::BeginMenu ("Player 2"))
             {
-                if (ImGui::MenuItem("Not Implemented", NULL)) { };
-                ImGui::EndMenu();
+                if (ImGui::MenuItem ("Not Implemented", NULL)) { };
+                ImGui::EndMenu ();
             }
 
-            if (ImGui::MenuItem("Configure...", NULL)) { snepulator.running = false; input_modal = true; }
-            ImGui::EndMenu();
+            if (ImGui::MenuItem ("Configure...", NULL)) { snepulator.running = false; input_modal = true; }
+            ImGui::EndMenu ();
         }
 
-        if (ImGui::BeginMenu("Statistics"))
+        if (ImGui::BeginMenu ("Statistics"))
         {
             ImGui::Text ("Video");
             ImGui::Text ("Host: %.2f fps", snepulator.host_framerate);
             ImGui::Text ("VDP:  %.2f fps", snepulator.vdp_framerate);
-            ImGui::Separator();
+            ImGui::Separator ();
             ImGui::Text ("Audio");
             ImGui::Text ("Ring buffer: %.2f%% full", snepulator.audio_ring_utilisation * 100.0);
 
-            ImGui::EndMenu();
+            ImGui::EndMenu ();
         }
 
-        if (ImGui::BeginMenu("DEBUG"))
+        if (ImGui::BeginMenu ("DEBUG"))
         {
             ImGui::Text ("CPU Registers");
             ImGui::Text ("PC : %04x", z80_regs.pc);
 
-            ImGui::EndMenu();
+            ImGui::EndMenu ();
         }
 
-        ImGui::EndMainMenuBar();
+        ImGui::EndMainMenuBar ();
     }
 
     /* Open any popups requested */
     if (open_modal)
     {
-        ImGui::OpenPopup("Open ROM...");
+        ImGui::OpenPopup ("Open ROM...");
     }
     if (input_modal)
     {
         map_to_edit = player_1_mapping;
         config_capture_events = true;
-        ImGui::OpenPopup("Configure input...");
+        ImGui::OpenPopup ("Configure input...");
     }
 
 }
 
 void snepulator_update_input_device (Gamepad_Mapping device)
 {
-    for (int i = 0; i < input_devices.size(); i++)
+    for (int i = 0; i < input_devices.size (); i++)
     {
         if (input_devices[i].device_id == device.device_id)
         {
@@ -307,12 +307,12 @@ int main (int argc, char **argv)
         if (!strcmp ("-b", *argv))
         {
             /* BIOS to load */
-            snepulator.bios_filename = strdup(*(++argv));
+            snepulator.bios_filename = strdup (*(++argv));
         }
         else if (!snepulator.cart_filename)
         {
             /* ROM to load */
-            snepulator.cart_filename = strdup(*(argv));
+            snepulator.cart_filename = strdup (*(argv));
         }
         else
         {
@@ -361,7 +361,7 @@ int main (int argc, char **argv)
     SDL_GL_SetSwapInterval (1);
 
     /* Setup ImGui binding */
-    gl3wInit();
+    gl3wInit ();
     ImGui_ImplSdlGL3_Init (window);
 
     /* Style */
@@ -382,10 +382,10 @@ int main (int argc, char **argv)
     /* Create texture for VDP output */
     glGenTextures (1, &sms_vdp_texture);
     glBindTexture (GL_TEXTURE_2D, sms_vdp_texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     float Float4_Black[4] = { 0.0, 0.0, 0.0, 0.0 };
-    glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, Float4_Black);
+    glTexParameterfv (GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, Float4_Black);
 
     /* Open the default audio device */
     audio_device_id = SDL_OpenAudioDevice (NULL, 0, &desired_audiospec, &obtained_audiospec,
@@ -481,7 +481,7 @@ int main (int argc, char **argv)
         glBindTexture (GL_TEXTURE_2D, sms_vdp_texture);
         glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, snepulator.video_filter);
         glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, snepulator.video_filter);
-        glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, Float4_Black);
+        glTexParameterfv (GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, Float4_Black);
 
         switch (snepulator.video_filter)
         {
@@ -580,22 +580,22 @@ int main (int argc, char **argv)
                           /* uv1 */  ImVec2 (1.0, 1.0),
                           /* tint */ ImColor (255, 255, 255, 255),
                           /* border */ ImColor (0, 0, 0, 0));
-            ImGui::End();
+            ImGui::End ();
             ImGui::PopStyleColor (1);
         }
 
         /* Draw to HW */
-        glViewport(0, 0, (int)ImGui::GetIO().DisplaySize.x, (int)ImGui::GetIO().DisplaySize.y);
-        glClearColor(0.0, 0.0, 0.0, 0.0);
-        glClear(GL_COLOR_BUFFER_BIT);
-        ImGui::Render();
+        glViewport (0, 0, (int)ImGui::GetIO ().DisplaySize.x, (int)ImGui::GetIO ().DisplaySize.y);
+        glClearColor (0.0, 0.0, 0.0, 0.0);
+        glClear (GL_COLOR_BUFFER_BIT);
+        ImGui::Render ();
 
         SDL_GL_SwapWindow (window);
 
         /* Update statistics (rolling average) */
         static int host_previous_completion_time = 0;
         static int host_current_time = 0;
-        host_current_time = SDL_GetTicks();
+        host_current_time = SDL_GetTicks ();
         if (host_previous_completion_time)
         {
             snepulator.host_framerate *= 0.95;
