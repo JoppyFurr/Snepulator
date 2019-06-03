@@ -22,7 +22,6 @@ extern Snepulator snepulator;
 
 /* VDP State */
 static Vdp_Regs vdp_regs;
-static uint8_t v_counter = 0; /* Should this be added to the register struct? */
 static uint8_t cram [VDP_CRAM_SIZE];
 static uint8_t vram [VDP_VRAM_SIZE];
 Float3 vdp_frame_complete [(256 + VDP_BORDER * 2) * (192 + VDP_BORDER * 2)];
@@ -60,11 +59,8 @@ void vdp_data_write (uint8_t value)
     {
         case VDP_CODE_VRAM_READ:
         case VDP_CODE_VRAM_WRITE:
-            vram[vdp_regs.address] = value;
-            break;
-
         case VDP_CODE_REG_WRITE:
-            fprintf (stdout, "[DEBUG(vdp)]: vdp_data_write: REG_WRITE not implemented.\n");
+            vram[vdp_regs.address] = value;
             break;
 
         case VDP_CODE_CRAM_WRITE:
@@ -194,19 +190,93 @@ const char *vdp_get_mode_name (void)
     return vdp_mode_names[vdp_get_mode ()];
 }
 
+typedef struct Vdp_V_Counter_Range_s {
+    uint16_t first;
+    uint16_t last;
+} Vdp_V_Counter_Range;
 
-/* TODO: For now, assuming 256x192 */
-void vdp_run_scanline ()
+typedef struct Vdp_Display_Mode_s {
+    uint32_t lines_active;
+    uint32_t lines_total;
+    Vdp_V_Counter_Range v_counter_map[3];
+} Vdp_Display_Mode;
+
+const Vdp_Display_Mode Mode4_PAL192 = {
+    .lines_active = 192,
+    .lines_total = 313,
+    .v_counter_map = { { .first = 0x00, .last = 0xf2 },
+                       { .first = 0xba, .last = 0xff } }
+};
+const Vdp_Display_Mode Mode4_PAL224 = {
+    .lines_active = 224,
+    .lines_total = 313,
+    .v_counter_map = { { .first = 0x00, .last = 0xff },
+                       { .first = 0x00, .last = 0x02 },
+                       { .first = 0xca, .last = 0xff } }
+};
+const Vdp_Display_Mode Mode4_PAL240 = {
+    .lines_active = 240,
+    .lines_total = 313,
+    .v_counter_map = { { .first = 0x00, .last = 0xff },
+                       { .first = 0x00, .last = 0x0a },
+                       { .first = 0xd2, .last = 0xff } }
+};
+const Vdp_Display_Mode Mode4_NTSC192 = {
+    .lines_active = 192,
+    .lines_total = 262,
+    .v_counter_map = { { .first = 0x00, .last = 0xda },
+                       { .first = 0xd5, .last = 0xff } }
+};
+const Vdp_Display_Mode Mode4_NTSC224 = {
+    .lines_active = 192,
+    .lines_total = 262,
+    .v_counter_map = { { .first = 0x00, .last = 0xea },
+                       { .first = 0xe5, .last = 0xff } }
+};
+const Vdp_Display_Mode Mode4_NTSC240 = {
+    .lines_active = 192,
+    .lines_total = 262,
+    .v_counter_map = { { .first = 0x00, .last = 0xff },
+                       { .first = 0x00, .last = 0x06 } }
+};
+
+/*
+ * Run one scanline on the VDP
+ */
+void vdp_run_one_scanline ()
 {
-    static uint16_t v_counter_16 = 0;
+    static uint16_t line = 0;
+
+    Vdp_Display_Mode mode;
+
+    switch (vdp_get_mode ())
+    {
+        case 0x8: /* Mode 4, 192 lines */
+        case 0xa:
+        case 0xc:
+        case 0xf:
+            mode = (framerate == FRAMERATE_NTSC) ? Mode4_NTSC192 : Mode4_PAL192;
+            break;
+
+        case 0xb: /* "Mode 4, 224 lines */
+            mode = (framerate == FRAMERATE_NTSC) ? Mode4_NTSC224 : Mode4_PAL224;
+            break;
+
+        case 0xe: /* "Mode 4, 240 lines */
+            mode = (framerate == FRAMERATE_NTSC) ? Mode4_NTSC240 : Mode4_PAL240;
+            break;
+
+        default: /* Unsupported */
+            return;
+    }
 
     /* If this is an active line, render it */
-    if (v_counter_16 < 192)
-        vdp_render_line (v_counter_16);
+    if (line < mode.lines_active)
+        vdp_render_line (line);
 
     /* If this the final active line, copy to the frame buffer */
     /* TODO: This is okay for single-threaded code, but locking may be needed if multi-threading is added */
-    if (v_counter_16 == 191)
+    if (line == mode.lines_active - 1)
     {
         memcpy (vdp_frame_complete, vdp_frame_current, sizeof (vdp_frame_current));
 
@@ -223,39 +293,44 @@ void vdp_run_scanline ()
     }
 
     /* Check for frame interrupt */
-    if (v_counter_16 == 193)
+    if (line == mode.lines_active + 1)
         vdp_regs.status |= VDP_STATUS_INT;
 
     /* Decrement the line interrupt counter during the active display period.
      * Reset outside of the active display period (but not the first line after) */
-    if (v_counter_16 <= 192)
+    if (line <= mode.lines_active)
         vdp_regs.line_interrupt_counter--;
     else
         vdp_regs.line_interrupt_counter = vdp_regs.line_counter;
 
     /* On underflow, we reset the line interrupt counter and set the pending flag */
-    if (v_counter_16 <= 192 && vdp_regs.line_interrupt_counter == 0xff)
+    if (line <= mode.lines_active && vdp_regs.line_interrupt_counter == 0xff)
     {
         vdp_regs.line_interrupt_counter = vdp_regs.line_counter;
         vdp_regs.line_interrupt = true;
     }
 
     /* Update values for the next line */
-    if (framerate == FRAMERATE_NTSC)
+    line = (line + 1) % mode.lines_total;
+
+    uint16_t temp_line = line;
+    for (int range = 0; range < 3; range++)
     {
-        v_counter_16 = (v_counter_16 + 1) % 262;
-        v_counter = (v_counter_16 <= 0xda) ? v_counter_16 : (v_counter_16 - 0xdb) + 0xd5;
-    }
-    else if (framerate == FRAMERATE_PAL)
-    {
-        v_counter_16 = (v_counter_16 + 1) % 313;
-        v_counter = (v_counter_16 <= 0xf2) ? v_counter_16 : (v_counter_16 - 0xf3) + 0xba;
+        if (temp_line < mode.v_counter_map[range].last - mode.v_counter_map[range].first + 1)
+        {
+            vdp_regs.v_counter = temp_line + mode.v_counter_map[range].first;
+            break;
+        }
+        else
+        {
+            temp_line -= mode.v_counter_map[range].last - mode.v_counter_map[range].first + 1;
+        }
     }
 }
 
 uint8_t vdp_get_v_counter (void)
 {
-    return v_counter;
+    return vdp_regs.v_counter;
 }
 
 bool vdp_get_interrupt (void)
@@ -498,6 +573,7 @@ void vdp_render_line_mode4_192 (uint16_t line)
     vdp_render_line_mode4_background (line, true);
 }
 
+/* TODO: For now, assuming 256x192 */
 void vdp_render_line (uint16_t line)
 {
     switch (vdp_regs.mode_ctrl_1 & VDP_MODE_CTRL_1_MODE_4)
