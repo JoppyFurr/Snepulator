@@ -157,6 +157,44 @@ extern SMS_Framerate framerate;
 
 void vdp_render_line (uint16_t line);
 
+/*
+ * Assemble the four mode-bits.
+ */
+static uint8_t vdp_get_mode (void)
+{
+    return ((vdp_regs.mode_ctrl_2 & VDP_MODE_CTRL_2_MODE_1) ? BIT_0 : 0) +
+           ((vdp_regs.mode_ctrl_1 & VDP_MODE_CTRL_1_MODE_2) ? BIT_1 : 0) +
+           ((vdp_regs.mode_ctrl_2 & VDP_MODE_CTRL_2_MODE_3) ? BIT_2 : 0) +
+           ((vdp_regs.mode_ctrl_1 & VDP_MODE_CTRL_1_MODE_4) ? BIT_3 : 0);
+}
+
+/*
+ * Supply a human-readable string describing the current mode.
+ */
+const char *vdp_get_mode_name (void)
+{
+    const char *vdp_mode_names[16] = {
+        "Mode 0 - Graphic I",
+        "Mode 1 - Text",
+        "Mode 2 - Graphic II",
+        "Mode 1+2 - Undocumented",
+        "Mode 3 - Multicolour",
+        "Mode 1+3 - Undocumented",
+        "Mode 2+3 - Undocumented",
+        "Mode 1+2+3 - Undocumented",
+        "Mode 4 - 192 lines",
+        "Mode 4+1 - Undocumented",
+        "Mode 4 - 192 lines",
+        "Mode 4 - 224 lines",
+        "Mode 4 - 192 lines",
+        "Mode 4+3+2 - Undocumented",
+        "Mode 4 - 240 lines",
+        "Mode 4 - 192 lines" };
+
+    return vdp_mode_names[vdp_get_mode ()];
+}
+
+
 /* TODO: For now, assuming 256x192 */
 void vdp_run_scanline ()
 {
