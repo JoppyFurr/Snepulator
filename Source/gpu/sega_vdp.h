@@ -61,6 +61,7 @@ typedef struct Vdp_Regs_t {
 #define VDP_STATUS_INT                  BIT_7
     uint8_t  line_interrupt_counter;            /* Line interrupt counter current value */
     bool     line_interrupt;                    /* Line interrupt pending */
+    uint8_t v_counter;                          /* 8-bit line counter */
 } Vdp_Regs;
 
 typedef struct Vdp_Pattern_t {
@@ -76,7 +77,7 @@ void vdp_control_write (uint8_t value);
 uint8_t vdp_get_v_counter (void);
 
 void vdp_init (void);
-void vdp_run_scanline (void);
+void vdp_run_one_scanline (void);
 void vdp_copy_latest_frame (void);
 bool vdp_get_interrupt (void);
 const char *vdp_get_mode_name (void);
