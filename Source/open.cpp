@@ -42,7 +42,7 @@ void snepulator_render_open_modal (void)
         static int selected_file = 0;
         bool open_action = false;
 
-        std::regex sms_regex(".*\\.(BIN|bin|SMS|sms)$");
+        std::regex sms_regex (".*\\.(BIN|bin|SMS|sms)$");
 
         if (!cwd_cached)
         {
@@ -75,14 +75,14 @@ void snepulator_render_open_modal (void)
                         entry_string += '/';
                     }
                     /* Only list files that have a valid ROM extension */
-                    else if (!std::regex_match(entry_string, sms_regex))
+                    else if (!std::regex_match (entry_string, sms_regex))
                     {
                             continue;
                     }
 
                     file_list.push_back (entry_string);
                 }
-                std::sort (file_list.begin(), file_list.end());
+                std::sort (file_list.begin (), file_list.end ());
             }
 
             cwd_cached = true;
@@ -109,13 +109,13 @@ void snepulator_render_open_modal (void)
             bool hovering = ImGui::IsMouseHoveringRect (draw_cursor, ImVec2 (draw_cursor.x + 350, draw_cursor.y + 16));
 
             /* Click to select */
-            if (hovering && ImGui::IsMouseClicked(0))
+            if (hovering && ImGui::IsMouseClicked (0))
             {
                 selected_file = i;
             }
 
             /* Double-click to open */
-            if (hovering && ImGui::IsMouseDoubleClicked(0))
+            if (hovering && ImGui::IsMouseDoubleClicked (0))
             {
                 open_action = true;
             }
@@ -123,15 +123,15 @@ void snepulator_render_open_modal (void)
             /* Render the selected file in green, hovered file in yellow, and others with the text default */
             if (i == selected_file)
             {
-                ImGui::TextColored (ImVec4 (0.5f, 1.0f, 0.5f, 1.0f), "%s", file_list[i].c_str());
+                ImGui::TextColored (ImVec4 (0.5f, 1.0f, 0.5f, 1.0f), "%s", file_list[i].c_str ());
             }
             else if (hovering)
             {
-                ImGui::TextColored (ImVec4 (1.0f, 1.0f, 0.5f, 1.0f), "%s", file_list[i].c_str());
+                ImGui::TextColored (ImVec4 (1.0f, 1.0f, 0.5f, 1.0f), "%s", file_list[i].c_str ());
             }
             else
             {
-                ImGui::Text ("%s", file_list[i].c_str());
+                ImGui::Text ("%s", file_list[i].c_str ());
             }
 
         }
@@ -143,7 +143,7 @@ void snepulator_render_open_modal (void)
             ImGui::CloseCurrentPopup ();
         }
         ImGui::SameLine ();
-        if (ImGui::Button ("Open", ImVec2(120,0))) { /* TODO: Do we want an "Open BIOS"? */
+        if (ImGui::Button ("Open", ImVec2 (120,0))) { /* TODO: Do we want an "Open BIOS"? */
             open_action = true;
         }
 
@@ -151,22 +151,22 @@ void snepulator_render_open_modal (void)
         if (open_action)
         {
             /* Directory */
-            if (file_list[selected_file].back() == '/')
+            if (file_list[selected_file].back () == '/')
             {
-                chdir (file_list[selected_file].c_str());
+                chdir (file_list[selected_file].c_str ());
             }
             /* ROM */
             else
             {
                 free (snepulator.cart_filename);
-                snepulator.cart_filename = strdup(file_list[selected_file].c_str());
+                snepulator.cart_filename = strdup (file_list[selected_file].c_str ());
                 sms_init (snepulator.bios_filename, snepulator.cart_filename);
                 snepulator.running = true;
 
                 ImGui::CloseCurrentPopup ();
             }
             cwd_cached = false;
-            file_list.clear();
+            file_list.clear ();
         }
 
         ImGui::EndPopup ();

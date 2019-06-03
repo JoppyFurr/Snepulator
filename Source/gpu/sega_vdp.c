@@ -31,9 +31,9 @@ Float3 vdp_frame_current  [(256 + VDP_BORDER * 2) * (192 + VDP_BORDER * 2)];
 void vdp_init (void)
 {
     /* TODO: Are there any nonzero default values? */
-    memset (&vdp_regs, 0, sizeof(vdp_regs));
-    memset (vram,      0, sizeof(vram));
-    memset (cram,      0, sizeof(cram));
+    memset (&vdp_regs, 0, sizeof (vdp_regs));
+    memset (vram,      0, sizeof (vram));
+    memset (cram,      0, sizeof (cram));
 }
 
 static bool first_byte_received = false;
@@ -175,7 +175,7 @@ void vdp_run_scanline ()
         /* Update statistics (rolling average) */
         static int vdp_previous_completion_time = 0;
         static int vdp_current_time = 0;
-        vdp_current_time = SDL_GetTicks();
+        vdp_current_time = SDL_GetTicks ();
         if (vdp_previous_completion_time)
         {
             snepulator.vdp_framerate *= 0.95;
@@ -330,7 +330,7 @@ void vdp_render_line_mode4_background (uint16_t line, bool priority)
             bool h_flip = tile & VDP_PATTERN_HORIZONTAL_FLIP;
             bool v_flip = tile & VDP_PATTERN_VERTICAL_FLIP;
 
-            Vdp_Pattern *pattern = (Vdp_Pattern *) &vram[(tile & 0x1ff) * sizeof(Vdp_Pattern)];
+            Vdp_Pattern *pattern = (Vdp_Pattern *) &vram[(tile & 0x1ff) * sizeof (Vdp_Pattern)];
 
             Vdp_Palette palette = (tile & (1 << 11)) ? VDP_PALETTE_SPRITE : VDP_PALETTE_BACKGROUND;
 

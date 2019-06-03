@@ -250,7 +250,7 @@ void sn79489_get_samples (int16_t *stream, int count)
     /* Take samples from the PSG ring to pass to the sound card */
     for (int i = 0; i < count; i++)
     {
-        read_index = (soundcard_sample_count * (sms_get_clock_rate() >> 4)) / 48000;
+        read_index = (soundcard_sample_count * (sms_get_clock_rate () >> 4)) / 48000;
 
         if (read_index >= write_index)
         {

@@ -263,7 +263,7 @@ static uint8_t sms_io_read (uint8_t addr)
     return 0xff;
 }
 
-bool sms_nmi_check()
+bool sms_nmi_check ()
 {
     static bool pause_button_previous = false;
     bool ret = false;
@@ -293,12 +293,12 @@ int32_t sms_load_rom (uint8_t **buffer, uint32_t *buffer_size, char *filename)
     }
 
     /* Get ROM size */
-    fseek(rom_file, 0, SEEK_END);
-    file_size = ftell(rom_file);
+    fseek (rom_file, 0, SEEK_END);
+    file_size = ftell (rom_file);
 
     /* Some roms seem to have an extra header at the start. Skip this. */
     skip = file_size & 0x3ff;
-    fseek(rom_file, skip, SEEK_SET);
+    fseek (rom_file, skip, SEEK_SET);
     *buffer_size = file_size - skip;
 
     /* Allocate memory */

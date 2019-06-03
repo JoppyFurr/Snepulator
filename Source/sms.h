@@ -26,4 +26,4 @@ uint32_t sms_get_clock_rate ();
 void sms_audio_callback (void *userdata, uint8_t *stream, int len);
 void sms_run (double ms);
 void sms_init (char *bios_filename, char *cart_filename);
-bool sms_nmi_check();
+bool sms_nmi_check ();
