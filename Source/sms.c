@@ -79,9 +79,21 @@ static void sms_memory_write (uint16_t addr, uint8_t data)
         mapper_bank[2] = data & 0x3f;
     }
 
-    /* Mapping (CodeMasters) */
-    if (addr == 0x8000)
+    /* CodeMasters Mapper */
+    /* TODO: There are differences from the Sega mapper. Do any games rely on them?
+     *  1. Initial banks are different (0, 1, 0) instead of (0, 1, 2).
+     *  2. The first 1KB is not protected. */
+    if (addr == 0x0000)
     {
+        mapper_bank[0] = data & 0x3f;
+    }
+    if (addr == 0x4000)
+    {
+        mapper_bank[1] = data & 0x3f;
+    }
+    else if (addr == 0x8000)
+    {
+        mapper_bank[2] = data & 0x3f;
     }
 
     /* Cartridge, card, BIOS, expansion slot */
