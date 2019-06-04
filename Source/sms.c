@@ -378,6 +378,10 @@ void sms_init (char *bios_filename, char *cart_filename)
     {
         z80_regs.im = 1;
         memory_control |= SMS_MEMORY_CTRL_BIOS_DISABLE;
+
+        /* Leave the VDP in Mode4 */
+        vdp_control_write (VDP_MODE_CTRL_1_MODE_4);
+        vdp_control_write (VDP_CODE_REG_WRITE | 0x00);
     }
 }
 
