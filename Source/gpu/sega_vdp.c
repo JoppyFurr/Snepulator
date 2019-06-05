@@ -24,8 +24,8 @@ extern Snepulator snepulator;
 static Vdp_Regs vdp_regs;
 static uint8_t cram [VDP_CRAM_SIZE];
 static uint8_t vram [VDP_VRAM_SIZE];
-Float3 vdp_frame_complete [(256 + VDP_BORDER * 2) * (192 + VDP_BORDER * 2)];
-Float3 vdp_frame_current  [(256 + VDP_BORDER * 2) * (192 + VDP_BORDER * 2)];
+Float3 vdp_frame_complete [VDP_BUFFER_WIDTH * VDP_BUFFER_LINES];
+Float3 vdp_frame_current  [VDP_BUFFER_WIDTH * VDP_BUFFER_LINES];
 
 void vdp_init (void)
 {
@@ -151,7 +151,7 @@ void vdp_control_write (uint8_t value)
 #include <SDL2/SDL.h>
 extern SMS_Framerate framerate;
 
-void vdp_render_line (uint16_t line);
+void vdp_render_line_mode4 (Vdp_Display_Mode *mode, uint16_t line);
 
 /*
  * Assemble the four mode-bits.
@@ -190,17 +190,6 @@ const char *vdp_get_mode_name (void)
     return vdp_mode_names[vdp_get_mode ()];
 }
 
-typedef struct Vdp_V_Counter_Range_s {
-    uint16_t first;
-    uint16_t last;
-} Vdp_V_Counter_Range;
-
-typedef struct Vdp_Display_Mode_s {
-    uint32_t lines_active;
-    uint32_t lines_total;
-    Vdp_V_Counter_Range v_counter_map[3];
-} Vdp_Display_Mode;
-
 const Vdp_Display_Mode Mode4_PAL192 = {
     .lines_active = 192,
     .lines_total = 313,
@@ -228,13 +217,13 @@ const Vdp_Display_Mode Mode4_NTSC192 = {
                        { .first = 0xd5, .last = 0xff } }
 };
 const Vdp_Display_Mode Mode4_NTSC224 = {
-    .lines_active = 192,
+    .lines_active = 224,
     .lines_total = 262,
     .v_counter_map = { { .first = 0x00, .last = 0xea },
                        { .first = 0xe5, .last = 0xff } }
 };
 const Vdp_Display_Mode Mode4_NTSC240 = {
-    .lines_active = 192,
+    .lines_active = 240,
     .lines_total = 262,
     .v_counter_map = { { .first = 0x00, .last = 0xff },
                        { .first = 0x00, .last = 0x06 } }
@@ -272,7 +261,7 @@ void vdp_run_one_scanline ()
 
     /* If this is an active line, render it */
     if (line < mode.lines_active)
-        vdp_render_line (line);
+        vdp_render_line_mode4 (&mode, line);
 
     /* If this the final active line, copy to the frame buffer */
     /* TODO: This is okay for single-threaded code, but locking may be needed if multi-threading is added */
@@ -357,8 +346,10 @@ typedef struct Point2D_s {
     int32_t y;
 } Point2D;
 
-void vdp_render_line_mode4_pattern (uint16_t line, Vdp_Pattern *pattern_base, Vdp_Palette palette, Point2D offset, bool h_flip, bool v_flip, bool transparency)
+void vdp_render_line_mode4_pattern (Vdp_Display_Mode *mode, uint16_t line, Vdp_Pattern *pattern_base, Vdp_Palette palette,
+                                    Point2D offset, bool h_flip, bool v_flip, bool transparency)
 {
+    int border_lines_top = (VDP_BUFFER_LINES - mode->lines_active) / 2;
     char *line_base;
 
     /* Early abort if the pattern doesn't belong on this line */
@@ -397,9 +388,9 @@ void vdp_render_line_mode4_pattern (uint16_t line, Vdp_Pattern *pattern_base, Vd
 
         uint8_t pixel = cram[((palette == VDP_PALETTE_SPRITE) ? 16 : 0) + (bit0 | bit1 | bit2 | bit3)];
 
-        vdp_frame_current [(offset.x + x + VDP_BORDER) + (line + VDP_BORDER) * VDP_STRIDE].data[0] = VDP_TO_RED   (pixel) / 256.0f;
-        vdp_frame_current [(offset.x + x + VDP_BORDER) + (line + VDP_BORDER) * VDP_STRIDE].data[1] = VDP_TO_GREEN (pixel) / 256.0f;
-        vdp_frame_current [(offset.x + x + VDP_BORDER) + (line + VDP_BORDER) * VDP_STRIDE].data[2] = VDP_TO_BLUE  (pixel) / 256.0f;
+        vdp_frame_current [(offset.x + x + VDP_SIDE_BORDER) + (border_lines_top + line) * VDP_BUFFER_WIDTH].data[0] = VDP_TO_RED   (pixel) / 256.0f;
+        vdp_frame_current [(offset.x + x + VDP_SIDE_BORDER) + (border_lines_top + line) * VDP_BUFFER_WIDTH].data[1] = VDP_TO_GREEN (pixel) / 256.0f;
+        vdp_frame_current [(offset.x + x + VDP_SIDE_BORDER) + (border_lines_top + line) * VDP_BUFFER_WIDTH].data[2] = VDP_TO_BLUE  (pixel) / 256.0f;
     }
 }
 
@@ -407,16 +398,24 @@ void vdp_render_line_mode4_pattern (uint16_t line, Vdp_Pattern *pattern_base, Vd
 #define VDP_PATTERN_VERTICAL_FLIP       BIT_10
 
 /* TODO: Optimize this for one-line-at-a-time rendering */
-void vdp_render_line_mode4_background (uint16_t line, bool priority)
+void vdp_render_line_mode4_background (Vdp_Display_Mode *mode, uint16_t line, bool priority)
 {
-    /* TODO: If using more than 192 lines, only two bits should be used here */
-    uint16_t name_table_base = (((uint16_t) vdp_regs.name_table_addr) << 10) & 0x3800;
-
+    uint16_t name_table_base;
+    uint8_t num_rows = (mode->lines_active == 192) ? 28 : 32;
     uint8_t start_column = 32 - ((vdp_regs.background_x_scroll & 0xf8) >> 3);
     uint8_t fine_scroll_x = vdp_regs.background_x_scroll & 0x07;
-    uint8_t start_row = (((vdp_regs.background_y_scroll % 224) & 0xf8) >> 3);
-    uint8_t fine_scroll_y = (vdp_regs.background_y_scroll % 224) & 0x07;
+    uint8_t start_row = ((vdp_regs.background_y_scroll % (8 * num_rows)) & 0xf8) >> 3;
+    uint8_t fine_scroll_y = (vdp_regs.background_y_scroll % (8 * num_rows)) & 0x07;
     Point2D position;
+
+    if (mode->lines_active == 192)
+    {
+        name_table_base = (((uint16_t) vdp_regs.name_table_addr) << 10) & 0x3800;
+    }
+    else
+    {
+        name_table_base = ((((uint16_t) vdp_regs.name_table_addr) << 10) & 0x3000) + 0x700;
+    }
 
     /* A bit in mode_ctrl_1 can disable scrolling for the first two rows */
     if (vdp_regs.mode_ctrl_1 & VDP_MODE_CTRL_1_SCROLL_DISABLE_ROW_0_1 && line < 16)
@@ -427,11 +426,11 @@ void vdp_render_line_mode4_background (uint16_t line, bool priority)
 
     /* TODO: Implement VDP_MODE_CTRL_1_SCROLL_DISABLE_COL_24_31 */
     /* TODO: The vertical scroll value should only take affect between active frames, not mid-frame */
-    for (uint32_t tile_y = 0; tile_y < 28; tile_y++)
+    for (uint32_t tile_y = 0; tile_y < num_rows; tile_y++)
     {
         for (uint32_t tile_x = 0; tile_x < 32; tile_x++)
         {
-            uint16_t tile_address = name_table_base | (((tile_y + start_row) % 28) << 6) | ((tile_x + start_column) % 32 << 1);
+            uint16_t tile_address = name_table_base + ((((tile_y + start_row) % num_rows) << 6) | ((tile_x + start_column) % 32 << 1));
 
             uint16_t tile = ((uint16_t)(vram [tile_address])) +
                             (((uint16_t)(vram [tile_address + 1])) << 8);
@@ -449,7 +448,7 @@ void vdp_render_line_mode4_background (uint16_t line, bool priority)
 
             position.x = 8 * tile_x + fine_scroll_x;
             position.y = 8 * tile_y - fine_scroll_y;
-            vdp_render_line_mode4_pattern (line, pattern, palette, position, h_flip, v_flip, false | priority);
+            vdp_render_line_mode4_pattern (mode, line, pattern, palette, position, h_flip, v_flip, false | priority);
 
         }
     }
@@ -460,7 +459,7 @@ void vdp_render_line_mode4_background (uint16_t line, bool priority)
 /* TODO: VDP Flag BIT_3 of ctrl_1 subtracts 8 from x position of sprites */
 /* TODO: Pixel-doubling */
 /* TODO: Draw order: the first entry in the line's sprite buffer with a non-transparent pixel is the one that sticks */
-void vdp_render_line_mode4_sprites (uint16_t line)
+void vdp_render_line_mode4_sprites (Vdp_Display_Mode *mode, uint16_t line)
 {
     uint16_t sprite_attribute_table_base = (((uint16_t) vdp_regs.sprite_attr_table_addr) << 7) & 0x3f00;
     uint16_t sprite_pattern_offset = (vdp_regs.sprite_pattern_generator_addr & 0x04) ? 256 : 0;
@@ -476,7 +475,7 @@ void vdp_render_line_mode4_sprites (uint16_t line)
         uint8_t pattern_index = vram [sprite_attribute_table_base + 0x80 + i * 2 + 1];
 
         /* Break if there are no more sprites */
-        if (y == 0xd0)
+        if (mode->lines_active == 192 && y == 0xd0)
             break;
 
         position.x = x;
@@ -494,23 +493,23 @@ void vdp_render_line_mode4_sprites (uint16_t line)
             pattern_index &= 0xfe;
 
         pattern = (Vdp_Pattern *) &vram [(sprite_pattern_offset + pattern_index) * sizeof (Vdp_Pattern)];
-        vdp_render_line_mode4_pattern (line, pattern, VDP_PALETTE_SPRITE, position, false, false, true);
+        vdp_render_line_mode4_pattern (mode, line, pattern, VDP_PALETTE_SPRITE, position, false, false, true);
 
         if (vdp_regs.mode_ctrl_2 & VDP_MODE_CTRL_2_SPRITE_TALL)
         {
             position.y += 8;
             pattern = (Vdp_Pattern *) &vram [(sprite_pattern_offset + pattern_index + 1) * sizeof (Vdp_Pattern)];
-            vdp_render_line_mode4_pattern (line, pattern, VDP_PALETTE_SPRITE, position, false, false, true);
+            vdp_render_line_mode4_pattern (mode, line, pattern, VDP_PALETTE_SPRITE, position, false, false, true);
         }
     }
 }
 
-void vdp_render_line_mode4_192 (uint16_t line)
+void vdp_render_line_mode4 (Vdp_Display_Mode *mode, uint16_t line)
 {
     Float3 video_background = { .data = { 0.0f, 0.0f, 0.0f } };
     Float3 video_background_dim = { .data = { 0.0f, 0.0f, 0.0f } };
 
-    uint32_t line_width = 256 + VDP_BORDER * 2;
+    int border_lines_top = (VDP_BUFFER_LINES - mode->lines_active) / 2;
 
     /* Background */
     if (!(vdp_regs.mode_ctrl_2 & VDP_MODE_CTRL_2_BLANK))
@@ -530,34 +529,38 @@ void vdp_render_line_mode4_192 (uint16_t line)
         video_background_dim.data[2] = video_background.data[2] * 0.5;
     }
 
-    /* TODO: For now we just copy the background from the first and last active lines.
-     *       Do any games use these lines differently? */
+    /* TODO: For now the top/bottom borders just copy the background from the first
+     *       and last active lines. Do any games change the value outside of this? */
 
-    /* Fill in the border with the background colour */
+    /* Top border */
     if (line == 0)
     {
-        for (int top_line = 0; top_line < VDP_BORDER; top_line++)
+        for (int top_line = 0; top_line < border_lines_top; top_line++)
         {
-            for (int x = 0; x < line_width; x++)
+            for (int x = 0; x < VDP_BUFFER_WIDTH; x++)
             {
-                vdp_frame_current [x + top_line * VDP_STRIDE] = video_background_dim;
+                vdp_frame_current [x + top_line * VDP_BUFFER_WIDTH] = video_background_dim;
             }
         }
     }
-    for (int x = 0; x < line_width; x++)
-    {
-        bool border = x < VDP_BORDER || x >= VDP_BORDER + 256 ||
-                      (vdp_regs.mode_ctrl_1 & VDP_MODE_CTRL_1_MASK_COL_1 && x < VDP_BORDER + 8);
 
-        vdp_frame_current [x + (VDP_BORDER + line) * VDP_STRIDE] = (border ? video_background_dim : video_background);
-    }
-    if (line == 191)
+    /* Side borders */
+    for (int x = 0; x < VDP_BUFFER_WIDTH; x++)
     {
-        for (int bottom_line = VDP_BORDER + 192; bottom_line < VDP_BORDER + 192 + VDP_BORDER; bottom_line++)
+        bool border = x < VDP_SIDE_BORDER || x >= VDP_SIDE_BORDER + 256 ||
+                      (vdp_regs.mode_ctrl_1 & VDP_MODE_CTRL_1_MASK_COL_1 && x < VDP_SIDE_BORDER + 8);
+
+        vdp_frame_current [x + (border_lines_top + line) * VDP_BUFFER_WIDTH] = (border ? video_background_dim : video_background);
+    }
+
+    /* Bottom border */
+    if (line == mode->lines_active - 1)
+    {
+        for (int bottom_line = border_lines_top + mode->lines_active; bottom_line < VDP_BUFFER_LINES; bottom_line++)
         {
-            for (int x = 0; x < line_width; x++)
+            for (int x = 0; x < VDP_BUFFER_WIDTH; x++)
             {
-                vdp_frame_current [x + bottom_line * VDP_STRIDE] = video_background_dim;
+                vdp_frame_current [x + bottom_line * VDP_BUFFER_WIDTH] = video_background_dim;
             }
         }
     }
@@ -568,26 +571,9 @@ void vdp_render_line_mode4_192 (uint16_t line)
         return;
     }
 
-    vdp_render_line_mode4_background (line, false);
-    vdp_render_line_mode4_sprites (line);
-    vdp_render_line_mode4_background (line, true);
-}
-
-/* TODO: For now, assuming 256x192 */
-void vdp_render_line (uint16_t line)
-{
-    switch (vdp_regs.mode_ctrl_1 & VDP_MODE_CTRL_1_MODE_4)
-    {
-        /* Mode 4 */
-        case VDP_MODE_CTRL_1_MODE_4:
-                vdp_render_line_mode4_192 (line);
-            break;
-
-        default:
-            /* TODO: Implement other modes */
-            break;
-    }
-
+    vdp_render_line_mode4_background (mode, line, false);
+    vdp_render_line_mode4_sprites (mode, line);
+    vdp_render_line_mode4_background (mode, line, true);
 }
 
 /* Note: For now, we will assume 192 lines, as this is what the vast majority of
