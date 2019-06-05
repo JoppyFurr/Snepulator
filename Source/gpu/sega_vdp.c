@@ -454,40 +454,60 @@ void vdp_render_line_mode4_background (Vdp_Display_Mode *mode, uint16_t line, bo
     }
 }
 
-/* TODO: Limit of eight sprites per line / set sprite-overflow flag */
+/* TODO: Set sprite-overflow flag */
+/* TODO: If we allow more than eight sprites per line, will games use it? */
 /* TODO: Collision detection */
 /* TODO: VDP Flag BIT_3 of ctrl_1 subtracts 8 from x position of sprites */
 /* TODO: Pixel-doubling */
-/* TODO: Draw order: the first entry in the line's sprite buffer with a non-transparent pixel is the one that sticks */
 void vdp_render_line_mode4_sprites (Vdp_Display_Mode *mode, uint16_t line)
 {
     uint16_t sprite_attribute_table_base = (((uint16_t) vdp_regs.sprite_attr_table_addr) << 7) & 0x3f00;
     uint16_t sprite_pattern_offset = (vdp_regs.sprite_pattern_generator_addr & 0x04) ? 256 : 0;
+    uint8_t sprite_height = (vdp_regs.mode_ctrl_2 & VDP_MODE_CTRL_2_SPRITE_TALL) ? 16 : 8;
+    uint8_t line_sprite_buffer [8];
+    uint8_t line_sprite_count = 0;
     Vdp_Pattern *pattern;
     Point2D position;
 
-    /* TODO: Once a pixel is set by a sprite, we should stop processing them for that pixel.
-     *       This could be emulated by traversing the sprite list backwards. */
-    for (int i = 0; i < 64; i++)
+    /* Traverse the sprite list, filling the line sprite buffer */
+    for (int i = 0; i < 64 && line_sprite_count < 8; i++)
     {
         uint8_t y = vram [sprite_attribute_table_base + i];
-        uint8_t x = vram [sprite_attribute_table_base + 0x80 + i * 2];
-        uint8_t pattern_index = vram [sprite_attribute_table_base + 0x80 + i * 2 + 1];
 
         /* Break if there are no more sprites */
         if (mode->lines_active == 192 && y == 0xd0)
             break;
 
-        position.x = x;
-
+        /* This number is treated as unsigned when the first line of
+         * the sprite is on the screen, but signed when it is not */
         if (y >= 0xe0)
             position.y = ((int8_t) y) + 1;
         else
             position.y = y + 1;
 
-        /* Skip sprites not on this line */
-        if (line < position.y || line > position.y + 32)
-            continue;
+        /* If the sprite is on this line, add it to the buffer */
+        if (line >= position.y && line < position.y + sprite_height)
+        {
+            line_sprite_buffer [line_sprite_count++] = i;
+        }
+    }
+
+    /* Render the sprites in the line sprite buffer.
+     * Done in reverse order so that the first sprite is the one left on the screen */
+    while (line_sprite_count--)
+    {
+        uint16_t i = line_sprite_buffer[line_sprite_count];
+        uint8_t y = vram [sprite_attribute_table_base + i];
+        uint8_t x = vram [sprite_attribute_table_base + 0x80 + i * 2];
+        uint8_t pattern_index = vram [sprite_attribute_table_base + 0x80 + i * 2 + 1];
+
+        position.x = x;
+
+        /* TODO: Can we remove these duplicated lines? */
+        if (y >= 0xe0)
+            position.y = ((int8_t) y) + 1;
+        else
+            position.y = y + 1;
 
         if (vdp_regs.mode_ctrl_2 & VDP_MODE_CTRL_2_SPRITE_TALL)
             pattern_index &= 0xfe;
