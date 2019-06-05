@@ -68,6 +68,16 @@ typedef struct Vdp_Pattern_t {
     uint8_t data[32];
 } Vdp_Pattern;
 
+typedef struct Vdp_V_Counter_Range_s {
+    uint16_t first;
+    uint16_t last;
+} Vdp_V_Counter_Range;
+
+typedef struct Vdp_Display_Mode_s {
+    uint32_t lines_active;
+    uint32_t lines_total;
+    Vdp_V_Counter_Range v_counter_map[3];
+} Vdp_Display_Mode;
 
 /* I/O Functions */
 uint8_t vdp_data_read ();

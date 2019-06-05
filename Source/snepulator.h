@@ -1,7 +1,7 @@
 
-#define VDP_BORDER 8
-#define VDP_STRIDE (256 + VDP_BORDER * 2)
-
+#define VDP_SIDE_BORDER 8
+#define VDP_BUFFER_WIDTH (256 + 2 * VDP_SIDE_BORDER)
+#define VDP_BUFFER_LINES 240
 
 #define ID_NONE     -1
 #define ID_KEYBOARD -2
@@ -44,8 +44,8 @@ typedef struct Snepulator_t {
 
     /* Video */
     Video_Filter video_filter;
-    float        sms_vdp_texture_data        [(256 + VDP_BORDER * 2) * (192 + VDP_BORDER * 2) * 3];
-    float        sms_vdp_texture_data_output [(256 + VDP_BORDER * 2) * 2 * (192 + VDP_BORDER * 2) * 3 * 3];
+    float        sms_vdp_texture_data [VDP_BUFFER_WIDTH * VDP_BUFFER_LINES * 3];
+    float        sms_vdp_texture_data_scanlines [VDP_BUFFER_WIDTH * 2 * (VDP_BUFFER_LINES) * 3 * 3];
     int          host_width;
     int          host_height;
 

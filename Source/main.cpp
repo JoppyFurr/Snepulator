@@ -350,7 +350,7 @@ int main (int argc, char **argv)
     /* Twice the Master System resolution, plus enough extra for 16 px boarders */
     /* TODO: Make dialogues fit (full-screen?) and consider hiding the menubar during gameplay */
     window = SDL_CreateWindow ("Snepulator", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-                      256 * 2 + 32, 192 * 2 + 32, SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL);
+                      VDP_BUFFER_WIDTH * 2, VDP_BUFFER_LINES * 2 + 16, SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL);
     if (window == NULL)
     {
         fprintf (stderr, "Error: SDL_CreateWindowfailed.\n");
@@ -495,38 +495,38 @@ int main (int argc, char **argv)
             case VIDEO_FILTER_NEAREST:
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-                glTexImage2D    (GL_TEXTURE_2D, 0, GL_RGB, 256 + VDP_BORDER * 2, 192 + VDP_BORDER * 2, 0, GL_RGB, GL_FLOAT,
+                glTexImage2D    (GL_TEXTURE_2D, 0, GL_RGB, VDP_BUFFER_WIDTH, VDP_BUFFER_LINES, 0, GL_RGB, GL_FLOAT,
                                  snepulator.sms_vdp_texture_data);
                 break;
             case VIDEO_FILTER_LINEAR:
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-                glTexImage2D    (GL_TEXTURE_2D, 0, GL_RGB, 256 + VDP_BORDER * 2, 192 + VDP_BORDER * 2, 0, GL_RGB, GL_FLOAT,
+                glTexImage2D    (GL_TEXTURE_2D, 0, GL_RGB, VDP_BUFFER_WIDTH, VDP_BUFFER_LINES, 0, GL_RGB, GL_FLOAT,
                                  snepulator.sms_vdp_texture_data);
                 break;
             case VIDEO_FILTER_SCANLINES:
-                /* TODO: Scanlines should also cover the overscan area */
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
                 Float3 *source = (Float3 *) snepulator.sms_vdp_texture_data;
-                Float3 *dest   = (Float3 *) snepulator.sms_vdp_texture_data_output;
+                Float3 *dest   = (Float3 *) snepulator.sms_vdp_texture_data_scanlines;
 
-                /* Prescale by 2x3 and add scanlines */
-                uint32_t output_width  = (256 + VDP_BORDER * 2) * 2;
-                uint32_t output_height = (192 + VDP_BORDER * 2) * 3;
+                /* Prescale by 2x3, then add scanlines */
+                uint32_t output_width  = VDP_BUFFER_WIDTH * 2;
+                uint32_t output_height = VDP_BUFFER_LINES * 3;
                 for (int y = 0; y < output_height; y++)
                 {
                     for (int x = 0; x < output_width; x++)
                     {
                         /* Prescale 2×3 */
-                        dest [x + y * output_width] = source [x / 2 + y / 3 * VDP_STRIDE];
+                        dest [x + y * output_width] = source [x / 2 + y / 3 * VDP_BUFFER_WIDTH];
 
                         /* Scanlines (40%) */
                         if (y % 3 == 2)
                         {
                             /* The space between scanlines inherits light from the scanline above and the scanline below */
                             /* TODO: Better math for blending colours? This can make things darker than they should be. */
+                            /* TODO: Should source [] be used instead of dest [] for the RHS? */
                             if (y != output_height - 1)
                             {
                                 dest [x + y * output_width].data[0] = dest [x + (y + 0) * output_width].data[0] * 0.5 +
@@ -537,14 +537,14 @@ int main (int argc, char **argv)
                                                                       dest [x + (y + 1) * output_width].data[2] * 0.5;
                             }
 
-                            dest [x + y * VDP_STRIDE * 2].data[0] *= (1.0 - 0.4);
-                            dest [x + y * VDP_STRIDE * 2].data[1] *= (1.0 - 0.4);
-                            dest [x + y * VDP_STRIDE * 2].data[2] *= (1.0 - 0.4);
+                            dest [x + y * VDP_BUFFER_WIDTH * 2].data[0] *= (1.0 - 0.4);
+                            dest [x + y * VDP_BUFFER_WIDTH * 2].data[1] *= (1.0 - 0.4);
+                            dest [x + y * VDP_BUFFER_WIDTH * 2].data[2] *= (1.0 - 0.4);
                         }
                     }
                 }
-                glTexImage2D    (GL_TEXTURE_2D, 0, GL_RGB, (256 + VDP_BORDER * 2) * 2, (192 + VDP_BORDER * 2) * 3, 0, GL_RGB, GL_FLOAT,
-                                 snepulator.sms_vdp_texture_data_output);
+                glTexImage2D    (GL_TEXTURE_2D, 0, GL_RGB, VDP_BUFFER_WIDTH * 2, VDP_BUFFER_LINES * 3, 0, GL_RGB, GL_FLOAT,
+                                 snepulator.sms_vdp_texture_data_scanlines);
                 break;
         }
 
@@ -557,7 +557,10 @@ int main (int argc, char **argv)
         /* Window Contents */
         {
             /* Scale the image to a multiple of SMS resolution */
-            uint8_t scale = (snepulator.host_width / 256) > (snepulator.host_height / 192) ? (snepulator.host_height / 192) : (snepulator.host_width / 256);
+            /* TODO: Can we get host_height to exclude the menu bar? */
+            /* TODO: Scale is based on the SMS resolution rather than the VDP buffer, as we don't mind losing some border.
+             *       However, does this mean we get a negative cursor position below, and is that okay? */
+            uint8_t scale = (snepulator.host_width / 256) > (snepulator.host_height / 224) ? (snepulator.host_height / 224) : (snepulator.host_width / 256);
             if (scale < 1)
                 scale = 1;
             ImGui::PushStyleColor (ImGuiCol_WindowBg, ImColor (0.0f, 0.0f, 0.0f, 0.0f));
@@ -572,17 +575,17 @@ int main (int argc, char **argv)
 
             /* First, draw the background, taken from the leftmost slice of the actual image */
             ImGui::SetCursorPosX (0);
-            ImGui::SetCursorPosY (snepulator.host_height / 2 - ((192 + VDP_BORDER * 2) * scale) / 2);
-            ImGui::Image ((void *) (uintptr_t) sms_vdp_texture, ImVec2 (snepulator.host_width, (192 + VDP_BORDER * 2) * scale),
+            ImGui::SetCursorPosY (snepulator.host_height / 2 - (VDP_BUFFER_LINES * scale) / 2);
+            ImGui::Image ((void *) (uintptr_t) sms_vdp_texture, ImVec2 (snepulator.host_width, VDP_BUFFER_LINES * scale),
                           /* uv0 */  ImVec2 (0.00, 0.0),
                           /* uv1 */  ImVec2 (0.01, 1.0),
                           /* tint */ ImColor (255, 255, 255, 255),
                           /* border */ ImColor (0, 0, 0, 0));
 
             /* Now, draw the actual image */
-            ImGui::SetCursorPosX (snepulator.host_width / 2 - ((256 + VDP_BORDER * 2) * scale) / 2);
-            ImGui::SetCursorPosY (snepulator.host_height / 2 - ((192 + VDP_BORDER * 2) * scale) / 2);
-            ImGui::Image ((void *) (uintptr_t) sms_vdp_texture, ImVec2 ((256 + VDP_BORDER * 2) * scale, (192 + VDP_BORDER * 2) * scale),
+            ImGui::SetCursorPosX (snepulator.host_width  / 2 - (VDP_BUFFER_WIDTH * scale) / 2);
+            ImGui::SetCursorPosY (snepulator.host_height / 2 - (VDP_BUFFER_LINES * scale) / 2);
+            ImGui::Image ((void *) (uintptr_t) sms_vdp_texture, ImVec2 (VDP_BUFFER_WIDTH * scale, VDP_BUFFER_LINES * scale),
                           /* uv0 */  ImVec2 (0.0, 0.0),
                           /* uv1 */  ImVec2 (1.0, 1.0),
                           /* tint */ ImColor (255, 255, 255, 255),
