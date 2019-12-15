@@ -374,15 +374,15 @@ void vdp_render_line_mode4_pattern (Vdp_Display_Mode *mode, uint16_t line, Vdp_P
         else
             shift = x;
 
-        uint8_t bit0 = (line_base[0] & (0x80 >> shift)) ? 0x01 : 0x00;
-        uint8_t bit1 = (line_base[1] & (0x80 >> shift)) ? 0x02 : 0x00;
-        uint8_t bit2 = (line_base[2] & (0x80 >> shift)) ? 0x04 : 0x00;
-        uint8_t bit3 = (line_base[3] & (0x80 >> shift)) ? 0x08 : 0x00;
+        uint8_t colour_index = ((line_base[0] & (0x80 >> shift)) ? 0x01 : 0x00) |
+                               ((line_base[1] & (0x80 >> shift)) ? 0x02 : 0x00) |
+                               ((line_base[2] & (0x80 >> shift)) ? 0x04 : 0x00) |
+                               ((line_base[3] & (0x80 >> shift)) ? 0x08 : 0x00);
 
-        if (transparency == true && (bit0 | bit1 | bit2 | bit3) == 0)
+        if (transparency == true && colour_index == 0)
             continue;
 
-        uint8_t pixel = cram[((palette == VDP_PALETTE_SPRITE) ? 16 : 0) + (bit0 | bit1 | bit2 | bit3)];
+        uint8_t pixel = cram[palette + colour_index];
 
         vdp_frame_current [(offset.x + x + VDP_SIDE_BORDER) + (border_lines_top + line) * VDP_BUFFER_WIDTH].data[0] = VDP_TO_RED   (pixel) / 256.0f;
         vdp_frame_current [(offset.x + x + VDP_SIDE_BORDER) + (border_lines_top + line) * VDP_BUFFER_WIDTH].data[1] = VDP_TO_GREEN (pixel) / 256.0f;

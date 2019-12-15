@@ -8,8 +8,8 @@ typedef enum Vdp_Code_t {
 } Vdp_Code;
 
 typedef enum Vdp_Palette_t {
-    VDP_PALETTE_BACKGROUND,
-    VDP_PALETTE_SPRITE,
+    VDP_PALETTE_BACKGROUND = 0,
+    VDP_PALETTE_SPRITE = 16,
 } Vdp_Palette;
 
 /* TODO: Consolidate helpers like this into a single file */
