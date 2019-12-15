@@ -352,10 +352,6 @@ void vdp_render_line_mode4_pattern (Vdp_Display_Mode *mode, uint16_t line, Vdp_P
     int border_lines_top = (VDP_BUFFER_LINES - mode->lines_active) / 2;
     char *line_base;
 
-    /* Early abort if the pattern doesn't belong on this line */
-    if (line < offset.y || line >= offset.y + 8)
-        return;
-
     if (v_flip)
         line_base = (char *)(&pattern_base->data[(offset.y - line + 7) * 4]);
     else
@@ -397,7 +393,6 @@ void vdp_render_line_mode4_pattern (Vdp_Display_Mode *mode, uint16_t line, Vdp_P
 #define VDP_PATTERN_HORIZONTAL_FLIP     BIT_9
 #define VDP_PATTERN_VERTICAL_FLIP       BIT_10
 
-/* TODO: Optimize this for one-line-at-a-time rendering */
 void vdp_render_line_mode4_background (Vdp_Display_Mode *mode, uint16_t line, bool priority)
 {
     uint16_t name_table_base;
@@ -406,6 +401,7 @@ void vdp_render_line_mode4_background (Vdp_Display_Mode *mode, uint16_t line, bo
     uint8_t fine_scroll_x = vdp_regs.background_x_scroll & 0x07;
     uint8_t start_row = ((vdp_regs.background_y_scroll % (8 * num_rows)) & 0xf8) >> 3;
     uint8_t fine_scroll_y = (vdp_regs.background_y_scroll % (8 * num_rows)) & 0x07;
+    uint32_t tile_y = (line + fine_scroll_y) / 8;
     Point2D position;
 
     if (mode->lines_active == 192)
@@ -426,31 +422,27 @@ void vdp_render_line_mode4_background (Vdp_Display_Mode *mode, uint16_t line, bo
 
     /* TODO: Implement VDP_MODE_CTRL_1_SCROLL_DISABLE_COL_24_31 */
     /* TODO: The vertical scroll value should only take affect between active frames, not mid-frame */
-    for (uint32_t tile_y = 0; tile_y < num_rows; tile_y++)
+    for (uint32_t tile_x = 0; tile_x < 32; tile_x++)
     {
-        for (uint32_t tile_x = 0; tile_x < 32; tile_x++)
-        {
-            uint16_t tile_address = name_table_base + ((((tile_y + start_row) % num_rows) << 6) | ((tile_x + start_column) % 32 << 1));
+        uint16_t tile_address = name_table_base + ((((tile_y + start_row) % num_rows) << 6) | ((tile_x + start_column) % 32 << 1));
 
-            uint16_t tile = ((uint16_t)(vram [tile_address])) +
-                            (((uint16_t)(vram [tile_address + 1])) << 8);
+        uint16_t tile = ((uint16_t)(vram [tile_address])) +
+                        (((uint16_t)(vram [tile_address + 1])) << 8);
 
-            /* If we are rendering the "priority" layer, skip any non-priority tiles */
-            if (priority && !(tile & 0x1000))
-                continue;
+        /* If we are rendering the "priority" layer, skip any non-priority tiles */
+        if (priority && !(tile & 0x1000))
+            continue;
 
-            bool h_flip = tile & VDP_PATTERN_HORIZONTAL_FLIP;
-            bool v_flip = tile & VDP_PATTERN_VERTICAL_FLIP;
+        bool h_flip = tile & VDP_PATTERN_HORIZONTAL_FLIP;
+        bool v_flip = tile & VDP_PATTERN_VERTICAL_FLIP;
 
-            Vdp_Pattern *pattern = (Vdp_Pattern *) &vram[(tile & 0x1ff) * sizeof (Vdp_Pattern)];
+        Vdp_Pattern *pattern = (Vdp_Pattern *) &vram[(tile & 0x1ff) * sizeof (Vdp_Pattern)];
 
-            Vdp_Palette palette = (tile & (1 << 11)) ? VDP_PALETTE_SPRITE : VDP_PALETTE_BACKGROUND;
+        Vdp_Palette palette = (tile & (1 << 11)) ? VDP_PALETTE_SPRITE : VDP_PALETTE_BACKGROUND;
 
-            position.x = 8 * tile_x + fine_scroll_x;
-            position.y = 8 * tile_y - fine_scroll_y;
-            vdp_render_line_mode4_pattern (mode, line, pattern, palette, position, h_flip, v_flip, false | priority);
-
-        }
+        position.x = 8 * tile_x + fine_scroll_x;
+        position.y = 8 * tile_y - fine_scroll_y;
+        vdp_render_line_mode4_pattern (mode, line, pattern, palette, position, h_flip, v_flip, false | priority);
     }
 }
 
