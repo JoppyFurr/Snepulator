@@ -205,6 +205,20 @@ void snepulator_render_menubar (void)
                 ImGui::EndMenu ();
             }
 
+            ImGui::Separator ();
+
+            if (ImGui::MenuItem ("Time One Minute", NULL))
+            {
+                uint32_t start_time;
+                uint32_t end_time;
+                start_time = SDL_GetTicks ();
+                sms_run (60000.0); /* Simulate 60 seconds */
+                end_time = SDL_GetTicks ();
+
+                fprintf (stdout, "[DEBUG] Took %d ms to emulate one minute. (%fx speed-up)\n",
+                         end_time - start_time, 60000.0 / (end_time - start_time));
+            }
+
             ImGui::EndMenu ();
         }
 
