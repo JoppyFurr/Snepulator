@@ -14,6 +14,7 @@
 
 extern "C" {
 #include "snepulator.h"
+#include "config.h"
 #include "gpu/sega_vdp.h"
 #include "cpu/z80.h"
 #include "sms.h"
@@ -87,14 +88,20 @@ void snepulator_render_menubar (void)
                 if (ImGui::MenuItem ("GL_NEAREST", NULL, snepulator.video_filter == VIDEO_FILTER_NEAREST))
                 {
                     snepulator.video_filter = VIDEO_FILTER_NEAREST;
+                    config_string_set ("video", "filter", "GL_NEAREST");
+                    config_write ();
                 }
                 if (ImGui::MenuItem ("GL_LINEAR",  NULL, snepulator.video_filter == VIDEO_FILTER_LINEAR))
                 {
                     snepulator.video_filter = VIDEO_FILTER_LINEAR;
+                    config_string_set ("video", "filter", "GL_LINEAR");
+                    config_write ();
                 }
                 if (ImGui::MenuItem ("Scanlines",  NULL, snepulator.video_filter == VIDEO_FILTER_SCANLINES))
                 {
                     snepulator.video_filter = VIDEO_FILTER_SCANLINES;
+                    config_string_set ("video", "filter", "Scanlines");
+                    config_write ();
                 }
                 ImGui::EndMenu ();
             }
@@ -296,8 +303,14 @@ void snepulator_init_input_devices (void)
     player_2_mapping = no_gamepad;
 }
 
+extern "C" {
+    extern int config_write (void);
+}
+
 int main (int argc, char **argv)
 {
+    config_read ();
+
     /* Video */
     SDL_Window *window = NULL;
     SDL_GLContext glcontext = NULL;
@@ -320,7 +333,22 @@ int main (int argc, char **argv)
 
     /* Initialize Snepulator state */
     memset (&snepulator, 0, sizeof (snepulator));
-    snepulator.video_filter = VIDEO_FILTER_SCANLINES;
+
+    /* TODO: Make a function to pull settings from config */
+    char *video_mode = NULL;
+    config_string_get ("video", "filter", &video_mode);
+    if (video_mode && strcmp (video_mode, "GL_NEAREST") == 0)
+    {
+        snepulator.video_filter = VIDEO_FILTER_NEAREST;
+    }
+    else if (video_mode && strcmp (video_mode, "GL_LINEAR") == 0)
+    {
+        snepulator.video_filter = VIDEO_FILTER_LINEAR;
+    }
+    else
+    {
+        snepulator.video_filter = VIDEO_FILTER_SCANLINES;
+    }
 
     /* Parse all CLI arguments */
     while (*(++argv))
