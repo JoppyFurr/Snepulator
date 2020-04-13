@@ -71,13 +71,14 @@ static int32_t config_section_get (ConfigSection **section_ptr, char const *sect
         config.section_count++;
 
         /* Initialise the section */
-        section->entry_count = 0;
+        memset (section, 0, sizeof (ConfigSection));
         section->name = strdup (section_name);
         if (section->name == NULL)
         {
             fprintf (stderr, "Error: Unable to duplicate string.\n");
             return -1;
         }
+
     }
 
     /* If the section was not found */
@@ -121,7 +122,8 @@ static int32_t config_entry_get (ConfigEntry **entry_ptr, char const *section_na
     {
         /* Extend the entry array */
         section->entry = realloc (section->entry, sizeof (ConfigEntry) * (section->entry_count + 1));
-        if (config.section == NULL)
+
+        if (section->entry == NULL)
         {
             fprintf (stderr, "Error: Unable to reallocate memory.\n");
             return -1;
@@ -130,10 +132,9 @@ static int32_t config_entry_get (ConfigEntry **entry_ptr, char const *section_na
         section->entry_count++;
 
         /* Initialise the entry */
-        entry->value = NULL;
-        entry->type = ENTRY_TYPE_NONE;
+        memset (entry, 0, sizeof (ConfigEntry));
         entry->key = strdup (key);
-        if (section->name == NULL)
+        if (entry->key == NULL)
         {
             fprintf (stderr, "Error: Unable to duplicate string.\n");
             return -1;
@@ -229,10 +230,15 @@ int32_t config_string_set (char const *section_name, char const *key, char const
 {
     ConfigEntry *entry = NULL;
 
-    /* First, check if the entry already exists */
     if (config_entry_get (&entry, section_name, key, true) == -1)
     {
         return -1;
+    }
+
+    /* Free the old string if any */
+    if ((entry->type = ENTRY_TYPE_STRING) && (entry->value != NULL))
+    {
+        free (entry->value);
     }
 
     entry->type = ENTRY_TYPE_STRING;
@@ -394,7 +400,7 @@ int32_t config_read (void)
     FILE    *config_file = NULL;
     char     buffer  [80];
     char     section [80];
-    char     key     [80];
+    char     key     [160]; /* TODO: Can these be made dynamic? */
     uint32_t length;
 
     if (config_open (&config_file, "r") == -1)
@@ -432,7 +438,7 @@ int32_t config_read (void)
                 fprintf (stderr, "Error: Expected \"=\", found \"%s\".\n", buffer);
                 return -1;
             }
-            if (fscanf (config_file, "%79s", buffer) == EOF)
+            if (fscanf (config_file, " %79[^\n]", buffer) == EOF)
             {
                 fprintf (stderr, "Error: Unexpected end of file.\n");
                 return -1;
