@@ -19,11 +19,14 @@
 
 extern "C" {
 #include "snepulator.h"
+#include "config.h"
 #include "sms.h"
 }
 
 /* Global state */
 extern Snepulator snepulator;
+
+static char rom_path[160] = { '\0' }; /* TODO: Make the size dynamic */
 
 void snepulator_render_open_modal (void)
 {
@@ -35,26 +38,44 @@ void snepulator_render_open_modal (void)
         int height = (snepulator.host_height / 2 > 384) ? snepulator.host_width / 2 : 384;
 
         /* State */
-        static bool cwd_cached = false;
-        static char cwd_path_buf[240]; /* TODO: Can we make this dynamic? */
-        static const char *cwd_path = NULL;
+        static bool rom_path_cached = false;
         static std::vector<std::string> file_list;
         static int selected_file = 0;
         bool open_action = false;
 
         std::regex sms_regex (".*\\.(BIN|bin|SMS|sms)$");
 
-        if (!cwd_cached)
+        if (!rom_path_cached)
         {
-            /* Current working directory string */
-            cwd_path = getcwd (cwd_path_buf, 240);
-            if (cwd_path == NULL)
+            /* Retrieve initial path from config */
+            if (rom_path [0] == '\0')
             {
-                cwd_path = "getcwd () -> NULL";
+                char *path = NULL;
+
+                if (config_string_get ("paths", "sms_roms", &path) == 0)
+                {
+                    strncpy (rom_path, path, 179);
+                }
+            }
+
+            /* Fallback to home directory */
+            if (rom_path [0] == '\0')
+            {
+                char *path = getenv ("HOME");
+
+                if (path != NULL)
+                {
+                    sprintf (rom_path, "%s/", path);
+                }
+                else
+                {
+                    fprintf (stderr, "Error: ${HOME} not defined.");
+                    return;
+                }
             }
 
             /* File listing */
-            DIR *dir = opendir (".");
+            DIR *dir = opendir (rom_path);
             struct dirent *entry = NULL;
             std::string entry_string;
 
@@ -62,7 +83,14 @@ void snepulator_render_open_modal (void)
             {
                 for (entry = readdir (dir); entry != NULL; entry = readdir (dir))
                 {
-                    if (!strcmp (".", entry->d_name))
+                    /* Ignore "." directory */
+                    if (strcmp (entry->d_name, ".") == 0)
+                    {
+                        continue;
+                    }
+
+                    /* Hide ".." directory if we're already at the root */
+                    if ((strcmp (rom_path, "/") == 0) && (strcmp (entry->d_name, "..") == 0))
                     {
                         continue;
                     }
@@ -85,20 +113,10 @@ void snepulator_render_open_modal (void)
                 std::sort (file_list.begin (), file_list.end ());
             }
 
-            cwd_cached = true;
+            rom_path_cached = true;
         }
 
-        ImGui::Text ("%s", cwd_path);
-
-#if 0
-        /* Placeholder - Configured ROM Directories */
-        ImGui::BeginChild ("Directories", ImVec2 (150, 400), true);
-            ImGui::Button ("Master System", ImVec2 (ImGui::GetContentRegionAvailWidth (), 24));
-            ImGui::Button ("SG-1000",       ImVec2 (ImGui::GetContentRegionAvailWidth (), 24));
-        ImGui::EndChild ();
-
-        ImGui::SameLine ();
-#endif
+        ImGui::Text ("%s", rom_path);
 
         /* Current directory contents */
         ImGui::BeginChild ("Files", ImVec2 (width, height - 64), true);
@@ -153,19 +171,53 @@ void snepulator_render_open_modal (void)
             /* Directory */
             if (file_list[selected_file].back () == '/')
             {
-                chdir (file_list[selected_file].c_str ());
+                char new_rom_path[160] = { '\0' };
+
+                if (strcmp (file_list [selected_file].c_str (), "../") == 0)
+                {
+                    /* Go up to the parent directory */
+                    /* First, remove the final slash from the path */
+                    char *end_slash = strrchr (rom_path, '/');
+                    if (end_slash == NULL)
+                    {
+                        fprintf (stderr, "Error: Failed to change directory.");
+                        return;
+                    }
+                    end_slash [0] = '\0';
+
+                    /* Now, zero the path name after the new final slash */
+                    end_slash = strrchr (rom_path, '/');
+                    if (end_slash == NULL)
+                    {
+                        fprintf (stderr, "Error: Failed to change directory.");
+                        return;
+                    }
+                    memset (&end_slash [1], 0, strlen (&end_slash [1]));
+                }
+                else
+                {
+                    /* Enter new directory */
+                    sprintf (new_rom_path, "%s%s", rom_path, file_list [selected_file].c_str ());
+                    strcpy (rom_path, new_rom_path);
+                }
+                config_string_set ("paths", "sms_roms", rom_path);
+                config_write ();
             }
             /* ROM */
             else
             {
+                char new_rom_path[160] = { '\0' };
+                sprintf (new_rom_path, "%s%s", rom_path, file_list [selected_file].c_str ());
+
                 free (snepulator.cart_filename);
-                snepulator.cart_filename = strdup (file_list[selected_file].c_str ());
+                snepulator.cart_filename = strdup (new_rom_path);
+
                 sms_init (snepulator.bios_filename, snepulator.cart_filename);
                 snepulator.running = true;
 
                 ImGui::CloseCurrentPopup ();
             }
-            cwd_cached = false;
+            rom_path_cached = false;
             file_list.clear ();
         }
 
