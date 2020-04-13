@@ -116,12 +116,28 @@ void snepulator_render_menubar (void)
             }
             ImGui::Separator ();
 
-            if (ImGui::MenuItem ("World", NULL, region == REGION_WORLD)) { region = REGION_WORLD; }
-            if (ImGui::MenuItem ("Japan", NULL, region == REGION_JAPAN)) { region = REGION_JAPAN; }
+            if (ImGui::MenuItem ("World", NULL, region == REGION_WORLD)) {
+                region = REGION_WORLD;
+                config_string_set ("sms", "region", "World");
+                config_write ();
+            }
+            if (ImGui::MenuItem ("Japan", NULL, region == REGION_JAPAN)) {
+                region = REGION_JAPAN;
+                config_string_set ("sms", "region", "Japan");
+                config_write ();
+            }
             ImGui::Separator ();
 
-            if (ImGui::MenuItem ("NTSC", NULL, framerate == FRAMERATE_NTSC)) { framerate = FRAMERATE_NTSC; }
-            if (ImGui::MenuItem ("PAL",  NULL, framerate == FRAMERATE_PAL))  { framerate = FRAMERATE_PAL; }
+            if (ImGui::MenuItem ("NTSC", NULL, framerate == FRAMERATE_NTSC)) {
+                framerate = FRAMERATE_NTSC;
+                config_string_set ("sms", "format", "NTSC");
+                config_write ();
+            }
+            if (ImGui::MenuItem ("PAL",  NULL, framerate == FRAMERATE_PAL))  {
+                framerate = FRAMERATE_PAL;
+                config_string_set ("sms", "format", "PAL");
+                config_write ();
+            }
             ImGui::EndMenu ();
         }
 
@@ -307,10 +323,54 @@ extern "C" {
     extern int config_write (void);
 }
 
-int main (int argc, char **argv)
+/*
+ * Import configuration from file and apply where needed.
+ */
+int config_import (void)
 {
+    char *string = NULL;
+
     config_read ();
 
+    /* Video filter - Defaults to Scanlines */
+    snepulator.video_filter = VIDEO_FILTER_SCANLINES;
+    if (config_string_get ("video", "filter", &string) == 0)
+    {
+        if (strcmp (string, "GL_NEAREST") == 0)
+        {
+            snepulator.video_filter = VIDEO_FILTER_NEAREST;
+        }
+        else if (strcmp (string, "GL_LINEAR") == 0)
+        {
+            snepulator.video_filter = VIDEO_FILTER_LINEAR;
+        }
+    }
+
+    /* SMS Region - Defaults to World*/
+    region = REGION_WORLD;
+    if (config_string_get ("sms", "region", &string) == 0)
+    {
+        if (strcmp (string, "Japan") == 0)
+        {
+            region = REGION_JAPAN;
+        }
+    }
+
+    /* SMS Format - Defaults to NTSC */
+    framerate = FRAMERATE_NTSC;
+    if (config_string_get ("sms", "format", &string) == 0)
+    {
+        if (strcmp (string, "PAL") == 0)
+        {
+            framerate = FRAMERATE_PAL;
+        }
+    }
+
+    return 0;
+}
+
+int main (int argc, char **argv)
+{
     /* Video */
     SDL_Window *window = NULL;
     SDL_GLContext glcontext = NULL;
@@ -334,22 +394,6 @@ int main (int argc, char **argv)
     /* Initialize Snepulator state */
     memset (&snepulator, 0, sizeof (snepulator));
 
-    /* TODO: Make a function to pull settings from config */
-    char *video_mode = NULL;
-    config_string_get ("video", "filter", &video_mode);
-    if (video_mode && strcmp (video_mode, "GL_NEAREST") == 0)
-    {
-        snepulator.video_filter = VIDEO_FILTER_NEAREST;
-    }
-    else if (video_mode && strcmp (video_mode, "GL_LINEAR") == 0)
-    {
-        snepulator.video_filter = VIDEO_FILTER_LINEAR;
-    }
-    else
-    {
-        snepulator.video_filter = VIDEO_FILTER_SCANLINES;
-    }
-
     /* Parse all CLI arguments */
     while (*(++argv))
     {
@@ -369,6 +413,12 @@ int main (int argc, char **argv)
             fprintf (stdout, "Usage: Snepulator [-b bios.sms] rom.sms\n");
             return EXIT_FAILURE;
         }
+    }
+
+    /* Import configuration */
+    if (config_import () == -1)
+    {
+        return -1;
     }
 
     /* Initialize SDL */
