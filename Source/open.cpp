@@ -28,6 +28,10 @@ extern Snepulator snepulator;
 
 static char rom_path[160] = { '\0' }; /* TODO: Make the size dynamic */
 
+
+/*
+ * Render the file-open modal.
+ */
 void snepulator_render_open_modal (void)
 {
     if (ImGui::BeginPopupModal ("Open ROM...", NULL, ImGuiWindowFlags_AlwaysAutoResize |

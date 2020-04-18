@@ -16,6 +16,9 @@ SN79489_Regs psg_regs;
 pthread_mutex_t psg_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 
+/*
+ * Handle data writes sent to the PSG.
+ */
 void sn79489_data_write (uint8_t data)
 {
     static uint8_t latch = 0x00;
@@ -105,6 +108,10 @@ void sn79489_data_write (uint8_t data)
     }
 }
 
+
+/*
+ * Reset PSG to initial power-on state.
+ */
 void sn79489_init (void)
 {
     memset (&psg_regs, 0, sizeof (psg_regs));
@@ -120,11 +127,15 @@ void sn79489_init (void)
 
 }
 
+
 static int16_t psg_sample_ring[PSG_RING_SIZE];
 static uint64_t read_index = 0;
 static uint64_t write_index = 0;
 
-/* Run the PSG for a number of CPU clock cycles */
+
+/*
+ * Run the PSG for a number of CPU clock cycles
+ */
 void _psg_run_cycles (uint64_t cycles)
 {
 
@@ -232,9 +243,14 @@ void _psg_run_cycles (uint64_t cycles)
     snepulator.audio_ring_utilisation += 0.001 * ((write_index - read_index) / (double) PSG_RING_SIZE);
 }
 
-/* Requests to run the PSG may come either from the main emulation loop, or as a request to pass
- * more samples to the sound card. Use a mutex to prevent these two threads from trampling one
- * another. */
+
+/*
+ * Run the PSG for a number of CPU clock cycles (mutex-wrapper)
+ *
+ * Allows two threads to request sound to be generated:
+ *  1. The emulation loop, this is the usual case.
+ *  2. SDL may request additional samples to keep the sound card from running out.
+ */
 void psg_run_cycles (uint64_t cycles)
 {
     pthread_mutex_lock (&psg_mutex);
@@ -242,7 +258,11 @@ void psg_run_cycles (uint64_t cycles)
     pthread_mutex_unlock (&psg_mutex);
 }
 
-/* TODO: Currently assuming 48 KHz for the sound card */
+
+/*
+ * Retrieves a block of samples from the sample-ring.
+ * Assumes a sample-rate of 48 KHz.
+ */
 void sn79489_get_samples (int16_t *stream, int count)
 {
     static uint64_t soundcard_sample_count = 0;

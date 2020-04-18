@@ -142,6 +142,10 @@ static const uint8_t uint8_even_parity[256] = {
     1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,
 };
 
+
+/*
+ * Reset the Z80 registers to power-on defaults.
+ */
 void z80_init (uint8_t (* _memory_read) (uint16_t),
                void    (* _memory_write)(uint16_t, uint8_t),
                uint8_t (* _io_read)     (uint8_t),
@@ -277,6 +281,12 @@ void z80_init (uint8_t (* _memory_read) (uint16_t),
                       (X & 0x80             ? Z80_FLAG_SIGN   : 0) | \
                       (X == 0               ? Z80_FLAG_ZERO   : 0) | \
                       (uint8_even_parity[X] ? Z80_FLAG_PARITY : 0); }
+
+
+/*
+ * Read and execute an extended instruction.
+ * Called after reading the 0xed prefix.
+ */
 uint32_t z80_extended_instruction ()
 {
     uint8_t instruction = memory_read (PC++);
@@ -487,6 +497,11 @@ uint32_t z80_extended_instruction ()
     return 0;
 }
 
+
+/*
+ * Read and execute an IX / IY bit instruction.
+ * Called after reading the prefix.
+ */
 uint32_t z80_ix_iy_bit_instruction (uint16_t reg_ix_iy_w)
 {
     /* Note: The displacement comes first, then the instruction */
@@ -582,8 +597,15 @@ uint32_t z80_ix_iy_bit_instruction (uint16_t reg_ix_iy_w)
     return 0;
 }
 
+
 void z80_instruction (void);
 #define FALL_THROUGH() { PC--; z80_instruction (); }
+
+
+/*
+ * Read and execute an IX / IY instruction.
+ * Called after reading the prefix.
+ */
 uint16_t z80_ix_iy_instruction (uint16_t reg_ix_iy_in)
 {
     uint8_t instruction = memory_read (PC++);
@@ -823,6 +845,10 @@ uint16_t z80_ix_iy_instruction (uint16_t reg_ix_iy_in)
     return reg_ix_iy.w;
 }
 
+/*
+ * Read and execute a bit instruction.
+ * Called after reading the 0xcb prefix.
+ */
 uint32_t z80_bit_instruction ()
 {
     uint8_t instruction = memory_read (PC++);
@@ -926,6 +952,10 @@ uint32_t z80_bit_instruction ()
     return 0;
 }
 
+
+/*
+ * Execute the DAA instruction.
+ */
 void z80_instruction_daa ()
 {
     bool set_carry = false;
@@ -1013,6 +1043,10 @@ void z80_instruction_daa ()
 #define RET()        { z80_regs.pc_l = memory_read (SP++); \
                        z80_regs.pc_h = memory_read (SP++); }
 
+
+/*
+ * Execute a single Z80 instruction.
+ */
 void z80_instruction ()
 {
     uint8_t instruction;
@@ -1448,6 +1482,10 @@ void z80_instruction ()
 extern bool vdp_get_interrupt (void);
 extern bool sms_nmi_check (void);
 
+
+/*
+ * Simulate the Z80 for the specified number of clock cycles.
+ */
 void z80_run_cycles (uint64_t cycles)
 {
     static uint64_t excess_cycles = 0;

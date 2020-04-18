@@ -1,3 +1,6 @@
+/*
+ * API for the SN79489 PSG chip.
+ */
 
 typedef struct SN79489_Regs_t {
 
@@ -34,7 +37,14 @@ typedef struct SN79489_Regs_t {
 #define BASE_VOLUME 100
 #define PSG_RING_SIZE 32768
 
+/* Reset PSG to initial power-on state. */
 void sn79489_init (void);
+
+/* Handle data writes sent to the PSG. */
 void sn79489_data_write (uint8_t data);
+
+/* Retrieves a block of samples from the sample-ring. */
 void sn79489_get_samples (int16_t *stream, int len);
+
+/* Run the PSG for a number of CPU clock cycles. */
 void psg_run_cycles (uint64_t cycles);

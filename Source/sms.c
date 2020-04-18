@@ -11,6 +11,8 @@ extern Snepulator snepulator;
 
 #include "sms.h"
 #include "cpu/z80.h"
+extern Z80_Regs z80_regs;
+
 #include "gpu/sega_vdp.h"
 #include "audio/sn79489.h"
 
@@ -52,6 +54,43 @@ bool pause_button;
 #define SMS_MEMORY_CTRL_CART_DISABLE 0x40
 #define SMS_MEMORY_CTRL_IO_DISABLE   0x04
 
+
+/*
+ * Handle SMS memory reads.
+ */
+static uint8_t sms_memory_read (uint16_t addr)
+{
+    /* Cartridge, card, BIOS, expansion slot */
+    if (addr >= 0x0000 && addr <= 0xbfff)
+    {
+        uint8_t  slot = (addr >> 14);
+        uint32_t bank_base = mapper_bank[slot] * ((uint32_t) 16 << 10);
+        uint16_t offset    = addr & 0x3fff;
+
+        /* The first 1 KiB of slot 0 is not affected by mapping */
+        if (slot == 0 && offset < (1 << 10))
+            bank_base = 0;
+
+        if (bios && !(memory_control & SMS_MEMORY_CTRL_BIOS_DISABLE))
+            return bios[(bank_base + offset) & (bios_size - 1)];
+
+        if (cart && !(memory_control & SMS_MEMORY_CTRL_CART_DISABLE))
+            return cart[(bank_base + offset) & (cart_size - 1)];
+    }
+
+    /* 8 KiB RAM + mirror */
+    if (addr >= 0xc000 && addr <= 0xffff)
+    {
+        return ram[(addr - 0xc000) & ((8 << 10) - 1)];
+    }
+
+    return 0xff;
+}
+
+
+/*
+ * Handle SMS memory writes.
+ */
 static void sms_memory_write (uint16_t addr, uint8_t data)
 {
     /* No early breaks - Register writes also affect RAM */
@@ -108,85 +147,10 @@ static void sms_memory_write (uint16_t addr, uint8_t data)
     }
 }
 
-static uint8_t sms_memory_read (uint16_t addr)
-{
-    /* Cartridge, card, BIOS, expansion slot */
-    if (addr >= 0x0000 && addr <= 0xbfff)
-    {
-        uint8_t  slot = (addr >> 14);
-        uint32_t bank_base = mapper_bank[slot] * ((uint32_t) 16 << 10);
-        uint16_t offset    = addr & 0x3fff;
 
-        /* The first 1 KiB of slot 0 is not affected by mapping */
-        if (slot == 0 && offset < (1 << 10))
-            bank_base = 0;
-
-        if (bios && !(memory_control & SMS_MEMORY_CTRL_BIOS_DISABLE))
-            return bios[(bank_base + offset) & (bios_size - 1)];
-
-        if (cart && !(memory_control & SMS_MEMORY_CTRL_CART_DISABLE))
-            return cart[(bank_base + offset) & (cart_size - 1)];
-    }
-
-    /* 8 KiB RAM + mirror */
-    if (addr >= 0xc000 && addr <= 0xffff)
-    {
-        return ram[(addr - 0xc000) & ((8 << 10) - 1)];
-    }
-
-    return 0xff;
-}
-
-extern Z80_Regs z80_regs;
-
-static void sms_io_write (uint8_t addr, uint8_t data)
-{
-    if (addr >= 0x00 && addr <= 0x3f)
-    {
-        if ((addr & 0x01) == 0x00)
-        {
-            /* Memory Control Register */
-            memory_control = data;
-        }
-        else
-        {
-            /* I/O Control Register */
-            io_control = data;
-        }
-
-    }
-
-    /* PSG */
-    else if (addr >= 0x40 && addr <= 0x7f)
-    {
-        /* Not implemented */
-        sn79489_data_write (data);
-    }
-
-
-    /* VDP */
-    else if (addr >= 0x80 && addr <= 0xbf)
-    {
-        if ((addr & 0x01) == 0x00)
-        {
-            /* VDP Data Register */
-            vdp_data_write (data);
-        }
-        else
-        {
-            /* VDP Control Register */
-            vdp_control_write (data);
-        }
-    }
-
-    /* Minimal SDSC Debug Console */
-    if (addr == 0xfd && (memory_control & 0x04))
-    {
-        fprintf (stdout, "%c", data);
-        fflush (stdout);
-    }
-}
-
+/*
+ * Handle SMS I/O reads.
+ */
 static uint8_t sms_io_read (uint8_t addr)
 {
     if ((memory_control & 0x04) && addr >= 0xC0 && addr <= 0xff)
@@ -275,6 +239,61 @@ static uint8_t sms_io_read (uint8_t addr)
     return 0xff;
 }
 
+
+/*
+ * Handle SMS I/O writes.
+ */
+static void sms_io_write (uint8_t addr, uint8_t data)
+{
+    if (addr >= 0x00 && addr <= 0x3f)
+    {
+        if ((addr & 0x01) == 0x00)
+        {
+            /* Memory Control Register */
+            memory_control = data;
+        }
+        else
+        {
+            /* I/O Control Register */
+            io_control = data;
+        }
+
+    }
+
+    /* PSG */
+    else if (addr >= 0x40 && addr <= 0x7f)
+    {
+        sn79489_data_write (data);
+    }
+
+
+    /* VDP */
+    else if (addr >= 0x80 && addr <= 0xbf)
+    {
+        if ((addr & 0x01) == 0x00)
+        {
+            /* VDP Data Register */
+            vdp_data_write (data);
+        }
+        else
+        {
+            /* VDP Control Register */
+            vdp_control_write (data);
+        }
+    }
+
+    /* Minimal SDSC Debug Console */
+    if (addr == 0xfd && (memory_control & 0x04))
+    {
+        fprintf (stdout, "%c", data);
+        fflush (stdout);
+    }
+}
+
+
+/*
+ * Returns true if there is a non-maskable interrupt.
+ */
 bool sms_nmi_check ()
 {
     static bool pause_button_previous = false;
@@ -290,6 +309,10 @@ bool sms_nmi_check ()
     return ret;
 }
 
+
+/*
+ * Reads a ROM image from file into memory.
+ */
 int32_t sms_load_rom (uint8_t **buffer, uint32_t *buffer_size, char *filename)
 {
     uint32_t bytes_read = 0;
@@ -332,6 +355,10 @@ int32_t sms_load_rom (uint8_t **buffer, uint32_t *buffer_size, char *filename)
     return EXIT_SUCCESS;
 }
 
+
+/*
+ * Callback to supply SDL with audio frames.
+ */
 void sms_audio_callback (void *userdata, uint8_t *stream, int len)
 {
     /* Assuming little-endian host */
@@ -341,6 +368,10 @@ void sms_audio_callback (void *userdata, uint8_t *stream, int len)
         memset (stream, 0, len);
 }
 
+
+/*
+ * Reset the SMS and load a new BIOS and/or cartridge ROM.
+ */
 void sms_init (char *bios_filename, char *cart_filename)
 {
     /* Free the previous ROMs */
@@ -397,6 +428,10 @@ void sms_init (char *bios_filename, char *cart_filename)
     }
 }
 
+
+/*
+ * Returns the SMS clock-rate in Hz.
+ */
 uint32_t sms_get_clock_rate ()
 {
     if (framerate == FRAMERATE_NTSC)
@@ -412,6 +447,10 @@ uint32_t sms_get_clock_rate ()
     return SMS_CLOCK_RATE_NTSC;
 }
 
+
+/*
+ * Emulate the SMS for the specified length of time.
+ */
 void sms_run (double ms)
 {
     int lines = (ms * sms_get_clock_rate () / 228.0) / 1000.0;
