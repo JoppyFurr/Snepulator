@@ -315,6 +315,10 @@ static int32_t config_path (char **path_ptr)
     return 0;
 }
 
+
+/*
+ * Opens the configuration file in either mode "r" or "w".
+ */
 static int32_t config_open (FILE **config_file, char *mode)
 {
     char        *directory;
@@ -391,6 +395,7 @@ static int32_t config_open (FILE **config_file, char *mode)
 
     return 0;
 }
+
 
 /*
  * Read the configuration file.

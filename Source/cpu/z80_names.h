@@ -1,3 +1,6 @@
+/*
+ * lists the names of each Z80 instruction.
+ */
 
 const char *z80_instruction_name[256] = {
     "nop",       "ld bc,**",  "ld (bc),a",  "inc bc",    "inc b",      "dec b",     "ld b,*",     "rlca",

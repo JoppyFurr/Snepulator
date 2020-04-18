@@ -1,3 +1,7 @@
+/*
+ * Z80 API
+ */
+
 /* Structs */
 /* TODO: Do we need to do anything extra to tell the compiler to pack the structs? */
 /* Note: Assuming little endian for now */
@@ -89,11 +93,14 @@ typedef struct Z80_Regs_t {
 #define Z80_FLAG_SIGN       BIT_7
 #define Z80_FLAG_NONE       0x00
 
-/* Function declarations */
+/* Reset the Z80 registers to power-on defaults. */
 void z80_init (uint8_t (* _memory_read)  (uint16_t),
                void    (* _memory_write) (uint16_t, uint8_t),
                uint8_t (* _io_read)      (uint8_t),
                void    (* _io_write)     (uint8_t, uint8_t));
 
+/* Execute a single Z80 instruction. */
 void z80_instruction (void);
+
+/* Simulate the Z80 for the specified number of clock cycles. */
 void z80_run_cycles (uint64_t cycles);

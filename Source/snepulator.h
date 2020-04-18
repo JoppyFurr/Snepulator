@@ -1,3 +1,6 @@
+/*
+ * Snepulator common header file.
+ */
 
 #define VDP_SIDE_BORDER 8
 #define VDP_BUFFER_WIDTH (256 + 2 * VDP_SIDE_BORDER)
@@ -56,4 +59,5 @@ typedef struct Snepulator_t {
 
 } Snepulator;
 
+/* Update the in-memory button mapping for an input device. */
 void snepulator_update_input_device (Gamepad_Mapping device);

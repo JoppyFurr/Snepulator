@@ -41,7 +41,11 @@ Remap_State remap_state = REMAP_STATE_DEFAULT;
 extern Snepulator snepulator;
 extern Gamepad_Mapping player_1_mapping;
 
-/* Returns true when an event is consumed */
+
+/*
+ * Pass an event to the input modal.
+ * Returns true when an event is consumed.
+ */
 bool input_modal_consume_event (SDL_Event event)
 {
     if (remap_state == REMAP_STATE_DEFAULT)
@@ -144,6 +148,10 @@ bool input_modal_consume_event (SDL_Event event)
     return false;
 }
 
+
+/*
+ * Get a printable name for an input button.
+ */
 const char *button_mapping_to_string (Button_Mapping b)
 {
     static char *buff = NULL;
@@ -169,7 +177,13 @@ const char *button_mapping_to_string (Button_Mapping b)
     return buff;
 }
 
+
 /* TODO: It would be nice to re-centre upon window resizing */
+
+
+/*
+ * Render the input configuration modal.
+ */
 void snepulator_render_input_modal (void)
 {
     if (ImGui::BeginPopupModal ("Configure input...", NULL, ImGuiWindowFlags_AlwaysAutoResize |

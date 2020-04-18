@@ -27,6 +27,10 @@ static uint8_t vram [VDP_VRAM_SIZE];
 Float3 vdp_frame_complete [VDP_BUFFER_WIDTH * VDP_BUFFER_LINES];
 Float3 vdp_frame_current  [VDP_BUFFER_WIDTH * VDP_BUFFER_LINES];
 
+
+/*
+ * Reset the VDP registers and memory to power-on defaults.
+ */
 void vdp_init (void)
 {
     /* TODO: Are there any nonzero default values? */
@@ -37,6 +41,10 @@ void vdp_init (void)
 
 static bool first_byte_received = false;
 
+
+/*
+ * Read one byte from the VDP data port.
+ */
 uint8_t vdp_data_read ()
 {
     uint8_t data = vdp_regs.read_buffer;
@@ -51,6 +59,10 @@ uint8_t vdp_data_read ()
 
 }
 
+
+/*
+ * Write one byte to the VDP data port.
+ */
 void vdp_data_write (uint8_t value)
 {
     first_byte_received = false;
@@ -73,6 +85,10 @@ void vdp_data_write (uint8_t value)
     vdp_regs.address = (vdp_regs.address + 1) & 0x3fff;
 }
 
+
+/*
+ * Read one byte from the VDP control (status) port.
+ */
 uint8_t vdp_status_read ()
 {
     uint8_t status = vdp_regs.status;
@@ -85,6 +101,10 @@ uint8_t vdp_status_read ()
     return status;
 }
 
+
+/*
+ * Write one byte to the VDP control port.
+ */
 void vdp_control_write (uint8_t value)
 {
     if (!first_byte_received) /* First byte */
@@ -153,6 +173,7 @@ extern SMS_Framerate framerate;
 
 void vdp_render_line_mode4 (Vdp_Display_Mode *mode, uint16_t line);
 
+
 /*
  * Assemble the four mode-bits.
  */
@@ -163,6 +184,7 @@ static uint8_t vdp_get_mode (void)
            ((vdp_regs.mode_ctrl_2 & VDP_MODE_CTRL_2_MODE_3) ? BIT_2 : 0) +
            ((vdp_regs.mode_ctrl_1 & VDP_MODE_CTRL_1_MODE_4) ? BIT_3 : 0);
 }
+
 
 /*
  * Supply a human-readable string describing the current mode.
@@ -229,8 +251,9 @@ const Vdp_Display_Mode Mode4_NTSC240 = {
                        { .first = 0x00, .last = 0x06 } }
 };
 
+
 /*
- * Run one scanline on the VDP
+ * Run one scanline on the VDP.
  */
 void vdp_run_one_scanline ()
 {
@@ -317,11 +340,19 @@ void vdp_run_one_scanline ()
     }
 }
 
+
+/*
+ * Read the 8-bit v-counter.
+ */
 uint8_t vdp_get_v_counter (void)
 {
     return vdp_regs.v_counter;
 }
 
+
+/*
+ * Check if the VDP is currently requesting an interrupt.
+ */
 bool vdp_get_interrupt (void)
 {
     bool interrupt = false;
@@ -346,6 +377,10 @@ typedef struct Point2D_s {
     int32_t y;
 } Point2D;
 
+
+/*
+ * Render one line of an 8x8 pattern.
+ */
 void vdp_render_line_mode4_pattern (Vdp_Display_Mode *mode, uint16_t line, Vdp_Pattern *pattern_base, Vdp_Palette palette,
                                     Point2D offset, bool h_flip, bool v_flip, bool transparency)
 {
@@ -393,6 +428,10 @@ void vdp_render_line_mode4_pattern (Vdp_Display_Mode *mode, uint16_t line, Vdp_P
 #define VDP_PATTERN_HORIZONTAL_FLIP     BIT_9
 #define VDP_PATTERN_VERTICAL_FLIP       BIT_10
 
+
+/*
+ * Render one line of the background layer.
+ */
 void vdp_render_line_mode4_background (Vdp_Display_Mode *mode, uint16_t line, bool priority)
 {
     uint16_t name_table_base;
@@ -446,11 +485,17 @@ void vdp_render_line_mode4_background (Vdp_Display_Mode *mode, uint16_t line, bo
     }
 }
 
+
 /* TODO: Set sprite-overflow flag */
 /* TODO: If we allow more than eight sprites per line, will games use it? */
 /* TODO: Collision detection */
 /* TODO: VDP Flag BIT_3 of ctrl_1 subtracts 8 from x position of sprites */
 /* TODO: Pixel-doubling */
+
+
+/*
+ * Render one line of the sprite layer.
+ */
 void vdp_render_line_mode4_sprites (Vdp_Display_Mode *mode, uint16_t line)
 {
     uint16_t sprite_attribute_table_base = (((uint16_t) vdp_regs.sprite_attr_table_addr) << 7) & 0x3f00;
@@ -516,6 +561,10 @@ void vdp_render_line_mode4_sprites (Vdp_Display_Mode *mode, uint16_t line)
     }
 }
 
+
+/*
+ * Render one line in mode 4.
+ */
 void vdp_render_line_mode4 (Vdp_Display_Mode *mode, uint16_t line)
 {
     Float3 video_background = { .data = { 0.0f, 0.0f, 0.0f } };
@@ -588,8 +637,10 @@ void vdp_render_line_mode4 (Vdp_Display_Mode *mode, uint16_t line)
     vdp_render_line_mode4_background (mode, line, true);
 }
 
-/* Note: For now, we will assume 192 lines, as this is what the vast majority of
- *       SMS games actually use */
+
+/*
+ * Copy the most recently rendered frame into the texture buffer.
+ */
 void vdp_copy_latest_frame (void)
 {
     memcpy (snepulator.sms_vdp_texture_data, vdp_frame_complete, sizeof (vdp_frame_complete));

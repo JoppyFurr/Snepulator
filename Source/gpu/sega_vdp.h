@@ -1,3 +1,6 @@
+/*
+ * SMS VDP API
+ */
 
 /* Enums */
 typedef enum Vdp_Code_t {
@@ -79,15 +82,32 @@ typedef struct Vdp_Display_Mode_s {
     Vdp_V_Counter_Range v_counter_map[3];
 } Vdp_Display_Mode;
 
-/* I/O Functions */
+/* Read one byte from the VDP data port. */
 uint8_t vdp_data_read ();
+
+/* Write one byte to the VDP data port. */
 void vdp_data_write (uint8_t value);
+
+/* Read one byte from the VDP control (status) port. */
 uint8_t vdp_status_read ();
+
+/* Write one byte to the VDP control port. */
 void vdp_control_write (uint8_t value);
+
+/* Read the 8-bit v-counter. */
 uint8_t vdp_get_v_counter (void);
 
+/* Reset the VDP registers and memory to power-on defaults. */
 void vdp_init (void);
+
+/* Run one scanline on the VDP. */
 void vdp_run_one_scanline (void);
+
+/* Copy the most recently rendered frame into the texture buffer. */
 void vdp_copy_latest_frame (void);
+
+/* Check if the VDP is currently requesting an interrupt. */
 bool vdp_get_interrupt (void);
+
+/* Supply a human-readable string describing the current mode. */
 const char *vdp_get_mode_name (void);

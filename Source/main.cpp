@@ -45,6 +45,10 @@ extern Gamepad_Mapping map_to_edit;
 bool input_modal_consume_event (SDL_Event event);
 void snepulator_render_input_modal (void);
 
+
+/*
+ * ImGui menu bar.
+ */
 void snepulator_render_menubar (void)
 {
     bool open_modal = false;
@@ -262,6 +266,10 @@ void snepulator_render_menubar (void)
 
 }
 
+
+/*
+ * Update the in-memory button mapping for an input device.
+ */
 void snepulator_update_input_device (Gamepad_Mapping device)
 {
     for (int i = 0; i < input_devices.size (); i++)
@@ -277,7 +285,11 @@ void snepulator_update_input_device (Gamepad_Mapping device)
     fprintf (stderr, "Error: Unable to find device %d.\n", device.device_id);
 }
 
-/* Note: It'd be nice to automatically add/remove mappings as devices are plugged in and removed */
+
+/*
+ * Detect input devices and populate the in-memory mapping list.
+ * Note: It'd be nice to automatically add/remove mappings as devices are plugged in and removed.
+ */
 void snepulator_init_input_devices (void)
 {
     Gamepad_Mapping no_gamepad = {
@@ -319,9 +331,6 @@ void snepulator_init_input_devices (void)
     player_2_mapping = no_gamepad;
 }
 
-extern "C" {
-    extern int config_write (void);
-}
 
 /*
  * Import configuration from file and apply where needed.
@@ -369,6 +378,10 @@ int config_import (void)
     return 0;
 }
 
+
+/*
+ * Entry point.
+ */
 int main (int argc, char **argv)
 {
     /* Video */
