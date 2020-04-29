@@ -41,8 +41,8 @@ typedef struct Vdp_Regs_t {
 #define VDP_MODE_CTRL_1_SCROLL_DISABLE_ROW_0_1      BIT_6
 #define VDP_MODE_CTRL_1_SCROLL_DISABLE_COL_24_31    BIT_7
     uint8_t  mode_ctrl_2;
-#define VDP_MODE_CTRL_2_SPRITE_DOUBLE   BIT_0
-#define VDP_MODE_CTRL_2_SPRITE_TALL     BIT_1
+#define VDP_MODE_CTRL_2_SPRITE_MAG      BIT_0
+#define VDP_MODE_CTRL_2_SPRITE_SIZE     BIT_1
 #define VDP_MODE_CTRL_2_MODE_3          BIT_3
 #define VDP_MODE_CTRL_2_MODE_1          BIT_4
 #define VDP_MODE_CTRL_2_FRAME_INT_EN    BIT_5
@@ -67,9 +67,20 @@ typedef struct Vdp_Regs_t {
     uint8_t v_counter;                          /* 8-bit line counter */
 } Vdp_Regs;
 
-typedef struct Vdp_Pattern_t {
+typedef struct Vdp_Mode4_Pattern_t {
     uint8_t data[32];
-} Vdp_Pattern;
+} Vdp_Mode4_Pattern;
+
+typedef struct Vdp_Legacy_Sprite_t {
+    uint8_t y;
+    uint8_t x;
+    uint8_t pattern;
+    uint8_t colour_ec;
+} Vdp_Legacy_Sprite;
+
+typedef struct Vdp_Legacy_Pattern_t {
+    uint8_t data[8];
+} Vdp_Legacy_Pattern;
 
 typedef struct Vdp_V_Counter_Range_s {
     uint16_t first;
