@@ -47,7 +47,7 @@ void snepulator_render_open_modal (void)
         static int selected_file = 0;
         bool open_action = false;
 
-        std::regex sms_regex (".*\\.(BIN|bin|SMS|sms)$");
+        std::regex sms_regex (".*\\.(BIN|bin|SMS|sms|sg)$");
 
         if (!rom_path_cached)
         {

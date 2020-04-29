@@ -171,7 +171,8 @@ void vdp_control_write (uint8_t value)
 #include <SDL2/SDL.h>
 extern SMS_Framerate framerate;
 
-void vdp_render_line_mode4 (Vdp_Display_Mode *mode, uint16_t line);
+void vdp_render_line_mode2 (const Vdp_Display_Mode *mode, uint16_t line);
+void vdp_render_line_mode4 (const Vdp_Display_Mode *mode, uint16_t line);
 
 
 /*
@@ -212,6 +213,20 @@ const char *vdp_get_mode_name (void)
     return vdp_mode_names[vdp_get_mode ()];
 }
 
+const Vdp_Display_Mode Mode2_PAL = {
+    .lines_active = 192,
+    .lines_total = 313,
+    /* TODO: Confirm the behaviour of this */
+    .v_counter_map = { { .first = 0x00, .last = 0xf2 },
+                       { .first = 0xba, .last = 0xff } }
+};
+const Vdp_Display_Mode Mode2_NTSC = {
+    .lines_active = 192,
+    .lines_total = 262,
+    /* TODO: Confirm the behaviour of this */
+    .v_counter_map = { { .first = 0x00, .last = 0xda },
+                       { .first = 0xd5, .last = 0xff } }
+};
 const Vdp_Display_Mode Mode4_PAL192 = {
     .lines_active = 192,
     .lines_total = 313,
@@ -259,23 +274,39 @@ void vdp_run_one_scanline ()
 {
     static uint16_t line = 0;
 
-    Vdp_Display_Mode mode;
+    const Vdp_Display_Mode *mode;
 
     switch (vdp_get_mode ())
     {
+        case 0x0: /* Mode 0: 32 × 24 8-byte tiles, sprites enabled */
+            printf ("Mode 0 - unsupported.\n");
+            return;
+
+        case 0x1: /* Mode 1: 40 × 24 8-byte tiles, characters are 6 px wide */
+            printf ("Mode 1 - unsupported.\n");
+            return;
+
+        case 0x2: /* Mode 2: 32 × 24 8-byte tiles, sprites enabled, three colour/pattern tables */
+            mode = (framerate == FRAMERATE_NTSC) ? &Mode2_NTSC : &Mode2_PAL;
+            break;
+
+        case 0x04: /* Mode 3: 32 × 24, made of four 4 × 4 pixel blocks, sprites enabled */
+            printf ("Mode 3 - unsupported.\n");
+            return;
+
         case 0x8: /* Mode 4, 192 lines */
         case 0xa:
         case 0xc:
         case 0xf:
-            mode = (framerate == FRAMERATE_NTSC) ? Mode4_NTSC192 : Mode4_PAL192;
+            mode = (framerate == FRAMERATE_NTSC) ? &Mode4_NTSC192 : &Mode4_PAL192;
             break;
 
         case 0xb: /* "Mode 4, 224 lines */
-            mode = (framerate == FRAMERATE_NTSC) ? Mode4_NTSC224 : Mode4_PAL224;
+            mode = (framerate == FRAMERATE_NTSC) ? &Mode4_NTSC224 : &Mode4_PAL224;
             break;
 
         case 0xe: /* "Mode 4, 240 lines */
-            mode = (framerate == FRAMERATE_NTSC) ? Mode4_NTSC240 : Mode4_PAL240;
+            mode = (framerate == FRAMERATE_NTSC) ? &Mode4_NTSC240 : &Mode4_PAL240;
             break;
 
         default: /* Unsupported */
@@ -283,12 +314,21 @@ void vdp_run_one_scanline ()
     }
 
     /* If this is an active line, render it */
-    if (line < mode.lines_active)
-        vdp_render_line_mode4 (&mode, line);
+    if (line < mode->lines_active)
+    {
+        if (mode == &Mode2_PAL || mode == &Mode2_NTSC)
+        {
+            vdp_render_line_mode2 (mode, line);
+        }
+        else
+        {
+            vdp_render_line_mode4 (mode, line);
+        }
+    }
 
     /* If this the final active line, copy to the frame buffer */
     /* TODO: This is okay for single-threaded code, but locking may be needed if multi-threading is added */
-    if (line == mode.lines_active - 1)
+    if (line == mode->lines_active - 1)
     {
         memcpy (vdp_frame_complete, vdp_frame_current, sizeof (vdp_frame_current));
 
@@ -305,37 +345,38 @@ void vdp_run_one_scanline ()
     }
 
     /* Check for frame interrupt */
-    if (line == mode.lines_active + 1)
+    if (line == mode->lines_active + 1)
         vdp_regs.status |= VDP_STATUS_INT;
 
     /* Decrement the line interrupt counter during the active display period.
      * Reset outside of the active display period (but not the first line after) */
-    if (line <= mode.lines_active)
+    if (line <= mode->lines_active)
         vdp_regs.line_interrupt_counter--;
     else
         vdp_regs.line_interrupt_counter = vdp_regs.line_counter;
 
+    /* TODO: Does the line interrupt exist outside of mode 4? */
     /* On underflow, we reset the line interrupt counter and set the pending flag */
-    if (line <= mode.lines_active && vdp_regs.line_interrupt_counter == 0xff)
+    if (line <= mode->lines_active && vdp_regs.line_interrupt_counter == 0xff)
     {
         vdp_regs.line_interrupt_counter = vdp_regs.line_counter;
         vdp_regs.line_interrupt = true;
     }
 
     /* Update values for the next line */
-    line = (line + 1) % mode.lines_total;
+    line = (line + 1) % mode->lines_total;
 
     uint16_t temp_line = line;
     for (int range = 0; range < 3; range++)
     {
-        if (temp_line < mode.v_counter_map[range].last - mode.v_counter_map[range].first + 1)
+        if (temp_line < mode->v_counter_map[range].last - mode->v_counter_map[range].first + 1)
         {
-            vdp_regs.v_counter = temp_line + mode.v_counter_map[range].first;
+            vdp_regs.v_counter = temp_line + mode->v_counter_map[range].first;
             break;
         }
         else
         {
-            temp_line -= mode.v_counter_map[range].last - mode.v_counter_map[range].first + 1;
+            temp_line -= mode->v_counter_map[range].last - mode->v_counter_map[range].first + 1;
         }
     }
 }
@@ -381,7 +422,7 @@ typedef struct Point2D_s {
 /*
  * Render one line of an 8x8 pattern.
  */
-void vdp_render_line_mode4_pattern (Vdp_Display_Mode *mode, uint16_t line, Vdp_Pattern *pattern_base, Vdp_Palette palette,
+void vdp_render_line_mode4_pattern (const Vdp_Display_Mode *mode, uint16_t line, Vdp_Mode4_Pattern *pattern_base, Vdp_Palette palette,
                                     Point2D offset, bool h_flip, bool v_flip, bool transparency)
 {
     int border_lines_top = (VDP_BUFFER_LINES - mode->lines_active) / 2;
@@ -432,7 +473,7 @@ void vdp_render_line_mode4_pattern (Vdp_Display_Mode *mode, uint16_t line, Vdp_P
 /*
  * Render one line of the background layer.
  */
-void vdp_render_line_mode4_background (Vdp_Display_Mode *mode, uint16_t line, bool priority)
+void vdp_render_line_mode4_background (const Vdp_Display_Mode *mode, uint16_t line, bool priority)
 {
     uint16_t name_table_base;
     uint8_t num_rows = (mode->lines_active == 192) ? 28 : 32;
@@ -475,7 +516,7 @@ void vdp_render_line_mode4_background (Vdp_Display_Mode *mode, uint16_t line, bo
         bool h_flip = tile & VDP_PATTERN_HORIZONTAL_FLIP;
         bool v_flip = tile & VDP_PATTERN_VERTICAL_FLIP;
 
-        Vdp_Pattern *pattern = (Vdp_Pattern *) &vram[(tile & 0x1ff) * sizeof (Vdp_Pattern)];
+        Vdp_Mode4_Pattern *pattern = (Vdp_Mode4_Pattern *) &vram[(tile & 0x1ff) * sizeof (Vdp_Mode4_Pattern)];
 
         Vdp_Palette palette = (tile & (1 << 11)) ? VDP_PALETTE_SPRITE : VDP_PALETTE_BACKGROUND;
 
@@ -496,14 +537,14 @@ void vdp_render_line_mode4_background (Vdp_Display_Mode *mode, uint16_t line, bo
 /*
  * Render one line of the sprite layer.
  */
-void vdp_render_line_mode4_sprites (Vdp_Display_Mode *mode, uint16_t line)
+void vdp_render_line_mode4_sprites (const Vdp_Display_Mode *mode, uint16_t line)
 {
     uint16_t sprite_attribute_table_base = (((uint16_t) vdp_regs.sprite_attr_table_addr) << 7) & 0x3f00;
     uint16_t sprite_pattern_offset = (vdp_regs.sprite_pattern_generator_addr & 0x04) ? 256 : 0;
-    uint8_t sprite_height = (vdp_regs.mode_ctrl_2 & VDP_MODE_CTRL_2_SPRITE_TALL) ? 16 : 8;
+    uint8_t sprite_height = (vdp_regs.mode_ctrl_2 & VDP_MODE_CTRL_2_SPRITE_SIZE) ? 16 : 8;
     uint8_t line_sprite_buffer [8];
     uint8_t line_sprite_count = 0;
-    Vdp_Pattern *pattern;
+    Vdp_Mode4_Pattern *pattern;
     Point2D position;
 
     /* Traverse the sprite list, filling the line sprite buffer */
@@ -546,26 +587,243 @@ void vdp_render_line_mode4_sprites (Vdp_Display_Mode *mode, uint16_t line)
         else
             position.y = y + 1;
 
-        if (vdp_regs.mode_ctrl_2 & VDP_MODE_CTRL_2_SPRITE_TALL)
+        if (vdp_regs.mode_ctrl_2 & VDP_MODE_CTRL_2_SPRITE_SIZE)
             pattern_index &= 0xfe;
 
-        pattern = (Vdp_Pattern *) &vram [(sprite_pattern_offset + pattern_index) * sizeof (Vdp_Pattern)];
+        pattern = (Vdp_Mode4_Pattern *) &vram [(sprite_pattern_offset + pattern_index) * sizeof (Vdp_Mode4_Pattern)];
         vdp_render_line_mode4_pattern (mode, line, pattern, VDP_PALETTE_SPRITE, position, false, false, true);
 
-        if (vdp_regs.mode_ctrl_2 & VDP_MODE_CTRL_2_SPRITE_TALL)
+        if (vdp_regs.mode_ctrl_2 & VDP_MODE_CTRL_2_SPRITE_SIZE)
         {
             position.y += 8;
-            pattern = (Vdp_Pattern *) &vram [(sprite_pattern_offset + pattern_index + 1) * sizeof (Vdp_Pattern)];
+            pattern = (Vdp_Mode4_Pattern *) &vram [(sprite_pattern_offset + pattern_index + 1) * sizeof (Vdp_Mode4_Pattern)];
             vdp_render_line_mode4_pattern (mode, line, pattern, VDP_PALETTE_SPRITE, position, false, false, true);
+        }
+    }
+}
+
+static uint8_t sms_legacy_palette[16] = {
+    0x00, /* Transparent */
+    0x00, /* Black */
+    0x08, /* Medium Green */
+    0x0c, /* Light Green */
+    0x10, /* Dark Blue */
+    0x30, /* Light blue */
+    0x01, /* Dark Red */
+    0x3c, /* Cyan */
+    0x02, /* Medium Red */
+    0x03, /* Light Red */
+    0x05, /* Dark Yellow */
+    0x0f, /* Light Yellow */
+    0x04, /* Dark Green */
+    0x33, /* Magenta */
+    0x15, /* Gray */
+    0x3f  /* White */
+};
+#define LEGACY_COLOUR_TRANSPARENT 0
+
+/*
+ * Render one line of a mode2 8x8 pattern.
+ */
+void vdp_render_line_mode2_pattern (const Vdp_Display_Mode *mode, uint16_t line, Vdp_Legacy_Pattern *pattern_base,
+                                    uint8_t tile_colours, Point2D offset, bool sprite)
+{
+    int border_lines_top = (VDP_BUFFER_LINES - mode->lines_active) / 2;
+    uint8_t line_data;
+
+    uint8_t background_colour = tile_colours & 0x0f;
+    uint8_t foreground_colour = tile_colours >> 4;
+
+    line_data = pattern_base->data [line - offset.y];
+
+    for (uint32_t x = 0; x < 8; x++)
+    {
+        /* Don't draw texture pixels that fall outside of the screen */
+        if (x + offset.x >= 256)
+            continue;
+
+        uint8_t colour_index = ((line_data & (0x80 >> x)) ? foreground_colour : background_colour);
+
+        if (colour_index == LEGACY_COLOUR_TRANSPARENT)
+        {
+            if (sprite == true)
+            {
+                continue;
+            }
+            else
+            {
+                colour_index = vdp_regs.background_colour & 0x0f;
+            }
+        }
+
+        uint8_t pixel = sms_legacy_palette[colour_index];
+
+        vdp_frame_current [(offset.x + x + VDP_SIDE_BORDER) + (border_lines_top + line) * VDP_BUFFER_WIDTH].data[0] = VDP_TO_RED   (pixel) / 256.0f;
+        vdp_frame_current [(offset.x + x + VDP_SIDE_BORDER) + (border_lines_top + line) * VDP_BUFFER_WIDTH].data[1] = VDP_TO_GREEN (pixel) / 256.0f;
+        vdp_frame_current [(offset.x + x + VDP_SIDE_BORDER) + (border_lines_top + line) * VDP_BUFFER_WIDTH].data[2] = VDP_TO_BLUE  (pixel) / 256.0f;
+    }
+}
+
+/* TODO: Consider renaming register "addr" to "base" */
+
+/*
+ * Render sprites for legacy modes 0, 2, and 3.
+ *
+ * Sprites can be either 8×8 pixels, or 16×16.
+ */
+void vdp_render_line_legacy_sprites (const Vdp_Display_Mode *mode, uint16_t line)
+{
+    uint16_t sprite_attribute_table_base = (((uint16_t) vdp_regs.sprite_attr_table_addr) << 7) & 0x3f10;
+    uint16_t pattern_generator_base = (((uint16_t) vdp_regs.sprite_pattern_generator_addr) << 11) & 0x3800;
+    uint8_t sprite_height = (vdp_regs.mode_ctrl_2 & VDP_MODE_CTRL_2_SPRITE_SIZE) ? 16 : 8;
+    Vdp_Legacy_Sprite *line_sprite_buffer [4];
+    uint8_t line_sprite_count = 0;
+    Vdp_Legacy_Pattern *pattern;
+    Point2D position;
+
+    /* Traverse the sprite list, filling the line sprite buffer */
+    for (int i = 0; i < 32 && line_sprite_count < 4; i++)
+    {
+        Vdp_Legacy_Sprite *sprite = (Vdp_Legacy_Sprite *) &vram [sprite_attribute_table_base + i * sizeof (Vdp_Legacy_Sprite)];
+
+        /* Break if there are no more sprites */
+        if (sprite->y == 0xd0)
+            break;
+
+        /* This number is treated as unsigned when the first line of
+         * the sprite is on the screen, but signed when it is not */
+        if (sprite->y >= 0xe0)
+            position.y = ((int8_t) sprite->y) + 1;
+        else
+            position.y = sprite->y + 1;
+
+        /* If the sprite is on this line, add it to the buffer */
+        if (line >= position.y && line < position.y + sprite_height)
+        {
+            line_sprite_buffer [line_sprite_count++] = sprite;
+        }
+    }
+
+    /* Render the sprites in the line sprite buffer.
+     * Done in reverse order so that the first sprite is the one left on the screen */
+    while (line_sprite_count--)
+    {
+        Vdp_Legacy_Sprite *sprite = line_sprite_buffer[line_sprite_count];
+        uint8_t pattern_index = sprite->pattern;
+
+        /* The most-significant bit of the colour byte decides if we 'early-clock' the sprite */
+        if (sprite->colour_ec & 0x80)
+        {
+            position.x = sprite->x - 32;
+        }
+        else
+        {
+            position.x = sprite->x;
+        }
+
+        /* TODO: Can we remove these duplicated lines? */
+        if (sprite->y >= 0xe0)
+        {
+            position.y = ((int8_t) sprite->y) + 1;
+        }
+        else
+        {
+            position.y = sprite->y + 1;
+        }
+
+        /* TODO: Sprite collisions */
+
+        /* TODO: Support 'magnified' sprites, (SPRITE_MAG) */
+
+        if (vdp_regs.mode_ctrl_2 & VDP_MODE_CTRL_2_SPRITE_SIZE)
+        {
+            pattern_index &= 0xfc;
+
+            /* TODO: It looks like maybe in some places, the base address is in bytes, and in other places it is in patterns...
+             *       (or is that just when it is zero?) Find out what's going on and comment. */
+
+            /* top left */
+            pattern = (Vdp_Legacy_Pattern *) &vram [pattern_generator_base + (pattern_index * sizeof (Vdp_Legacy_Pattern))];
+            vdp_render_line_mode2_pattern (mode, line, pattern, sprite->colour_ec << 4, position, true);
+
+            /* bottom left */
+            pattern++;
+            position.y += 8;
+            vdp_render_line_mode2_pattern (mode, line, pattern, sprite->colour_ec << 4, position, true);
+
+            /* top right */
+            pattern++;
+            position.y -= 8;
+            position.x += 8;
+            vdp_render_line_mode2_pattern (mode, line, pattern, sprite->colour_ec << 4, position, true);
+
+            /* bottom right */
+            pattern++;
+            position.y += 8;
+            vdp_render_line_mode2_pattern (mode, line, pattern, sprite->colour_ec << 4, position, true);
+
+        }
+        else
+        {
+            pattern = (Vdp_Legacy_Pattern *) &vram [pattern_generator_base + (pattern_index * sizeof (Vdp_Legacy_Pattern))];
+            vdp_render_line_mode2_pattern (mode, line, pattern, sprite->colour_ec << 4, position, true);
         }
     }
 }
 
 
 /*
- * Render one line in mode 4.
+ * Render one line of the mode2 background layer.
  */
-void vdp_render_line_mode4 (Vdp_Display_Mode *mode, uint16_t line)
+void vdp_render_line_mode2_background (const Vdp_Display_Mode *mode, uint16_t line)
+{
+    uint16_t name_table_base;
+    uint16_t pattern_generator_base;
+    uint16_t colour_table_base;
+    uint32_t tile_y = line / 8;
+    Point2D position;
+
+    name_table_base = (((uint16_t) vdp_regs.name_table_addr) << 10) & 0x3c00;
+
+    pattern_generator_base = (((uint16_t) vdp_regs.background_pattern_generator_addr) << 11) & 0x2000;
+
+    colour_table_base = (((uint16_t) vdp_regs.colour_table_addr) << 6) & 0x2000;
+
+    for (uint32_t tile_x = 0; tile_x < 32; tile_x++)
+    {
+        uint16_t tile = vram [name_table_base + ((tile_y << 5) | tile_x)];
+
+        /* The screen is broken into three 8-row sections */
+        if (tile_y >= 8 && tile_y < 16)
+        {
+            tile += 0x100;
+        }
+        else if (tile_y >= 16)
+        {
+            tile += 0x200;
+        }
+        /* TODO: Consider shortening the register name.. */
+        uint16_t pattern_tile = tile & ((((uint16_t) vdp_regs.background_pattern_generator_addr) << 8) | 0xff);
+        uint16_t colour_tile  = tile & ((((uint16_t) vdp_regs.colour_table_addr) << 3) | 0x07);
+
+        Vdp_Legacy_Pattern *pattern = (Vdp_Legacy_Pattern *) &vram[pattern_generator_base + (pattern_tile * sizeof (Vdp_Legacy_Pattern))];
+
+        uint8_t colours = vram[colour_table_base + colour_tile * 8 + (line & 0x07)];
+
+        position.x = 8 * tile_x;
+        position.y = 8 * tile_y;
+        vdp_render_line_mode2_pattern (mode, line, pattern, colours, position, false);
+    }
+}
+
+/* TODO: For new functions, remove unused parameters */
+
+/*
+ * Render one line in mode 2.
+ *
+ * TODO: Nearly identical to mode4 version, merge them.
+ */
+void vdp_render_line_mode2 (const Vdp_Display_Mode *mode, uint16_t line)
 {
     Float3 video_background = { .data = { 0.0f, 0.0f, 0.0f } };
     Float3 video_background_dim = { .data = { 0.0f, 0.0f, 0.0f } };
@@ -579,7 +837,79 @@ void vdp_render_line_mode4 (Vdp_Display_Mode *mode, uint16_t line)
     }
     else
     {
-        /* Overscan colour. Is this mode4-specific? */
+        uint8_t bg_colour;
+        bg_colour = sms_legacy_palette [vdp_regs.background_colour & 0x0f];
+        video_background.data[0] = VDP_TO_RED   (bg_colour) / 256.0f;
+        video_background.data[1] = VDP_TO_GREEN (bg_colour) / 256.0f;
+        video_background.data[2] = VDP_TO_BLUE  (bg_colour) / 256.0f;
+        video_background_dim.data[0] = video_background.data[0] * 0.5;
+        video_background_dim.data[1] = video_background.data[1] * 0.5;
+        video_background_dim.data[2] = video_background.data[2] * 0.5;
+    }
+
+    /* Top border */
+    if (line == 0)
+    {
+        for (int top_line = 0; top_line < border_lines_top; top_line++)
+        {
+            for (int x = 0; x < VDP_BUFFER_WIDTH; x++)
+            {
+                vdp_frame_current [x + top_line * VDP_BUFFER_WIDTH] = video_background_dim;
+            }
+        }
+    }
+
+    /* Side borders */
+    for (int x = 0; x < VDP_BUFFER_WIDTH; x++)
+    {
+        bool border = x < VDP_SIDE_BORDER || x >= VDP_SIDE_BORDER + 256 ||
+                      (vdp_regs.mode_ctrl_1 & VDP_MODE_CTRL_1_MASK_COL_1 && x < VDP_SIDE_BORDER + 8);
+
+        vdp_frame_current [x + (border_lines_top + line) * VDP_BUFFER_WIDTH] = (border ? video_background_dim : video_background);
+    }
+
+    /* Bottom border */
+    if (line == mode->lines_active - 1)
+    {
+        for (int bottom_line = border_lines_top + mode->lines_active; bottom_line < VDP_BUFFER_LINES; bottom_line++)
+        {
+            for (int x = 0; x < VDP_BUFFER_WIDTH; x++)
+            {
+                vdp_frame_current [x + bottom_line * VDP_BUFFER_WIDTH] = video_background_dim;
+            }
+        }
+    }
+
+    /* Return without rendering patterns if BLANK is enabled */
+    if (!(vdp_regs.mode_ctrl_2 & VDP_MODE_CTRL_2_BLANK))
+    {
+        return;
+    }
+
+    vdp_render_line_mode2_background (mode, line);
+    vdp_render_line_legacy_sprites (mode, line);
+
+    return;
+}
+
+
+/*
+ * Render one line in mode 4.
+ */
+void vdp_render_line_mode4 (const Vdp_Display_Mode *mode, uint16_t line)
+{
+    Float3 video_background = { .data = { 0.0f, 0.0f, 0.0f } };
+    Float3 video_background_dim = { .data = { 0.0f, 0.0f, 0.0f } };
+
+    int border_lines_top = (VDP_BUFFER_LINES - mode->lines_active) / 2;
+
+    /* Background */
+    if (!(vdp_regs.mode_ctrl_2 & VDP_MODE_CTRL_2_BLANK))
+    {
+        /* Display is blank */
+    }
+    else
+    {
         uint8_t bg_colour;
         bg_colour = cram [16 + (vdp_regs.background_colour & 0x0f)];
         video_background.data[0] = VDP_TO_RED   (bg_colour) / 256.0f;
@@ -590,7 +920,7 @@ void vdp_render_line_mode4 (Vdp_Display_Mode *mode, uint16_t line)
         video_background_dim.data[2] = video_background.data[2] * 0.5;
     }
 
-    /* TODO: For now the top/bottom borders just copy the background from the first
+    /* Note: For now the top/bottom borders just copy the background from the first
      *       and last active lines. Do any games change the value outside of this? */
 
     /* Top border */
