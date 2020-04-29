@@ -13,8 +13,8 @@ extern Snepulator snepulator;
 #include "cpu/z80.h"
 extern Z80_Regs z80_regs;
 
-#include "gpu/sega_vdp.h"
-#include "audio/sn79489.h"
+#include "video/sega_vdp.h"
+#include "sound/sn79489.h"
 
 
 /* Console state */

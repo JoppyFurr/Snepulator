@@ -22,9 +22,9 @@ rm Work/*.o
 # Compile C11 code.
 eval $CC -c Source/config.c          -o Work/config.o    -std=c11 -Wall -Werror
 eval $CC -c Source/cpu/z80.c         -o Work/z80.o       -std=c11 -Wall -Werror
-eval $CC -c Source/gpu/sega_vdp.c    -o Work/sega_vdp.o  -std=c11 -Wall -Werror
+eval $CC -c Source/video/sega_vdp.c  -o Work/sega_vdp.o  -std=c11 -Wall -Werror
 eval $CC -c Source/sms.c             -o Work/sms.o       -std=c11 -Wall -Werror
-eval $CC -c Source/audio/sn79489.c   -o Work/sn79489.o   -std=c11 -Wall -Werror
+eval $CC -c Source/sound/sn79489.c   -o Work/sn79489.o   -std=c11 -Wall -Werror
 
 # Compile C++11 GUI and link to the rest of the code.
 DATE=`date --rfc-3339=date`
