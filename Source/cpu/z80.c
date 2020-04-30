@@ -5,7 +5,7 @@
 #include <stdbool.h>
 
 #include "../snepulator.h"
-extern Snepulator snepulator;
+extern Snepulator_State state;
 
 #include "z80.h"
 #include "z80_names.h"
@@ -491,7 +491,7 @@ uint32_t z80_extended_instruction ()
         default:
         fprintf (stderr, "Unknown extended instruction: \"%s\" (%02x).\n",
                  z80_instruction_name_extended[instruction], instruction);
-        snepulator.abort = true;
+        state.abort = true;
     }
 
     return 0;
@@ -573,7 +573,7 @@ uint32_t z80_ix_iy_bit_instruction (uint16_t reg_ix_iy_w)
             fprintf (stderr, "Unknown ix/iy bit instruction: \"%s\" (%02x).\n",
                      z80_instruction_name_bits[instruction], instruction);
             write_data = false;
-            snepulator.abort = true;
+            state.abort = true;
     }
 
     /* Write data */
@@ -839,7 +839,7 @@ uint16_t z80_ix_iy_instruction (uint16_t reg_ix_iy_in)
         default:
         fprintf (stderr, "Unknown ix/iy instruction: \"%s\" (%02x).\n",
                  z80_instruction_name_ix[instruction], instruction);
-        snepulator.abort = true;
+        state.abort = true;
     }
 
     return reg_ix_iy.w;
@@ -930,7 +930,7 @@ uint32_t z80_bit_instruction ()
         default:
             fprintf (stderr, "Unknown bit instruction: \"%s\" (%02x).\n",
                      z80_instruction_name_bits[instruction], instruction);
-            snepulator.abort = true;
+            state.abort = true;
     }
 
     /* Write data */
@@ -1474,12 +1474,12 @@ void z80_instruction ()
         default:
             fprintf (stderr, "Unknown instruction: \"%s\" (%02x).\n",
                      z80_instruction_name[instruction], instruction);
-            snepulator.abort = true;
+            state.abort = true;
     }
 }
 
 /* TODO: Remove knowledge of the VDP from here */
-extern bool vdp_get_interrupt (void);
+extern bool sms_vdp_get_interrupt (void);
 extern bool sms_nmi_check (void);
 
 
@@ -1545,7 +1545,7 @@ void z80_run_cycles (uint64_t cycles)
                          debug_instruction_1,
                          debug_instruction_2,
                          debug_instruction_3);
-            snepulator.abort = true;
+            state.abort = true;
         }
         /* END TIMING DEBUG */
 
@@ -1567,7 +1567,7 @@ void z80_run_cycles (uint64_t cycles)
             }
 
             /* Then check for maskable interrupts */
-            if (IFF1 && vdp_get_interrupt ())
+            if (IFF1 && sms_vdp_get_interrupt ())
             {
                 if (z80_regs.halt)
                 {
@@ -1588,7 +1588,7 @@ void z80_run_cycles (uint64_t cycles)
                         break;
                     default:
                         fprintf (stderr, "Unknown interrupt mode %d.\n", z80_regs.im);
-                        snepulator.abort = true;
+                        state.abort = true;
                 }
             }
 

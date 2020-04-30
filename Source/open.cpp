@@ -24,7 +24,7 @@ extern "C" {
 }
 
 /* Global state */
-extern Snepulator snepulator;
+extern Snepulator_State state;
 
 static char rom_path[160] = { '\0' }; /* TODO: Make the size dynamic */
 
@@ -38,8 +38,8 @@ void snepulator_render_open_modal (void)
                                                      ImGuiWindowFlags_NoMove |
                                                      ImGuiWindowFlags_NoScrollbar))
     {
-        int width = (snepulator.host_width / 2 > 512) ? snepulator.host_width / 2 : 512;
-        int height = (snepulator.host_height / 2 > 384) ? snepulator.host_width / 2 : 384;
+        int width = (state.host_width / 2 > 512) ? state.host_width / 2 : 512;
+        int height = (state.host_height / 2 > 384) ? state.host_width / 2 : 384;
 
         /* State */
         static bool rom_path_cached = false;
@@ -161,7 +161,7 @@ void snepulator_render_open_modal (void)
 
         /* Buttons */
         if (ImGui::Button ("Cancel", ImVec2 (120,0))) {
-            snepulator.running = true;
+            state.running = true;
             ImGui::CloseCurrentPopup ();
         }
         ImGui::SameLine ();
@@ -213,11 +213,11 @@ void snepulator_render_open_modal (void)
                 char new_rom_path[160] = { '\0' };
                 sprintf (new_rom_path, "%s%s", rom_path, file_list [selected_file].c_str ());
 
-                free (snepulator.cart_filename);
-                snepulator.cart_filename = strdup (new_rom_path);
+                free (state.cart_filename);
+                state.cart_filename = strdup (new_rom_path);
 
-                sms_init (snepulator.bios_filename, snepulator.cart_filename);
-                snepulator.running = true;
+                sms_init (state.bios_filename, state.cart_filename);
+                state.running = true;
 
                 ImGui::CloseCurrentPopup ();
             }

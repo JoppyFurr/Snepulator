@@ -38,7 +38,7 @@ typedef enum Remap_State_t {
 Gamepad_Mapping map_to_edit;
 Remap_State remap_state = REMAP_STATE_DEFAULT;
 
-extern Snepulator snepulator;
+extern Snepulator_State state;
 extern Gamepad_Mapping player_1_mapping;
 
 
@@ -314,7 +314,7 @@ void snepulator_render_input_modal (void)
         /* Buttons */
         if (ImGui::Button ("Cancel", ImVec2 (120,0))) {
             remap_state = REMAP_STATE_DEFAULT;
-            snepulator.running = true;
+            state.running = true;
             config_capture_events = false;
             ImGui::CloseCurrentPopup ();
         }
@@ -335,7 +335,7 @@ void snepulator_render_input_modal (void)
             snepulator_update_input_device (map_to_edit);
             player_1_mapping = map_to_edit;
 
-            snepulator.running = true; /* TODO: Rather than going to "Running", restore to what the state was previously */
+            state.running = true; /* TODO: Rather than going to "Running", restore to what the state was previously */
 
             remap_state = REMAP_STATE_DEFAULT;
             config_capture_events = false;

@@ -12,13 +12,13 @@
 #include "../util.h"
 #include "../snepulator.h"
 #include "../sms.h"
-extern Snepulator snepulator;
+extern Snepulator_State state;
 
 #include "tms9918a.h"
 #include "sms_vdp.h"
 
 /* Constants */
-#define VDP_CRAM_SIZE (32)
+#define SMS_VDP_CRAM_SIZE (32)
 
 /* Macros */
 #define VDP_TO_RED(C)   ((0xff / 3) * (((C) & 0x03) >> 0))
@@ -29,7 +29,7 @@ extern Snepulator snepulator;
 
 #define VDP_TO_FLOAT(C) { .r = VDP_TO_RED (C) / 255.0f, .g = VDP_TO_GREEN (C) / 255.0f, .b = VDP_TO_BLUE (C) / 255.0f }
 
-#define VDP_LEGACY_PALETTE { \
+#define SMS_VDP_LEGACY_PALETTE { \
     VDP_TO_FLOAT (0x00), /* Transparent */ \
     VDP_TO_FLOAT (0x00), /* Black */ \
     VDP_TO_FLOAT (0x08), /* Medium Green */ \
@@ -49,51 +49,51 @@ extern Snepulator snepulator;
 }
 
 /* Display mode details */
-const TMS9918A_Config Mode2_PAL = {
+static const TMS9918A_Config Mode2_PAL = {
     .mode = TMS9918A_MODE_2,
     .lines_active = 192,
     .lines_total = 313,
-    .palette = VDP_LEGACY_PALETTE
+    .palette = SMS_VDP_LEGACY_PALETTE
 };
-const TMS9918A_Config Mode2_NTSC = {
+static const TMS9918A_Config Mode2_NTSC = {
     .mode = TMS9918A_MODE_2,
     .lines_active = 192,
     .lines_total = 262,
-    .palette = VDP_LEGACY_PALETTE
+    .palette = SMS_VDP_LEGACY_PALETTE
 };
-const TMS9918A_Config Mode4_PAL192 = {
+static const TMS9918A_Config Mode4_PAL192 = {
     .lines_active = 192,
     .lines_total = 313,
     .v_counter_map = { { .first = 0x00, .last = 0xf2 },
                        { .first = 0xba, .last = 0xff } }
 };
-const TMS9918A_Config Mode4_PAL224 = {
+static const TMS9918A_Config Mode4_PAL224 = {
     .lines_active = 224,
     .lines_total = 313,
     .v_counter_map = { { .first = 0x00, .last = 0xff },
                        { .first = 0x00, .last = 0x02 },
                        { .first = 0xca, .last = 0xff } }
 };
-const TMS9918A_Config Mode4_PAL240 = {
+static const TMS9918A_Config Mode4_PAL240 = {
     .lines_active = 240,
     .lines_total = 313,
     .v_counter_map = { { .first = 0x00, .last = 0xff },
                        { .first = 0x00, .last = 0x0a },
                        { .first = 0xd2, .last = 0xff } }
 };
-const TMS9918A_Config Mode4_NTSC192 = {
+static const TMS9918A_Config Mode4_NTSC192 = {
     .lines_active = 192,
     .lines_total = 262,
     .v_counter_map = { { .first = 0x00, .last = 0xda },
                        { .first = 0xd5, .last = 0xff } }
 };
-const TMS9918A_Config Mode4_NTSC224 = {
+static const TMS9918A_Config Mode4_NTSC224 = {
     .lines_active = 224,
     .lines_total = 262,
     .v_counter_map = { { .first = 0x00, .last = 0xea },
                        { .first = 0xe5, .last = 0xff } }
 };
-const TMS9918A_Config Mode4_NTSC240 = {
+static const TMS9918A_Config Mode4_NTSC240 = {
     .lines_active = 240,
     .lines_total = 262,
     .v_counter_map = { { .first = 0x00, .last = 0xff },
@@ -103,12 +103,12 @@ const TMS9918A_Config Mode4_NTSC240 = {
 
 /* SMS VDP State */
 extern TMS9918A_State tms9918a_state;
-static uint8_t cram [VDP_CRAM_SIZE];
+static uint8_t cram [SMS_VDP_CRAM_SIZE];
 
 /*
  * Reset the VDP registers and memory to power-on defaults.
  */
-void vdp_init (void)
+void sms_vdp_init (void)
 {
     /* TODO: Are there any nonzero default values? */
     memset (&tms9918a_state.regs, 0, sizeof (tms9918a_state.regs));
@@ -122,7 +122,7 @@ static bool first_byte_received = false;
 /*
  * Read one byte from the VDP data port.
  */
-uint8_t vdp_data_read ()
+uint8_t sms_vdp_data_read ()
 {
     uint8_t data = tms9918a_state.read_buffer;
 
@@ -140,7 +140,7 @@ uint8_t vdp_data_read ()
 /*
  * Write one byte to the VDP data port.
  */
-void vdp_data_write (uint8_t value)
+void sms_vdp_data_write (uint8_t value)
 {
     first_byte_received = false;
 
@@ -166,7 +166,7 @@ void vdp_data_write (uint8_t value)
 /*
  * Read one byte from the VDP control (status) port.
  */
-uint8_t vdp_status_read ()
+uint8_t sms_vdp_status_read ()
 {
     uint8_t status = tms9918a_state.status;
     first_byte_received = false;
@@ -182,7 +182,7 @@ uint8_t vdp_status_read ()
 /*
  * Write one byte to the VDP control port.
  */
-void vdp_control_write (uint8_t value)
+void sms_vdp_control_write (uint8_t value)
 {
     if (!first_byte_received) /* First byte */
     {
@@ -224,10 +224,11 @@ void vdp_control_write (uint8_t value)
 #include <SDL2/SDL.h>
 extern SMS_Framerate framerate;
 
+
 /*
  * Assemble the four mode-bits.
  */
-static uint8_t vdp_get_mode (void)
+static uint8_t sms_vdp_get_mode (void)
 {
     return ((tms9918a_state.regs.ctrl_1 & TMS9918A_CTRL_1_MODE_1) ? BIT_0 : 0) +
            ((tms9918a_state.regs.ctrl_0 & TMS9918A_CTRL_0_MODE_2) ? BIT_1 : 0) +
@@ -236,12 +237,10 @@ static uint8_t vdp_get_mode (void)
 }
 
 
-
-
 /*
  * Read the 8-bit v-counter.
  */
-uint8_t vdp_get_v_counter (void)
+uint8_t sms_vdp_get_v_counter (void)
 {
     return tms9918a_state.v_counter;
 }
@@ -250,7 +249,7 @@ uint8_t vdp_get_v_counter (void)
 /*
  * Check if the VDP is currently requesting an interrupt.
  */
-bool vdp_get_interrupt (void)
+bool sms_vdp_get_interrupt (void)
 {
     bool interrupt = false;
 
@@ -273,8 +272,8 @@ bool vdp_get_interrupt (void)
 /*
  * Render one line of an 8x8 pattern.
  */
-void vdp_render_mode4_pattern_line (const TMS9918A_Config *mode, uint16_t line, Vdp_Mode4_Pattern *pattern_base, Vdp_Palette palette,
-                                    int32_Point_2D offset, bool h_flip, bool v_flip, bool transparency)
+void sms_vdp_render_mode4_pattern_line (const TMS9918A_Config *mode, uint16_t line, SMS_VDP_Mode4_Pattern *pattern_base, SMS_VDP_Palette palette,
+                                        int32_Point_2D offset, bool h_flip, bool v_flip, bool transparency)
 {
     int border_lines_top = (VIDEO_BUFFER_LINES - mode->lines_active) / 2;
     char *line_base;
@@ -317,14 +316,14 @@ void vdp_render_mode4_pattern_line (const TMS9918A_Config *mode, uint16_t line, 
     }
 }
 
-#define VDP_PATTERN_HORIZONTAL_FLIP     BIT_9
-#define VDP_PATTERN_VERTICAL_FLIP       BIT_10
+#define SMS_VDP_PATTERN_HORIZONTAL_FLIP     BIT_9
+#define SMS_VDP_PATTERN_VERTICAL_FLIP       BIT_10
 
 
 /*
  * Render one line of the background layer.
  */
-void vdp_render_mode4_background_line (const TMS9918A_Config *mode, uint16_t line, bool priority)
+void sms_vdp_render_mode4_background_line (const TMS9918A_Config *mode, uint16_t line, bool priority)
 {
     uint16_t name_table_base;
     uint8_t num_rows = (mode->lines_active == 192) ? 28 : 32;
@@ -364,16 +363,16 @@ void vdp_render_mode4_background_line (const TMS9918A_Config *mode, uint16_t lin
         if (priority && !(tile & 0x1000))
             continue;
 
-        bool h_flip = tile & VDP_PATTERN_HORIZONTAL_FLIP;
-        bool v_flip = tile & VDP_PATTERN_VERTICAL_FLIP;
+        bool h_flip = tile & SMS_VDP_PATTERN_HORIZONTAL_FLIP;
+        bool v_flip = tile & SMS_VDP_PATTERN_VERTICAL_FLIP;
 
-        Vdp_Mode4_Pattern *pattern = (Vdp_Mode4_Pattern *) &tms9918a_state.vram[(tile & 0x1ff) * sizeof (Vdp_Mode4_Pattern)];
+        SMS_VDP_Mode4_Pattern *pattern = (SMS_VDP_Mode4_Pattern *) &tms9918a_state.vram[(tile & 0x1ff) * sizeof (SMS_VDP_Mode4_Pattern)];
 
-        Vdp_Palette palette = (tile & (1 << 11)) ? VDP_PALETTE_SPRITE : VDP_PALETTE_BACKGROUND;
+        SMS_VDP_Palette palette = (tile & (1 << 11)) ? SMS_VDP_PALETTE_SPRITE : SMS_VDP_PALETTE_BACKGROUND;
 
         position.x = 8 * tile_x + fine_scroll_x;
         position.y = 8 * tile_y - fine_scroll_y;
-        vdp_render_mode4_pattern_line (mode, line, pattern, palette, position, h_flip, v_flip, false | priority);
+        sms_vdp_render_mode4_pattern_line (mode, line, pattern, palette, position, h_flip, v_flip, false | priority);
     }
 }
 
@@ -388,14 +387,14 @@ void vdp_render_mode4_background_line (const TMS9918A_Config *mode, uint16_t lin
 /*
  * Render one line of the sprite layer.
  */
-void vdp_render_mode4_sprites_line (const TMS9918A_Config *mode, uint16_t line)
+void sms_vdp_render_mode4_sprites_line (const TMS9918A_Config *mode, uint16_t line)
 {
     uint16_t sprite_attribute_table_base = (((uint16_t) tms9918a_state.regs.sprite_attr_table_base) << 7) & 0x3f00;
     uint16_t sprite_pattern_offset = (tms9918a_state.regs.sprite_pg_base & 0x04) ? 256 : 0;
     uint8_t sprite_height = (tms9918a_state.regs.ctrl_1 & TMS9918A_CTRL_1_SPRITE_SIZE) ? 16 : 8;
     uint8_t line_sprite_buffer [8];
     uint8_t line_sprite_count = 0;
-    Vdp_Mode4_Pattern *pattern;
+    SMS_VDP_Mode4_Pattern *pattern;
     int32_Point_2D position;
 
     /* Traverse the sprite list, filling the line sprite buffer */
@@ -441,14 +440,14 @@ void vdp_render_mode4_sprites_line (const TMS9918A_Config *mode, uint16_t line)
         if (tms9918a_state.regs.ctrl_1 & TMS9918A_CTRL_1_SPRITE_SIZE)
             pattern_index &= 0xfe;
 
-        pattern = (Vdp_Mode4_Pattern *) &tms9918a_state.vram [(sprite_pattern_offset + pattern_index) * sizeof (Vdp_Mode4_Pattern)];
-        vdp_render_mode4_pattern_line (mode, line, pattern, VDP_PALETTE_SPRITE, position, false, false, true);
+        pattern = (SMS_VDP_Mode4_Pattern *) &tms9918a_state.vram [(sprite_pattern_offset + pattern_index) * sizeof (SMS_VDP_Mode4_Pattern)];
+        sms_vdp_render_mode4_pattern_line (mode, line, pattern, SMS_VDP_PALETTE_SPRITE, position, false, false, true);
 
         if (tms9918a_state.regs.ctrl_1 & TMS9918A_CTRL_1_SPRITE_SIZE)
         {
             position.y += 8;
-            pattern = (Vdp_Mode4_Pattern *) &tms9918a_state.vram [(sprite_pattern_offset + pattern_index + 1) * sizeof (Vdp_Mode4_Pattern)];
-            vdp_render_mode4_pattern_line (mode, line, pattern, VDP_PALETTE_SPRITE, position, false, false, true);
+            pattern = (SMS_VDP_Mode4_Pattern *) &tms9918a_state.vram [(sprite_pattern_offset + pattern_index + 1) * sizeof (SMS_VDP_Mode4_Pattern)];
+            sms_vdp_render_mode4_pattern_line (mode, line, pattern, SMS_VDP_PALETTE_SPRITE, position, false, false, true);
         }
     }
 }
@@ -462,7 +461,7 @@ void vdp_render_mode4_sprites_line (const TMS9918A_Config *mode, uint16_t line)
 /*
  * Render one line of output for the SMS VDP.
  */
-void vdp_render_line (const TMS9918A_Config *config, uint16_t line)
+void sms_vdp_render_line (const TMS9918A_Config *config, uint16_t line)
 {
     float_Colour video_background =     { .r = 0.0f, .g = 0.0f, .b = 0.0f };
     float_Colour video_background_dim = { .r = 0.0f, .g = 0.0f, .b = 0.0f };
@@ -534,9 +533,9 @@ void vdp_render_line (const TMS9918A_Config *config, uint16_t line)
 
     if (tms9918a_state.regs.ctrl_0 & SMS_VDP_CTRL_0_MODE_4)
     {
-        vdp_render_mode4_background_line (config, line, false);
-        vdp_render_mode4_sprites_line (config, line);
-        vdp_render_mode4_background_line (config, line, true);
+        sms_vdp_render_mode4_background_line (config, line, false);
+        sms_vdp_render_mode4_sprites_line (config, line);
+        sms_vdp_render_mode4_background_line (config, line, true);
     }
     else if (tms9918a_state.regs.ctrl_0 & TMS9918A_CTRL_0_MODE_2)
     {
@@ -549,12 +548,12 @@ void vdp_render_line (const TMS9918A_Config *config, uint16_t line)
 /*
  * Run one scanline on the VDP.
  */
-void vdp_run_one_scanline ()
+void sms_vdp_run_one_scanline ()
 {
     static uint16_t line = 0;
 
     const TMS9918A_Config *config;
-    TMS9918A_Mode mode = vdp_get_mode ();
+    TMS9918A_Mode mode = sms_vdp_get_mode ();
 
     switch (mode)
     {
@@ -585,7 +584,7 @@ void vdp_run_one_scanline ()
     /* If this is an active line, render it */
     if (line < config->lines_active)
     {
-        vdp_render_line (config, line);
+        sms_vdp_render_line (config, line);
     }
 
     /* If this the final active line, copy to the frame buffer */
@@ -600,8 +599,8 @@ void vdp_run_one_scanline ()
         vdp_current_time = SDL_GetTicks ();
         if (vdp_previous_completion_time)
         {
-            snepulator.vdp_framerate *= 0.95;
-            snepulator.vdp_framerate += 0.05 * (1000.0 / (vdp_current_time - vdp_previous_completion_time));
+            state.vdp_framerate *= 0.95;
+            state.vdp_framerate += 0.05 * (1000.0 / (vdp_current_time - vdp_previous_completion_time));
         }
         vdp_previous_completion_time = vdp_current_time;
     }
@@ -647,7 +646,7 @@ void vdp_run_one_scanline ()
 /*
  * Copy the most recently rendered frame into the texture buffer.
  */
-void vdp_copy_latest_frame (void)
+void sms_vdp_copy_latest_frame (void)
 {
-    memcpy (snepulator.sms_vdp_texture_data, tms9918a_state.frame_complete, sizeof (tms9918a_state.frame_complete));
+    memcpy (state.sms_vdp_texture_data, tms9918a_state.frame_complete, sizeof (tms9918a_state.frame_complete));
 }

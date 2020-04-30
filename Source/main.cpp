@@ -29,7 +29,7 @@ extern "C" {
 }
 
 /* Global state */
-Snepulator snepulator;
+Snepulator_State state;
 bool config_capture_events = false;
 
 /* Gamepads */
@@ -62,10 +62,10 @@ void snepulator_render_menubar (void)
     {
         if (ImGui::BeginMenu ("File"))
         {
-            if (ImGui::MenuItem ("Open...", NULL)) { snepulator.running = false; open_modal = true; }
-            if (ImGui::MenuItem ("Pause", NULL, !snepulator.running)) { snepulator.running = !snepulator.running; }
+            if (ImGui::MenuItem ("Open...", NULL)) { state.running = false; open_modal = true; }
+            if (ImGui::MenuItem ("Pause", NULL, !state.running)) { state.running = !state.running; }
             ImGui::Separator ();
-            if (ImGui::MenuItem ("Quit", NULL)) { snepulator.abort = true; }
+            if (ImGui::MenuItem ("Quit", NULL)) { state.abort = true; }
             ImGui::EndMenu ();
         }
 
@@ -91,21 +91,21 @@ void snepulator_render_menubar (void)
         {
             if (ImGui::BeginMenu ("Filter"))
             {
-                if (ImGui::MenuItem ("GL_NEAREST", NULL, snepulator.video_filter == VIDEO_FILTER_NEAREST))
+                if (ImGui::MenuItem ("GL_NEAREST", NULL, state.video_filter == VIDEO_FILTER_NEAREST))
                 {
-                    snepulator.video_filter = VIDEO_FILTER_NEAREST;
+                    state.video_filter = VIDEO_FILTER_NEAREST;
                     config_string_set ("video", "filter", "GL_NEAREST");
                     config_write ();
                 }
-                if (ImGui::MenuItem ("GL_LINEAR",  NULL, snepulator.video_filter == VIDEO_FILTER_LINEAR))
+                if (ImGui::MenuItem ("GL_LINEAR",  NULL, state.video_filter == VIDEO_FILTER_LINEAR))
                 {
-                    snepulator.video_filter = VIDEO_FILTER_LINEAR;
+                    state.video_filter = VIDEO_FILTER_LINEAR;
                     config_string_set ("video", "filter", "GL_LINEAR");
                     config_write ();
                 }
-                if (ImGui::MenuItem ("Scanlines",  NULL, snepulator.video_filter == VIDEO_FILTER_SCANLINES))
+                if (ImGui::MenuItem ("Scanlines",  NULL, state.video_filter == VIDEO_FILTER_SCANLINES))
                 {
-                    snepulator.video_filter = VIDEO_FILTER_SCANLINES;
+                    state.video_filter = VIDEO_FILTER_SCANLINES;
                     config_string_set ("video", "filter", "Scanlines");
                     config_write ();
                 }
@@ -118,7 +118,7 @@ void snepulator_render_menubar (void)
         {
             if (ImGui::MenuItem ("Hard Reset"))
             {
-                sms_init (snepulator.bios_filename, snepulator.cart_filename);
+                sms_init (state.bios_filename, state.cart_filename);
             }
             ImGui::Separator ();
 
@@ -206,7 +206,7 @@ void snepulator_render_menubar (void)
                 ImGui::EndMenu ();
             }
 
-            if (ImGui::MenuItem ("Configure...", NULL)) { snepulator.running = false; input_modal = true; }
+            if (ImGui::MenuItem ("Configure...", NULL)) { state.running = false; input_modal = true; }
             ImGui::EndMenu ();
         }
 
@@ -226,11 +226,11 @@ void snepulator_render_menubar (void)
             if (ImGui::BeginMenu ("Statistics"))
             {
                 ImGui::Text ("Video");
-                ImGui::Text ("Host: %.2f fps", snepulator.host_framerate);
-                ImGui::Text ("VDP:  %.2f fps", snepulator.vdp_framerate);
+                ImGui::Text ("Host: %.2f fps", state.host_framerate);
+                ImGui::Text ("VDP:  %.2f fps", state.vdp_framerate);
                 ImGui::Separator ();
                 ImGui::Text ("Audio");
-                ImGui::Text ("Ring buffer: %.2f%% full", snepulator.audio_ring_utilisation * 100.0);
+                ImGui::Text ("Ring buffer: %.2f%% full", state.audio_ring_utilisation * 100.0);
 
                 ImGui::EndMenu ();
             }
@@ -345,16 +345,16 @@ int config_import (void)
     config_read ();
 
     /* Video filter - Defaults to Scanlines */
-    snepulator.video_filter = VIDEO_FILTER_SCANLINES;
+    state.video_filter = VIDEO_FILTER_SCANLINES;
     if (config_string_get ("video", "filter", &string) == 0)
     {
         if (strcmp (string, "GL_NEAREST") == 0)
         {
-            snepulator.video_filter = VIDEO_FILTER_NEAREST;
+            state.video_filter = VIDEO_FILTER_NEAREST;
         }
         else if (strcmp (string, "GL_LINEAR") == 0)
         {
-            snepulator.video_filter = VIDEO_FILTER_LINEAR;
+            state.video_filter = VIDEO_FILTER_LINEAR;
         }
     }
 
@@ -408,7 +408,7 @@ int main (int argc, char **argv)
     printf ("Built on " BUILD_DATE ".\n");
 
     /* Initialize Snepulator state */
-    memset (&snepulator, 0, sizeof (snepulator));
+    memset (&state, 0, sizeof (state));
 
     /* Parse all CLI arguments */
     while (*(++argv))
@@ -416,12 +416,12 @@ int main (int argc, char **argv)
         if (!strcmp ("-b", *argv))
         {
             /* BIOS to load */
-            snepulator.bios_filename = strdup (*(++argv));
+            state.bios_filename = strdup (*(++argv));
         }
-        else if (!snepulator.cart_filename)
+        else if (!state.cart_filename)
         {
             /* ROM to load */
-            snepulator.cart_filename = strdup (*(argv));
+            state.cart_filename = strdup (*(argv));
         }
         else
         {
@@ -513,17 +513,17 @@ int main (int argc, char **argv)
 
     /* If we have a valid ROM to run, start emulation */
     /* TODO: Only allow unpause if we have a ROM to run */
-    if (snepulator.bios_filename || snepulator.cart_filename)
+    if (state.bios_filename || state.cart_filename)
     {
-        sms_init (snepulator.bios_filename, snepulator.cart_filename);
-        snepulator.running = true;
+        sms_init (state.bios_filename, state.cart_filename);
+        state.running = true;
     }
 
     /* Main loop */
-    while (!snepulator.abort)
+    while (!state.abort)
     {
         /* INPUT */
-        SDL_GetWindowSize (window, &snepulator.host_width, &snepulator.host_height);
+        SDL_GetWindowSize (window, &state.host_width, &state.host_height);
         SDL_Event event;
 
         /* TODO: For now, we hard-code the USB Saturn gamepad on my desk. A "Configure gamepad" option needs to be created. */
@@ -534,7 +534,7 @@ int main (int argc, char **argv)
 
             if (event.type == SDL_QUIT)
             {
-                snepulator.abort = true;
+                state.abort = true;
             }
 
             /* Allow the input configuration dialogue to sample input */
@@ -588,36 +588,36 @@ int main (int argc, char **argv)
         }
 
         /* EMULATE */
-        if (snepulator.running)
+        if (state.running)
             sms_run (1000.0 / 60.0); /* Simulate 1/60 of a second */
 
         /* RENDER VDP */
-        vdp_copy_latest_frame ();
+        sms_vdp_copy_latest_frame ();
         glBindTexture (GL_TEXTURE_2D, sms_vdp_texture);
-        glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, snepulator.video_filter);
-        glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, snepulator.video_filter);
+        glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, state.video_filter);
+        glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, state.video_filter);
         glTexParameterfv (GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, Float4_Black);
 
-        switch (snepulator.video_filter)
+        switch (state.video_filter)
         {
             case VIDEO_FILTER_NEAREST:
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
                 glTexImage2D    (GL_TEXTURE_2D, 0, GL_RGB, VIDEO_BUFFER_WIDTH, VIDEO_BUFFER_LINES, 0, GL_RGB, GL_FLOAT,
-                                 snepulator.sms_vdp_texture_data);
+                                 state.sms_vdp_texture_data);
                 break;
             case VIDEO_FILTER_LINEAR:
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
                 glTexImage2D    (GL_TEXTURE_2D, 0, GL_RGB, VIDEO_BUFFER_WIDTH, VIDEO_BUFFER_LINES, 0, GL_RGB, GL_FLOAT,
-                                 snepulator.sms_vdp_texture_data);
+                                 state.sms_vdp_texture_data);
                 break;
             case VIDEO_FILTER_SCANLINES:
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-                float_Colour *source = (float_Colour *) snepulator.sms_vdp_texture_data;
-                float_Colour *dest   = (float_Colour *) snepulator.sms_vdp_texture_data_scanlines;
+                float_Colour *source = (float_Colour *) state.sms_vdp_texture_data;
+                float_Colour *dest   = (float_Colour *) state.sms_vdp_texture_data_scanlines;
 
                 /* Prescale by 2x3, then add scanlines */
                 uint32_t output_width  = VIDEO_BUFFER_WIDTH * 2;
@@ -653,7 +653,7 @@ int main (int argc, char **argv)
                     }
                 }
                 glTexImage2D    (GL_TEXTURE_2D, 0, GL_RGB, VIDEO_BUFFER_WIDTH * 2, VIDEO_BUFFER_LINES * 3, 0, GL_RGB, GL_FLOAT,
-                                 snepulator.sms_vdp_texture_data_scanlines);
+                                 state.sms_vdp_texture_data_scanlines);
                 break;
         }
 
@@ -669,11 +669,11 @@ int main (int argc, char **argv)
             /* TODO: Can we get host_height to exclude the menu bar? */
             /* TODO: Scale is based on the SMS resolution rather than the VDP buffer, as we don't mind losing some border.
              *       However, does this mean we get a negative cursor position below, and is that okay? */
-            uint8_t scale = (snepulator.host_width / 256) > (snepulator.host_height / 224) ? (snepulator.host_height / 224) : (snepulator.host_width / 256);
+            uint8_t scale = (state.host_width / 256) > (state.host_height / 224) ? (state.host_height / 224) : (state.host_width / 256);
             if (scale < 1)
                 scale = 1;
             ImGui::PushStyleColor (ImGuiCol_WindowBg, ImColor (0.0f, 0.0f, 0.0f, 0.0f));
-            ImGui::SetNextWindowSize (ImVec2 (snepulator.host_width, snepulator.host_height));
+            ImGui::SetNextWindowSize (ImVec2 (state.host_width, state.host_height));
             ImGui::Begin ("VDP Output", NULL, ImGuiWindowFlags_NoTitleBar |
                                               ImGuiWindowFlags_NoResize |
                                               ImGuiWindowFlags_NoScrollbar |
@@ -684,16 +684,16 @@ int main (int argc, char **argv)
 
             /* First, draw the background, taken from the leftmost slice of the actual image */
             ImGui::SetCursorPosX (0);
-            ImGui::SetCursorPosY (snepulator.host_height / 2 - (VIDEO_BUFFER_LINES * scale) / 2);
-            ImGui::Image ((void *) (uintptr_t) sms_vdp_texture, ImVec2 (snepulator.host_width, VIDEO_BUFFER_LINES * scale),
+            ImGui::SetCursorPosY (state.host_height / 2 - (VIDEO_BUFFER_LINES * scale) / 2);
+            ImGui::Image ((void *) (uintptr_t) sms_vdp_texture, ImVec2 (state.host_width, VIDEO_BUFFER_LINES * scale),
                           /* uv0 */  ImVec2 (0.00, 0.0),
                           /* uv1 */  ImVec2 (0.01, 1.0),
                           /* tint */ ImColor (255, 255, 255, 255),
                           /* border */ ImColor (0, 0, 0, 0));
 
             /* Now, draw the actual image */
-            ImGui::SetCursorPosX (snepulator.host_width  / 2 - (VIDEO_BUFFER_WIDTH * scale) / 2);
-            ImGui::SetCursorPosY (snepulator.host_height / 2 - (VIDEO_BUFFER_LINES * scale) / 2);
+            ImGui::SetCursorPosX (state.host_width  / 2 - (VIDEO_BUFFER_WIDTH * scale) / 2);
+            ImGui::SetCursorPosY (state.host_height / 2 - (VIDEO_BUFFER_LINES * scale) / 2);
             ImGui::Image ((void *) (uintptr_t) sms_vdp_texture, ImVec2 (VIDEO_BUFFER_WIDTH * scale, VIDEO_BUFFER_LINES * scale),
                           /* uv0 */  ImVec2 (0.0, 0.0),
                           /* uv1 */  ImVec2 (1.0, 1.0),
@@ -717,8 +717,8 @@ int main (int argc, char **argv)
         host_current_time = SDL_GetTicks ();
         if (host_previous_completion_time)
         {
-            snepulator.host_framerate *= 0.95;
-            snepulator.host_framerate += 0.05 * (1000.0 / (host_current_time - host_previous_completion_time));
+            state.host_framerate *= 0.95;
+            state.host_framerate += 0.05 * (1000.0 / (host_current_time - host_previous_completion_time));
         }
         host_previous_completion_time = host_current_time;
     }
