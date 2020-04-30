@@ -6,6 +6,7 @@
 #include <string.h>
 #include <errno.h>
 
+#include "util.h"
 #include "snepulator.h"
 extern Snepulator snepulator;
 
@@ -13,9 +14,9 @@ extern Snepulator snepulator;
 #include "cpu/z80.h"
 extern Z80_Regs z80_regs;
 
+#include "video/tms9918a.h"
 #include "video/sega_vdp.h"
 #include "sound/sn79489.h"
-
 
 /* Console state */
 uint8_t *bios = NULL;
@@ -423,8 +424,8 @@ void sms_init (char *bios_filename, char *cart_filename)
         memory_control |= SMS_MEMORY_CTRL_BIOS_DISABLE;
 
         /* Leave the VDP in Mode4 */
-        vdp_control_write (VDP_MODE_CTRL_1_MODE_4);
-        vdp_control_write (VDP_CODE_REG_WRITE | 0x00);
+        vdp_control_write (SMS_VDP_CTRL_0_MODE_4);
+        vdp_control_write (TMS9918A_CODE_REG_WRITE | 0x00);
     }
 }
 

@@ -13,8 +13,10 @@
 #include <vector>
 
 extern "C" {
+#include "util.h"
 #include "snepulator.h"
 #include "config.h"
+#include "video/tms9918a.h"
 #include "video/sega_vdp.h"
 #include "cpu/z80.h"
 #include "sms.h"
@@ -216,7 +218,8 @@ void snepulator_render_menubar (void)
             ImGui::Separator ();
 
             ImGui::Text ("VDP");
-            ImGui::Text ("Mode : %s", vdp_get_mode_name ());
+            /* TODO: Expose the current mode */
+            ImGui::Text ("Mode : %s", tms9918a_mode_name_get (TMS9918A_MODE_0));
 
             ImGui::Separator ();
 
@@ -455,7 +458,7 @@ int main (int argc, char **argv)
     /* Twice the Master System resolution, plus enough extra for 16 px boarders */
     /* TODO: Make dialogues fit (full-screen?) and consider hiding the menubar during gameplay */
     window = SDL_CreateWindow ("Snepulator", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-                      VDP_BUFFER_WIDTH * 2, VDP_BUFFER_LINES * 2 + 16, SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL);
+                      VIDEO_BUFFER_WIDTH * 2, VIDEO_BUFFER_LINES * 2 + 16, SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL);
     if (window == NULL)
     {
         fprintf (stderr, "Error: SDL_CreateWindowfailed.\n");
@@ -600,31 +603,31 @@ int main (int argc, char **argv)
             case VIDEO_FILTER_NEAREST:
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-                glTexImage2D    (GL_TEXTURE_2D, 0, GL_RGB, VDP_BUFFER_WIDTH, VDP_BUFFER_LINES, 0, GL_RGB, GL_FLOAT,
+                glTexImage2D    (GL_TEXTURE_2D, 0, GL_RGB, VIDEO_BUFFER_WIDTH, VIDEO_BUFFER_LINES, 0, GL_RGB, GL_FLOAT,
                                  snepulator.sms_vdp_texture_data);
                 break;
             case VIDEO_FILTER_LINEAR:
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-                glTexImage2D    (GL_TEXTURE_2D, 0, GL_RGB, VDP_BUFFER_WIDTH, VDP_BUFFER_LINES, 0, GL_RGB, GL_FLOAT,
+                glTexImage2D    (GL_TEXTURE_2D, 0, GL_RGB, VIDEO_BUFFER_WIDTH, VIDEO_BUFFER_LINES, 0, GL_RGB, GL_FLOAT,
                                  snepulator.sms_vdp_texture_data);
                 break;
             case VIDEO_FILTER_SCANLINES:
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-                Float3 *source = (Float3 *) snepulator.sms_vdp_texture_data;
-                Float3 *dest   = (Float3 *) snepulator.sms_vdp_texture_data_scanlines;
+                float_Colour *source = (float_Colour *) snepulator.sms_vdp_texture_data;
+                float_Colour *dest   = (float_Colour *) snepulator.sms_vdp_texture_data_scanlines;
 
                 /* Prescale by 2x3, then add scanlines */
-                uint32_t output_width  = VDP_BUFFER_WIDTH * 2;
-                uint32_t output_height = VDP_BUFFER_LINES * 3;
+                uint32_t output_width  = VIDEO_BUFFER_WIDTH * 2;
+                uint32_t output_height = VIDEO_BUFFER_LINES * 3;
                 for (int y = 0; y < output_height; y++)
                 {
                     for (int x = 0; x < output_width; x++)
                     {
                         /* Prescale 2×3 */
-                        dest [x + y * output_width] = source [x / 2 + y / 3 * VDP_BUFFER_WIDTH];
+                        dest [x + y * output_width] = source [x / 2 + y / 3 * VIDEO_BUFFER_WIDTH];
 
                         /* Scanlines (40%) */
                         if (y % 3 == 2)
@@ -632,23 +635,24 @@ int main (int argc, char **argv)
                             /* The space between scanlines inherits light from the scanline above and the scanline below */
                             /* TODO: Better math for blending colours? This can make things darker than they should be. */
                             /* TODO: Should source [] be used instead of dest [] for the RHS? */
+                            /* TODO: Operations to work with float_Colour? */
                             if (y != output_height - 1)
                             {
-                                dest [x + y * output_width].data[0] = dest [x + (y + 0) * output_width].data[0] * 0.5 +
-                                                                      dest [x + (y + 1) * output_width].data[0] * 0.5;
-                                dest [x + y * output_width].data[1] = dest [x + (y + 0) * output_width].data[1] * 0.5 +
-                                                                      dest [x + (y + 1) * output_width].data[1] * 0.5;
-                                dest [x + y * output_width].data[2] = dest [x + (y + 0) * output_width].data[2] * 0.5 +
-                                                                      dest [x + (y + 1) * output_width].data[2] * 0.5;
+                                dest [x + y * output_width].r = dest [x + (y + 0) * output_width].r * 0.5 +
+                                                                dest [x + (y + 1) * output_width].r * 0.5;
+                                dest [x + y * output_width].g = dest [x + (y + 0) * output_width].g * 0.5 +
+                                                                dest [x + (y + 1) * output_width].g * 0.5;
+                                dest [x + y * output_width].b = dest [x + (y + 0) * output_width].b * 0.5 +
+                                                                dest [x + (y + 1) * output_width].b * 0.5;
                             }
 
-                            dest [x + y * VDP_BUFFER_WIDTH * 2].data[0] *= (1.0 - 0.4);
-                            dest [x + y * VDP_BUFFER_WIDTH * 2].data[1] *= (1.0 - 0.4);
-                            dest [x + y * VDP_BUFFER_WIDTH * 2].data[2] *= (1.0 - 0.4);
+                            dest [x + y * VIDEO_BUFFER_WIDTH * 2].r *= (1.0 - 0.4);
+                            dest [x + y * VIDEO_BUFFER_WIDTH * 2].g *= (1.0 - 0.4);
+                            dest [x + y * VIDEO_BUFFER_WIDTH * 2].b *= (1.0 - 0.4);
                         }
                     }
                 }
-                glTexImage2D    (GL_TEXTURE_2D, 0, GL_RGB, VDP_BUFFER_WIDTH * 2, VDP_BUFFER_LINES * 3, 0, GL_RGB, GL_FLOAT,
+                glTexImage2D    (GL_TEXTURE_2D, 0, GL_RGB, VIDEO_BUFFER_WIDTH * 2, VIDEO_BUFFER_LINES * 3, 0, GL_RGB, GL_FLOAT,
                                  snepulator.sms_vdp_texture_data_scanlines);
                 break;
         }
@@ -680,17 +684,17 @@ int main (int argc, char **argv)
 
             /* First, draw the background, taken from the leftmost slice of the actual image */
             ImGui::SetCursorPosX (0);
-            ImGui::SetCursorPosY (snepulator.host_height / 2 - (VDP_BUFFER_LINES * scale) / 2);
-            ImGui::Image ((void *) (uintptr_t) sms_vdp_texture, ImVec2 (snepulator.host_width, VDP_BUFFER_LINES * scale),
+            ImGui::SetCursorPosY (snepulator.host_height / 2 - (VIDEO_BUFFER_LINES * scale) / 2);
+            ImGui::Image ((void *) (uintptr_t) sms_vdp_texture, ImVec2 (snepulator.host_width, VIDEO_BUFFER_LINES * scale),
                           /* uv0 */  ImVec2 (0.00, 0.0),
                           /* uv1 */  ImVec2 (0.01, 1.0),
                           /* tint */ ImColor (255, 255, 255, 255),
                           /* border */ ImColor (0, 0, 0, 0));
 
             /* Now, draw the actual image */
-            ImGui::SetCursorPosX (snepulator.host_width  / 2 - (VDP_BUFFER_WIDTH * scale) / 2);
-            ImGui::SetCursorPosY (snepulator.host_height / 2 - (VDP_BUFFER_LINES * scale) / 2);
-            ImGui::Image ((void *) (uintptr_t) sms_vdp_texture, ImVec2 (VDP_BUFFER_WIDTH * scale, VDP_BUFFER_LINES * scale),
+            ImGui::SetCursorPosX (snepulator.host_width  / 2 - (VIDEO_BUFFER_WIDTH * scale) / 2);
+            ImGui::SetCursorPosY (snepulator.host_height / 2 - (VIDEO_BUFFER_LINES * scale) / 2);
+            ImGui::Image ((void *) (uintptr_t) sms_vdp_texture, ImVec2 (VIDEO_BUFFER_WIDTH * scale, VIDEO_BUFFER_LINES * scale),
                           /* uv0 */  ImVec2 (0.0, 0.0),
                           /* uv1 */  ImVec2 (1.0, 1.0),
                           /* tint */ ImColor (255, 255, 255, 255),
