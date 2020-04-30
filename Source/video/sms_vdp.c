@@ -15,7 +15,7 @@
 extern Snepulator snepulator;
 
 #include "tms9918a.h"
-#include "sega_vdp.h"
+#include "sms_vdp.h"
 
 /* Constants */
 #define VDP_CRAM_SIZE (32)

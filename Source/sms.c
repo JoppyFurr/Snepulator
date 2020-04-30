@@ -15,7 +15,7 @@ extern Snepulator snepulator;
 extern Z80_Regs z80_regs;
 
 #include "video/tms9918a.h"
-#include "video/sega_vdp.h"
+#include "video/sms_vdp.h"
 #include "sound/sn79489.h"
 
 /* Console state */

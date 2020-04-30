@@ -17,7 +17,7 @@ extern "C" {
 #include "snepulator.h"
 #include "config.h"
 #include "video/tms9918a.h"
-#include "video/sega_vdp.h"
+#include "video/sms_vdp.h"
 #include "cpu/z80.h"
 #include "sms.h"
     /* TODO: Move this into a struct */
