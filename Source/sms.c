@@ -1,6 +1,7 @@
 /*
  * Sega Master System implementation.
  */
+
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,17 +13,16 @@
 #include "util.h"
 #include "snepulator.h"
 
-extern Snepulator_State state;
-
 #include "sms.h"
 #include "cpu/z80.h"
-extern Z80_Regs z80_regs;
-
 #include "video/tms9918a.h"
 #include "video/sms_vdp.h"
 #include "sound/sn79489.h"
 
-#define SMS_RAM_SIZE (16 << 10)
+extern Snepulator_State state;
+extern Z80_Regs z80_regs;
+
+#define SMS_RAM_SIZE (8 << 10)
 
 /* Console state */
 SMS_Region region = REGION_WORLD;
@@ -31,12 +31,7 @@ uint8_t memory_control = 0x00;
 uint8_t io_control = 0x00;
 
 /* Sega Mapper */
-uint8_t mapper_bank[3] = { 0x00, 0x01, 0x02 };
-
-/* Gamepads */
-SMS_Gamepad gamepad_1;
-SMS_Gamepad gamepad_2;
-bool pause_button;
+static uint8_t mapper_bank[3] = { 0x00, 0x01, 0x02 };
 
 /* 0: Output
  * 1: Input */
@@ -202,14 +197,14 @@ static uint8_t sms_io_read (uint8_t addr)
         if ((addr & 0x01) == 0x00)
         {
             /* I/O Port A/B */
-            return (gamepad_1.up        ? 0 : BIT_0) |
-                   (gamepad_1.down      ? 0 : BIT_1) |
-                   (gamepad_1.left      ? 0 : BIT_2) |
-                   (gamepad_1.right     ? 0 : BIT_3) |
-                   (gamepad_1.button_1  ? 0 : BIT_4) |
-                   (gamepad_1.button_2  ? 0 : BIT_5) |
-                   (gamepad_2.up        ? 0 : BIT_6) |
-                   (gamepad_2.down      ? 0 : BIT_7);
+            return (state.gamepad_1.up        ? 0 : BIT_0) |
+                   (state.gamepad_1.down      ? 0 : BIT_1) |
+                   (state.gamepad_1.left      ? 0 : BIT_2) |
+                   (state.gamepad_1.right     ? 0 : BIT_3) |
+                   (state.gamepad_1.button_1  ? 0 : BIT_4) |
+                   (state.gamepad_1.button_2  ? 0 : BIT_5) |
+                   (state.gamepad_2.up        ? 0 : BIT_6) |
+                   (state.gamepad_2.down      ? 0 : BIT_7);
         }
         else
         {
@@ -226,10 +221,10 @@ static uint8_t sms_io_read (uint8_t addr)
             }
 
             /* I/O Port B/misc */
-            return (gamepad_2.left      ? 0 : BIT_0) |
-                   (gamepad_2.right     ? 0 : BIT_1) |
-                   (gamepad_2.button_1  ? 0 : BIT_2) |
-                   (gamepad_2.button_2  ? 0 : BIT_3) |
+            return (state.gamepad_2.left      ? 0 : BIT_0) |
+                   (state.gamepad_2.right     ? 0 : BIT_1) |
+                   (state.gamepad_2.button_1  ? 0 : BIT_2) |
+                   (state.gamepad_2.button_2  ? 0 : BIT_3) |
                    (/* TODO: RESET */ 0 ? 0 : BIT_4) |
                    (port_1_th           ? BIT_6 : 0) |
                    (port_2_th           ? BIT_7 : 0);
@@ -300,12 +295,12 @@ bool sms_nmi_check ()
     static bool pause_button_previous = false;
     bool ret = false;
 
-    if (pause_button_previous == false && pause_button == true)
+    if (pause_button_previous == false && state.pause_button == true)
     {
         ret = true;
     }
 
-    pause_button_previous = pause_button;
+    pause_button_previous = state.pause_button;
 
     return ret;
 }
@@ -426,9 +421,9 @@ void sms_init (char *bios_filename, char *cart_filename)
     sn79489_init ();
 
     /* Initialize input */
-    memset (&gamepad_1, 0, sizeof (gamepad_1));
-    memset (&gamepad_2, 0, sizeof (gamepad_2));
-    pause_button = false;
+    memset (&state.gamepad_1, 0, sizeof (state.gamepad_1));
+    memset (&state.gamepad_2, 0, sizeof (state.gamepad_2));
+    state.pause_button = false;
 
     /* Minimal alternative to the BIOS */
     if (!bios_filename)
