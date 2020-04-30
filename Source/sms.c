@@ -1,3 +1,6 @@
+/*
+ * Sega Master System implementation.
+ */
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,7 +11,8 @@
 
 #include "util.h"
 #include "snepulator.h"
-extern Snepulator snepulator;
+
+extern Snepulator_State state;
 
 #include "sms.h"
 #include "cpu/z80.h"
@@ -18,15 +22,12 @@ extern Z80_Regs z80_regs;
 #include "video/sms_vdp.h"
 #include "sound/sn79489.h"
 
+#define SMS_RAM_SIZE (16 << 10)
+
 /* Console state */
-uint8_t *bios = NULL;
-uint8_t *cart = NULL;
-static uint32_t bios_size = 0;
-static uint32_t cart_size = 0;
 SMS_Region region = REGION_WORLD;
 SMS_Framerate framerate = FRAMERATE_NTSC;
 
-uint8_t ram[8 << 10];
 uint8_t memory_control = 0x00;
 uint8_t io_control = 0x00;
 
@@ -72,17 +73,17 @@ static uint8_t sms_memory_read (uint16_t addr)
         if (slot == 0 && offset < (1 << 10))
             bank_base = 0;
 
-        if (bios && !(memory_control & SMS_MEMORY_CTRL_BIOS_DISABLE))
-            return bios[(bank_base + offset) & (bios_size - 1)];
+        if (state.bios != NULL && !(memory_control & SMS_MEMORY_CTRL_BIOS_DISABLE))
+            return state.bios[(bank_base + offset) & (state.bios_size - 1)];
 
-        if (cart && !(memory_control & SMS_MEMORY_CTRL_CART_DISABLE))
-            return cart[(bank_base + offset) & (cart_size - 1)];
+        if (state.rom != NULL && !(memory_control & SMS_MEMORY_CTRL_CART_DISABLE))
+            return state.rom[(bank_base + offset) & (state.rom_size - 1)];
     }
 
     /* 8 KiB RAM + mirror */
     if (addr >= 0xc000 && addr <= 0xffff)
     {
-        return ram[(addr - 0xc000) & ((8 << 10) - 1)];
+        return state.ram[(addr - 0xc000) & ((8 << 10) - 1)];
     }
 
     return 0xff;
@@ -144,7 +145,7 @@ static void sms_memory_write (uint16_t addr, uint8_t data)
     /* RAM + mirror */
     if (addr >= 0xc000 && addr <= 0xffff)
     {
-        ram[(addr - 0xc000) & ((8 << 10) - 1)] = data;
+        state.ram[(addr - 0xc000) & ((8 << 10) - 1)] = data;
     }
 }
 
@@ -171,7 +172,7 @@ static uint8_t sms_io_read (uint8_t addr)
         if ((addr & 0x01) == 0x00)
         {
             /* V Counter */
-            return vdp_get_v_counter ();
+            return sms_vdp_get_v_counter ();
         }
         else
         {
@@ -187,12 +188,12 @@ static uint8_t sms_io_read (uint8_t addr)
         if ((addr & 0x01) == 0x00)
         {
             /* VDP Data Register */
-            return vdp_data_read ();
+            return sms_vdp_data_read ();
         }
         else
         {
             /* VDP Status Flags */
-            return vdp_status_read ();
+            return sms_vdp_status_read ();
         }
     }
 
@@ -274,12 +275,12 @@ static void sms_io_write (uint8_t addr, uint8_t data)
         if ((addr & 0x01) == 0x00)
         {
             /* VDP Data Register */
-            vdp_data_write (data);
+            sms_vdp_data_write (data);
         }
         else
         {
             /* VDP Control Register */
-            vdp_control_write (data);
+            sms_vdp_control_write (data);
         }
     }
 
@@ -363,7 +364,7 @@ int32_t sms_load_rom (uint8_t **buffer, uint32_t *buffer_size, char *filename)
 void sms_audio_callback (void *userdata, uint8_t *stream, int len)
 {
     /* Assuming little-endian host */
-    if (snepulator.running)
+    if (state.running)
         sn79489_get_samples ((int16_t *)stream, len / 2);
     else
         memset (stream, 0, len);
@@ -375,41 +376,54 @@ void sms_audio_callback (void *userdata, uint8_t *stream, int len)
  */
 void sms_init (char *bios_filename, char *cart_filename)
 {
-    /* Free the previous ROMs */
-    if (bios != NULL)
+    /* TODO: Combine these into a common 'free everything' function */
+    /* Free any previous memory */
+    if (state.ram != NULL)
     {
-        free (bios);
-        bios = NULL;
+        free (state.ram);
+        state.ram = NULL;
     }
-    if (cart != NULL)
+    if (state.bios != NULL)
     {
-        free (cart);
-        cart = NULL;
+        free (state.bios);
+        state.bios = NULL;
+    }
+    if (state.rom != NULL)
+    {
+        free (state.rom);
+        state.rom = NULL;
+    }
+
+    /* Create RAM */
+    state.ram = calloc (SMS_RAM_SIZE, 1);
+    if (state.ram == NULL)
+    {
+        fprintf (stderr, "Error: Unable to allocate memory.");
     }
 
     /* Load BIOS */
     if (bios_filename)
     {
-        if (sms_load_rom (&bios, &bios_size, bios_filename) == -1)
+        if (sms_load_rom (&state.bios, &state.bios_size, bios_filename) == -1)
         {
-            snepulator.abort = true;
+            state.abort = true;
         }
-        fprintf (stdout, "%d KiB BIOS %s loaded.\n", bios_size >> 10, bios_filename);
+        fprintf (stdout, "%d KiB BIOS %s loaded.\n", state.bios_size >> 10, bios_filename);
     }
 
-    /* Load cart */
+    /* Load ROM cart */
     if (cart_filename)
     {
-        if (sms_load_rom (&cart, &cart_size, cart_filename) == -1)
+        if (sms_load_rom (&state.rom, &state.rom_size, cart_filename) == -1)
         {
-            snepulator.abort = true;
+            state.abort = true;
         }
-        fprintf (stdout, "%d KiB cart %s loaded.\n", cart_size >> 10, cart_filename);
+        fprintf (stdout, "%d KiB ROM %s loaded.\n", state.rom_size >> 10, cart_filename);
     }
 
     /* Initialise CPU and VDP */
     z80_init (sms_memory_read, sms_memory_write, sms_io_read, sms_io_write);
-    vdp_init ();
+    sms_vdp_init ();
     sn79489_init ();
 
     /* Initialize input */
@@ -424,8 +438,8 @@ void sms_init (char *bios_filename, char *cart_filename)
         memory_control |= SMS_MEMORY_CTRL_BIOS_DISABLE;
 
         /* Leave the VDP in Mode4 */
-        vdp_control_write (SMS_VDP_CTRL_0_MODE_4);
-        vdp_control_write (TMS9918A_CODE_REG_WRITE | 0x00);
+        sms_vdp_control_write (SMS_VDP_CTRL_0_MODE_4);
+        sms_vdp_control_write (TMS9918A_CODE_REG_WRITE | 0x00);
     }
 }
 
@@ -463,6 +477,6 @@ void sms_run (double ms)
         /* 228 CPU cycles per scanline */
         z80_run_cycles (228);
         psg_run_cycles (228);
-        vdp_run_one_scanline ();
+        sms_vdp_run_one_scanline ();
     }
 }

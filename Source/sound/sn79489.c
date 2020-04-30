@@ -9,7 +9,7 @@
 #include "../snepulator.h"
 #include "../sms.h"
 #include "sn79489.h"
-extern Snepulator snepulator;
+extern Snepulator_State state;
 
 /* State */
 SN79489_Regs psg_regs;
@@ -239,8 +239,8 @@ void _psg_run_cycles (uint64_t cycles)
     }
 
     /* Update statistics (rolling average) */
-    snepulator.audio_ring_utilisation *= 0.999;
-    snepulator.audio_ring_utilisation += 0.001 * ((write_index - read_index) / (double) PSG_RING_SIZE);
+    state.audio_ring_utilisation *= 0.999;
+    state.audio_ring_utilisation += 0.001 * ((write_index - read_index) / (double) PSG_RING_SIZE);
 }
 
 
