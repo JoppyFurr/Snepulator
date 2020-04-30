@@ -2,17 +2,12 @@
  * Snepulator common header file.
  */
 
-#define VDP_SIDE_BORDER 8
-#define VDP_BUFFER_WIDTH (256 + 2 * VDP_SIDE_BORDER)
-#define VDP_BUFFER_LINES 240
+#define VIDEO_SIDE_BORDER 8
+#define VIDEO_BUFFER_WIDTH (256 + 2 * VIDEO_SIDE_BORDER)
+#define VIDEO_BUFFER_LINES 240
 
 #define ID_NONE     -1
 #define ID_KEYBOARD -2
-
-typedef struct Float3_t {
-    float data [3];
-} Float3;
-
 
 typedef struct Button_Mapping_t {
     uint32_t type;
@@ -47,8 +42,8 @@ typedef struct Snepulator_t {
 
     /* Video */
     Video_Filter video_filter;
-    float        sms_vdp_texture_data [VDP_BUFFER_WIDTH * VDP_BUFFER_LINES * 3];
-    float        sms_vdp_texture_data_scanlines [VDP_BUFFER_WIDTH * 2 * (VDP_BUFFER_LINES) * 3 * 3];
+    float        sms_vdp_texture_data [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES * 3];
+    float        sms_vdp_texture_data_scanlines [VIDEO_BUFFER_WIDTH * 2 * (VIDEO_BUFFER_LINES) * 3 * 3];
     int          host_width;
     int          host_height;
 
