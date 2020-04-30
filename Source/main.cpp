@@ -387,7 +387,7 @@ int main (int argc, char **argv)
     /* Video */
     SDL_Window *window = NULL;
     SDL_GLContext glcontext = NULL;
-    GLuint sms_vdp_texture = 0;
+    GLuint video_out_texture = 0;
 
     /* Audio */
     /* TODO: Will we ever want to change the SDL audio driver? */
@@ -491,9 +491,9 @@ int main (int argc, char **argv)
     ImGui::PushStyleColor (ImGuiCol_ButtonActive,  ImVec4 (0.9, 0.0, 0.0, 1.0));
     ImGui::PushStyleVar (ImGuiStyleVar_WindowRounding, 4.0);
 
-    /* Create texture for VDP output */
-    glGenTextures (1, &sms_vdp_texture);
-    glBindTexture (GL_TEXTURE_2D, sms_vdp_texture);
+    /* Create texture for video output */
+    glGenTextures (1, &video_out_texture);
+    glBindTexture (GL_TEXTURE_2D, video_out_texture);
     glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     float Float4_Black[4] = { 0.0, 0.0, 0.0, 0.0 };
@@ -590,7 +590,7 @@ int main (int argc, char **argv)
 
         /* RENDER VDP */
         sms_vdp_copy_latest_frame ();
-        glBindTexture (GL_TEXTURE_2D, sms_vdp_texture);
+        glBindTexture (GL_TEXTURE_2D, video_out_texture);
         glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, state.video_filter);
         glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, state.video_filter);
         glTexParameterfv (GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, Float4_Black);
@@ -601,20 +601,20 @@ int main (int argc, char **argv)
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
                 glTexImage2D    (GL_TEXTURE_2D, 0, GL_RGB, VIDEO_BUFFER_WIDTH, VIDEO_BUFFER_LINES, 0, GL_RGB, GL_FLOAT,
-                                 state.sms_vdp_texture_data);
+                                 state.video_out_texture_data);
                 break;
             case VIDEO_FILTER_LINEAR:
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
                 glTexImage2D    (GL_TEXTURE_2D, 0, GL_RGB, VIDEO_BUFFER_WIDTH, VIDEO_BUFFER_LINES, 0, GL_RGB, GL_FLOAT,
-                                 state.sms_vdp_texture_data);
+                                 state.video_out_texture_data);
                 break;
             case VIDEO_FILTER_SCANLINES:
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-                float_Colour *source = (float_Colour *) state.sms_vdp_texture_data;
-                float_Colour *dest   = (float_Colour *) state.sms_vdp_texture_data_scanlines;
+                float_Colour *source = (float_Colour *) state.video_out_texture_data;
+                float_Colour *dest   = (float_Colour *) state.video_out_texture_data_scanlines;
 
                 /* Prescale by 2x3, then add scanlines */
                 uint32_t output_width  = VIDEO_BUFFER_WIDTH * 2;
@@ -650,7 +650,7 @@ int main (int argc, char **argv)
                     }
                 }
                 glTexImage2D    (GL_TEXTURE_2D, 0, GL_RGB, VIDEO_BUFFER_WIDTH * 2, VIDEO_BUFFER_LINES * 3, 0, GL_RGB, GL_FLOAT,
-                                 state.sms_vdp_texture_data_scanlines);
+                                 state.video_out_texture_data_scanlines);
                 break;
         }
 
@@ -682,7 +682,7 @@ int main (int argc, char **argv)
             /* First, draw the background, taken from the leftmost slice of the actual image */
             ImGui::SetCursorPosX (0);
             ImGui::SetCursorPosY (state.host_height / 2 - (VIDEO_BUFFER_LINES * scale) / 2);
-            ImGui::Image ((void *) (uintptr_t) sms_vdp_texture, ImVec2 (state.host_width, VIDEO_BUFFER_LINES * scale),
+            ImGui::Image ((void *) (uintptr_t) video_out_texture, ImVec2 (state.host_width, VIDEO_BUFFER_LINES * scale),
                           /* uv0 */  ImVec2 (0.00, 0.0),
                           /* uv1 */  ImVec2 (0.01, 1.0),
                           /* tint */ ImColor (255, 255, 255, 255),
@@ -691,7 +691,7 @@ int main (int argc, char **argv)
             /* Now, draw the actual image */
             ImGui::SetCursorPosX (state.host_width  / 2 - (VIDEO_BUFFER_WIDTH * scale) / 2);
             ImGui::SetCursorPosY (state.host_height / 2 - (VIDEO_BUFFER_LINES * scale) / 2);
-            ImGui::Image ((void *) (uintptr_t) sms_vdp_texture, ImVec2 (VIDEO_BUFFER_WIDTH * scale, VIDEO_BUFFER_LINES * scale),
+            ImGui::Image ((void *) (uintptr_t) video_out_texture, ImVec2 (VIDEO_BUFFER_WIDTH * scale, VIDEO_BUFFER_LINES * scale),
                           /* uv0 */  ImVec2 (0.0, 0.0),
                           /* uv1 */  ImVec2 (1.0, 1.0),
                           /* tint */ ImColor (255, 255, 255, 255),
@@ -723,7 +723,7 @@ int main (int argc, char **argv)
     fprintf (stdout, "EMULATION ENDED.\n");
 
     SDL_CloseAudioDevice (audio_device_id);
-    glDeleteTextures (1, &sms_vdp_texture);
+    glDeleteTextures (1, &video_out_texture);
     SDL_GL_DeleteContext (glcontext);
     SDL_DestroyWindow (window);
     SDL_Quit ();
