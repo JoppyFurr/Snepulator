@@ -19,10 +19,6 @@ typedef enum SMS_Region_t {
     REGION_JAPAN
 } SMS_Region;
 
-typedef enum SMS_Framerate_t {
-    FRAMERATE_NTSC,
-    FRAMERATE_PAL
-} SMS_Framerate;
 
 
 /* Returns the SMS clock-rate in Hz. */

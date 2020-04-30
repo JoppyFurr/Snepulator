@@ -26,7 +26,6 @@ extern Z80_Regs z80_regs;
 
 /* Console state */
 SMS_Region region = REGION_WORLD;
-SMS_Framerate framerate = FRAMERATE_NTSC;
 
 uint8_t memory_control = 0x00;
 uint8_t io_control = 0x00;
@@ -449,16 +448,11 @@ void sms_init (char *bios_filename, char *cart_filename)
  */
 uint32_t sms_get_clock_rate ()
 {
-    if (framerate == FRAMERATE_NTSC)
-    {
-        return SMS_CLOCK_RATE_NTSC;
-    }
-    else if (framerate == FRAMERATE_PAL)
+    if (state.system == VIDEO_SYSTEM_PAL)
     {
         return SMS_CLOCK_RATE_PAL;
     }
 
-    fprintf (stderr, "Error: Framerate is neither NTSC or PAL.\n");
     return SMS_CLOCK_RATE_NTSC;
 }
 

@@ -23,8 +23,6 @@ extern "C" {
     /* TODO: Move this into a struct */
     extern SMS_Gamepad gamepad_1;
     extern SMS_Region region;
-    extern SMS_Framerate framerate;
-    extern bool pause_button;
     extern Z80_Regs z80_regs;
 }
 
@@ -134,13 +132,13 @@ void snepulator_render_menubar (void)
             }
             ImGui::Separator ();
 
-            if (ImGui::MenuItem ("NTSC", NULL, framerate == FRAMERATE_NTSC)) {
-                framerate = FRAMERATE_NTSC;
+            if (ImGui::MenuItem ("NTSC", NULL, state.system == VIDEO_SYSTEM_NTSC)) {
+                state.system = VIDEO_SYSTEM_NTSC;
                 config_string_set ("sms", "format", "NTSC");
                 config_write ();
             }
-            if (ImGui::MenuItem ("PAL",  NULL, framerate == FRAMERATE_PAL))  {
-                framerate = FRAMERATE_PAL;
+            if (ImGui::MenuItem ("PAL",  NULL, state.system == VIDEO_SYSTEM_PAL))  {
+                state.system = VIDEO_SYSTEM_PAL;
                 config_string_set ("sms", "format", "PAL");
                 config_write ();
             }
@@ -369,12 +367,12 @@ int config_import (void)
     }
 
     /* SMS Format - Defaults to NTSC */
-    framerate = FRAMERATE_NTSC;
+    state.system = VIDEO_SYSTEM_NTSC;
     if (config_string_get ("sms", "format", &string) == 0)
     {
         if (strcmp (string, "PAL") == 0)
         {
-            framerate = FRAMERATE_PAL;
+            state.system = VIDEO_SYSTEM_PAL;
         }
     }
 
