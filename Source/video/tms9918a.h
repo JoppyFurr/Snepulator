@@ -139,3 +139,9 @@ void tms9918a_render_sprites_line (const TMS9918A_Config *config, uint16_t line)
 
 /* Render one line of the mode2 background layer. */
 void tms9918a_render_mode2_background_line (const TMS9918A_Config *config, uint16_t line);
+
+/* Run one scanline on the tms9918a. */
+void tms9918a_run_one_scanline (void);
+
+/* Reset the tms9918a registers and memory to power-on defaults. */
+void tms9918a_init (void);
