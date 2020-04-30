@@ -32,6 +32,11 @@ typedef enum Video_Filter_e {
     VIDEO_FILTER_SCANLINES,
 } Video_Filter;
 
+typedef enum Video_System_e {
+    VIDEO_SYSTEM_NTSC,
+    VIDEO_SYSTEM_PAL
+} Video_System;
+
 typedef struct Snepulator_State_s {
     bool    abort ;
     bool    running ;
@@ -47,6 +52,8 @@ typedef struct Snepulator_State_s {
 
     uint32_t rom_size;
     uint32_t bios_size;
+
+    Video_System system;
 
     /* Video */
     Video_Filter video_filter;

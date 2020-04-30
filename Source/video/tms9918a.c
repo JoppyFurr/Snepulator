@@ -2,14 +2,19 @@
  * Implementation for the TI TMS9918A video chip.
  */
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+
+#include <SDL2/SDL.h>
 
 #include "../util.h"
 #include "../snepulator.h"
 
 #include "tms9918a.h"
 
+extern Snepulator_State state;
 TMS9918A_State tms9918a_state;
 
 const char *tms9918a_mode_name [16] = {
@@ -29,6 +34,40 @@ const char *tms9918a_mode_name [16] = {
     "Mode 4+3+1 - Undocumented",
     "Mode 4+3+2 - SMS 240 lines",
     "Mode 4+3+2+1 - SMS 192 lines"
+};
+
+#define TMS9918A_NTSC_PALETTE { \
+    {   0 / 255.0f,   0 / 255.0f,   0 / 255.0f }, /* Transparent */ \
+    {   0 / 255.0f,   0 / 255.0f,   0 / 255.0f }, /* Black */ \
+    {  33 / 255.0f, 200 / 255.0f,  66 / 255.0f }, /* Medium Green */ \
+    {  94 / 255.0f, 220 / 255.0f, 120 / 255.0f }, /* Light Green */ \
+    {  84 / 255.0f,  85 / 255.0f, 237 / 255.0f }, /* Dark Blue */ \
+    { 125 / 255.0f, 118 / 255.0f, 252 / 255.0f }, /* Light blue */ \
+    { 212 / 255.0f,  82 / 255.0f,  77 / 255.0f }, /* Dark Red */ \
+    {  66 / 255.0f, 235 / 255.0f, 245 / 255.0f }, /* Cyan */ \
+    { 252 / 255.0f,  85 / 255.0f,  84 / 255.0f }, /* Medium Red */ \
+    { 255 / 255.0f, 121 / 255.0f, 120 / 255.0f }, /* Light Red */ \
+    { 212 / 255.0f, 193 / 255.0f,  84 / 255.0f }, /* Dark Yellow */ \
+    { 230 / 255.0f, 206 / 255.0f, 128 / 255.0f }, /* Light Yellow */ \
+    {  33 / 255.0f, 176 / 255.0f,  59 / 255.0f }, /* Dark Green */ \
+    { 201 / 255.0f,  91 / 255.0f, 186 / 255.0f }, /* Magenta */ \
+    { 204 / 255.0f, 204 / 255.0f, 204 / 255.0f }, /* Gray */ \
+    { 255 / 255.0f, 255 / 255.0f, 255 / 255.0f }  /* White */ \
+}
+
+/* Display mode details */
+/* TODO: Confirm PAL palette */
+static const TMS9918A_Config Mode2_PAL = {
+    .mode = TMS9918A_MODE_2,
+    .lines_active = 192,
+    .lines_total = 313,
+    .palette = TMS9918A_NTSC_PALETTE
+};
+static const TMS9918A_Config Mode2_NTSC = {
+    .mode = TMS9918A_MODE_2,
+    .lines_active = 192,
+    .lines_total = 262,
+    .palette = TMS9918A_NTSC_PALETTE
 };
 
 
@@ -222,7 +261,6 @@ void tms9918a_render_mode2_background_line (const TMS9918A_Config *config, uint1
         {
             tile += 0x200;
         }
-        /* TODO: Consider shortening the register name.. */
         uint16_t pattern_tile = tile & ((((uint16_t) tms9918a_state.regs.background_pg_base) << 8) | 0xff);
         uint16_t colour_tile  = tile & ((((uint16_t) tms9918a_state.regs.colour_table_base) << 3) | 0x07);
 

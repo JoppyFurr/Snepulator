@@ -9,6 +9,8 @@
 #include <stdbool.h>
 #include <string.h>
 
+#include <SDL2/SDL.h>
+
 #include "../util.h"
 #include "../snepulator.h"
 #include "../sms.h"
@@ -220,15 +222,11 @@ void sms_vdp_control_write (uint8_t value)
 /* TODO: We seem to run a touch faster than real hardware. It looks like the clock rate doesn't divide evenly into
  *       frames/lines, should we do the timing calculations with floats? */
 
-/* TEMP */
-#include <SDL2/SDL.h>
-extern SMS_Framerate framerate;
-
 
 /*
  * Assemble the four mode-bits.
  */
-static uint8_t sms_vdp_get_mode (void)
+static uint8_t sms_vdp_mode_get (void)
 {
     return ((tms9918a_state.regs.ctrl_1 & TMS9918A_CTRL_1_MODE_1) ? BIT_0 : 0) +
            ((tms9918a_state.regs.ctrl_0 & TMS9918A_CTRL_0_MODE_2) ? BIT_1 : 0) +
@@ -459,7 +457,7 @@ void sms_vdp_render_mode4_sprites_line (const TMS9918A_Config *mode, uint16_t li
 /* TODO: For new functions, remove unused parameters */
 
 /*
- * Render one line of output for the SMS VDP.
+ * Render one active line of output for the SMS VDP.
  */
 void sms_vdp_render_line (const TMS9918A_Config *config, uint16_t line)
 {
@@ -553,27 +551,27 @@ void sms_vdp_run_one_scanline ()
     static uint16_t line = 0;
 
     const TMS9918A_Config *config;
-    TMS9918A_Mode mode = sms_vdp_get_mode ();
+    TMS9918A_Mode mode = sms_vdp_mode_get ();
 
     switch (mode)
     {
         case TMS9918A_MODE_2: /* Mode 2: 32 × 24 8-byte tiles, sprites enabled, three colour/pattern tables */
-            config = (framerate == FRAMERATE_NTSC) ? &Mode2_NTSC : &Mode2_PAL;
+            config = (state.system == VIDEO_SYSTEM_NTSC) ? &Mode2_NTSC : &Mode2_PAL;
             break;
 
         case SMS_VDP_MODE_4: /* Mode 4, 192 lines */
         case SMS_VDP_MODE_4_2:
         case SMS_VDP_MODE_4_3:
         case SMS_VDP_MODE_4_3_2_1:
-            config = (framerate == FRAMERATE_NTSC) ? &Mode4_NTSC192 : &Mode4_PAL192;
+            config = (state.system == VIDEO_SYSTEM_NTSC) ? &Mode4_NTSC192 : &Mode4_PAL192;
             break;
 
         case SMS_VDP_MODE_4_224:
-            config = (framerate == FRAMERATE_NTSC) ? &Mode4_NTSC224 : &Mode4_PAL224;
+            config = (state.system == VIDEO_SYSTEM_NTSC) ? &Mode4_NTSC224 : &Mode4_PAL224;
             break;
 
         case SMS_VDP_MODE_4_240:
-            config = (framerate == FRAMERATE_NTSC) ? &Mode4_NTSC240 : &Mode4_PAL240;
+            config = (state.system == VIDEO_SYSTEM_NTSC) ? &Mode4_NTSC240 : &Mode4_PAL240;
             break;
 
         default: /* Unsupported */
