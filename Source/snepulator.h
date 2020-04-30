@@ -64,8 +64,8 @@ typedef struct Snepulator_State_s {
 
     /* Video */
     Video_Filter video_filter;
-    float        sms_vdp_texture_data [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES * 3];
-    float        sms_vdp_texture_data_scanlines [VIDEO_BUFFER_WIDTH * 2 * (VIDEO_BUFFER_LINES) * 3 * 3];
+    float        video_out_texture_data [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES * 3];
+    float        video_out_texture_data_scanlines [VIDEO_BUFFER_WIDTH * 2 * (VIDEO_BUFFER_LINES) * 3 * 3];
     int          host_width;
     int          host_height;
 

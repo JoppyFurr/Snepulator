@@ -646,5 +646,5 @@ void sms_vdp_run_one_scanline ()
  */
 void sms_vdp_copy_latest_frame (void)
 {
-    memcpy (state.sms_vdp_texture_data, tms9918a_state.frame_complete, sizeof (tms9918a_state.frame_complete));
+    memcpy (state.video_out_texture_data, tms9918a_state.frame_complete, sizeof (tms9918a_state.frame_complete));
 }
