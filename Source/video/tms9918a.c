@@ -273,3 +273,149 @@ void tms9918a_render_mode2_background_line (const TMS9918A_Config *config, uint1
         tms9918a_render_mode2_pattern_line (config, line, pattern, colours, position, false);
     }
 }
+
+
+/*
+ * Assemble the three mode-bits.
+ */
+static uint8_t tms9918a_mode_get (void)
+{
+    return ((tms9918a_state.regs.ctrl_1 & TMS9918A_CTRL_1_MODE_1) ? BIT_0 : 0) +
+           ((tms9918a_state.regs.ctrl_0 & TMS9918A_CTRL_0_MODE_2) ? BIT_1 : 0) +
+           ((tms9918a_state.regs.ctrl_1 & TMS9918A_CTRL_1_MODE_3) ? BIT_2 : 0);
+}
+
+
+/*
+ * Render one active line of output for the tms9918a.
+ */
+void tms9918a_render_line (const TMS9918A_Config *config, uint16_t line)
+{
+    float_Colour video_background =     { .r = 0.0f, .g = 0.0f, .b = 0.0f };
+    float_Colour video_background_dim = { .r = 0.0f, .g = 0.0f, .b = 0.0f };
+
+    int border_lines_top = (VIDEO_BUFFER_LINES - config->lines_active) / 2;
+
+    /* Background */
+    if (!(tms9918a_state.regs.ctrl_1 & TMS9918A_CTRL_1_BLANK))
+    {
+        /* Display is blank */
+    }
+    else
+    {
+        video_background = config->palette [tms9918a_state.regs.background_colour & 0x0f];
+    }
+    video_background_dim.r = video_background.r * 0.5;
+    video_background_dim.g = video_background.g * 0.5;
+    video_background_dim.b = video_background.b * 0.5;
+
+    /* Note: For now the top/bottom borders just copy the background from the first
+     *       and last active lines. Do any games change the value outside of this? */
+
+    /* Top border */
+    if (line == 0)
+    {
+        for (int top_line = 0; top_line < border_lines_top; top_line++)
+        {
+            for (int x = 0; x < VIDEO_BUFFER_WIDTH; x++)
+            {
+                tms9918a_state.frame_current [x + top_line * VIDEO_BUFFER_WIDTH] = video_background_dim;
+            }
+        }
+    }
+
+    /* Side borders */
+    for (int x = 0; x < VIDEO_BUFFER_WIDTH; x++)
+    {
+        bool border = x < VIDEO_SIDE_BORDER || x >= VIDEO_SIDE_BORDER + 256;
+
+        tms9918a_state.frame_current [x + (border_lines_top + line) * VIDEO_BUFFER_WIDTH] = (border ? video_background_dim : video_background);
+    }
+
+    /* Bottom border */
+    if (line == config->lines_active - 1)
+    {
+        for (int bottom_line = border_lines_top + config->lines_active; bottom_line < VIDEO_BUFFER_LINES; bottom_line++)
+        {
+            for (int x = 0; x < VIDEO_BUFFER_WIDTH; x++)
+            {
+                tms9918a_state.frame_current [x + bottom_line * VIDEO_BUFFER_WIDTH] = video_background_dim;
+            }
+        }
+    }
+
+    /* Return without rendering patterns if BLANK is enabled */
+    if (!(tms9918a_state.regs.ctrl_1 & TMS9918A_CTRL_1_BLANK))
+    {
+        return;
+    }
+
+    if (config->mode & TMS9918A_MODE_2)
+    {
+        tms9918a_render_mode2_background_line (config, line);
+        tms9918a_render_sprites_line (config, line);
+    }
+}
+
+
+/*
+ * Run one scanline on the tms9918a.
+ */
+void tms9918a_run_one_scanline (void)
+{
+    static uint16_t line = 0;
+
+    const TMS9918A_Config *config;
+    TMS9918A_Mode mode = tms9918a_mode_get ();
+
+    switch (mode)
+    {
+        case TMS9918A_MODE_2: /* Mode 2: 32 × 24 8-byte tiles, sprites enabled, three colour/pattern tables */
+            config = (state.system == VIDEO_SYSTEM_NTSC) ? &Mode2_NTSC : &Mode2_PAL;
+            break;
+
+        default: /* Unsupported */
+            fprintf (stderr, "Unsupported mode: %s.\n", tms9918a_mode_name_get (mode));
+            return;
+    }
+
+    /* If this is an active line, render it */
+    if (line < config->lines_active)
+    {
+        tms9918a_render_line (config, line);
+    }
+
+    /* If this the final active line, copy to the frame buffer */
+    if (line == config->lines_active - 1)
+    {
+        memcpy (tms9918a_state.frame_complete, tms9918a_state.frame_current, sizeof (tms9918a_state.frame_current));
+
+        /* Update statistics (rolling average) */
+        static int vdp_previous_completion_time = 0;
+        static int vdp_current_time = 0;
+        vdp_current_time = SDL_GetTicks ();
+        if (vdp_previous_completion_time)
+        {
+            state.vdp_framerate *= 0.95;
+            state.vdp_framerate += 0.05 * (1000.0 / (vdp_current_time - vdp_previous_completion_time));
+        }
+        vdp_previous_completion_time = vdp_current_time;
+    }
+
+    /* Check for frame interrupt */
+    if (line == config->lines_active + 1)
+        tms9918a_state.status |= TMS9918A_STATUS_INT;
+
+    /* Update values for the next line */
+    line = (line + 1) % config->lines_total;
+}
+
+
+/*
+ * Reset the tms9918a registers and memory to power-on defaults.
+ */
+void tms9918a_init (void)
+{
+    memset (&tms9918a_state.regs, 0, sizeof (tms9918a_state.regs));
+    memset (&tms9918a_state.vram, 0, sizeof (tms9918a_state.vram));
+}
