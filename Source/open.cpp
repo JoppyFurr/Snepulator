@@ -1,3 +1,7 @@
+/*
+ * File open modal.
+ */
+
 #include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>

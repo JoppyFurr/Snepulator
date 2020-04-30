@@ -21,7 +21,6 @@ extern "C" {
 #include "cpu/z80.h"
 #include "sms.h"
     /* TODO: Move this into a struct */
-    extern SMS_Gamepad gamepad_1;
     extern SMS_Region region;
     extern Z80_Regs z80_regs;
 }
@@ -547,13 +546,13 @@ int main (int argc, char **argv)
             /* Keyboard */
             if ((event.type == SDL_KEYDOWN || event.type == SDL_KEYUP) && player_1_mapping.device_id == ID_KEYBOARD)
             {
-                if (event.key.keysym.sym == player_1_mapping.direction_up.value)    { gamepad_1.up       = (event.type == SDL_KEYDOWN); }
-                if (event.key.keysym.sym == player_1_mapping.direction_down.value)  { gamepad_1.down     = (event.type == SDL_KEYDOWN); }
-                if (event.key.keysym.sym == player_1_mapping.direction_left.value)  { gamepad_1.left     = (event.type == SDL_KEYDOWN); }
-                if (event.key.keysym.sym == player_1_mapping.direction_right.value) { gamepad_1.right    = (event.type == SDL_KEYDOWN); }
-                if (event.key.keysym.sym == player_1_mapping.button_1.value)        { gamepad_1.button_1 = (event.type == SDL_KEYDOWN); }
-                if (event.key.keysym.sym == player_1_mapping.button_2.value)        { gamepad_1.button_2 = (event.type == SDL_KEYDOWN); }
-                if (event.key.keysym.sym == player_1_mapping.pause.value)           { pause_button       = (event.type == SDL_KEYDOWN); }
+                if (event.key.keysym.sym == player_1_mapping.direction_up.value)    { state.gamepad_1.up       = (event.type == SDL_KEYDOWN); }
+                if (event.key.keysym.sym == player_1_mapping.direction_down.value)  { state.gamepad_1.down     = (event.type == SDL_KEYDOWN); }
+                if (event.key.keysym.sym == player_1_mapping.direction_left.value)  { state.gamepad_1.left     = (event.type == SDL_KEYDOWN); }
+                if (event.key.keysym.sym == player_1_mapping.direction_right.value) { state.gamepad_1.right    = (event.type == SDL_KEYDOWN); }
+                if (event.key.keysym.sym == player_1_mapping.button_1.value)        { state.gamepad_1.button_1 = (event.type == SDL_KEYDOWN); }
+                if (event.key.keysym.sym == player_1_mapping.button_2.value)        { state.gamepad_1.button_2 = (event.type == SDL_KEYDOWN); }
+                if (event.key.keysym.sym == player_1_mapping.pause.value)           { state.pause_button       = (event.type == SDL_KEYDOWN); }
             }
 
             /* Joystick */
@@ -561,23 +560,23 @@ int main (int argc, char **argv)
             {
                 /* TODO: Make the deadzone configurable */
                 /* TODO: Shorten these lines via macros */
-                if (player_1_mapping.direction_up.type    == SDL_JOYAXISMOTION && event.jaxis.axis == player_1_mapping.direction_up.value)    { gamepad_1.up       = (player_1_mapping.direction_up.negative    ? -event.jaxis.value : event.jaxis.value) > 1000; }
-                if (player_1_mapping.direction_down.type  == SDL_JOYAXISMOTION && event.jaxis.axis == player_1_mapping.direction_down.value)  { gamepad_1.down     = (player_1_mapping.direction_down.negative  ? -event.jaxis.value : event.jaxis.value) > 1000; }
-                if (player_1_mapping.direction_left.type  == SDL_JOYAXISMOTION && event.jaxis.axis == player_1_mapping.direction_left.value)  { gamepad_1.left     = (player_1_mapping.direction_left.negative  ? -event.jaxis.value : event.jaxis.value) > 1000; }
-                if (player_1_mapping.direction_right.type == SDL_JOYAXISMOTION && event.jaxis.axis == player_1_mapping.direction_right.value) { gamepad_1.right    = (player_1_mapping.direction_right.negative ? -event.jaxis.value : event.jaxis.value) > 1000; }
-                if (player_1_mapping.button_1.type        == SDL_JOYAXISMOTION && event.jaxis.axis == player_1_mapping.button_1.value)        { gamepad_1.button_1 = (player_1_mapping.button_1.negative        ? -event.jaxis.value : event.jaxis.value) > 1000; }
-                if (player_1_mapping.button_2.type        == SDL_JOYAXISMOTION && event.jaxis.axis == player_1_mapping.button_2.value)        { gamepad_1.button_2 = (player_1_mapping.button_2.negative        ? -event.jaxis.value : event.jaxis.value) > 1000; }
-                if (player_1_mapping.pause.type           == SDL_JOYAXISMOTION && event.jaxis.axis == player_1_mapping.pause.value)           { pause_button       = (player_1_mapping.pause.negative           ? -event.jaxis.value : event.jaxis.value) > 1000; }
+                if (player_1_mapping.direction_up.type    == SDL_JOYAXISMOTION && event.jaxis.axis == player_1_mapping.direction_up.value)    { state.gamepad_1.up       = (player_1_mapping.direction_up.negative    ? -event.jaxis.value : event.jaxis.value) > 1000; }
+                if (player_1_mapping.direction_down.type  == SDL_JOYAXISMOTION && event.jaxis.axis == player_1_mapping.direction_down.value)  { state.gamepad_1.down     = (player_1_mapping.direction_down.negative  ? -event.jaxis.value : event.jaxis.value) > 1000; }
+                if (player_1_mapping.direction_left.type  == SDL_JOYAXISMOTION && event.jaxis.axis == player_1_mapping.direction_left.value)  { state.gamepad_1.left     = (player_1_mapping.direction_left.negative  ? -event.jaxis.value : event.jaxis.value) > 1000; }
+                if (player_1_mapping.direction_right.type == SDL_JOYAXISMOTION && event.jaxis.axis == player_1_mapping.direction_right.value) { state.gamepad_1.right    = (player_1_mapping.direction_right.negative ? -event.jaxis.value : event.jaxis.value) > 1000; }
+                if (player_1_mapping.button_1.type        == SDL_JOYAXISMOTION && event.jaxis.axis == player_1_mapping.button_1.value)        { state.gamepad_1.button_1 = (player_1_mapping.button_1.negative        ? -event.jaxis.value : event.jaxis.value) > 1000; }
+                if (player_1_mapping.button_2.type        == SDL_JOYAXISMOTION && event.jaxis.axis == player_1_mapping.button_2.value)        { state.gamepad_1.button_2 = (player_1_mapping.button_2.negative        ? -event.jaxis.value : event.jaxis.value) > 1000; }
+                if (player_1_mapping.pause.type           == SDL_JOYAXISMOTION && event.jaxis.axis == player_1_mapping.pause.value)           { state.pause_button       = (player_1_mapping.pause.negative           ? -event.jaxis.value : event.jaxis.value) > 1000; }
             }
             else if ((event.type == SDL_JOYBUTTONDOWN || event.type == SDL_JOYBUTTONUP) && event.jbutton.which == player_1_mapping.device_id)
             {
-                if (player_1_mapping.direction_up.type    == SDL_JOYBUTTONDOWN && event.jbutton.button == player_1_mapping.direction_up.value)    { gamepad_1.up       = (event.type == SDL_JOYBUTTONDOWN); }
-                if (player_1_mapping.direction_down.type  == SDL_JOYBUTTONDOWN && event.jbutton.button == player_1_mapping.direction_down.value)  { gamepad_1.down     = (event.type == SDL_JOYBUTTONDOWN); }
-                if (player_1_mapping.direction_left.type  == SDL_JOYBUTTONDOWN && event.jbutton.button == player_1_mapping.direction_left.value)  { gamepad_1.left     = (event.type == SDL_JOYBUTTONDOWN); }
-                if (player_1_mapping.direction_right.type == SDL_JOYBUTTONDOWN && event.jbutton.button == player_1_mapping.direction_right.value) { gamepad_1.right    = (event.type == SDL_JOYBUTTONDOWN); }
-                if (player_1_mapping.button_1.type        == SDL_JOYBUTTONDOWN && event.jbutton.button == player_1_mapping.button_1.value)        { gamepad_1.button_1 = (event.type == SDL_JOYBUTTONDOWN); }
-                if (player_1_mapping.button_2.type        == SDL_JOYBUTTONDOWN && event.jbutton.button == player_1_mapping.button_2.value)        { gamepad_1.button_2 = (event.type == SDL_JOYBUTTONDOWN); }
-                if (player_1_mapping.pause.type           == SDL_JOYBUTTONDOWN && event.jbutton.button == player_1_mapping.pause.value)           { pause_button       = (event.type == SDL_JOYBUTTONDOWN); }
+                if (player_1_mapping.direction_up.type    == SDL_JOYBUTTONDOWN && event.jbutton.button == player_1_mapping.direction_up.value)    { state.gamepad_1.up       = (event.type == SDL_JOYBUTTONDOWN); }
+                if (player_1_mapping.direction_down.type  == SDL_JOYBUTTONDOWN && event.jbutton.button == player_1_mapping.direction_down.value)  { state.gamepad_1.down     = (event.type == SDL_JOYBUTTONDOWN); }
+                if (player_1_mapping.direction_left.type  == SDL_JOYBUTTONDOWN && event.jbutton.button == player_1_mapping.direction_left.value)  { state.gamepad_1.left     = (event.type == SDL_JOYBUTTONDOWN); }
+                if (player_1_mapping.direction_right.type == SDL_JOYBUTTONDOWN && event.jbutton.button == player_1_mapping.direction_right.value) { state.gamepad_1.right    = (event.type == SDL_JOYBUTTONDOWN); }
+                if (player_1_mapping.button_1.type        == SDL_JOYBUTTONDOWN && event.jbutton.button == player_1_mapping.button_1.value)        { state.gamepad_1.button_1 = (event.type == SDL_JOYBUTTONDOWN); }
+                if (player_1_mapping.button_2.type        == SDL_JOYBUTTONDOWN && event.jbutton.button == player_1_mapping.button_2.value)        { state.gamepad_1.button_2 = (event.type == SDL_JOYBUTTONDOWN); }
+                if (player_1_mapping.pause.type           == SDL_JOYBUTTONDOWN && event.jbutton.button == player_1_mapping.pause.value)           { state.pause_button       = (event.type == SDL_JOYBUTTONDOWN); }
             }
 
             /* Device removal */

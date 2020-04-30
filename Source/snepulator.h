@@ -2,6 +2,8 @@
  * Snepulator common header file.
  */
 
+#include "sega_gamepad.h"
+
 #define VIDEO_SIDE_BORDER 8
 #define VIDEO_BUFFER_WIDTH (256 + 2 * VIDEO_SIDE_BORDER)
 #define VIDEO_BUFFER_LINES 240
@@ -54,6 +56,11 @@ typedef struct Snepulator_State_s {
     uint32_t bios_size;
 
     Video_System system;
+
+    /* Console inputs */
+    Sega_Gamepad gamepad_1;
+    Sega_Gamepad gamepad_2;
+    bool pause_button;
 
     /* Video */
     Video_Filter video_filter;
