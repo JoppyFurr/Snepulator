@@ -52,6 +52,7 @@ typedef struct Snepulator_State_s {
     void (*run) (double ms);
     void (*audio_callback) (void *userdata, uint8_t *stream, int len);
     uint32_t (*get_clock_rate) (void);
+    bool (*get_int) (void);
     bool (*get_nmi) (void);
 
     /* Console memory */

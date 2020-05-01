@@ -1478,9 +1478,6 @@ void z80_instruction ()
     }
 }
 
-/* TODO: Remove knowledge of the VDP from here */
-extern bool sms_vdp_get_interrupt (void);
-
 
 /*
  * Simulate the Z80 for the specified number of clock cycles.
@@ -1566,7 +1563,7 @@ void z80_run_cycles (uint64_t cycles)
             }
 
             /* Then check for maskable interrupts */
-            if (IFF1 && sms_vdp_get_interrupt ())
+            if (IFF1 && state.get_int())
             {
                 if (z80_regs.halt)
                 {

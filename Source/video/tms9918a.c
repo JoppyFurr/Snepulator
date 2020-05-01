@@ -81,6 +81,23 @@ const char *tms9918a_mode_name_get (TMS9918A_Mode mode)
 
 
 /*
+ * Check if the tms9918a is currently requesting an interrupt.
+ */
+bool tms9918a_get_interrupt (void)
+{
+    bool interrupt = false;
+
+    /* Frame interrupt */
+    if ((tms9918a_state.regs.ctrl_1 & TMS9918A_CTRL_1_FRAME_INT_EN) && (tms9918a_state.status & TMS9918A_STATUS_INT))
+    {
+        interrupt = true;
+    }
+
+    return interrupt;
+}
+
+
+/*
  * Render one line of a mode2 8x8 pattern.
  */
 void tms9918a_render_mode2_pattern_line (const TMS9918A_Config *config, uint16_t line, TMS9918A_Pattern *pattern_base,

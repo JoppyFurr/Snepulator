@@ -142,5 +142,8 @@ void tms9918a_render_mode2_background_line (const TMS9918A_Config *config, uint1
 /* Run one scanline on the tms9918a. */
 void tms9918a_run_one_scanline (void);
 
+/* Check if the tms9918a is currently requesting an interrupt. */
+bool tms9918a_get_interrupt (void);
+
 /* Reset the tms9918a registers and memory to power-on defaults. */
 void tms9918a_init (void);
