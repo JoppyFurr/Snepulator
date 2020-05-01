@@ -23,6 +23,7 @@ extern "C" {
     /* TODO: Move this into a struct */
     extern SMS_Region region;
     extern Z80_Regs z80_regs;
+    extern TMS9918A_Mode sms_vdp_mode_get (void);
 }
 
 /* Global state */
@@ -214,9 +215,8 @@ void snepulator_render_menubar (void)
 
             ImGui::Separator ();
 
-            ImGui::Text ("VDP");
-            /* TODO: Expose the current mode */
-            ImGui::Text ("Mode : %s", tms9918a_mode_name_get (TMS9918A_MODE_0));
+            ImGui::Text ("Video");
+            ImGui::Text ("Mode : %s", tms9918a_mode_name_get (sms_vdp_mode_get ()));
 
             ImGui::Separator ();
 
