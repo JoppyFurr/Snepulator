@@ -224,9 +224,7 @@ void snepulator_render_open_modal (void)
                 free (state.cart_filename);
                 state.cart_filename = strdup (new_rom_path);
 
-                sms_init (state.bios_filename, state.cart_filename);
-                state.ready = true;
-                state.running = true;
+                system_init ();
 
                 ImGui::CloseCurrentPopup ();
             }

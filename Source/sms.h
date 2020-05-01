@@ -10,6 +10,5 @@ typedef enum SMS_Region_t {
     REGION_JAPAN
 } SMS_Region;
 
-
 /* Reset the SMS and load a new BIOS and/or cartridge ROM. */
-void sms_init (char *bios_filename, char *cart_filename);
+void sms_init ();
