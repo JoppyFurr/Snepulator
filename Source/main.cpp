@@ -239,7 +239,7 @@ void snepulator_render_menubar (void)
                 uint32_t start_time;
                 uint32_t end_time;
                 start_time = SDL_GetTicks ();
-                sms_run (60000.0); /* Simulate 60 seconds */
+                state.run (60000.0); /* Simulate 60 seconds */
                 end_time = SDL_GetTicks ();
 
                 fprintf (stdout, "[DEBUG] Took %d ms to emulate one minute. (%fx speed-up)\n",
@@ -599,7 +599,7 @@ int main (int argc, char **argv)
 
         /* EMULATE */
         if (state.running)
-            sms_run (1000.0 / 60.0); /* Simulate 1/60 of a second */
+            state.run (1000.0 / 60.0); /* Simulate 1/60 of a second */
 
         /* RENDER VDP */
         glBindTexture (GL_TEXTURE_2D, video_out_texture);

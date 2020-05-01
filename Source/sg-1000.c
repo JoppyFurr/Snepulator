@@ -247,6 +247,44 @@ static void sg_1000_audio_callback (void *userdata, uint8_t *stream, int len)
         memset (stream, 0, len);
 }
 
+
+/*
+ * Returns the SG-1000 clock-rate in Hz.
+ * TODO: Confirm values.
+ * TODO: Rename "Frame rate" to "Video system"
+ */
+#define SG_1000_CLOCK_RATE_PAL  3546895
+#define SG_1000_CLOCK_RATE_NTSC 3579545
+uint32_t sg_1000_get_clock_rate ()
+{
+    if (state.system == VIDEO_SYSTEM_PAL)
+    {
+        return SG_1000_CLOCK_RATE_PAL;
+    }
+
+    return SG_1000_CLOCK_RATE_NTSC;
+}
+
+
+/*
+ * Emulate the SG-1000 for the specified length of time.
+ */
+void sg_1000_run (double ms)
+{
+    int lines = (ms * sg_1000_get_clock_rate () / 228.0) / 1000.0;
+
+    while (lines--)
+    {
+        assert (lines >= 0);
+
+        /* 228 CPU cycles per scanline */
+        z80_run_cycles (228);
+        psg_run_cycles (228);
+        tms9918a_run_one_scanline ();
+    }
+}
+
+
 /*
  * Reset the SG-1000 and load a new cartridge ROM.
  */
@@ -308,41 +346,5 @@ void sg_1000_init (char *bios_filename, char *cart_filename)
 
     /* Hook up the audio callback */
     state.audio_callback = sg_1000_audio_callback;
-}
-
-
-/*
- * Returns the SG-1000 clock-rate in Hz.
- * TODO: Confirm values.
- * TODO: Rename "Frame rate" to "Video system"
- */
-#define SG_1000_CLOCK_RATE_PAL  3546895
-#define SG_1000_CLOCK_RATE_NTSC 3579545
-uint32_t sg_1000_get_clock_rate ()
-{
-    if (state.system == VIDEO_SYSTEM_PAL)
-    {
-        return SG_1000_CLOCK_RATE_PAL;
-    }
-
-    return SG_1000_CLOCK_RATE_NTSC;
-}
-
-
-/*
- * Emulate the SG-1000 for the specified length of time.
- */
-void sg_1000_run (double ms)
-{
-    int lines = (ms * sg_1000_get_clock_rate () / 228.0) / 1000.0;
-
-    while (lines--)
-    {
-        assert (lines >= 0);
-
-        /* 228 CPU cycles per scanline */
-        z80_run_cycles (228);
-        psg_run_cycles (228);
-        tms9918a_run_one_scanline ();
-    }
+    state.run = sg_1000_run;
 }
