@@ -1480,7 +1480,6 @@ void z80_instruction ()
 
 /* TODO: Remove knowledge of the VDP from here */
 extern bool sms_vdp_get_interrupt (void);
-extern bool sms_nmi_check (void);
 
 
 /*
@@ -1557,7 +1556,7 @@ void z80_run_cycles (uint64_t cycles)
         if (!instructions_before_interrupts)
         {
             /* First, check for non-maskable interrupts */
-            if (sms_nmi_check ())
+            if (state.get_nmi ())
             {
                 IFF1 = false;
                 /* TODO: Cycle count? */

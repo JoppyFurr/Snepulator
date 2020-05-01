@@ -13,6 +13,3 @@ typedef enum SMS_Region_t {
 
 /* Reset the SMS and load a new BIOS and/or cartridge ROM. */
 void sms_init (char *bios_filename, char *cart_filename);
-
-/* Returns true if there is a non-maskable interrupt. */
-bool sms_nmi_check ();

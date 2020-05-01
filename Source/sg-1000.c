@@ -172,7 +172,7 @@ static void sg_1000_io_write (uint8_t addr, uint8_t data)
 /*
  * Returns true if there is a non-maskable interrupt.
  */
-bool sg_1000_nmi_check ()
+static bool sg_1000_get_nmi ()
 {
     static bool pause_button_previous = false;
     bool ret = false;
@@ -327,5 +327,6 @@ void sg_1000_init (char *bios_filename, char *cart_filename)
     /* Hook up the audio callback */
     state.audio_callback = sg_1000_audio_callback;
     state.get_clock_rate = sg_1000_get_clock_rate;
+    state.get_nmi = sg_1000_get_nmi;
     state.run = sg_1000_run;
 }
