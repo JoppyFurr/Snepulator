@@ -392,6 +392,39 @@ void snepulator_audio_callback (void *userdata, uint8_t *stream, int len)
 
 
 /*
+ * Clear the state of the currently running system.
+ */
+void snepulator_reset (void)
+{
+    /* Stop emulation */
+    state.ready = false;
+    state.running = false;
+
+    /* Clear callback functions */
+    state.run = NULL;
+    state.audio_callback = NULL;
+    state.get_clock_rate = NULL;
+
+    /* Free memory */
+    if (state.ram != NULL)
+    {
+        free (state.ram);
+        state.ram = NULL;
+    }
+    if (state.bios != NULL)
+    {
+        free (state.bios);
+        state.bios = NULL;
+    }
+    if (state.rom != NULL)
+    {
+        free (state.rom);
+        state.rom = NULL;
+    }
+}
+
+
+/*
  * Entry point.
  */
 int main (int argc, char **argv)
