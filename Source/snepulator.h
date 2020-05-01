@@ -48,6 +48,9 @@ typedef struct Snepulator_State_s {
     char *bios_filename;
     char *cart_filename;
 
+    /* Console API */
+    void (*audio_callback) (void *userdata, uint8_t *stream, int len);
+
     /* Console memory */
     uint8_t *ram;
     uint8_t *rom;

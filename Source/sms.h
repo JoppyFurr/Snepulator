@@ -15,9 +15,6 @@ typedef enum SMS_Region_t {
 /* Returns the SMS clock-rate in Hz. */
 uint32_t sms_get_clock_rate ();
 
-/* Callback to supply SDL with audio frames. */
-void sms_audio_callback (void *userdata, uint8_t *stream, int len);
-
 /* Emulate the SMS for the specified length of time. */
 void sms_run (double ms);
 
