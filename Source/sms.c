@@ -368,7 +368,7 @@ static void sms_audio_callback (void *userdata, uint8_t *stream, int len)
 /*
  * Returns the SMS clock-rate in Hz.
  */
-uint32_t sms_get_clock_rate ()
+static uint32_t sms_get_clock_rate ()
 {
     if (state.system == VIDEO_SYSTEM_PAL)
     {
@@ -469,6 +469,7 @@ void sms_init (char *bios_filename, char *cart_filename)
 
     /* Hook up callbacks */
     state.audio_callback = sms_audio_callback;
+    state.get_clock_rate = sms_get_clock_rate;
     state.run = sms_run;
 
     /* Minimal alternative to the BIOS */
