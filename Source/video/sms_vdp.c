@@ -232,7 +232,7 @@ void sms_vdp_control_write (uint8_t value)
 /*
  * Assemble the four mode-bits.
  */
-static uint8_t sms_vdp_mode_get (void)
+uint8_t sms_vdp_mode_get (void)
 {
     return ((tms9918a_state.regs.ctrl_1 & TMS9918A_CTRL_1_MODE_1) ? BIT_0 : 0) +
            ((tms9918a_state.regs.ctrl_0 & TMS9918A_CTRL_0_MODE_2) ? BIT_1 : 0) +
