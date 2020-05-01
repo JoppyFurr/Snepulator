@@ -84,3 +84,6 @@ typedef struct Snepulator_State_s {
 
 /* Update the in-memory button mapping for an input device. */
 void snepulator_update_input_device (Gamepad_Mapping device);
+
+/* Clean up after the previously running system */
+void snepulator_reset (void);

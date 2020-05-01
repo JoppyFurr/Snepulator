@@ -403,27 +403,7 @@ static void sms_run (double ms)
  */
 void sms_init (char *bios_filename, char *cart_filename)
 {
-    /* TODO: Combine these into a common 'free everything' function */
-    /* Free any previous memory */
-    if (state.ram != NULL)
-    {
-        free (state.ram);
-        state.ram = NULL;
-    }
-    if (state.bios != NULL)
-    {
-        free (state.bios);
-        state.bios = NULL;
-    }
-    if (state.rom != NULL)
-    {
-        free (state.rom);
-        state.rom = NULL;
-    }
-    if (state.audio_callback != NULL)
-    {
-        state.audio_callback = NULL;
-    }
+    snepulator_reset ();
 
     /* Reset the mapper */
     mapper_bank[0] = 0;
