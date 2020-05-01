@@ -380,6 +380,18 @@ int config_import (void)
 
 
 /*
+ * Audio callback wrapper.
+ */
+void snepulator_audio_callback (void *userdata, uint8_t *stream, int len)
+{
+    if (state.audio_callback != NULL)
+        state.audio_callback (userdata, stream, len);
+    else
+        memset (stream, 0, len);
+}
+
+
+/*
  * Entry point.
  */
 int main (int argc, char **argv)
@@ -399,7 +411,7 @@ int main (int argc, char **argv)
     desired_audiospec.format = AUDIO_S16LSB;
     desired_audiospec.channels = 1;
     desired_audiospec.samples = 2048;
-    desired_audiospec.callback = sms_audio_callback;
+    desired_audiospec.callback = snepulator_audio_callback;
 
     printf ("Snepulator.\n");
     printf ("Built on " BUILD_DATE ".\n");

@@ -355,7 +355,7 @@ int32_t sms_load_rom (uint8_t **buffer, uint32_t *buffer_size, char *filename)
 /*
  * Callback to supply SDL with audio frames.
  */
-void sms_audio_callback (void *userdata, uint8_t *stream, int len)
+static void sms_audio_callback (void *userdata, uint8_t *stream, int len)
 {
     /* Assuming little-endian host */
     if (state.running)
@@ -386,6 +386,10 @@ void sms_init (char *bios_filename, char *cart_filename)
     {
         free (state.rom);
         state.rom = NULL;
+    }
+    if (state.audio_callback != NULL)
+    {
+        state.audio_callback = NULL;
     }
 
     /* Reset the mapper */
@@ -429,6 +433,9 @@ void sms_init (char *bios_filename, char *cart_filename)
     memset (&state.gamepad_1, 0, sizeof (state.gamepad_1));
     memset (&state.gamepad_2, 0, sizeof (state.gamepad_2));
     state.pause_button = false;
+
+    /* Hook up the audio callback */
+    state.audio_callback = sms_audio_callback;
 
     /* Minimal alternative to the BIOS */
     if (!bios_filename)
