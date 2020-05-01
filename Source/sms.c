@@ -366,6 +366,39 @@ static void sms_audio_callback (void *userdata, uint8_t *stream, int len)
 
 
 /*
+ * Returns the SMS clock-rate in Hz.
+ */
+uint32_t sms_get_clock_rate ()
+{
+    if (state.system == VIDEO_SYSTEM_PAL)
+    {
+        return SMS_CLOCK_RATE_PAL;
+    }
+
+    return SMS_CLOCK_RATE_NTSC;
+}
+
+
+/*
+ * Emulate the SMS for the specified length of time.
+ */
+static void sms_run (double ms)
+{
+    int lines = (ms * sms_get_clock_rate () / 228.0) / 1000.0;
+
+    while (lines--)
+    {
+        assert (lines >= 0);
+
+        /* 228 CPU cycles per scanline */
+        z80_run_cycles (228);
+        psg_run_cycles (228);
+        sms_vdp_run_one_scanline ();
+    }
+}
+
+
+/*
  * Reset the SMS and load a new BIOS and/or cartridge ROM.
  */
 void sms_init (char *bios_filename, char *cart_filename)
@@ -434,8 +467,9 @@ void sms_init (char *bios_filename, char *cart_filename)
     memset (&state.gamepad_2, 0, sizeof (state.gamepad_2));
     state.pause_button = false;
 
-    /* Hook up the audio callback */
+    /* Hook up callbacks */
     state.audio_callback = sms_audio_callback;
+    state.run = sms_run;
 
     /* Minimal alternative to the BIOS */
     if (!bios_filename)
@@ -446,38 +480,5 @@ void sms_init (char *bios_filename, char *cart_filename)
         /* Leave the VDP in Mode4 */
         sms_vdp_control_write (SMS_VDP_CTRL_0_MODE_4);
         sms_vdp_control_write (TMS9918A_CODE_REG_WRITE | 0x00);
-    }
-}
-
-
-/*
- * Returns the SMS clock-rate in Hz.
- */
-uint32_t sms_get_clock_rate ()
-{
-    if (state.system == VIDEO_SYSTEM_PAL)
-    {
-        return SMS_CLOCK_RATE_PAL;
-    }
-
-    return SMS_CLOCK_RATE_NTSC;
-}
-
-
-/*
- * Emulate the SMS for the specified length of time.
- */
-void sms_run (double ms)
-{
-    int lines = (ms * sms_get_clock_rate () / 228.0) / 1000.0;
-
-    while (lines--)
-    {
-        assert (lines >= 0);
-
-        /* 228 CPU cycles per scanline */
-        z80_run_cycles (228);
-        psg_run_cycles (228);
-        sms_vdp_run_one_scanline ();
     }
 }
