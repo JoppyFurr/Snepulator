@@ -585,11 +585,11 @@ void sms_vdp_run_one_scanline ()
         sms_vdp_render_line (config, line);
     }
 
-    /* If this the final active line, copy to the frame buffer */
+    /* If this the final active line, copy the frame for output to the user */
     /* TODO: This is okay for single-threaded code, but locking may be needed if multi-threading is added */
     if (line == config->lines_active - 1)
     {
-        memcpy (tms9918a_state.frame_complete, tms9918a_state.frame_current, sizeof (tms9918a_state.frame_current));
+        memcpy (state.video_out_texture_data, tms9918a_state.frame_current, sizeof (tms9918a_state.frame_current));
 
         /* Update statistics (rolling average) */
         static int vdp_previous_completion_time = 0;
@@ -640,11 +640,3 @@ void sms_vdp_run_one_scanline ()
     }
 }
 
-
-/*
- * Copy the most recently rendered frame into the texture buffer.
- */
-void sms_vdp_copy_latest_frame (void)
-{
-    memcpy (state.video_out_texture_data, tms9918a_state.frame_complete, sizeof (tms9918a_state.frame_complete));
-}

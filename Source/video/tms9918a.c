@@ -388,7 +388,7 @@ void tms9918a_run_one_scanline (void)
     /* If this the final active line, copy to the frame buffer */
     if (line == config->lines_active - 1)
     {
-        memcpy (tms9918a_state.frame_complete, tms9918a_state.frame_current, sizeof (tms9918a_state.frame_current));
+        memcpy (state.video_out_texture_data, tms9918a_state.frame_current, sizeof (tms9918a_state.frame_current));
 
         /* Update statistics (rolling average) */
         static int vdp_previous_completion_time = 0;

@@ -43,9 +43,6 @@ void sms_vdp_init (void);
 /* Run one scanline on the VDP. */
 void sms_vdp_run_one_scanline (void);
 
-/* Copy the most recently rendered frame into the texture buffer. */
-void sms_vdp_copy_latest_frame (void);
-
 /* Check if the VDP is currently requesting an interrupt. */
 bool sms_vdp_get_interrupt (void);
 

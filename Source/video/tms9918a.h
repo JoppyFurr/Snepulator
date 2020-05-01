@@ -94,8 +94,7 @@ typedef struct TMS9918A_State_s {
     bool     line_interrupt;            /* Line interrupt pending */
     uint8_t  v_counter;                 /* 8-bit line counter */
 
-    /* Frame buffers */
-    float_Colour frame_complete [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
+    /* Frame buffer */
     float_Colour frame_current  [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
 } TMS9918A_State;
 
