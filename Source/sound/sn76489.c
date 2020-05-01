@@ -7,18 +7,18 @@
 #include <pthread.h>
 
 #include "../snepulator.h"
-#include "sn79489.h"
+#include "sn76489.h"
 extern Snepulator_State state;
 
 /* State */
-SN79489_Regs psg_regs;
+SN76489_Regs psg_regs;
 pthread_mutex_t psg_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 
 /*
  * Handle data writes sent to the PSG.
  */
-void sn79489_data_write (uint8_t data)
+void sn76489_data_write (uint8_t data)
 {
     static uint8_t latch = 0x00;
     uint16_t data_low = data & 0x0f;
@@ -111,7 +111,7 @@ void sn79489_data_write (uint8_t data)
 /*
  * Reset PSG to initial power-on state.
  */
-void sn79489_init (void)
+void sn76489_init (void)
 {
     memset (&psg_regs, 0, sizeof (psg_regs));
     psg_regs.vol_0 = 0x0f;
@@ -262,7 +262,7 @@ void psg_run_cycles (uint64_t cycles)
  * Retrieves a block of samples from the sample-ring.
  * Assumes a sample-rate of 48 KHz.
  */
-void sn79489_get_samples (int16_t *stream, int count)
+void sn76489_get_samples (int16_t *stream, int count)
 {
     static uint64_t soundcard_sample_count = 0;
 

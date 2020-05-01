@@ -15,7 +15,7 @@
 #include "cpu/z80.h"
 #include "video/tms9918a.h"
 #include "video/sms_vdp.h"
-#include "sound/sn79489.h"
+#include "sound/sn76489.h"
 
 #include "sg-1000.h"
 
@@ -151,7 +151,7 @@ static void sg_1000_io_write (uint8_t addr, uint8_t data)
     /* PSG */
     if (addr >= 0x40 && addr <= 0x7f)
     {
-        sn79489_data_write (data);
+        sn76489_data_write (data);
     }
 
     /* VDP */
@@ -244,7 +244,7 @@ static void sg_1000_audio_callback (void *userdata, uint8_t *stream, int len)
 {
     /* Assuming little-endian host */
     if (state.running)
-        sn79489_get_samples ((int16_t *)stream, len / 2);
+        sn76489_get_samples ((int16_t *)stream, len / 2);
     else
         memset (stream, 0, len);
 }
@@ -313,7 +313,7 @@ void sg_1000_init (void)
     /* Initialise hardware */
     z80_init (sg_1000_memory_read, sg_1000_memory_write, sg_1000_io_read, sg_1000_io_write);
     tms9918a_init ();
-    sn79489_init ();
+    sn76489_init ();
 
     /* Initialize input */
     memset (&state.gamepad_1, 0, sizeof (state.gamepad_1));
