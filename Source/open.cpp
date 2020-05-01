@@ -24,13 +24,21 @@
 extern "C" {
 #include "snepulator.h"
 #include "config.h"
+#include "open.h"
+
 #include "sms.h"
 }
+
 
 /* Global state */
 extern Snepulator_State state;
 
-static char rom_path[160] = { '\0' }; /* TODO: Make the size dynamic */
+/* Open-dialogue state */
+File_Open_State open_state = { .title = "Open" };
+
+/* Current path */
+/* TODO: Make size dynamic */
+static char path[160] = { '\0' };
 
 
 /*
@@ -38,7 +46,7 @@ static char rom_path[160] = { '\0' }; /* TODO: Make the size dynamic */
  */
 void snepulator_render_open_modal (void)
 {
-    if (ImGui::BeginPopupModal ("Open ROM...", NULL, ImGuiWindowFlags_AlwaysAutoResize |
+    if (ImGui::BeginPopupModal (open_state.title, NULL, ImGuiWindowFlags_AlwaysAutoResize |
                                                      ImGuiWindowFlags_NoMove |
                                                      ImGuiWindowFlags_NoScrollbar))
     {
@@ -46,34 +54,34 @@ void snepulator_render_open_modal (void)
         int height = (state.host_height / 2 > 384) ? state.host_width / 2 : 384;
 
         /* State */
-        static bool rom_path_cached = false;
+        static bool path_cached = false;
         static std::vector<std::string> file_list;
         static int selected_file = 0;
         bool open_action = false;
 
-        std::regex sms_regex (".*\\.(BIN|bin|SMS|sms|sg)$");
+        std::regex file_regex (open_state.regex);
 
-        if (!rom_path_cached)
+        if (!path_cached)
         {
             /* Retrieve initial path from config */
-            if (rom_path [0] == '\0')
+            if (path [0] == '\0')
             {
-                char *path = NULL;
+                char *stored_path = NULL;
 
-                if (config_string_get ("paths", "sms_roms", &path) == 0)
+                if (config_string_get ("paths", "sms_roms", &stored_path) == 0)
                 {
-                    strncpy (rom_path, path, 179);
+                    strncpy (path, stored_path, 179);
                 }
             }
 
             /* Fallback to home directory */
-            if (rom_path [0] == '\0')
+            if (path [0] == '\0')
             {
-                char *path = getenv ("HOME");
+                char *home_path = getenv ("HOME");
 
-                if (path != NULL)
+                if (home_path != NULL)
                 {
-                    sprintf (rom_path, "%s/", path);
+                    sprintf (path, "%s/", home_path);
                 }
                 else
                 {
@@ -83,7 +91,7 @@ void snepulator_render_open_modal (void)
             }
 
             /* File listing */
-            DIR *dir = opendir (rom_path);
+            DIR *dir = opendir (path);
             struct dirent *entry = NULL;
             std::string entry_string;
 
@@ -98,7 +106,7 @@ void snepulator_render_open_modal (void)
                     }
 
                     /* Hide ".." directory if we're already at the root */
-                    if ((strcmp (rom_path, "/") == 0) && (strcmp (entry->d_name, "..") == 0))
+                    if ((strcmp (path, "/") == 0) && (strcmp (entry->d_name, "..") == 0))
                     {
                         continue;
                     }
@@ -111,7 +119,7 @@ void snepulator_render_open_modal (void)
                         entry_string += '/';
                     }
                     /* Only list files that have a valid ROM extension */
-                    else if (!std::regex_match (entry_string, sms_regex))
+                    else if (!std::regex_match (entry_string, file_regex))
                     {
                             continue;
                     }
@@ -121,10 +129,10 @@ void snepulator_render_open_modal (void)
                 std::sort (file_list.begin (), file_list.end ());
             }
 
-            rom_path_cached = true;
+            path_cached = true;
         }
 
-        ImGui::Text ("%s", rom_path);
+        ImGui::Text ("%s", path);
 
         /* Current directory contents */
         ImGui::BeginChild ("Files", ImVec2 (width, height - 64), true);
@@ -183,13 +191,13 @@ void snepulator_render_open_modal (void)
             /* Directory */
             if (file_list[selected_file].back () == '/')
             {
-                char new_rom_path[160] = { '\0' };
+                char new_path[160] = { '\0' };
 
                 if (strcmp (file_list [selected_file].c_str (), "../") == 0)
                 {
                     /* Go up to the parent directory */
                     /* First, remove the final slash from the path */
-                    char *end_slash = strrchr (rom_path, '/');
+                    char *end_slash = strrchr (path, '/');
                     if (end_slash == NULL)
                     {
                         fprintf (stderr, "Error: Failed to change directory.");
@@ -198,7 +206,7 @@ void snepulator_render_open_modal (void)
                     end_slash [0] = '\0';
 
                     /* Now, zero the path name after the new final slash */
-                    end_slash = strrchr (rom_path, '/');
+                    end_slash = strrchr (path, '/');
                     if (end_slash == NULL)
                     {
                         fprintf (stderr, "Error: Failed to change directory.");
@@ -209,26 +217,23 @@ void snepulator_render_open_modal (void)
                 else
                 {
                     /* Enter new directory */
-                    sprintf (new_rom_path, "%s%s", rom_path, file_list [selected_file].c_str ());
-                    strcpy (rom_path, new_rom_path);
+                    sprintf (new_path, "%s%s", path, file_list [selected_file].c_str ());
+                    strcpy (path, new_path);
                 }
-                config_string_set ("paths", "sms_roms", rom_path);
+                config_string_set ("paths", "sms_roms", path);
                 config_write ();
             }
             /* ROM */
             else
             {
-                char new_rom_path[160] = { '\0' };
-                sprintf (new_rom_path, "%s%s", rom_path, file_list [selected_file].c_str ());
+                char new_path[160] = { '\0' };
+                sprintf (new_path, "%s%s", path, file_list [selected_file].c_str ());
 
-                free (state.cart_filename);
-                state.cart_filename = strdup (new_rom_path);
-
-                system_init ();
+                open_state.callback (new_path);
 
                 ImGui::CloseCurrentPopup ();
             }
-            rom_path_cached = false;
+            path_cached = false;
             file_list.clear ();
         }
 

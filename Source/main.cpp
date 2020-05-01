@@ -14,15 +14,20 @@
 #include <vector>
 
 extern "C" {
+
 #include "util.h"
 #include "snepulator.h"
+#include "open.h"
 #include "config.h"
+
 #include "video/tms9918a.h"
 #include "video/sms_vdp.h"
 #include "cpu/z80.h"
 
 #include "sg-1000.h"
 #include "sms.h"
+
+    extern File_Open_State open_state;
 
     /* TODO: Move this into a struct */
     extern SMS_Region region;
@@ -41,13 +46,22 @@ Gamepad_Mapping player_2_mapping;
 SDL_Joystick *player_1_joystick;
 SDL_Joystick *player_2_joystick;
 
-/* Implementation in open.cpp */
-void snepulator_render_open_modal (void);
-
 /* Implementation in input.cpp */
 extern Gamepad_Mapping map_to_edit;
 bool input_modal_consume_event (SDL_Event event);
 void snepulator_render_input_modal (void);
+
+
+/*
+ * Callback for "Load ROM..."
+ */
+void snepulator_load_rom (char *path)
+{
+    free (state.cart_filename);
+    state.cart_filename = strdup (path);
+
+    system_init ();
+}
 
 
 /*
@@ -64,7 +78,16 @@ void snepulator_render_menubar (void)
     {
         if (ImGui::BeginMenu ("File"))
         {
-            if (ImGui::MenuItem ("Open...", NULL)) { state.running = false; open_modal = true; }
+            if (ImGui::MenuItem ("Load ROM...", NULL))
+            {
+                state.running = false;
+
+                open_state.title = "Load ROM...";
+                open_state.regex = ".*\\.(BIN|bin|SMS|sms|sg)$";
+                open_state.callback = snepulator_load_rom;
+
+                open_modal = true;
+            }
             if (ImGui::MenuItem ("Pause", NULL, !state.running)) { if (state.ready) { state.running = !state.running; } }
             ImGui::Separator ();
             if (ImGui::MenuItem ("Quit", NULL)) { state.abort = true; }
@@ -259,7 +282,7 @@ void snepulator_render_menubar (void)
     /* Open any popups requested */
     if (open_modal)
     {
-        ImGui::OpenPopup ("Open ROM...");
+        ImGui::OpenPopup (open_state.title);
     }
     if (input_modal)
     {
