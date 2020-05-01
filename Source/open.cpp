@@ -165,7 +165,11 @@ void snepulator_render_open_modal (void)
 
         /* Buttons */
         if (ImGui::Button ("Cancel", ImVec2 (120,0))) {
-            state.running = true;
+            if (state.ready)
+            {
+                /* TODO: Preserve previous state */
+                state.running = true;
+            }
             ImGui::CloseCurrentPopup ();
         }
         ImGui::SameLine ();
@@ -221,6 +225,7 @@ void snepulator_render_open_modal (void)
                 state.cart_filename = strdup (new_rom_path);
 
                 sms_init (state.bios_filename, state.cart_filename);
+                state.ready = true;
                 state.running = true;
 
                 ImGui::CloseCurrentPopup ();

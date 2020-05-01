@@ -40,8 +40,9 @@ typedef enum Video_System_e {
 } Video_System;
 
 typedef struct Snepulator_State_s {
-    bool    abort ;
-    bool    running ;
+    bool    ready;      /* Ready to run - A console and ROM are loaded. */
+    bool    running;    /* Emulation is actively running. */
+    bool    abort;      /* Attempt to cleanly exit. */
 
     /* Files */
     char *bios_filename;
