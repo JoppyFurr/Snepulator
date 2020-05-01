@@ -450,6 +450,7 @@ void sms_init (char *bios_filename, char *cart_filename)
     /* Hook up callbacks */
     state.audio_callback = sms_audio_callback;
     state.get_clock_rate = sms_get_clock_rate;
+    state.get_int = sms_vdp_get_interrupt;
     state.get_nmi = sms_get_nmi;
     state.run = sms_run;
 

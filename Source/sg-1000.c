@@ -327,6 +327,7 @@ void sg_1000_init (char *bios_filename, char *cart_filename)
     /* Hook up the audio callback */
     state.audio_callback = sg_1000_audio_callback;
     state.get_clock_rate = sg_1000_get_clock_rate;
+    state.get_int = tms9918a_get_interrupt;
     state.get_nmi = sg_1000_get_nmi;
     state.run = sg_1000_run;
 }
