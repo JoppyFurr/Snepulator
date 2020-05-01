@@ -17,7 +17,7 @@
 #include "cpu/z80.h"
 #include "video/tms9918a.h"
 #include "video/sms_vdp.h"
-#include "sound/sn79489.h"
+#include "sound/sn76489.h"
 
 extern Snepulator_State state;
 extern Z80_Regs z80_regs;
@@ -259,7 +259,7 @@ static void sms_io_write (uint8_t addr, uint8_t data)
     /* PSG */
     else if (addr >= 0x40 && addr <= 0x7f)
     {
-        sn79489_data_write (data);
+        sn76489_data_write (data);
     }
 
 
@@ -359,7 +359,7 @@ static void sms_audio_callback (void *userdata, uint8_t *stream, int len)
 {
     /* Assuming little-endian host */
     if (state.running)
-        sn79489_get_samples ((int16_t *)stream, len / 2);
+        sn76489_get_samples ((int16_t *)stream, len / 2);
     else
         memset (stream, 0, len);
 }
@@ -438,7 +438,7 @@ void sms_init (void)
     /* Initialise CPU and VDP */
     z80_init (sms_memory_read, sms_memory_write, sms_io_read, sms_io_write);
     sms_vdp_init ();
-    sn79489_init ();
+    sn76489_init ();
 
     /* Initialize input */
     memset (&state.gamepad_1, 0, sizeof (state.gamepad_1));
