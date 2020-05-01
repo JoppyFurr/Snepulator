@@ -314,7 +314,10 @@ void snepulator_render_input_modal (void)
         /* Buttons */
         if (ImGui::Button ("Cancel", ImVec2 (120,0))) {
             remap_state = REMAP_STATE_DEFAULT;
-            state.running = true;
+            if (state.ready)
+            {
+                state.running = true;
+            }
             config_capture_events = false;
             ImGui::CloseCurrentPopup ();
         }
@@ -335,7 +338,11 @@ void snepulator_render_input_modal (void)
             snepulator_update_input_device (map_to_edit);
             player_1_mapping = map_to_edit;
 
-            state.running = true; /* TODO: Rather than going to "Running", restore to what the state was previously */
+            if (state.ready)
+            {
+                /* TODO: Rather than going to "Running", restore to what the state was previously */
+                state.running = true;
+            }
 
             remap_state = REMAP_STATE_DEFAULT;
             config_capture_events = false;

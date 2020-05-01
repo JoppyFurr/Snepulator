@@ -60,7 +60,7 @@ void snepulator_render_menubar (void)
         if (ImGui::BeginMenu ("File"))
         {
             if (ImGui::MenuItem ("Open...", NULL)) { state.running = false; open_modal = true; }
-            if (ImGui::MenuItem ("Pause", NULL, !state.running)) { state.running = !state.running; }
+            if (ImGui::MenuItem ("Pause", NULL, !state.running)) { if (state.ready) { state.running = !state.running; } }
             ImGui::Separator ();
             if (ImGui::MenuItem ("Quit", NULL)) { state.abort = true; }
             ImGui::EndMenu ();
@@ -513,6 +513,7 @@ int main (int argc, char **argv)
     if (state.bios_filename || state.cart_filename)
     {
         sms_init (state.bios_filename, state.cart_filename);
+        state.ready = true;
         state.running = true;
     }
 
