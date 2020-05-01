@@ -255,7 +255,7 @@ static void sg_1000_audio_callback (void *userdata, uint8_t *stream, int len)
  */
 #define SG_1000_CLOCK_RATE_PAL  3546895
 #define SG_1000_CLOCK_RATE_NTSC 3579545
-uint32_t sg_1000_get_clock_rate ()
+static uint32_t sg_1000_get_clock_rate ()
 {
     if (state.system == VIDEO_SYSTEM_PAL)
     {
@@ -269,7 +269,7 @@ uint32_t sg_1000_get_clock_rate ()
 /*
  * Emulate the SG-1000 for the specified length of time.
  */
-void sg_1000_run (double ms)
+static void sg_1000_run (double ms)
 {
     int lines = (ms * sg_1000_get_clock_rate () / 228.0) / 1000.0;
 
@@ -346,5 +346,6 @@ void sg_1000_init (char *bios_filename, char *cart_filename)
 
     /* Hook up the audio callback */
     state.audio_callback = sg_1000_audio_callback;
+    state.get_clock_rate = sg_1000_get_clock_rate;
     state.run = sg_1000_run;
 }

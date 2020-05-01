@@ -11,10 +11,6 @@ typedef enum SMS_Region_t {
 } SMS_Region;
 
 
-
-/* Returns the SMS clock-rate in Hz. */
-uint32_t sms_get_clock_rate ();
-
 /* Reset the SMS and load a new BIOS and/or cartridge ROM. */
 void sms_init (char *bios_filename, char *cart_filename);
 
