@@ -558,8 +558,6 @@ int main (int argc, char **argv)
     if (state.bios_filename || state.cart_filename)
     {
         sms_init (state.bios_filename, state.cart_filename);
-        state.ready = true;
-        state.running = true;
     }
 
     /* Main loop */
