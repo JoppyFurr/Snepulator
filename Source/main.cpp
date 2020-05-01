@@ -590,7 +590,6 @@ int main (int argc, char **argv)
             sms_run (1000.0 / 60.0); /* Simulate 1/60 of a second */
 
         /* RENDER VDP */
-        sms_vdp_copy_latest_frame ();
         glBindTexture (GL_TEXTURE_2D, video_out_texture);
         glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, state.video_filter);
         glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, state.video_filter);
