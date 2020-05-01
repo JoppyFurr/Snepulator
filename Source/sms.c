@@ -401,10 +401,8 @@ static void sms_run (double ms)
 /*
  * Reset the SMS and load a new BIOS and/or cartridge ROM.
  */
-void sms_init (char *bios_filename, char *cart_filename)
+void sms_init (void)
 {
-    snepulator_reset ();
-
     /* Reset the mapper */
     mapper_bank[0] = 0;
     mapper_bank[1] = 1;
@@ -418,23 +416,23 @@ void sms_init (char *bios_filename, char *cart_filename)
     }
 
     /* Load BIOS */
-    if (bios_filename)
+    if (state.bios_filename)
     {
-        if (sms_load_rom (&state.bios, &state.bios_size, bios_filename) == -1)
+        if (sms_load_rom (&state.bios, &state.bios_size, state.bios_filename) == -1)
         {
             state.abort = true;
         }
-        fprintf (stdout, "%d KiB BIOS %s loaded.\n", state.bios_size >> 10, bios_filename);
+        fprintf (stdout, "%d KiB BIOS %s loaded.\n", state.bios_size >> 10, state.bios_filename);
     }
 
     /* Load ROM cart */
-    if (cart_filename)
+    if (state.cart_filename)
     {
-        if (sms_load_rom (&state.rom, &state.rom_size, cart_filename) == -1)
+        if (sms_load_rom (&state.rom, &state.rom_size, state.cart_filename) == -1)
         {
             state.abort = true;
         }
-        fprintf (stdout, "%d KiB ROM %s loaded.\n", state.rom_size >> 10, cart_filename);
+        fprintf (stdout, "%d KiB ROM %s loaded.\n", state.rom_size >> 10, state.cart_filename);
     }
 
     /* Initialise CPU and VDP */
@@ -459,7 +457,7 @@ void sms_init (char *bios_filename, char *cart_filename)
     state.running = true;
 
     /* Minimal alternative to the BIOS */
-    if (!bios_filename)
+    if (!state.bios_filename)
     {
         z80_regs.im = 1;
         memory_control |= SMS_MEMORY_CTRL_BIOS_DISABLE;

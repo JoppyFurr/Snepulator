@@ -17,6 +17,8 @@
 #include "video/sms_vdp.h"
 #include "sound/sn79489.h"
 
+#include "sg-1000.h"
+
 extern Snepulator_State state;
 
 #define SG_1000_RAM_SIZE (1 << 10)
@@ -250,11 +252,7 @@ static void sg_1000_audio_callback (void *userdata, uint8_t *stream, int len)
 
 /*
  * Returns the SG-1000 clock-rate in Hz.
- * TODO: Confirm values.
- * TODO: Rename "Frame rate" to "Video system"
  */
-#define SG_1000_CLOCK_RATE_PAL  3546895
-#define SG_1000_CLOCK_RATE_NTSC 3579545
 static uint32_t sg_1000_get_clock_rate ()
 {
     if (state.system == VIDEO_SYSTEM_PAL)
@@ -288,10 +286,8 @@ static void sg_1000_run (double ms)
 /*
  * Reset the SG-1000 and load a new cartridge ROM.
  */
-void sg_1000_init (char *bios_filename, char *cart_filename)
+void sg_1000_init (void)
 {
-    snepulator_reset ();
-
     /* Reset the mapper */
     mapper_bank[0] = 0;
     mapper_bank[1] = 1;
@@ -305,13 +301,13 @@ void sg_1000_init (char *bios_filename, char *cart_filename)
     }
 
     /* Load ROM cart */
-    if (cart_filename)
+    if (state.cart_filename)
     {
-        if (sg_1000_load_rom (&state.rom, &state.rom_size, cart_filename) == -1)
+        if (sg_1000_load_rom (&state.rom, &state.rom_size, state.cart_filename) == -1)
         {
             state.abort = true;
         }
-        fprintf (stdout, "%d KiB ROM %s loaded.\n", state.rom_size >> 10, cart_filename);
+        fprintf (stdout, "%d KiB ROM %s loaded.\n", state.rom_size >> 10, state.cart_filename);
     }
 
     /* Initialise hardware */

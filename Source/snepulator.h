@@ -89,3 +89,6 @@ void snepulator_update_input_device (Gamepad_Mapping device);
 
 /* Clean up after the previously running system */
 void snepulator_reset (void);
+
+/* Call the appropriate initialisation for the chosen ROM */
+void system_init (void);

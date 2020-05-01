@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -19,7 +20,10 @@ extern "C" {
 #include "video/tms9918a.h"
 #include "video/sms_vdp.h"
 #include "cpu/z80.h"
+
+#include "sg-1000.h"
 #include "sms.h"
+
     /* TODO: Move this into a struct */
     extern SMS_Region region;
     extern Z80_Regs z80_regs;
@@ -116,7 +120,7 @@ void snepulator_render_menubar (void)
         {
             if (ImGui::MenuItem ("Hard Reset"))
             {
-                sms_init (state.bios_filename, state.cart_filename);
+                system_init ();
             }
             ImGui::Separator ();
 
@@ -424,6 +428,35 @@ void snepulator_reset (void)
 }
 
 
+void system_init ()
+{
+    char extension[16] = { '\0' };
+    char *extension_ptr;
+
+    snepulator_reset ();
+
+    extension_ptr = strrchr (state.cart_filename, '.');
+
+    if (extension_ptr != NULL)
+    {
+        for (int i = 0; i < 15 && extension_ptr[i] != '\0'; i++)
+        {
+            extension [i] = tolower (extension_ptr [i]);
+        }
+    }
+
+    if (strcmp (extension, ".sg") == 0)
+    {
+        sg_1000_init ();
+    }
+    else
+    {
+        /* Default to Master System, to allow the running of the bios */
+        sms_init ();
+    }
+}
+
+
 /*
  * Entry point.
  */
@@ -554,10 +587,9 @@ int main (int argc, char **argv)
     snepulator_init_input_devices ();
 
     /* If we have a valid ROM to run, start emulation */
-    /* TODO: Only allow unpause if we have a ROM to run */
     if (state.bios_filename || state.cart_filename)
     {
-        sms_init (state.bios_filename, state.cart_filename);
+        system_init ();
     }
 
     /* Main loop */
