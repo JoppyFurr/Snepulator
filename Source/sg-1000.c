@@ -330,4 +330,8 @@ void sg_1000_init (char *bios_filename, char *cart_filename)
     state.get_int = tms9918a_get_interrupt;
     state.get_nmi = sg_1000_get_nmi;
     state.run = sg_1000_run;
+
+    /* Begin emulation */
+    state.ready = true;
+    state.running = true;
 }

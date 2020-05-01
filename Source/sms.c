@@ -454,6 +454,10 @@ void sms_init (char *bios_filename, char *cart_filename)
     state.get_nmi = sms_get_nmi;
     state.run = sms_run;
 
+    /* Begin emulation */
+    state.ready = true;
+    state.running = true;
+
     /* Minimal alternative to the BIOS */
     if (!bios_filename)
     {
