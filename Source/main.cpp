@@ -57,8 +57,29 @@ void snepulator_render_input_modal (void);
  */
 void snepulator_load_rom (char *path)
 {
-    free (state.cart_filename);
+    if (state.cart_filename != NULL)
+    {
+        free (state.cart_filename);
+    }
+
     state.cart_filename = strdup (path);
+
+    system_init ();
+}
+
+
+/*
+ * Callback for "Load Master System BIOS..."
+ */
+void snepulator_load_sms_bios (char *path)
+{
+    if (state.bios_filename != NULL)
+    {
+        free (state.bios_filename);
+    }
+
+    /* TODO: Separate BIOS file names for different consoles. */
+    state.bios_filename = strdup (path);
 
     system_init ();
 }
@@ -81,13 +102,24 @@ void snepulator_render_menubar (void)
             if (ImGui::MenuItem ("Load ROM...", NULL))
             {
                 state.running = false;
-
                 open_state.title = "Load ROM...";
                 open_state.regex = ".*\\.(BIN|bin|SMS|sms|sg)$";
                 open_state.callback = snepulator_load_rom;
-
                 open_modal = true;
             }
+            if (ImGui::BeginMenu ("Load BIOS..."))
+            {
+                if (ImGui::MenuItem ("Master System", NULL))
+                {
+                    state.running = false;
+                    open_state.title = "Load Master System BIOS...";
+                    open_state.regex = ".*\\.(BIN|bin|SMS|sms)$";
+                    open_state.callback = snepulator_load_sms_bios;
+                    open_modal = true;
+                }
+                ImGui::EndMenu ();
+            }
+
             if (ImGui::MenuItem ("Pause", NULL, !state.running)) { if (state.ready) { state.running = !state.running; } }
             ImGui::Separator ();
             if (ImGui::MenuItem ("Quit", NULL)) { state.abort = true; }
@@ -454,17 +486,20 @@ void snepulator_reset (void)
 void system_init ()
 {
     char extension[16] = { '\0' };
-    char *extension_ptr;
+    char *extension_ptr = NULL;
 
     snepulator_reset ();
 
-    extension_ptr = strrchr (state.cart_filename, '.');
-
-    if (extension_ptr != NULL)
+    if (state.cart_filename != NULL)
     {
-        for (int i = 0; i < 15 && extension_ptr[i] != '\0'; i++)
+        extension_ptr = strrchr (state.cart_filename, '.');
+
+        if (extension_ptr != NULL)
         {
-            extension [i] = tolower (extension_ptr [i]);
+            for (int i = 0; i < 15 && extension_ptr[i] != '\0'; i++)
+            {
+                extension [i] = tolower (extension_ptr [i]);
+            }
         }
     }
 
