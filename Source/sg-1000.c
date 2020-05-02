@@ -14,7 +14,6 @@
 
 #include "cpu/z80.h"
 #include "video/tms9918a.h"
-#include "video/sms_vdp.h"
 #include "sound/sn76489.h"
 
 #include "sg-1000.h"
@@ -93,22 +92,22 @@ static void sg_1000_memory_write (uint16_t addr, uint8_t data)
 
 
 /*
- * Handle SMS I/O reads.
+ * Handle SG-1000 I/O reads.
  */
 static uint8_t sg_1000_io_read (uint8_t addr)
 {
-    /* VDP */
+    /* tms9918a */
     if (addr >= 0x80 && addr <= 0xbf)
     {
         if ((addr & 0x01) == 0x00)
         {
-            /* VDP Data Register */
-            return sms_vdp_data_read ();
+            /* tms9918a Data Register */
+            return tms9918a_data_read ();
         }
         else
         {
-            /* VDP Status Flags */
-            return sms_vdp_status_read ();
+            /* tms9918a Status Flags */
+            return tms9918a_status_read ();
         }
     }
 
@@ -144,7 +143,7 @@ static uint8_t sg_1000_io_read (uint8_t addr)
 
 
 /*
- * Handle SMS I/O writes.
+ * Handle SG-1000 I/O writes.
  */
 static void sg_1000_io_write (uint8_t addr, uint8_t data)
 {
@@ -160,12 +159,12 @@ static void sg_1000_io_write (uint8_t addr, uint8_t data)
         if ((addr & 0x01) == 0x00)
         {
             /* VDP Data Register */
-            sms_vdp_data_write (data);
+            tms9918a_data_write (data);
         }
         else
         {
             /* VDP Control Register */
-            sms_vdp_control_write (data);
+            tms9918a_control_write (data);
         }
     }
 }

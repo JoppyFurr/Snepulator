@@ -81,6 +81,98 @@ const char *tms9918a_mode_name_get (TMS9918A_Mode mode)
 
 
 /*
+ * Read one byte from the tms9918a data port.
+ */
+uint8_t tms9918a_data_read ()
+{
+    uint8_t data = tms9918a_state.read_buffer;
+
+    tms9918a_state.first_byte_received = false;
+
+    tms9918a_state.read_buffer = tms9918a_state.vram[tms9918a_state.address];
+
+    tms9918a_state.address = (tms9918a_state.address + 1) & 0x3fff;
+
+    return data;
+
+}
+
+
+/*
+ * Write one byte to the tms9918a data port.
+ */
+void tms9918a_data_write (uint8_t value)
+{
+    tms9918a_state.first_byte_received = false;
+
+    switch (tms9918a_state.code)
+    {
+        case TMS9918A_CODE_VRAM_READ:
+        case TMS9918A_CODE_VRAM_WRITE:
+        case TMS9918A_CODE_REG_WRITE:
+            tms9918a_state.vram[tms9918a_state.address] = value;
+            break;
+
+        default:
+            break;
+    }
+    tms9918a_state.address = (tms9918a_state.address + 1) & 0x3fff;
+}
+
+
+/*
+ * Read one byte from the tms9918a control (status) port.
+ */
+uint8_t tms9918a_status_read ()
+{
+    uint8_t status = tms9918a_state.status;
+    tms9918a_state.first_byte_received = false;
+
+    /* Clear on read */
+    tms9918a_state.status = 0x00;
+    tms9918a_state.line_interrupt = false; /* "The flag remains set until the control port (IO port 0xbf) is read */
+
+    return status;
+}
+
+
+/*
+ * Write one byte to the tms9918a control port.
+ */
+void tms9918a_control_write (uint8_t value)
+{
+    if (!tms9918a_state.first_byte_received) /* First byte */
+    {
+        tms9918a_state.first_byte_received = true;
+        tms9918a_state.address = (tms9918a_state.address & 0x3f00) | ((uint16_t) value << 0);
+    }
+    else /* Second byte */
+    {
+        tms9918a_state.first_byte_received = false;
+        tms9918a_state.address = (tms9918a_state.address & 0x00ff) | ((uint16_t) (value & 0x3f) << 8);
+        tms9918a_state.code = value & 0xc0;
+
+        switch (tms9918a_state.code)
+        {
+            case TMS9918A_CODE_VRAM_READ:
+                tms9918a_state.read_buffer = tms9918a_state.vram[tms9918a_state.address++];
+                break;
+            case TMS9918A_CODE_VRAM_WRITE:
+                break;
+            case TMS9918A_CODE_REG_WRITE:
+                if ((value & 0x0f) <= 10)
+                {
+                    ((uint8_t *) &tms9918a_state.regs) [value & 0x0f] = tms9918a_state.address & 0x00ff;
+                }
+                break;
+            default:
+                break;
+        }
+    }
+}
+
+
+/*
  * Check if the tms9918a is currently requesting an interrupt.
  */
 bool tms9918a_get_interrupt (void)
@@ -281,6 +373,7 @@ void tms9918a_render_mode2_background_line (const TMS9918A_Config *config, uint1
         uint16_t pattern_tile = tile & ((((uint16_t) tms9918a_state.regs.background_pg_base) << 8) | 0xff);
         uint16_t colour_tile  = tile & ((((uint16_t) tms9918a_state.regs.colour_table_base) << 3) | 0x07);
 
+        /* TODO: Is the base-address in bytes, or in patterns? */
         TMS9918A_Pattern *pattern = (TMS9918A_Pattern *) &tms9918a_state.vram[pattern_generator_base + (pattern_tile * sizeof (TMS9918A_Pattern))];
 
         uint8_t colours = tms9918a_state.vram[colour_table_base + colour_tile * 8 + (line & 0x07)];

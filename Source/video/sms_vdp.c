@@ -124,9 +124,8 @@ void sms_vdp_init (void)
     memset (cram,                 0, sizeof (cram));
 }
 
-static bool first_byte_received = false;
 
-
+/* TODO: Use tms9918a versions where identical */
 /*
  * Read one byte from the VDP data port.
  */
@@ -134,7 +133,7 @@ uint8_t sms_vdp_data_read ()
 {
     uint8_t data = tms9918a_state.read_buffer;
 
-    first_byte_received = false;
+    tms9918a_state.first_byte_received = false;
 
     tms9918a_state.read_buffer = tms9918a_state.vram[tms9918a_state.address];
 
@@ -150,7 +149,7 @@ uint8_t sms_vdp_data_read ()
  */
 void sms_vdp_data_write (uint8_t value)
 {
-    first_byte_received = false;
+    tms9918a_state.first_byte_received = false;
 
     switch (tms9918a_state.code)
     {
@@ -177,7 +176,7 @@ void sms_vdp_data_write (uint8_t value)
 uint8_t sms_vdp_status_read ()
 {
     uint8_t status = tms9918a_state.status;
-    first_byte_received = false;
+    tms9918a_state.first_byte_received = false;
 
     /* Clear on read */
     tms9918a_state.status = 0x00;
@@ -192,14 +191,14 @@ uint8_t sms_vdp_status_read ()
  */
 void sms_vdp_control_write (uint8_t value)
 {
-    if (!first_byte_received) /* First byte */
+    if (!tms9918a_state.first_byte_received) /* First byte */
     {
-        first_byte_received = true;
+        tms9918a_state.first_byte_received = true;
         tms9918a_state.address = (tms9918a_state.address & 0x3f00) | ((uint16_t) value << 0);
     }
     else /* Second byte */
     {
-        first_byte_received = false;
+        tms9918a_state.first_byte_received = false;
         tms9918a_state.address = (tms9918a_state.address & 0x00ff) | ((uint16_t) (value & 0x3f) << 8);
         tms9918a_state.code = value & 0xc0;
 
@@ -456,8 +455,6 @@ void sms_vdp_render_mode4_sprites_line (const TMS9918A_Config *mode, uint16_t li
     }
 }
 
-
-/* TODO: Consider renaming register "addr" to "base" */
 
 
 /* TODO: For new functions, remove unused parameters */

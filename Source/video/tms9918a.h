@@ -84,6 +84,7 @@ typedef struct TMS9918A_Registers_s {
 typedef struct TMS9918A_State_s {
     TMS9918A_Registers regs;
     uint8_t vram [TMS9918A_VRAM_SIZE];
+    bool first_byte_received;
     uint8_t  code;
     uint16_t address;
     uint8_t  read_buffer;
@@ -128,6 +129,18 @@ typedef struct TMS9918A_Sprite_t {
 
 /* Supply a human-readable string describing the specified mode. */
 const char *tms9918a_mode_name_get (TMS9918A_Mode mode);
+
+/* Read one byte from the tms9918a data port. */
+uint8_t tms9918a_data_read ();
+
+/* Write one byte to the tms9918a data port. */
+void tms9918a_data_write (uint8_t value);
+
+/* Read one byte from the tms9918a control (status) port. */
+uint8_t tms9918a_status_read ();
+
+/* Write one byte to the tms9918a control port. */
+void tms9918a_control_write (uint8_t value);
 
 /* Render one line of a mode2 8x8 pattern. */
 void tms9918a_render_mode2_pattern_line (const TMS9918A_Config *config, uint16_t line, TMS9918A_Pattern *pattern_base,
