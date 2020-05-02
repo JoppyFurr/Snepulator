@@ -77,7 +77,7 @@ static uint8_t sms_memory_read (uint16_t addr)
     /* 8 KiB RAM + mirror */
     if (addr >= 0xc000 && addr <= 0xffff)
     {
-        return state.ram[(addr - 0xc000) & (SMS_RAM_SIZE - 1)];
+        return state.ram[addr & (SMS_RAM_SIZE - 1)];
     }
 
     return 0xff;
@@ -139,7 +139,7 @@ static void sms_memory_write (uint16_t addr, uint8_t data)
     /* RAM + mirror */
     if (addr >= 0xc000 && addr <= 0xffff)
     {
-        state.ram[(addr - 0xc000) & (SMS_RAM_SIZE - 1)] = data;
+        state.ram[addr & (SMS_RAM_SIZE - 1)] = data;
     }
 }
 

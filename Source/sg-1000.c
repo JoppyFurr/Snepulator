@@ -51,7 +51,7 @@ static uint8_t sg_1000_memory_read (uint16_t addr)
     /* 1 KiB RAM (mirrored) */
     if (addr >= 0xc000 && addr <= 0xffff)
     {
-        return state.ram[(addr - 0xc000) & (SG_1000_RAM_SIZE - 1)];
+        return state.ram[addr & (SG_1000_RAM_SIZE - 1)];
     }
 
     return 0xff;
@@ -86,7 +86,7 @@ static void sg_1000_memory_write (uint16_t addr, uint8_t data)
     /* 1 KiB RAM (mirrored) */
     if (addr >= 0xc000 && addr <= 0xffff)
     {
-        state.ram[(addr - 0xc000) & (SG_1000_RAM_SIZE - 1)] = data;
+        state.ram[addr & (SG_1000_RAM_SIZE - 1)] = data;
     }
 }
 
