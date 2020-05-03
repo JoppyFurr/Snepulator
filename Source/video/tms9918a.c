@@ -69,6 +69,18 @@ static const TMS9918A_Config Mode2_NTSC = {
     .lines_total = 262,
     .palette = TMS9918A_NTSC_PALETTE
 };
+static const TMS9918A_Config Mode0_PAL = {
+    .mode = TMS9918A_MODE_0,
+    .lines_active = 192,
+    .lines_total = 313,
+    .palette = TMS9918A_NTSC_PALETTE
+};
+static const TMS9918A_Config Mode0_NTSC = {
+    .mode = TMS9918A_MODE_0,
+    .lines_active = 192,
+    .lines_total = 262,
+    .palette = TMS9918A_NTSC_PALETTE
+};
 
 
 /*
@@ -341,6 +353,38 @@ void tms9918a_render_sprites_line (const TMS9918A_Config *config, uint16_t line)
 
 
 /*
+ * Render one line of the mode0 background layer.
+ */
+void tms9918a_render_mode0_background_line (const TMS9918A_Config *config, uint16_t line)
+{
+    uint16_t name_table_base;
+    uint16_t pattern_generator_base;
+    uint16_t colour_table_base;
+    uint32_t tile_y = line / 8;
+    int32_Point_2D position;
+
+    name_table_base = (((uint16_t) tms9918a_state.regs.name_table_base) << 10) & 0x3c00;
+
+    pattern_generator_base = (((uint16_t) tms9918a_state.regs.background_pg_base) << 11) & 0x3800;
+
+    colour_table_base = (((uint16_t) tms9918a_state.regs.colour_table_base) << 6) & 0x3fc0;
+
+    for (uint32_t tile_x = 0; tile_x < 32; tile_x++)
+    {
+        uint16_t tile = tms9918a_state.vram [name_table_base + ((tile_y << 5) | tile_x)];
+
+        /* TODO: Is the base-address in bytes, or in patterns? */
+        TMS9918A_Pattern *pattern = (TMS9918A_Pattern *) &tms9918a_state.vram[pattern_generator_base + (tile * sizeof (TMS9918A_Pattern))];
+        uint8_t colours = tms9918a_state.vram[colour_table_base + (tile >> 3)];
+
+        position.x = 8 * tile_x;
+        position.y = 8 * tile_y;
+        tms9918a_render_mode2_pattern_line (config, line, pattern, colours, position, false);
+    }
+}
+
+
+/*
  * Render one line of the mode2 background layer.
  */
 void tms9918a_render_mode2_background_line (const TMS9918A_Config *config, uint16_t line)
@@ -460,7 +504,12 @@ void tms9918a_render_line (const TMS9918A_Config *config, uint16_t line)
         return;
     }
 
-    if (config->mode & TMS9918A_MODE_2)
+    if (config->mode == TMS9918A_MODE_0)
+    {
+        tms9918a_render_mode0_background_line (config, line);
+        tms9918a_render_sprites_line (config, line);
+    }
+    else if (config->mode & TMS9918A_MODE_2)
     {
         tms9918a_render_mode2_background_line (config, line);
         tms9918a_render_sprites_line (config, line);
@@ -480,6 +529,10 @@ void tms9918a_run_one_scanline (void)
 
     switch (mode)
     {
+        case TMS9918A_MODE_0: /* Mode 0: 32 x 24 8-byte tiles, sprites enabled. */
+            config = (state.system == VIDEO_SYSTEM_NTSC) ? &Mode0_NTSC : &Mode0_PAL;
+            break;
+
         case TMS9918A_MODE_2: /* Mode 2: 32 × 24 8-byte tiles, sprites enabled, three colour/pattern tables */
             config = (state.system == VIDEO_SYSTEM_NTSC) ? &Mode2_NTSC : &Mode2_PAL;
             break;
