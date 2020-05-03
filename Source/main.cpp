@@ -26,6 +26,7 @@ extern "C" {
 
 #include "sg-1000.h"
 #include "sms.h"
+#include "colecovision.h"
 
     extern File_Open_State open_state;
 
@@ -103,7 +104,7 @@ void snepulator_render_menubar (void)
             {
                 state.running = false;
                 open_state.title = "Load ROM...";
-                open_state.regex = ".*\\.(BIN|bin|SMS|sms|sg)$";
+                open_state.regex = ".*\\.(BIN|bin|SMS|sms|sg|col)$";
                 open_state.callback = snepulator_load_rom;
                 open_modal = true;
             }
@@ -114,6 +115,14 @@ void snepulator_render_menubar (void)
                     state.running = false;
                     open_state.title = "Load Master System BIOS...";
                     open_state.regex = ".*\\.(BIN|bin|SMS|sms)$";
+                    open_state.callback = snepulator_load_sms_bios;
+                    open_modal = true;
+                }
+                if (ImGui::MenuItem ("ColecoVision", NULL))
+                {
+                    state.running = false;
+                    open_state.title = "Load ColecoVision BIOS...";
+                    open_state.regex = ".*\\.(col)$";
                     open_state.callback = snepulator_load_sms_bios;
                     open_modal = true;
                 }

@@ -20,13 +20,14 @@ mkdir -p Work
 rm Work/*.o
 
 # Compile C11 code.
-eval $CC -c Source/config.c          -o Work/config.o    -std=c11 -Wall -Werror
-eval $CC -c Source/cpu/z80.c         -o Work/z80.o       -std=c11 -Wall -Werror
-eval $CC -c Source/sound/sn76489.c   -o Work/sn76489.o   -std=c11 -Wall -Werror
-eval $CC -c Source/video/tms9918a.c  -o Work/tms9918a.o  -std=c11 -Wall -Werror
-eval $CC -c Source/video/sms_vdp.c   -o Work/sms_vdp.o   -std=c11 -Wall -Werror
-eval $CC -c Source/sg-1000.c         -o Work/sg-1000.o   -std=c11 -Wall -Werror
-eval $CC -c Source/sms.c             -o Work/sms.o       -std=c11 -Wall -Werror
+eval $CC -c Source/config.c         -o Work/config.o       -std=c11 -Wall -Werror
+eval $CC -c Source/cpu/z80.c        -o Work/z80.o          -std=c11 -Wall -Werror
+eval $CC -c Source/sound/sn76489.c  -o Work/sn76489.o      -std=c11 -Wall -Werror
+eval $CC -c Source/video/tms9918a.c -o Work/tms9918a.o     -std=c11 -Wall -Werror
+eval $CC -c Source/video/sms_vdp.c  -o Work/sms_vdp.o      -std=c11 -Wall -Werror
+eval $CC -c Source/sg-1000.c        -o Work/sg-1000.o      -std=c11 -Wall -Werror
+eval $CC -c Source/sms.c            -o Work/sms.o          -std=c11 -Wall -Werror
+eval $CC -c Source/colecovision.c   -o Work/colecovision.o -std=c11 -Wall -Werror
 
 # Compile C++11 GUI and link to the rest of the code.
 DATE=`date --rfc-3339=date`
