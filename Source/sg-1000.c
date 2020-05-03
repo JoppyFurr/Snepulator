@@ -189,7 +189,7 @@ static bool sg_1000_get_nmi ()
 }
 
 
-/* TODO: This could be made common */
+/* TODO: Make this common */
 /*
  * Reads a ROM image from file into memory.
  */
