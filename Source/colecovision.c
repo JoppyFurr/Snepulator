@@ -237,14 +237,14 @@ void colecovision_init (void)
     }
 
     /* Load BIOS */
-    if (state.bios_filename)
+    if (state.colecovision_bios_filename)
     {
         /* TODO: Common rom loading function */
-        if (colecovision_load_rom (&state.bios, &state.bios_size, state.bios_filename) == -1)
+        if (colecovision_load_rom (&state.bios, &state.bios_size, state.colecovision_bios_filename) == -1)
         {
             state.abort = true;
         }
-        fprintf (stdout, "%d KiB BIOS %s loaded.\n", state.bios_size >> 10, state.bios_filename);
+        fprintf (stdout, "%d KiB BIOS %s loaded.\n", state.bios_size >> 10, state.colecovision_bios_filename);
     }
 
     /* Load ROM cart */

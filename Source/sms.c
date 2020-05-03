@@ -416,13 +416,13 @@ void sms_init (void)
     }
 
     /* Load BIOS */
-    if (state.bios_filename)
+    if (state.sms_bios_filename)
     {
-        if (sms_load_rom (&state.bios, &state.bios_size, state.bios_filename) == -1)
+        if (sms_load_rom (&state.bios, &state.bios_size, state.sms_bios_filename) == -1)
         {
             state.abort = true;
         }
-        fprintf (stdout, "%d KiB BIOS %s loaded.\n", state.bios_size >> 10, state.bios_filename);
+        fprintf (stdout, "%d KiB BIOS %s loaded.\n", state.bios_size >> 10, state.sms_bios_filename);
     }
 
     /* Load ROM cart */
@@ -457,7 +457,7 @@ void sms_init (void)
     state.running = true;
 
     /* Minimal alternative to the BIOS */
-    if (!state.bios_filename)
+    if (!state.sms_bios_filename)
     {
         z80_regs.im = 1;
         memory_control |= SMS_MEMORY_CTRL_BIOS_DISABLE;
