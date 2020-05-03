@@ -202,10 +202,10 @@ bool tms9918a_get_interrupt (void)
 
 
 /*
- * Render one line of a mode2 8x8 pattern.
+ * Render one line of an 8x8 pattern.
  */
-void tms9918a_render_mode2_pattern_line (const TMS9918A_Config *config, uint16_t line, TMS9918A_Pattern *pattern_base,
-                                         uint8_t tile_colours, int32_Point_2D offset, bool sprite)
+static void tms9918a_render_pattern_line (const TMS9918A_Config *config, uint16_t line, TMS9918A_Pattern *pattern_base,
+                                          uint8_t tile_colours, int32_Point_2D offset, bool sprite)
 {
     int border_lines_top = (VIDEO_BUFFER_LINES - config->lines_active) / 2;
     uint8_t line_data;
@@ -324,29 +324,29 @@ void tms9918a_render_sprites_line (const TMS9918A_Config *config, uint16_t line)
 
             /* top left */
             pattern = (TMS9918A_Pattern *) &tms9918a_state.vram [pattern_generator_base + (pattern_index * sizeof (TMS9918A_Pattern))];
-            tms9918a_render_mode2_pattern_line (config, line, pattern, sprite->colour_ec << 4, position, true);
+            tms9918a_render_pattern_line (config, line, pattern, sprite->colour_ec << 4, position, true);
 
             /* bottom left */
             pattern++;
             position.y += 8;
-            tms9918a_render_mode2_pattern_line (config, line, pattern, sprite->colour_ec << 4, position, true);
+            tms9918a_render_pattern_line (config, line, pattern, sprite->colour_ec << 4, position, true);
 
             /* top right */
             pattern++;
             position.y -= 8;
             position.x += 8;
-            tms9918a_render_mode2_pattern_line (config, line, pattern, sprite->colour_ec << 4, position, true);
+            tms9918a_render_pattern_line (config, line, pattern, sprite->colour_ec << 4, position, true);
 
             /* bottom right */
             pattern++;
             position.y += 8;
-            tms9918a_render_mode2_pattern_line (config, line, pattern, sprite->colour_ec << 4, position, true);
+            tms9918a_render_pattern_line (config, line, pattern, sprite->colour_ec << 4, position, true);
 
         }
         else
         {
             pattern = (TMS9918A_Pattern *) &tms9918a_state.vram [pattern_generator_base + (pattern_index * sizeof (TMS9918A_Pattern))];
-            tms9918a_render_mode2_pattern_line (config, line, pattern, sprite->colour_ec << 4, position, true);
+            tms9918a_render_pattern_line (config, line, pattern, sprite->colour_ec << 4, position, true);
         }
     }
 }
@@ -379,7 +379,7 @@ void tms9918a_render_mode0_background_line (const TMS9918A_Config *config, uint1
 
         position.x = 8 * tile_x;
         position.y = 8 * tile_y;
-        tms9918a_render_mode2_pattern_line (config, line, pattern, colours, position, false);
+        tms9918a_render_pattern_line (config, line, pattern, colours, position, false);
     }
 }
 
@@ -424,7 +424,7 @@ void tms9918a_render_mode2_background_line (const TMS9918A_Config *config, uint1
 
         position.x = 8 * tile_x;
         position.y = 8 * tile_y;
-        tms9918a_render_mode2_pattern_line (config, line, pattern, colours, position, false);
+        tms9918a_render_pattern_line (config, line, pattern, colours, position, false);
     }
 }
 
