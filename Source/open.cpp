@@ -54,6 +54,7 @@ void snepulator_render_open_modal (void)
         int height = (state.host_height / 2 > 384) ? state.host_width / 2 : 384;
 
         /* State */
+        /* TODO: path_cached needs to clear whenever the regex changes */
         static bool path_cached = false;
         static std::vector<std::string> file_list;
         static int selected_file = 0;

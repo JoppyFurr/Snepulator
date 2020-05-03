@@ -45,7 +45,8 @@ typedef struct Snepulator_State_s {
     bool    abort;      /* Attempt to cleanly exit. */
 
     /* Files */
-    char *bios_filename;
+    char *sms_bios_filename;
+    char *colecovision_bios_filename;
     char *cart_filename;
 
     /* Console API */

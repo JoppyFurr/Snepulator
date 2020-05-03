@@ -71,18 +71,53 @@ void snepulator_load_rom (char *path)
 
 /*
  * Callback for "Load Master System BIOS..."
+ * Removes the cartridge and runs a BIOS.
  */
 void snepulator_load_sms_bios (char *path)
 {
-    if (state.bios_filename != NULL)
+    snepulator_reset ();
+
+    if (state.cart_filename != NULL)
     {
-        free (state.bios_filename);
+        free (state.cart_filename);
+        state.cart_filename = NULL;
+    }
+
+    if (state.sms_bios_filename != NULL)
+    {
+        free (state.sms_bios_filename);
     }
 
     /* TODO: Separate BIOS file names for different consoles. */
-    state.bios_filename = strdup (path);
+    state.sms_bios_filename = strdup (path);
 
-    system_init ();
+    sms_init ();
+}
+
+
+/*
+ * Callback for "Load ColecoVision BIOS..."
+ * Removes the cartridge and runs a BIOS.
+ */
+void snepulator_load_colecovision_bios (char *path)
+{
+    snepulator_reset ();
+
+    if (state.cart_filename != NULL)
+    {
+        free (state.cart_filename);
+        state.cart_filename = NULL;
+    }
+
+    if (state.colecovision_bios_filename != NULL)
+    {
+        free (state.colecovision_bios_filename);
+    }
+
+    /* TODO: Separate BIOS file names for different consoles. */
+    state.colecovision_bios_filename = strdup (path);
+
+    colecovision_init ();
 }
 
 
@@ -123,7 +158,7 @@ void snepulator_render_menubar (void)
                     state.running = false;
                     open_state.title = "Load ColecoVision BIOS...";
                     open_state.regex = ".*\\.(col)$";
-                    open_state.callback = snepulator_load_sms_bios;
+                    open_state.callback = snepulator_load_colecovision_bios;
                     open_modal = true;
                 }
                 ImGui::EndMenu ();
@@ -516,9 +551,13 @@ void system_init ()
     {
         sg_1000_init ();
     }
+    if (strcmp (extension, ".col") == 0)
+    {
+        colecovision_init ();
+    }
     else
     {
-        /* Default to Master System, to allow the running of the bios */
+        /* Default to Master System */
         sms_init ();
     }
 }
@@ -555,12 +594,7 @@ int main (int argc, char **argv)
     /* Parse all CLI arguments */
     while (*(++argv))
     {
-        if (!strcmp ("-b", *argv))
-        {
-            /* BIOS to load */
-            state.bios_filename = strdup (*(++argv));
-        }
-        else if (!state.cart_filename)
+        if (!state.cart_filename)
         {
             /* ROM to load */
             state.cart_filename = strdup (*(argv));
@@ -568,7 +602,7 @@ int main (int argc, char **argv)
         else
         {
             /* Display usage */
-            fprintf (stdout, "Usage: Snepulator [-b bios.sms] rom.sms\n");
+            fprintf (stdout, "Usage: Snepulator [rom.sms]\n");
             return EXIT_FAILURE;
         }
     }
@@ -654,7 +688,7 @@ int main (int argc, char **argv)
     snepulator_init_input_devices ();
 
     /* If we have a valid ROM to run, start emulation */
-    if (state.bios_filename || state.cart_filename)
+    if (state.cart_filename)
     {
         system_init ();
     }
