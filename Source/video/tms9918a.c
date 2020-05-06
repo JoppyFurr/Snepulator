@@ -236,11 +236,7 @@ static void tms9918a_render_pattern_line (const TMS9918A_Config *config, uint16_
         }
 
         float_Colour pixel = config->palette [colour_index];
-
-        /* TODO: Should be a single line */
-        tms9918a_state.frame_current [(offset.x + x + VIDEO_SIDE_BORDER) + (border_lines_top + line) * VIDEO_BUFFER_WIDTH].r = pixel.r;
-        tms9918a_state.frame_current [(offset.x + x + VIDEO_SIDE_BORDER) + (border_lines_top + line) * VIDEO_BUFFER_WIDTH].g = pixel.g;
-        tms9918a_state.frame_current [(offset.x + x + VIDEO_SIDE_BORDER) + (border_lines_top + line) * VIDEO_BUFFER_WIDTH].b = pixel.b;
+        tms9918a_state.frame_current [(offset.x + x + VIDEO_SIDE_BORDER) + (border_lines_top + line) * VIDEO_BUFFER_WIDTH] = pixel;
     }
 }
 
