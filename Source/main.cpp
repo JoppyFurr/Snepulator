@@ -551,7 +551,7 @@ void system_init ()
     {
         sg_1000_init ();
     }
-    if (strcmp (extension, ".col") == 0)
+    else if (strcmp (extension, ".col") == 0)
     {
         colecovision_init ();
     }

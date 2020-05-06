@@ -224,9 +224,6 @@ void sms_vdp_control_write (uint8_t value)
 }
 
 /* TODO: Implement some kind of "Run CPU until frame completes" code */
-/* TODO: We seem to run a touch faster than real hardware. It looks like the clock rate doesn't divide evenly into
- *       frames/lines, should we do the timing calculations with floats? */
-
 
 /*
  * Assemble the four mode-bits.
