@@ -182,7 +182,7 @@ void snepulator_render_open_modal (void)
             ImGui::CloseCurrentPopup ();
         }
         ImGui::SameLine ();
-        if (ImGui::Button ("Open", ImVec2 (120,0))) { /* TODO: Do we want an "Open BIOS"? */
+        if (ImGui::Button ("Open", ImVec2 (120,0))) {
             open_action = true;
         }
 

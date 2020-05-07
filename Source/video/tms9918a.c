@@ -312,35 +312,20 @@ void tms9918a_render_sprites_line (const TMS9918A_Config *config, uint16_t line)
         if (tms9918a_state.regs.ctrl_1 & TMS9918A_CTRL_1_SPRITE_SIZE)
         {
             pattern_index &= 0xfc;
-
-            /* TODO: It looks like maybe in some places, the base address is in bytes, and in other places it is in patterns...
-             *       (or is that just when it is zero?) Find out what's going on and comment. */
-
-            /* TODO: for-loop */
-
-            /* top left */
             pattern = (TMS9918A_Pattern *) &tms9918a_state.vram [pattern_generator_base + (pattern_index * sizeof (TMS9918A_Pattern))];
-            tms9918a_render_pattern_line (config, line, pattern, sprite->colour_ec << 4, position, true);
+            int32_Point_2D sub_position;
 
-            /* bottom left */
-            pattern++;
-            position.y += 8;
-            tms9918a_render_pattern_line (config, line, pattern, sprite->colour_ec << 4, position, true);
-
-            /* top right */
-            pattern++;
-            position.y -= 8;
-            position.x += 8;
-            tms9918a_render_pattern_line (config, line, pattern, sprite->colour_ec << 4, position, true);
-
-            /* bottom right */
-            pattern++;
-            position.y += 8;
-            tms9918a_render_pattern_line (config, line, pattern, sprite->colour_ec << 4, position, true);
-
+            for (int i = 0; i < 4; i++)
+            {
+                sub_position.x = position.x + ((i & 2) ? 8 : 0);
+                sub_position.y = position.y + ((i & 1) ? 8 : 0);
+                tms9918a_render_pattern_line (config, line, pattern + i, sprite->colour_ec << 4, sub_position, true);
+            }
         }
         else
         {
+            /* TODO: It looks like maybe in some places, the base address is in bytes, and in other places it is in patterns...
+             *       (or is that just when it is zero?) Find out what's going on and comment. */
             pattern = (TMS9918A_Pattern *) &tms9918a_state.vram [pattern_generator_base + (pattern_index * sizeof (TMS9918A_Pattern))];
             tms9918a_render_pattern_line (config, line, pattern, sprite->colour_ec << 4, position, true);
         }
