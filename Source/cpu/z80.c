@@ -145,6 +145,7 @@ static const uint8_t uint8_even_parity[256] = {
 
 /*
  * Reset the Z80 registers to power-on defaults.
+ * TODO: Some functions come from state.x, others as parameters. Make this more consistent.
  */
 void z80_init (uint8_t (* _memory_read) (uint16_t),
                void    (* _memory_write)(uint16_t, uint8_t),
