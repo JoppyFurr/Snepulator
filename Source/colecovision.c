@@ -223,6 +223,14 @@ static void colecovision_run (double ms)
     }
 }
 
+/*
+ * Maskable interrupt line is not used.
+ */
+static bool colecovision_get_int (void)
+{
+    return false;
+}
+
 
 /*
  * Reset the ColecoVision and load a new cartridge ROM.
@@ -270,7 +278,7 @@ void colecovision_init (void)
     /* Hook up the audio callback */
     state.audio_callback = colecovision_audio_callback;
     state.get_clock_rate = colecovision_get_clock_rate;
-    state.get_int = NULL;
+    state.get_int = colecovision_get_int;
     state.get_nmi = tms9918a_get_interrupt;
     state.run = colecovision_run;
 
