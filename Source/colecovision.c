@@ -9,6 +9,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <SDL2/SDL.h>
+
 #include "util.h"
 #include "snepulator.h"
 
@@ -22,6 +24,9 @@ extern Snepulator_State state;
 
 #define COLECOVISION_RAM_SIZE (1 << 10)
 
+
+static ColecoVision_Input_Mode colecovision_input_mode = COLECOVISION_INPUT_MODE_JOYSTICK;
+
 /*
  * Handle ColecoVision memory reads.
  */
@@ -32,6 +37,7 @@ static uint8_t colecovision_memory_read (uint16_t addr)
     {
         if (state.bios != NULL)
         {
+
             return state.bios[(addr) & (state.bios_size - 1)];
         }
     }
@@ -91,7 +97,86 @@ static uint8_t colecovision_io_read (uint8_t addr)
     /* Controller input */
     else if (addr >= 0xe0 && addr <= 0xff)
     {
-        /* TODO */
+        if (addr & 0x02)
+        {
+            if (colecovision_input_mode == COLECOVISION_INPUT_MODE_JOYSTICK)
+            {
+                return (state.gamepad_1.up        ? 0 : BIT_0) |
+                       (state.gamepad_1.right     ? 0 : BIT_1) |
+                       (state.gamepad_1.down      ? 0 : BIT_2) |
+                       (state.gamepad_1.left      ? 0 : BIT_3) |
+                       (                                BIT_4) |
+                       (                                BIT_5) |
+                       (state.gamepad_1.button_1  ? 0 : BIT_6);
+            }
+            else
+            {
+                /* For now, just use the computer keyboard. */
+                uint8_t const *keyboard_state = SDL_GetKeyboardState (NULL);
+                uint8_t key;
+
+                if ((keyboard_state [SDL_SCANCODE_8] && (keyboard_state [SDL_SCANCODE_LSHIFT] || keyboard_state [SDL_SCANCODE_RSHIFT])) ||
+                    keyboard_state [SDL_SCANCODE_KP_MULTIPLY])
+                {
+                    key = 0x09;
+                }
+                else if ((keyboard_state [SDL_SCANCODE_3] && (keyboard_state [SDL_SCANCODE_LSHIFT]|| keyboard_state [SDL_SCANCODE_RSHIFT])) ||
+                    keyboard_state [SDL_SCANCODE_KP_HASH])
+                {
+                    key = 0x06;
+                }
+                else if (keyboard_state [SDL_SCANCODE_1] || keyboard_state [SDL_SCANCODE_KP_1])
+                {
+                    key = 0x0d;
+                }
+                else if (keyboard_state [SDL_SCANCODE_2] || keyboard_state [SDL_SCANCODE_KP_2])
+                {
+                    key = 0x07;
+                }
+                else if (keyboard_state [SDL_SCANCODE_3] || keyboard_state [SDL_SCANCODE_KP_3])
+                {
+                    key = 0x0c;
+                }
+                else if (keyboard_state [SDL_SCANCODE_4] || keyboard_state [SDL_SCANCODE_KP_4])
+                {
+                    key = 0x02;
+                }
+                else if (keyboard_state [SDL_SCANCODE_5] || keyboard_state [SDL_SCANCODE_KP_5])
+                {
+                    key = 0x03;
+                }
+                else if (keyboard_state [SDL_SCANCODE_6] || keyboard_state [SDL_SCANCODE_KP_6])
+                {
+                    key = 0x0e;
+                }
+                else if (keyboard_state [SDL_SCANCODE_7] || keyboard_state [SDL_SCANCODE_KP_7])
+                {
+                    key = 0x05;
+                }
+                else if (keyboard_state [SDL_SCANCODE_8] || keyboard_state [SDL_SCANCODE_KP_8])
+                {
+                    key = 0x01;
+                }
+                else if (keyboard_state [SDL_SCANCODE_9] || keyboard_state [SDL_SCANCODE_KP_9])
+                {
+                    key = 0x0b;
+                }
+                else if (keyboard_state [SDL_SCANCODE_0] || keyboard_state [SDL_SCANCODE_KP_0])
+                {
+                    key = 0x0a;
+                }
+                else
+                {
+                    key = 0x0f;
+                }
+
+                return key | BIT_4 | BIT_5 | (state.gamepad_1.button_2  ? 0 : BIT_6);
+            }
+        }
+        else
+        {
+            /* Player 2 not implemented */
+        }
     }
 
     /* DEFAULT */
@@ -104,7 +189,11 @@ static uint8_t colecovision_io_read (uint8_t addr)
  */
 static void colecovision_io_write (uint8_t addr, uint8_t data)
 {
-    /* TODO: 0x80 - 0x9f: Set input to keypad-mode */
+    /* Set input to keypad-mode */
+    if (addr >= 0x80 && addr <= 0x9f)
+    {
+        colecovision_input_mode = COLECOVISION_INPUT_MODE_KEYPAD;
+    }
 
     /* tms9918a */
     if (addr >= 0xa0 && addr <= 0xbf)
@@ -121,7 +210,11 @@ static void colecovision_io_write (uint8_t addr, uint8_t data)
         }
     }
 
-    /* TODO: 0xc0 - 0xdf: Set input to joystick-mode */
+    /* Set input to joystick-mode */
+    if (addr >= 0xc0 && addr <= 0xdf)
+    {
+        colecovision_input_mode = COLECOVISION_INPUT_MODE_JOYSTICK;
+    }
 
     /* PSG */
     if (addr >= 0xe0 && addr <= 0xff)
