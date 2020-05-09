@@ -532,6 +532,8 @@ void tms9918a_run_one_scanline (void)
     /* If this the final active line, copy to the frame buffer */
     if (line == config->lines_active - 1)
     {
+        state.video_width = 256;
+        state.video_height = 192;
         memcpy (state.video_out_texture_data, tms9918a_state.frame_current, sizeof (tms9918a_state.frame_current));
 
         /* Update statistics (rolling average) */

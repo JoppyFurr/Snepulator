@@ -589,6 +589,8 @@ void sms_vdp_run_one_scanline ()
     /* TODO: This is okay for single-threaded code, but locking may be needed if multi-threading is added */
     if (line == config->lines_active - 1)
     {
+        state.video_width = 256;
+        state.video_height = config->lines_active;
         memcpy (state.video_out_texture_data, tms9918a_state.frame_current, sizeof (tms9918a_state.frame_current));
 
         /* Update statistics (rolling average) */

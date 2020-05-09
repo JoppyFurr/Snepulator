@@ -595,6 +595,8 @@ int main (int argc, char **argv)
     /* Initialize Snepulator state */
     memset (&state, 0, sizeof (state));
     state.show_gui = true;
+    state.video_width = 256;
+    state.video_height = 192;
 
     /* Parse all CLI arguments */
     while (*(++argv))
@@ -865,10 +867,8 @@ int main (int argc, char **argv)
         /* Window Contents */
         {
             /* Scale the image to a multiple of SMS resolution */
-            /* TODO: Can we get host_height to exclude the menu bar? */
-            /* TODO: Scale is based on the SMS resolution rather than the VDP buffer, as we don't mind losing some border.
-             *       However, does this mean we get a negative cursor position below, and is that okay? */
-            uint8_t scale = (state.host_width / 256) > (state.host_height / 224) ? (state.host_height / 224) : (state.host_width / 256);
+            uint8_t scale = (state.host_width / state.video_width) > (state.host_height / state.video_height) ? (state.host_height / state.video_height)
+                                                                                                              : (state.host_width  / state.video_width);
             if (scale < 1)
                 scale = 1;
             ImGui::PushStyleColor (ImGuiCol_WindowBg, ImColor (0.0f, 0.0f, 0.0f, 0.0f));
