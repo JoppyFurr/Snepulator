@@ -307,7 +307,11 @@ void snepulator_render_menubar (void)
                 ImGui::EndMenu ();
             }
 
-            if (ImGui::MenuItem ("Configure...", NULL)) { state.running = false; input_modal = true; }
+            if (ImGui::MenuItem ("Configure...", NULL))
+            {
+                state.running = false;
+                input_modal = true;
+            }
             ImGui::EndMenu ();
         }
 
@@ -590,6 +594,7 @@ int main (int argc, char **argv)
 
     /* Initialize Snepulator state */
     memset (&state, 0, sizeof (state));
+    state.show_gui = true;
 
     /* Parse all CLI arguments */
     while (*(++argv))
@@ -732,6 +737,14 @@ int main (int argc, char **argv)
                 if (event.key.keysym.sym == player_1_mapping.pause.value)           { state.pause_button       = (event.type == SDL_KEYDOWN); }
             }
 
+            /* Mouse */
+            if (event.type == SDL_MOUSEMOTION)
+            {
+                state.mouse_time = SDL_GetTicks ();
+                state.show_gui = true;
+                SDL_ShowCursor (SDL_ENABLE);
+            }
+
             /* Joystick */
             else if ((event.type == SDL_JOYAXISMOTION) && event.jaxis.which == player_1_mapping.device_id)
             {
@@ -832,9 +845,22 @@ int main (int argc, char **argv)
 
         /* RENDER GUI */
         ImGui_ImplSdlGL3_NewFrame (window);
-        snepulator_render_menubar ();
-        snepulator_render_open_modal ();
-        snepulator_render_input_modal ();
+        if (state.show_gui)
+        {
+            snepulator_render_menubar ();
+            snepulator_render_open_modal ();
+            snepulator_render_input_modal ();
+        }
+
+        if (SDL_GetTicks() > (state.mouse_time + 3000))
+        {
+            /* If the emulator is running, we can hide the GUI */
+            if (state.running)
+            {
+                state.show_gui = false;
+                SDL_ShowCursor (SDL_DISABLE);
+            }
+        }
 
         /* Window Contents */
         {
