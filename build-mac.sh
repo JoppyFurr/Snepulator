@@ -20,6 +20,7 @@ mkdir -p Work
 rm Work/*.o
 
 # Compile C11 code.
+eval $CC -c Source/util.c           -o Work/util.o         -std=c11 -Wall -Werror
 eval $CC -c Source/config.c         -o Work/config.o       -std=c11 -Wall -Werror
 eval $CC -c Source/cpu/z80.c        -o Work/z80.o          -std=c11 -Wall -Werror
 eval $CC -c Source/sound/sn76489.c  -o Work/sn76489.o      -std=c11 -Wall -Werror
