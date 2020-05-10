@@ -36,6 +36,8 @@ extern "C" {
     extern TMS9918A_Mode sms_vdp_mode_get (void);
 }
 
+#include "../Images/snepulator_icon.c"
+
 /* Global state */
 Snepulator_State state;
 bool config_capture_events = false;
@@ -639,7 +641,7 @@ int main (int argc, char **argv)
     SDL_GL_SetAttribute (SDL_GL_CONTEXT_MINOR_VERSION, 2);
 
     /* Twice the Master System resolution, plus enough extra for 16 px boarders */
-    /* TODO: Make dialogues fit (full-screen?) and consider hiding the menubar during gameplay */
+    /* TODO: Make dialogues fit (full-screen?) */
     window = SDL_CreateWindow ("Snepulator", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
                       VIDEO_BUFFER_WIDTH * 2, VIDEO_BUFFER_LINES * 2 + 16, SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL);
     if (window == NULL)
@@ -657,6 +659,19 @@ int main (int argc, char **argv)
         return EXIT_FAILURE;
     }
     SDL_GL_SetSwapInterval (1);
+
+    /* Set icon */
+    SDL_Surface *icon = SDL_CreateRGBSurfaceFrom ((void *) snepulator_icon.pixel_data, snepulator_icon.width, snepulator_icon.height,
+                                                  snepulator_icon.bytes_per_pixel * 8, snepulator_icon.bytes_per_pixel * snepulator_icon.width,
+                                                  0xff << 0, 0xff << 8, 0xff << 16, 0xff << 24);
+    if (icon == NULL)
+    {
+        fprintf (stderr, "Error: SDL_CreateRGBSurfaceFrom failed.\n");
+        SDL_Quit ();
+        return EXIT_FAILURE;
+    }
+    SDL_SetWindowIcon (window, icon);
+    SDL_FreeSurface (icon);
 
     /* Setup ImGui binding */
     gl3wInit ();
