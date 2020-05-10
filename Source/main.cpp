@@ -825,8 +825,8 @@ int main (int argc, char **argv)
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-                float_Colour *source = (float_Colour *) state.video_out_texture_data;
-                float_Colour *dest   = (float_Colour *) state.video_out_texture_data_scanlines;
+                float_Colour *source = state.video_out_texture_data;
+                float_Colour *dest   = state.video_out_texture_data_scanlines;
 
                 /* Prescale by 2x3, then add scanlines */
                 uint32_t output_width  = VIDEO_BUFFER_WIDTH * 2;
@@ -838,12 +838,11 @@ int main (int argc, char **argv)
                         /* Prescale 2×3 */
                         dest [x + y * output_width] = source [x / 2 + y / 3 * VIDEO_BUFFER_WIDTH];
 
-                        /* Scanlines (40%) */
+                        /* Two solid lines are followed by one darkened line */
                         if (y % 3 == 2)
                         {
-                            /* The space between scanlines inherits light from the scanline above and the scanline below */
+                            /* The darkened line between scanlines takes its colour as the average of the two scanlines */
                             /* TODO: Better math for blending colours? This can make things darker than they should be. */
-                            /* TODO: Should source [] be used instead of dest [] for the RHS? */
                             /* TODO: Operations to work with float_Colour? */
                             if (y != output_height - 1)
                             {
@@ -855,6 +854,7 @@ int main (int argc, char **argv)
                                                                 dest [x + (y + 1) * output_width].b * 0.5;
                             }
 
+                            /* To darken the lines, remove 40% of their value */
                             dest [x + y * VIDEO_BUFFER_WIDTH * 2].r *= (1.0 - 0.4);
                             dest [x + y * VIDEO_BUFFER_WIDTH * 2].g *= (1.0 - 0.4);
                             dest [x + y * VIDEO_BUFFER_WIDTH * 2].b *= (1.0 - 0.4);

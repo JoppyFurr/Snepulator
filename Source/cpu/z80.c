@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "../util.h"
 #include "../snepulator.h"
 extern Snepulator_State state;
 

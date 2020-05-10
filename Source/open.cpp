@@ -22,6 +22,7 @@
 #include "../Libraries/imgui-1.49/examples/sdl_opengl3_example/imgui_impl_sdl_gl3.h"
 
 extern "C" {
+#include "util.h"
 #include "snepulator.h"
 #include "config.h"
 #include "open.h"
