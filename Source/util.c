@@ -9,6 +9,7 @@
 
 #include <SDL2/SDL.h>
 
+#include "util.h"
 #include "snepulator.h"
 
 /* Global state */
@@ -79,9 +80,9 @@ void snepulator_take_screenshot (void)
     {
         for (int x = 0; x < width; x++)
         {
-            buffer [(x + y * width) * 3 + 0] = state.video_out_texture_data [(x + VIDEO_SIDE_BORDER + (y + state.video_out_first_active_line) * stride) * 3 + 0] * 255.0;
-            buffer [(x + y * width) * 3 + 1] = state.video_out_texture_data [(x + VIDEO_SIDE_BORDER + (y + state.video_out_first_active_line) * stride) * 3 + 1] * 255.0;
-            buffer [(x + y * width) * 3 + 2] = state.video_out_texture_data [(x + VIDEO_SIDE_BORDER + (y + state.video_out_first_active_line) * stride) * 3 + 2] * 255.0;
+            buffer [(x + y * width) * 3 + 0] = state.video_out_texture_data [x + VIDEO_SIDE_BORDER + (y + state.video_out_first_active_line) * stride].r * 255.0;
+            buffer [(x + y * width) * 3 + 1] = state.video_out_texture_data [x + VIDEO_SIDE_BORDER + (y + state.video_out_first_active_line) * stride].g * 255.0;
+            buffer [(x + y * width) * 3 + 2] = state.video_out_texture_data [x + VIDEO_SIDE_BORDER + (y + state.video_out_first_active_line) * stride].b * 255.0;
         }
     }
 

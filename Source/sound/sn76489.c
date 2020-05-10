@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include <pthread.h>
 
+#include "../util.h"
 #include "../snepulator.h"
 #include "sn76489.h"
 extern Snepulator_State state;
