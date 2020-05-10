@@ -287,7 +287,6 @@ bool sms_vdp_get_interrupt (void)
 void sms_vdp_render_mode4_pattern_line (const TMS9918A_Config *mode, uint16_t line, SMS_VDP_Mode4_Pattern *pattern_base, SMS_VDP_Palette palette,
                                         int32_Point_2D offset, bool h_flip, bool v_flip, bool transparency)
 {
-    int border_lines_top = (VIDEO_BUFFER_LINES - mode->lines_active) / 2;
     char *line_base;
 
     if (v_flip)
@@ -322,9 +321,9 @@ void sms_vdp_render_mode4_pattern_line (const TMS9918A_Config *mode, uint16_t li
 
         uint8_t pixel = cram[palette + colour_index];
 
-        tms9918a_state.frame_current [(offset.x + x + VIDEO_SIDE_BORDER) + (border_lines_top + line) * VIDEO_BUFFER_WIDTH].r = VDP_TO_RED   (pixel) / 255.0f;
-        tms9918a_state.frame_current [(offset.x + x + VIDEO_SIDE_BORDER) + (border_lines_top + line) * VIDEO_BUFFER_WIDTH].g = VDP_TO_GREEN (pixel) / 255.0f;
-        tms9918a_state.frame_current [(offset.x + x + VIDEO_SIDE_BORDER) + (border_lines_top + line) * VIDEO_BUFFER_WIDTH].b = VDP_TO_BLUE  (pixel) / 255.0f;
+        tms9918a_state.frame_current [(offset.x + x + VIDEO_SIDE_BORDER) + (state.video_out_first_active_line + line) * VIDEO_BUFFER_WIDTH].r = VDP_TO_RED   (pixel) / 255.0f;
+        tms9918a_state.frame_current [(offset.x + x + VIDEO_SIDE_BORDER) + (state.video_out_first_active_line + line) * VIDEO_BUFFER_WIDTH].g = VDP_TO_GREEN (pixel) / 255.0f;
+        tms9918a_state.frame_current [(offset.x + x + VIDEO_SIDE_BORDER) + (state.video_out_first_active_line + line) * VIDEO_BUFFER_WIDTH].b = VDP_TO_BLUE  (pixel) / 255.0f;
     }
 }
 
@@ -476,7 +475,7 @@ void sms_vdp_render_line (const TMS9918A_Config *config, uint16_t line)
     float_Colour video_background =     { .r = 0.0f, .g = 0.0f, .b = 0.0f };
     float_Colour video_background_dim = { .r = 0.0f, .g = 0.0f, .b = 0.0f };
 
-    int border_lines_top = (VIDEO_BUFFER_LINES - config->lines_active) / 2;
+    state.video_out_first_active_line = (VIDEO_BUFFER_LINES - config->lines_active) / 2;
 
     /* Background */
     if (!(tms9918a_state.regs.ctrl_1 & TMS9918A_CTRL_1_BLANK))
@@ -505,7 +504,7 @@ void sms_vdp_render_line (const TMS9918A_Config *config, uint16_t line)
     /* Top border */
     if (line == 0)
     {
-        for (int top_line = 0; top_line < border_lines_top; top_line++)
+        for (int top_line = 0; top_line < state.video_out_first_active_line; top_line++)
         {
             for (int x = 0; x < VIDEO_BUFFER_WIDTH; x++)
             {
@@ -520,13 +519,13 @@ void sms_vdp_render_line (const TMS9918A_Config *config, uint16_t line)
         bool border = x < VIDEO_SIDE_BORDER || x >= VIDEO_SIDE_BORDER + 256 ||
                       (tms9918a_state.regs.ctrl_0 & SMS_VDP_CTRL_0_MASK_COL_1 && x < VIDEO_SIDE_BORDER + 8);
 
-        tms9918a_state.frame_current [x + (border_lines_top + line) * VIDEO_BUFFER_WIDTH] = (border ? video_background_dim : video_background);
+        tms9918a_state.frame_current [x + (state.video_out_first_active_line + line) * VIDEO_BUFFER_WIDTH] = (border ? video_background_dim : video_background);
     }
 
     /* Bottom border */
     if (line == config->lines_active - 1)
     {
-        for (int bottom_line = border_lines_top + config->lines_active; bottom_line < VIDEO_BUFFER_LINES; bottom_line++)
+        for (int bottom_line = state.video_out_first_active_line + config->lines_active; bottom_line < VIDEO_BUFFER_LINES; bottom_line++)
         {
             for (int x = 0; x < VIDEO_BUFFER_WIDTH; x++)
             {

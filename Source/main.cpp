@@ -214,6 +214,12 @@ void snepulator_render_menubar (void)
                 }
                 ImGui::EndMenu ();
             }
+
+            if (ImGui::MenuItem ("Take Screenshot"))
+            {
+                snepulator_take_screenshot ();
+            }
+
             ImGui::EndMenu ();
         }
 
