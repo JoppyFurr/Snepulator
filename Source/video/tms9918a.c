@@ -207,7 +207,6 @@ bool tms9918a_get_interrupt (void)
 static void tms9918a_render_pattern_line (const TMS9918A_Config *config, uint16_t line, TMS9918A_Pattern *pattern_base,
                                           uint8_t tile_colours, int32_Point_2D offset, bool sprite)
 {
-    int border_lines_top = (VIDEO_BUFFER_LINES - config->lines_active) / 2;
     uint8_t line_data;
 
     uint8_t background_colour = tile_colours & 0x0f;
@@ -236,7 +235,7 @@ static void tms9918a_render_pattern_line (const TMS9918A_Config *config, uint16_
         }
 
         float_Colour pixel = config->palette [colour_index];
-        tms9918a_state.frame_current [(offset.x + x + VIDEO_SIDE_BORDER) + (border_lines_top + line) * VIDEO_BUFFER_WIDTH] = pixel;
+        tms9918a_state.frame_current [(offset.x + x + VIDEO_SIDE_BORDER) + (state.video_out_first_active_line + line) * VIDEO_BUFFER_WIDTH] = pixel;
     }
 }
 
@@ -429,7 +428,7 @@ void tms9918a_render_line (const TMS9918A_Config *config, uint16_t line)
     float_Colour video_background =     { .r = 0.0f, .g = 0.0f, .b = 0.0f };
     float_Colour video_background_dim = { .r = 0.0f, .g = 0.0f, .b = 0.0f };
 
-    int border_lines_top = (VIDEO_BUFFER_LINES - config->lines_active) / 2;
+    state.video_out_first_active_line = (VIDEO_BUFFER_LINES - config->lines_active) / 2;
 
     /* Background */
     if (!(tms9918a_state.regs.ctrl_1 & TMS9918A_CTRL_1_BLANK))
@@ -450,7 +449,7 @@ void tms9918a_render_line (const TMS9918A_Config *config, uint16_t line)
     /* Top border */
     if (line == 0)
     {
-        for (int top_line = 0; top_line < border_lines_top; top_line++)
+        for (int top_line = 0; top_line < state.video_out_first_active_line; top_line++)
         {
             for (int x = 0; x < VIDEO_BUFFER_WIDTH; x++)
             {
@@ -464,13 +463,13 @@ void tms9918a_render_line (const TMS9918A_Config *config, uint16_t line)
     {
         bool border = x < VIDEO_SIDE_BORDER || x >= VIDEO_SIDE_BORDER + 256;
 
-        tms9918a_state.frame_current [x + (border_lines_top + line) * VIDEO_BUFFER_WIDTH] = (border ? video_background_dim : video_background);
+        tms9918a_state.frame_current [x + (state.video_out_first_active_line + line) * VIDEO_BUFFER_WIDTH] = (border ? video_background_dim : video_background);
     }
 
     /* Bottom border */
     if (line == config->lines_active - 1)
     {
-        for (int bottom_line = border_lines_top + config->lines_active; bottom_line < VIDEO_BUFFER_LINES; bottom_line++)
+        for (int bottom_line = state.video_out_first_active_line + config->lines_active; bottom_line < VIDEO_BUFFER_LINES; bottom_line++)
         {
             for (int x = 0; x < VIDEO_BUFFER_WIDTH; x++)
             {
