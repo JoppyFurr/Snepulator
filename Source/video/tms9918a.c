@@ -57,18 +57,6 @@ const char *tms9918a_mode_name [16] = {
 
 /* Display mode details */
 /* TODO: Confirm PAL palette */
-static const TMS9918A_Config Mode2_PAL = {
-    .mode = TMS9918A_MODE_2,
-    .lines_active = 192,
-    .lines_total = 313,
-    .palette = TMS9918A_NTSC_PALETTE
-};
-static const TMS9918A_Config Mode2_NTSC = {
-    .mode = TMS9918A_MODE_2,
-    .lines_active = 192,
-    .lines_total = 262,
-    .palette = TMS9918A_NTSC_PALETTE
-};
 static const TMS9918A_Config Mode0_PAL = {
     .mode = TMS9918A_MODE_0,
     .lines_active = 192,
@@ -77,6 +65,18 @@ static const TMS9918A_Config Mode0_PAL = {
 };
 static const TMS9918A_Config Mode0_NTSC = {
     .mode = TMS9918A_MODE_0,
+    .lines_active = 192,
+    .lines_total = 262,
+    .palette = TMS9918A_NTSC_PALETTE
+};
+static const TMS9918A_Config Mode2_PAL = {
+    .mode = TMS9918A_MODE_2,
+    .lines_active = 192,
+    .lines_total = 313,
+    .palette = TMS9918A_NTSC_PALETTE
+};
+static const TMS9918A_Config Mode2_NTSC = {
+    .mode = TMS9918A_MODE_2,
     .lines_active = 192,
     .lines_total = 262,
     .palette = TMS9918A_NTSC_PALETTE

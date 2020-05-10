@@ -51,6 +51,18 @@ extern Snepulator_State state;
 }
 
 /* Display mode details */
+static const TMS9918A_Config Mode0_PAL = {
+    .mode = TMS9918A_MODE_0,
+    .lines_active = 192,
+    .lines_total = 313,
+    .palette = SMS_VDP_LEGACY_PALETTE
+};
+static const TMS9918A_Config Mode0_NTSC = {
+    .mode = TMS9918A_MODE_0,
+    .lines_active = 192,
+    .lines_total = 262,
+    .palette = SMS_VDP_LEGACY_PALETTE
+};
 static const TMS9918A_Config Mode2_PAL = {
     .mode = TMS9918A_MODE_2,
     .lines_active = 192,
@@ -555,6 +567,10 @@ void sms_vdp_run_one_scanline ()
 
     switch (mode)
     {
+        case TMS9918A_MODE_0:
+            config = (state.system == VIDEO_SYSTEM_NTSC) ? &Mode0_NTSC : &Mode0_PAL;
+            break;
+
         case TMS9918A_MODE_2: /* Mode 2: 32 × 24 8-byte tiles, sprites enabled, three colour/pattern tables */
             config = (state.system == VIDEO_SYSTEM_NTSC) ? &Mode2_NTSC : &Mode2_PAL;
             break;
