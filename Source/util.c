@@ -12,6 +12,8 @@
 #include "util.h"
 #include "snepulator.h"
 
+#include "../Libraries/SDL_SavePNG/savepng.h"
+
 /* Global state */
 extern Snepulator_State state;
 
@@ -89,7 +91,7 @@ void snepulator_take_screenshot (void)
     SDL_Surface *screenshot_surface = SDL_CreateRGBSurfaceFrom (buffer, width, height,
                                       24, state.video_width * 3, 0xff << 0, 0xff << 8, 0xff << 16, 0x00);
 
-    if (SDL_SaveBMP (screenshot_surface, "screenshot.bmp") < 0)
+    if (SDL_SavePNG (screenshot_surface, "screenshot.png") < 0)
     {
         fprintf (stderr, "Error: %s", SDL_GetError ());
     }
