@@ -854,7 +854,7 @@ uint16_t z80_ix_iy_instruction (uint16_t reg_ix_iy_in)
 uint32_t z80_bit_instruction ()
 {
     uint8_t instruction = memory_read (PC++);
-    uint8_t data;
+    uint8_t data = 0x00;
     uint8_t temp;
     uint8_t bit;
     bool write_data = true;
@@ -962,7 +962,7 @@ void z80_instruction_daa ()
 {
     bool set_carry = false;
     bool set_half = false;
-    uint8_t diff;
+    uint8_t diff = 0x00;
 
     /* Calculate diff to apply */
     switch (F & (Z80_FLAG_CARRY | Z80_FLAG_HALF))
