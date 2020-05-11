@@ -88,7 +88,7 @@ static const TMS9918A_Config Mode2_NTSC = {
  */
 const char *tms9918a_mode_name_get (TMS9918A_Mode mode)
 {
-    return tms9918a_mode_name [mode];
+    return tms9918a_mode_name [mode & 0x0f];
 }
 
 
