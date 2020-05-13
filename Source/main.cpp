@@ -8,8 +8,8 @@
 #include "SDL2/SDL.h"
 #include "SDL2/SDL_joystick.h"
 #include <GL/gl3w.h>
-#include "../Libraries/imgui-1.49/imgui.h"
-#include "../Libraries/imgui-1.49/examples/sdl_opengl3_example/imgui_impl_sdl_gl3.h"
+#include "../Libraries/imgui-1.53/imgui.h"
+#include "../Libraries/imgui-1.53/examples/sdl_opengl3_example/imgui_impl_sdl_gl3.h"
 
 #include <vector>
 
@@ -892,7 +892,7 @@ int main (int argc, char **argv)
                                                                                                               : (state.host_width  / state.video_width);
             if (scale < 1)
                 scale = 1;
-            ImGui::PushStyleColor (ImGuiCol_WindowBg, ImColor (0.0f, 0.0f, 0.0f, 0.0f));
+            ImGui::PushStyleColor (ImGuiCol_WindowBg, ImVec4 (0.0f, 0.0f, 0.0f, 0.0f));
             ImGui::SetNextWindowSize (ImVec2 (state.host_width, state.host_height));
             ImGui::Begin ("VDP Output", NULL, ImGuiWindowFlags_NoTitleBar |
                                               ImGuiWindowFlags_NoResize |
