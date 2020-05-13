@@ -18,8 +18,8 @@
 #include "SDL2/SDL.h"
 #include "SDL2/SDL_joystick.h"
 #include <GL/gl3w.h>
-#include "../Libraries/imgui-1.49/imgui.h"
-#include "../Libraries/imgui-1.49/examples/sdl_opengl3_example/imgui_impl_sdl_gl3.h"
+#include "../Libraries/imgui-1.53/imgui.h"
+#include "../Libraries/imgui-1.53/examples/sdl_opengl3_example/imgui_impl_sdl_gl3.h"
 
 extern "C" {
 #include "util.h"
