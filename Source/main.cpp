@@ -8,8 +8,8 @@
 #include "SDL2/SDL.h"
 #include "SDL2/SDL_joystick.h"
 #include <GL/gl3w.h>
-#include "../Libraries/imgui-1.53/imgui.h"
-#include "../Libraries/imgui-1.53/examples/sdl_opengl3_example/imgui_impl_sdl_gl3.h"
+#include "../Libraries/imgui-1.60/imgui.h"
+#include "../Libraries/imgui-1.60/examples/sdl_opengl3_example/imgui_impl_sdl_gl3.h"
 
 #include <vector>
 
@@ -681,6 +681,7 @@ int main (int argc, char **argv)
 
     /* Setup ImGui binding */
     gl3wInit ();
+    ImGui::CreateContext ();
     ImGui_ImplSdlGL3_Init (window);
 
     /* Style */
@@ -697,6 +698,7 @@ int main (int argc, char **argv)
     ImGui::PushStyleColor (ImGuiCol_ButtonHovered, ImVec4 (0.8, 0.0, 0.0, 1.0));
     ImGui::PushStyleColor (ImGuiCol_ButtonActive,  ImVec4 (0.9, 0.0, 0.0, 1.0));
     ImGui::PushStyleVar (ImGuiStyleVar_WindowRounding, 4.0);
+    ImGui::PushStyleVar (ImGuiStyleVar_WindowBorderSize, 0.0);
 
     /* Create texture for video output */
     glGenTextures (1, &video_out_texture);
@@ -927,7 +929,9 @@ int main (int argc, char **argv)
         glViewport (0, 0, (int)ImGui::GetIO ().DisplaySize.x, (int)ImGui::GetIO ().DisplaySize.y);
         glClearColor (0.0, 0.0, 0.0, 0.0);
         glClear (GL_COLOR_BUFFER_BIT);
+
         ImGui::Render ();
+        ImGui_ImplSdlGL3_RenderDrawData (ImGui::GetDrawData ());
 
         SDL_GL_SwapWindow (window);
 
@@ -944,6 +948,9 @@ int main (int argc, char **argv)
     }
 
     fprintf (stdout, "EMULATION ENDED.\n");
+
+    ImGui_ImplSdlGL3_Shutdown ();
+    ImGui::DestroyContext ();
 
     SDL_CloseAudioDevice (audio_device_id);
     glDeleteTextures (1, &video_out_texture);
