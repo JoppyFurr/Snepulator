@@ -8,8 +8,8 @@
 #include "SDL2/SDL.h"
 #include "SDL2/SDL_joystick.h"
 #include <GL/gl3w.h>
-#include "../Libraries/imgui-1.60/imgui.h"
-#include "../Libraries/imgui-1.60/examples/sdl_opengl3_example/imgui_impl_sdl_gl3.h"
+#include "../Libraries/imgui-1.61/imgui.h"
+#include "../Libraries/imgui-1.61/examples/sdl_opengl3_example/imgui_impl_sdl_gl3.h"
 
 #include <vector>
 
@@ -895,6 +895,7 @@ int main (int argc, char **argv)
             if (scale < 1)
                 scale = 1;
             ImGui::PushStyleColor (ImGuiCol_WindowBg, ImVec4 (0.0f, 0.0f, 0.0f, 0.0f));
+            ImGui::SetNextWindowPos (ImVec2 (0, 0));
             ImGui::SetNextWindowSize (ImVec2 (state.host_width, state.host_height));
             ImGui::Begin ("VDP Output", NULL, ImGuiWindowFlags_NoTitleBar |
                                               ImGuiWindowFlags_NoResize |
@@ -907,6 +908,7 @@ int main (int argc, char **argv)
             /* First, draw the background, taken from the leftmost slice of the actual image */
             ImGui::SetCursorPosX (0);
             ImGui::SetCursorPosY (state.host_height / 2 - (VIDEO_BUFFER_LINES * scale) / 2);
+
             ImGui::Image ((void *) (uintptr_t) video_out_texture, ImVec2 (state.host_width, VIDEO_BUFFER_LINES * scale),
                           /* uv0 */  ImVec2 (0.00, 0.0),
                           /* uv1 */  ImVec2 (0.01, 1.0),
@@ -916,6 +918,7 @@ int main (int argc, char **argv)
             /* Now, draw the actual image */
             ImGui::SetCursorPosX (state.host_width  / 2 - (VIDEO_BUFFER_WIDTH * scale) / 2);
             ImGui::SetCursorPosY (state.host_height / 2 - (VIDEO_BUFFER_LINES * scale) / 2);
+
             ImGui::Image ((void *) (uintptr_t) video_out_texture, ImVec2 (VIDEO_BUFFER_WIDTH * scale, VIDEO_BUFFER_LINES * scale),
                           /* uv0 */  ImVec2 (0.0, 0.0),
                           /* uv1 */  ImVec2 (1.0, 1.0),

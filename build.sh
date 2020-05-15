@@ -40,12 +40,12 @@ DATE=`date --rfc-3339=date`
 eval $CXX \
     Source/*.cpp \
     Work/*.o \
-    Libraries/imgui-1.60/*.cpp \
-    Libraries/imgui-1.60/examples/libs/gl3w/GL/gl3w.c \
-    Libraries/imgui-1.60/examples/sdl_opengl3_example/imgui_impl_sdl_gl3.cpp \
+    Libraries/imgui-1.61/*.cpp \
+    Libraries/imgui-1.61/examples/libs/gl3w/GL/gl3w.c \
+    Libraries/imgui-1.61/examples/sdl_opengl3_example/imgui_impl_sdl_gl3.cpp \
     `sdl2-config --cflags` \
-    -I Libraries/imgui-1.60/ \
-    -I Libraries/imgui-1.60/examples/libs/gl3w/ \
+    -I Libraries/imgui-1.61/ \
+    -I Libraries/imgui-1.61/examples/libs/gl3w/ \
     `sdl2-config --libs` \
     -lGL -ldl -lpng -DBUILD_DATE=\\\"$DATE\\\" \
     -o Snepulator -std=c++11
