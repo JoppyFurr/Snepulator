@@ -8,9 +8,9 @@
 #include "SDL2/SDL.h"
 #include "SDL2/SDL_joystick.h"
 #include <GL/gl3w.h>
-#include "../Libraries/imgui-1.62/imgui.h"
-#include "../Libraries/imgui-1.62/examples/imgui_impl_sdl.h"
-#include "../Libraries/imgui-1.62/examples/imgui_impl_opengl3.h"
+#include "../Libraries/imgui-1.76/imgui.h"
+#include "../Libraries/imgui-1.76/examples/imgui_impl_sdl.h"
+#include "../Libraries/imgui-1.76/examples/imgui_impl_opengl3.h"
 
 #include <vector>
 

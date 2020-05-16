@@ -18,7 +18,7 @@
 #include "SDL2/SDL.h"
 #include "SDL2/SDL_joystick.h"
 #include <GL/gl3w.h>
-#include "../Libraries/imgui-1.62/imgui.h"
+#include "../Libraries/imgui-1.76/imgui.h"
 
 extern "C" {
 #include "util.h"
