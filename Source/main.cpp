@@ -38,6 +38,7 @@ extern "C" {
 }
 
 #include "../Images/snepulator_icon.c"
+#include "../Images/snepulator_logo.c"
 
 /* Global state */
 Snepulator_State state;
@@ -710,6 +711,23 @@ int main (int argc, char **argv)
     glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     float Float4_Black[4] = { 0.0, 0.0, 0.0, 0.0 };
     glTexParameterfv (GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, Float4_Black);
+
+    /* Load the logo to display before a rom is loaded */
+    for (int y = 0; y < snepulator_logo.height; y++)
+    {
+        uint32_t x_offset = VIDEO_BUFFER_WIDTH / 2 - snepulator_logo.width / 2;
+        uint32_t y_offset = VIDEO_BUFFER_LINES / 2 - snepulator_logo.height / 2;
+
+        for (int x = 0; x < snepulator_logo.width; x++)
+        {
+            state.video_out_texture_data [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].r =
+                snepulator_logo.pixel_data [(x + y * snepulator_logo.width) * 3 + 0] / 255.0;
+            state.video_out_texture_data [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].g =
+                snepulator_logo.pixel_data [(x + y * snepulator_logo.width) * 3 + 1] / 255.0;
+            state.video_out_texture_data [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].b =
+                snepulator_logo.pixel_data [(x + y * snepulator_logo.width) * 3 + 2] / 255.0;
+        }
+    }
 
     /* Open the default audio device */
     audio_device_id = SDL_OpenAudioDevice (NULL, 0, &desired_audiospec, &obtained_audiospec,
