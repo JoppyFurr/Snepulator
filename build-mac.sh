@@ -40,13 +40,13 @@ DATE=`date "+%Y-%m-%d"`
 eval $CXX \
     Source/*.cpp \
     Work/*.o \
-    Libraries/imgui-1.62/*.cpp \
-    Libraries/imgui-1.62/examples/libs/gl3w/GL/gl3w.c \
-    Libraries/imgui-1.62/examples/imgui_impl_opengl3.cpp \
-    Libraries/imgui-1.62/examples/imgui_impl_sdl.cpp \
+    Libraries/imgui-1.76/*.cpp \
+    Libraries/imgui-1.76/examples/libs/gl3w/GL/gl3w.c \
+    Libraries/imgui-1.76/examples/imgui_impl_opengl3.cpp \
+    Libraries/imgui-1.76/examples/imgui_impl_sdl.cpp \
     `sdl2-config --cflags` \
-    -I Libraries/imgui-1.62/ \
-    -I Libraries/imgui-1.62/examples/libs/gl3w/ \
+    -I Libraries/imgui-1.76/ \
+    -I Libraries/imgui-1.76/examples/libs/gl3w/ \
     `sdl2-config --libs` \
     -framework OpenGL -framework CoreFoundation -ldl -lpng -DBUILD_DATE=\\\"$DATE\\\" \
     -o Snepulator -std=c++11
