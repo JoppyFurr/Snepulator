@@ -8,8 +8,9 @@
 #include "SDL2/SDL.h"
 #include "SDL2/SDL_joystick.h"
 #include <GL/gl3w.h>
-#include "../Libraries/imgui-1.61/imgui.h"
-#include "../Libraries/imgui-1.61/examples/sdl_opengl3_example/imgui_impl_sdl_gl3.h"
+#include "../Libraries/imgui-1.62/imgui.h"
+#include "../Libraries/imgui-1.62/examples/imgui_impl_sdl.h"
+#include "../Libraries/imgui-1.62/examples/imgui_impl_opengl3.h"
 
 #include <vector>
 
@@ -682,7 +683,9 @@ int main (int argc, char **argv)
     /* Setup ImGui binding */
     gl3wInit ();
     ImGui::CreateContext ();
-    ImGui_ImplSdlGL3_Init (window);
+    ImGui::GetIO ().IniFilename = NULL;
+    ImGui_ImplSDL2_InitForOpenGL (window, glcontext);
+    ImGui_ImplOpenGL3_Init ();
 
     /* Style */
     ImGui::PushStyleColor (ImGuiCol_MenuBarBg,     ImVec4 (0.5, 0.0, 0.0, 1.0));
@@ -734,7 +737,7 @@ int main (int argc, char **argv)
         /* TODO: For any saved configuration, use UUID instead of "id". */
         while (SDL_PollEvent (&event))
         {
-            ImGui_ImplSdlGL3_ProcessEvent (&event);
+            ImGui_ImplSDL2_ProcessEvent (&event);
 
             if (event.type == SDL_QUIT)
             {
@@ -869,7 +872,9 @@ int main (int argc, char **argv)
         }
 
         /* RENDER GUI */
-        ImGui_ImplSdlGL3_NewFrame (window);
+        ImGui_ImplOpenGL3_NewFrame ();
+        ImGui_ImplSDL2_NewFrame (window);
+        ImGui::NewFrame ();
         if (state.show_gui)
         {
             snepulator_render_menubar ();
@@ -929,13 +934,12 @@ int main (int argc, char **argv)
         }
 
         /* Draw to HW */
+        ImGui::Render ();
+        SDL_GL_MakeCurrent (window, glcontext);
         glViewport (0, 0, (int)ImGui::GetIO ().DisplaySize.x, (int)ImGui::GetIO ().DisplaySize.y);
         glClearColor (0.0, 0.0, 0.0, 0.0);
         glClear (GL_COLOR_BUFFER_BIT);
-
-        ImGui::Render ();
-        ImGui_ImplSdlGL3_RenderDrawData (ImGui::GetDrawData ());
-
+        ImGui_ImplOpenGL3_RenderDrawData (ImGui::GetDrawData ());
         SDL_GL_SwapWindow (window);
 
         /* Update statistics (rolling average) */
@@ -952,7 +956,8 @@ int main (int argc, char **argv)
 
     fprintf (stdout, "EMULATION ENDED.\n");
 
-    ImGui_ImplSdlGL3_Shutdown ();
+    ImGui_ImplOpenGL3_Shutdown ();
+    ImGui_ImplSDL2_Shutdown ();
     ImGui::DestroyContext ();
 
     SDL_CloseAudioDevice (audio_device_id);
