@@ -25,8 +25,6 @@ extern Z80_Regs z80_regs;
 #define SMS_RAM_SIZE (8 << 10)
 
 /* Console state */
-SMS_Region region = REGION_WORLD;
-
 uint8_t memory_control = 0x00;
 uint8_t io_control = 0x00;
 
@@ -211,7 +209,7 @@ static uint8_t sms_io_read (uint8_t addr)
             bool port_1_th = false;
             bool port_2_th = false;
 
-            if (region == REGION_WORLD)
+            if (state.region == REGION_WORLD)
             {
                 if ((io_control & SMS_IO_TH_A_DIRECTION) == 0)
                     port_1_th = io_control & SMS_IO_TH_A_LEVEL;

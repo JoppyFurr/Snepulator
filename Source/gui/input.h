@@ -1,0 +1,3 @@
+/*
+ * Input configuration modal
+ */

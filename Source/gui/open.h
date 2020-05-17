@@ -9,5 +9,5 @@ typedef struct File_Open_State_s {
 } File_Open_State;
 
 /* Rendering function for the open modal */
-extern void snepulator_render_open_modal (void);
+void snepulator_render_open_modal (void);
 

@@ -25,10 +25,10 @@ extern "C" {
 #include "util.h"
 #include "snepulator.h"
 #include "config.h"
-#include "open.h"
-
 #include "sms.h"
 }
+
+#include "open.h"
 
 
 /* Global state */

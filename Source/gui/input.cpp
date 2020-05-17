@@ -1,3 +1,6 @@
+/*
+ * Input configuration modal
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
