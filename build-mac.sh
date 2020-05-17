@@ -41,6 +41,7 @@ eval $CXX \
     Work/*.o \
     Source/main.cpp \
     Source/gui/input.cpp \
+    Source/gui/menubar.cpp \
     Source/gui/open.cpp \
     Libraries/imgui-1.76/*.cpp \
     Libraries/imgui-1.76/examples/libs/gl3w/GL/gl3w.c \

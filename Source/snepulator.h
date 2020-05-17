@@ -39,6 +39,12 @@ typedef enum Video_System_e {
     VIDEO_SYSTEM_PAL
 } Video_System;
 
+typedef enum Console_Region_t {
+    REGION_WORLD,
+    REGION_JAPAN
+} Console_Region;
+
+
 typedef struct Snepulator_State_s {
     bool    ready;      /* Ready to run - A console and ROM are loaded. */
     bool    running;    /* Emulation is actively running. */
@@ -68,7 +74,9 @@ typedef struct Snepulator_State_s {
     uint32_t rom_size;
     uint32_t bios_size;
 
+    /* Console Configuration */
     Video_System system;
+    Console_Region region;
 
     /* Console inputs */
     Sega_Gamepad gamepad_1;
