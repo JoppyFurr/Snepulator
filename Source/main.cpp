@@ -5,12 +5,13 @@
 #include <stdbool.h>
 #include <errno.h>
 
-#include "SDL2/SDL.h"
-#include "SDL2/SDL_joystick.h"
 #include <GL/gl3w.h>
-#include "../Libraries/imgui-1.76/imgui.h"
-#include "../Libraries/imgui-1.76/examples/imgui_impl_sdl.h"
-#include "../Libraries/imgui-1.76/examples/imgui_impl_opengl3.h"
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_joystick.h>
+
+#include "imgui.h"
+#include "examples/imgui_impl_sdl.h"
+#include "examples/imgui_impl_opengl3.h"
 
 #include <vector>
 
@@ -18,8 +19,8 @@ extern "C" {
 
 #include "util.h"
 #include "snepulator.h"
-#include "open.h"
 #include "config.h"
+#include "gui/open.h"
 
 #include "video/tms9918a.h"
 #include "video/sms_vdp.h"
