@@ -11,10 +11,11 @@
 #include <string>
 #include <vector>
 
-#include "SDL2/SDL.h"
-#include "SDL2/SDL_joystick.h"
 #include <GL/gl3w.h>
-#include "../Libraries/imgui-1.76/imgui.h"
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_joystick.h>
+
+#include "imgui.h"
 
 extern "C" {
 #include "util.h"

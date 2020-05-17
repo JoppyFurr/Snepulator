@@ -38,13 +38,16 @@ eval $CC $CFLAGS -c Libraries/SDL_SavePNG/savepng.c -o Work/SDL_SavePNG.o
 # Compile C++11 GUI and link to the rest of the code.
 DATE=`date --rfc-3339=date`
 eval $CXX \
-    Source/*.cpp \
     Work/*.o \
+    Source/main.cpp \
+    Source/gui/input.cpp \
+    Source/gui/open.cpp \
     Libraries/imgui-1.76/*.cpp \
     Libraries/imgui-1.76/examples/libs/gl3w/GL/gl3w.c \
     Libraries/imgui-1.76/examples/imgui_impl_opengl3.cpp \
     Libraries/imgui-1.76/examples/imgui_impl_sdl.cpp \
     `sdl2-config --cflags` \
+    -I Source/ \
     -I Libraries/imgui-1.76/ \
     -I Libraries/imgui-1.76/examples/libs/gl3w/ \
     `sdl2-config --libs` \
