@@ -491,9 +491,9 @@ uint32_t z80_extended_instruction ()
 
 
         default:
-        fprintf (stderr, "Unknown extended instruction: \"%s\" (%02x).\n",
-                 z80_instruction_name_extended[instruction], instruction);
-        state.abort = true;
+            snprintf (state.error_buffer, 79, "Unknown extended instruction: \"%s\" (%02x).",
+                      z80_instruction_name_extended [instruction] , instruction);
+            snepulator_error ("Z80 Error", state.error_buffer);
     }
 
     return 0;
@@ -572,10 +572,10 @@ uint32_t z80_ix_iy_bit_instruction (uint16_t reg_ix_iy_w)
         case 0xe0: case 0xe8: case 0xf0: case 0xf8:
             data |= bit;                                        CYCLES (23);    break;
         default:
-            fprintf (stderr, "Unknown ix/iy bit instruction: \"%s\" (%02x).\n",
-                     z80_instruction_name_bits[instruction], instruction);
-            write_data = false;
-            state.abort = true;
+            snprintf (state.error_buffer, 79, "Unknown ix/iy bit instruction: \"%s\" (%02x).",
+                      z80_instruction_name_bits [instruction] , instruction);
+            snepulator_error ("Z80 Error", state.error_buffer);
+            return -1;
     }
 
     /* Write data */
@@ -839,9 +839,10 @@ uint16_t z80_ix_iy_instruction (uint16_t reg_ix_iy_in)
         case 0xf9: /* LD SP,IX     */ SP = reg_ix_iy.w;         CYCLES (10);    break;
 
         default:
-        fprintf (stderr, "Unknown ix/iy instruction: \"%s\" (%02x).\n",
-                 z80_instruction_name_ix[instruction], instruction);
-        state.abort = true;
+            snprintf (state.error_buffer, 79, "Unknown ix/iy instruction: \"%s\" (%02x).",
+                      z80_instruction_name_ix [instruction] , instruction);
+            snepulator_error ("Z80 Error", state.error_buffer);
+            return -1;
     }
 
     return reg_ix_iy.w;
@@ -930,9 +931,10 @@ uint32_t z80_bit_instruction ()
             CYCLES ((instruction & 0x07) == 0x06 ? 15 : 8);                     break;
 
         default:
-            fprintf (stderr, "Unknown bit instruction: \"%s\" (%02x).\n",
-                     z80_instruction_name_bits[instruction], instruction);
-            state.abort = true;
+            snprintf (state.error_buffer, 79, "Unknown bit instruction: \"%s\" (%02x).",
+                      z80_instruction_name_bits [instruction] , instruction);
+            snepulator_error ("Z80 Error", state.error_buffer);
+            return -1;
     }
 
     /* Write data */
@@ -1474,9 +1476,9 @@ void z80_instruction ()
         case 0xff: /* RST 38h    */ CALL (0x38);                CYCLES (11);    break;
 
         default:
-            fprintf (stderr, "Unknown instruction: \"%s\" (%02x).\n",
-                     z80_instruction_name[instruction], instruction);
-            state.abort = true;
+            snprintf (state.error_buffer, 79, "Unknown instruction: \"%s\" (%02x).",
+                      z80_instruction_name [instruction] , instruction);
+            snepulator_error ("Z80 Error", state.error_buffer);
     }
 }
 
@@ -1493,10 +1495,11 @@ void z80_run_cycles (uint64_t cycles)
     {
         /* TIMING DEBUG */
         uint64_t previous_cycle_count = z80_cycle;
-        uint8_t debug_instruction_0 = memory_read (PC + 0);
-        uint8_t debug_instruction_1 = memory_read (PC + 1);
-        uint8_t debug_instruction_2 = memory_read (PC + 2);
-        uint8_t debug_instruction_3 = memory_read (PC + 3);
+        uint8_t debug_instruction [4];
+        debug_instruction [0] = memory_read (PC + 0);
+        debug_instruction [1] = memory_read (PC + 1);
+        debug_instruction [2] = memory_read (PC + 2);
+        debug_instruction [3] = memory_read (PC + 3);
         if (z80_regs.halt)
         {
             /* NOP */ CYCLES (4);
@@ -1508,42 +1511,10 @@ void z80_run_cycles (uint64_t cycles)
 
         if (z80_cycle == previous_cycle_count)
         {
-            fprintf (stderr, "Instruction %x %x %x %x took no time\n",
-                     debug_instruction_0,
-                     debug_instruction_1,
-                     debug_instruction_2,
-                     debug_instruction_3);
-
-            if (debug_instruction_0 == 0xcb)
-                fprintf (stderr, "DECODE %s %s %x %x took no time\n",
-                         z80_instruction_name[debug_instruction_0],
-                         z80_instruction_name_bits[debug_instruction_1],
-                         debug_instruction_2,
-                         debug_instruction_3);
-            else if (debug_instruction_0 == 0xed)
-                fprintf (stderr, "DECODE %s %s %x %x took no time\n",
-                         z80_instruction_name[debug_instruction_0],
-                         z80_instruction_name_extended[debug_instruction_1],
-                         debug_instruction_2,
-                         debug_instruction_3);
-            else if ((debug_instruction_0 == 0xdd || debug_instruction_0 == 0xfd) && debug_instruction_1 == 0xcb)
-                fprintf (stderr, "DECODE %s %s %s took no time\n",
-                         z80_instruction_name[debug_instruction_0],
-                         z80_instruction_name_ix[debug_instruction_1],
-                         z80_instruction_name_bits[debug_instruction_2]);
-            else if (debug_instruction_0 == 0xdd || debug_instruction_0 == 0xfd)
-                    fprintf (stderr, "DECODE %s %s %x %x took no time\n",
-                             z80_instruction_name[debug_instruction_0],
-                             z80_instruction_name_ix[debug_instruction_1],
-                             debug_instruction_2,
-                             debug_instruction_3);
-            else
-                fprintf (stderr, "DECODE %s %x %x %x took no time\n",
-                         z80_instruction_name[debug_instruction_0],
-                         debug_instruction_1,
-                         debug_instruction_2,
-                         debug_instruction_3);
-            state.abort = true;
+            snprintf (state.error_buffer, 79, "Instruction took no time: %x %x %x %x.",
+                      debug_instruction [0], debug_instruction [1], debug_instruction [2], debug_instruction [3]);
+            snepulator_error ("Z80 Error", state.error_buffer);
+            return;
         }
         /* END TIMING DEBUG */
 
@@ -1585,8 +1556,9 @@ void z80_run_cycles (uint64_t cycles)
                         PC = 0x38;
                         break;
                     default:
-                        fprintf (stderr, "Unknown interrupt mode %d.\n", z80_regs.im);
-                        state.abort = true;
+                        snprintf (state.error_buffer, 79, "Unsupported interrupt mode %d.", z80_regs.im);
+                        snepulator_error ("Z80 Error", state.error_buffer);
+                        return;
                 }
             }
 

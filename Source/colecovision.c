@@ -287,7 +287,7 @@ void colecovision_init (void)
     state.ram = calloc (COLECOVISION_RAM_SIZE, 1);
     if (state.ram == NULL)
     {
-        fprintf (stderr, "Error: Unable to allocate memory.");
+        snepulator_error ("Error", "Unable to allocate Colecovision RAM.");
     }
 
     /* Load BIOS */

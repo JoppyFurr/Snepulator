@@ -249,7 +249,8 @@ void sg_1000_init (void)
     state.ram = calloc (SG_1000_RAM_SIZE, 1);
     if (state.ram == NULL)
     {
-        fprintf (stderr, "Error: Unable to allocate memory.");
+        snepulator_error ("Error", "Unable to allocate SG-1000 RAM.");
+        return;
     }
 
     /* Load ROM cart */

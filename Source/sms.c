@@ -169,7 +169,7 @@ static uint8_t sms_io_read (uint8_t addr)
         else
         {
             /* H Counter */
-            fprintf (stderr, "Error: H Counter not implemented.\n");
+            fprintf (stderr, "Warning: H Counter not implemented.\n");
         }
     }
 
@@ -364,7 +364,8 @@ void sms_init (void)
     state.ram = calloc (SMS_RAM_SIZE, 1);
     if (state.ram == NULL)
     {
-        fprintf (stderr, "Error: Unable to allocate memory.");
+        snepulator_error ("Error", "Unable to allocate SMS RAM.");
+        return;
     }
 
     /* Load BIOS */

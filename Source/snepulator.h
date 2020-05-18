@@ -74,7 +74,7 @@ typedef struct Snepulator_State_s {
     uint32_t rom_size;
     uint32_t bios_size;
 
-    /* Console Configuration */
+    /* Console configuration */
     Video_System system;
     Console_Region region;
 
@@ -98,6 +98,11 @@ typedef struct Snepulator_State_s {
     double vdp_framerate;
     double audio_ring_utilisation;
 
+    /* Error reporting */
+    char  error_buffer[80];
+    char *error_title;
+    char *error_message;
+
 } Snepulator_State;
 
 /* Update the in-memory button mapping for an input device. */
@@ -108,3 +113,6 @@ void snepulator_reset (void);
 
 /* Call the appropriate initialisation for the chosen ROM */
 void system_init (void);
+
+/* Display an error message */
+void snepulator_error (const char *title, const char *message);

@@ -87,7 +87,7 @@ void snepulator_render_open_modal (void)
                 }
                 else
                 {
-                    fprintf (stderr, "Error: ${HOME} not defined.");
+                    snepulator_error ("Error", "${HOME} not defined.");
                     return;
                 }
             }
@@ -202,7 +202,7 @@ void snepulator_render_open_modal (void)
                     char *end_slash = strrchr (path, '/');
                     if (end_slash == NULL)
                     {
-                        fprintf (stderr, "Error: Failed to change directory.");
+                        snepulator_error ("Error", "Failed to change directory.");
                         return;
                     }
                     end_slash [0] = '\0';
@@ -211,7 +211,7 @@ void snepulator_render_open_modal (void)
                     end_slash = strrchr (path, '/');
                     if (end_slash == NULL)
                     {
-                        fprintf (stderr, "Error: Failed to change directory.");
+                        snepulator_error ("Error", "Failed to change directory.");
                         return;
                     }
                     memset (&end_slash [1], 0, strlen (&end_slash [1]));

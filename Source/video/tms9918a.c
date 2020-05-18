@@ -518,7 +518,8 @@ void tms9918a_run_one_scanline (void)
             break;
 
         default: /* Unsupported */
-            fprintf (stderr, "Unsupported mode: %s.\n", tms9918a_mode_name_get (mode));
+            snprintf (state.error_buffer, 79, "Unsupported mode: %s.", tms9918a_mode_name_get (mode));
+            snepulator_error ("tms9918a Error", state.error_buffer);
             return;
     }
 

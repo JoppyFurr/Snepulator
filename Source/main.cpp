@@ -52,6 +52,49 @@ Gamepad_Mapping player_2_mapping;
 bool input_modal_consume_event (SDL_Event event);
 void snepulator_render_input_modal (void);
 
+/*
+ * Display an error message.
+ */
+void snepulator_error (const char *title, const char *message)
+{
+    state.running = false;
+    state.ready = false;
+    state.show_gui = true;
+
+    /* All errors get printed to console */
+    fprintf (stderr, "%s: %s\n", title, message);
+
+    /* The first reported error gets shown as a pop-up */
+    if (state.error_title == NULL)
+    {
+        state.error_title = strdup (title);
+        state.error_message = strdup (message);
+    }
+}
+
+void snepulator_render_error ()
+{
+    static bool first = true;
+
+    if (first)
+    {
+        first = false;
+        ImGui::OpenPopup (state.error_title);
+    }
+
+    if (ImGui::BeginPopupModal (state.error_title, NULL, ImGuiWindowFlags_AlwaysAutoResize |
+                                                        ImGuiWindowFlags_NoMove |
+                                                        ImGuiWindowFlags_NoScrollbar))
+    {
+        ImGui::Text ("%s", state.error_message);
+        if (ImGui::Button ("Exit", ImVec2 (120,0))) {
+            /* TODO: Free error strings */
+            state.abort = true;
+        }
+        ImGui::EndPopup ();
+    }
+}
+
 
 /*
  * Callback for "Load ROM..."
@@ -638,6 +681,10 @@ int main (int argc, char **argv)
             snepulator_render_menubar ();
             snepulator_render_open_modal ();
             snepulator_render_input_modal ();
+            if (state.error_title != NULL)
+            {
+                snepulator_render_error ();
+            }
         }
 
         if (SDL_GetTicks() > (state.mouse_time + 3000))

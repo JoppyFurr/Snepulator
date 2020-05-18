@@ -93,7 +93,7 @@ void snepulator_take_screenshot (void)
 
     if (SDL_SavePNG (screenshot_surface, "screenshot.png") < 0)
     {
-        fprintf (stderr, "Error: %s", SDL_GetError ());
+        snepulator_error ("SDL Error", SDL_GetError ());
     }
 
     SDL_FreeSurface (screenshot_surface);
