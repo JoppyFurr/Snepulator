@@ -590,7 +590,8 @@ void sms_vdp_run_one_scanline ()
             break;
 
         default: /* Unsupported */
-            fprintf (stderr, "Unsupported mode: %s.\n", tms9918a_mode_name_get (mode));
+            snprintf (state.error_buffer, 79, "Unsupported mode: %s.", tms9918a_mode_name_get (mode));
+            snepulator_error ("VDP Error", state.error_buffer);
             return;
     }
 
