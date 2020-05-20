@@ -87,8 +87,10 @@ void snepulator_render_error ()
                                                         ImGuiWindowFlags_NoScrollbar))
     {
         ImGui::Text ("%s", state.error_message);
+
+        ImGui::Spacing ();
+        ImGui::SameLine (ImGui::GetContentRegionAvail().x + 16 - 128);
         if (ImGui::Button ("Exit", ImVec2 (120,0))) {
-            /* TODO: Free error strings */
             state.abort = true;
         }
         ImGui::EndPopup ();
@@ -760,6 +762,12 @@ int main (int argc, char **argv)
     }
 
     fprintf (stdout, "EMULATION ENDED.\n");
+
+    if (state.error_title)
+    {
+        free (state.error_title);
+        free (state.error_message);
+    }
 
     ImGui_ImplOpenGL3_Shutdown ();
     ImGui_ImplSDL2_Shutdown ();
