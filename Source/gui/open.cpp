@@ -174,6 +174,8 @@ void snepulator_render_open_modal (void)
         ImGui::EndChild ();
 
         /* Buttons */
+        ImGui::Spacing ();
+        ImGui::SameLine (ImGui::GetContentRegionAvail().x + 16 - 128 - 128);
         if (ImGui::Button ("Cancel", ImVec2 (120,0))) {
             if (state.ready)
             {

@@ -316,6 +316,8 @@ void snepulator_render_input_modal (void)
         ImGui::EndChild ();
 
         /* Buttons */
+        ImGui::Spacing ();
+        ImGui::SameLine (ImGui::GetContentRegionAvail().x + 16 - 128 * 3);
         if (ImGui::Button ("Cancel", ImVec2 (120,0))) {
             remap_state = REMAP_STATE_DEFAULT;
             if (state.ready)
