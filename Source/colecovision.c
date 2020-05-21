@@ -295,7 +295,7 @@ void colecovision_init (void)
     {
         if (snepulator_load_rom (&state.bios, &state.bios_size, state.colecovision_bios_filename) == -1)
         {
-            state.abort = true;
+            return;
         }
         fprintf (stdout, "%d KiB BIOS %s loaded.\n", state.bios_size >> 10, state.colecovision_bios_filename);
     }
@@ -305,7 +305,7 @@ void colecovision_init (void)
     {
         if (snepulator_load_rom (&state.rom, &state.rom_size, state.cart_filename) == -1)
         {
-            state.abort = true;
+            return;
         }
         fprintf (stdout, "%d KiB ROM %s loaded.\n", state.rom_size >> 10, state.cart_filename);
     }
