@@ -183,7 +183,7 @@ void snepulator_update_input_device (Gamepad_Mapping device)
         }
     }
 
-    fprintf (stderr, "Error: Unable to find device %d.\n", device.device_id);
+    fprintf (stderr, "Warning: Unable to find device %d.\n", device.device_id);
 }
 
 
@@ -418,7 +418,7 @@ int main (int argc, char **argv)
     /* Initialize SDL */
     if (SDL_Init (SDL_INIT_EVERYTHING) == -1)
     {
-        fprintf (stderr, "Error: SDL_Init failed.\n");
+        snepulator_error ("SDL Error", SDL_GetError ());
         return EXIT_FAILURE;
     }
 
@@ -439,7 +439,7 @@ int main (int argc, char **argv)
                       VIDEO_BUFFER_WIDTH * 2, VIDEO_BUFFER_LINES * 2 + 16, SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL);
     if (window == NULL)
     {
-        fprintf (stderr, "Error: SDL_CreateWindowfailed.\n");
+        snepulator_error ("SDL Error", SDL_GetError ());
         SDL_Quit ();
         return EXIT_FAILURE;
     }
@@ -447,7 +447,7 @@ int main (int argc, char **argv)
     glcontext = SDL_GL_CreateContext (window);
     if (glcontext == NULL)
     {
-        fprintf (stderr, "Error: SDL_GL_CreateContext failed.\n");
+        snepulator_error ("SDL Error", SDL_GetError ());
         SDL_Quit ();
         return EXIT_FAILURE;
     }
@@ -459,7 +459,7 @@ int main (int argc, char **argv)
                                                   0xff << 0, 0xff << 8, 0xff << 16, 0xff << 24);
     if (icon == NULL)
     {
-        fprintf (stderr, "Error: SDL_CreateRGBSurfaceFrom failed.\n");
+        snepulator_error ("SDL Error", SDL_GetError ());
         SDL_Quit ();
         return EXIT_FAILURE;
     }

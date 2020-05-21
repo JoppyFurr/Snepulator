@@ -2,6 +2,7 @@
  * Common utilities.
  */
 
+#include <errno.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -32,7 +33,7 @@ int32_t snepulator_load_rom (uint8_t **buffer, uint32_t *buffer_size, char *file
     FILE *rom_file = fopen (filename, "rb");
     if (!rom_file)
     {
-        perror ("Error: Unable to open ROM");
+        snepulator_error ("Load Error", strerror (errno));
         return -1;
     }
 
@@ -49,7 +50,7 @@ int32_t snepulator_load_rom (uint8_t **buffer, uint32_t *buffer_size, char *file
     *buffer = (uint8_t *) malloc (*buffer_size);
     if (!*buffer)
     {
-        perror ("Error: Unable to allocate memory for ROM.\n");
+        snepulator_error ("Load Error", strerror (errno));
         return -1;
     }
 
