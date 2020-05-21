@@ -258,7 +258,7 @@ void sg_1000_init (void)
     {
         if (snepulator_load_rom (&state.rom, &state.rom_size, state.cart_filename) == -1)
         {
-            state.abort = true;
+            return;
         }
         fprintf (stdout, "%d KiB ROM %s loaded.\n", state.rom_size >> 10, state.cart_filename);
     }
