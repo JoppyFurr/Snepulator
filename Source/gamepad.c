@@ -12,11 +12,15 @@
 
 #include "gamepad.h"
 
+/* TODO: Should these be rolled into a struct? */
+SDL_Joystick *gamepad_1_joystick;
+SDL_Joystick *gamepad_2_joystick;
+
 /* Gamepad configuration */
 /* TODO: Make dynamic */
 Gamepad_Config gamepad_config [10];
 uint32_t gamepad_config_count = 0;
-Gamepad_Config gamepad_1_config;
+Gamepad_Config gamepad_1_config; /* TODO: Should this be a pointer instead of a copy? */
 Gamepad_Config gamepad_2_config;
 
 /* Gamepad state */
@@ -28,42 +32,62 @@ Snepulator_Gamepad gamepad_2;
  */
 void gamepad_process_event (SDL_Event *event)
 {
-    /* Keyboard */
-    if ((event->type == SDL_KEYDOWN || event->type == SDL_KEYUP) && gamepad_1_config.device_id == ID_KEYBOARD)
+    Gamepad_Config *config;
+    Snepulator_Gamepad *gamepad;
+
+    for (uint32_t player = 1; player <= 2; player++)
     {
-        for (int i = 0; i < GAMEPAD_BUTTON_COUNT; i++)
+        switch (player)
         {
-            if (gamepad_1_config.mapping [i].type == SDL_KEYDOWN)
+            case 1:
+                config = &gamepad_1_config;
+                gamepad = &gamepad_1;
+                break;
+            case 2:
+                config = &gamepad_2_config;
+                gamepad = &gamepad_2;
+                break;
+            default:
+                return;
+        }
+
+        /* Keyboard */
+        if ((event->type == SDL_KEYDOWN || event->type == SDL_KEYUP) && config->device_id == ID_KEYBOARD)
+        {
+            for (int i = 0; i < GAMEPAD_BUTTON_COUNT; i++)
             {
-                if (event->key.keysym.sym == gamepad_1_config.mapping [i].key)
+                if (config->mapping [i].type == SDL_KEYDOWN)
                 {
-                    gamepad_1.state [i] = (event->type == SDL_KEYDOWN);
+                    if (event->key.keysym.sym == config->mapping [i].key)
+                    {
+                        gamepad->state [i] = (event->type == SDL_KEYDOWN);
+                    }
                 }
             }
         }
-    }
 
-    /* Joystick Axis */
-    else if ((event->type == SDL_JOYAXISMOTION) && event->jaxis.which == gamepad_1_config.device_id)
-    {
-        for (int i = 0; i < GAMEPAD_BUTTON_COUNT; i++)
+        /* Joystick Axis */
+        else if ((event->type == SDL_JOYAXISMOTION) && event->jaxis.which == config->device_id)
         {
-            if ((gamepad_1_config.mapping [i].type == SDL_JOYAXISMOTION) && (event->jaxis.axis == gamepad_1_config.mapping [i].axis))
+            for (int i = 0; i < GAMEPAD_BUTTON_COUNT; i++)
             {
-                /* TODO: Make the deadzone configurable */
-                gamepad_1.state [i] = ((event->jaxis.value * gamepad_1_config.mapping [i].sign ) > 1000) ? 1 : 0;
+                if ((config->mapping [i].type == SDL_JOYAXISMOTION) && (event->jaxis.axis == config->mapping [i].axis))
+                {
+                    /* TODO: Make the deadzone configurable */
+                    gamepad->state [i] = ((event->jaxis.value * config->mapping [i].sign ) > 1000) ? 1 : 0;
+                }
             }
         }
-    }
 
-    /* Joystick Button */
-    else if ((event->type == SDL_JOYBUTTONDOWN || event->type == SDL_JOYBUTTONUP) && event->jbutton.which == gamepad_1_config.device_id)
-    {
-        for (int i = 0; i < GAMEPAD_BUTTON_COUNT; i++)
+        /* Joystick Button */
+        else if ((event->type == SDL_JOYBUTTONDOWN || event->type == SDL_JOYBUTTONUP) && event->jbutton.which == config->device_id)
         {
-            if ((gamepad_1_config.mapping [i].type == SDL_JOYBUTTONDOWN) && (event->jbutton.button == gamepad_1_config.mapping [i].button))
+            for (int i = 0; i < GAMEPAD_BUTTON_COUNT; i++)
             {
-                gamepad_1.state [i] = (event->type == SDL_JOYBUTTONDOWN);
+                if ((config->mapping [i].type == SDL_JOYBUTTONDOWN) && (event->jbutton.button == config->mapping [i].button))
+                {
+                    gamepad->state [i] = (event->type == SDL_JOYBUTTONDOWN);
+                }
             }
         }
     }
@@ -132,3 +156,77 @@ void gamepad_update_mapping (Gamepad_Config device)
 }
 
 
+/*
+ * Get the name of a gamepad in our config array.
+ */
+const char *gamepad_get_name (uint32_t index)
+{
+    const char *joystick_name;
+    if (gamepad_config [index].device_id == ID_KEYBOARD)
+    {
+        joystick_name = "Keyboard";
+    }
+    else
+    {
+        joystick_name = SDL_JoystickNameForIndex (gamepad_config [index].device_id);
+        if (joystick_name == NULL)
+        {
+            joystick_name = "Unknown Joystick";
+        }
+    }
+
+    return joystick_name;
+}
+
+
+/*
+ * Change input device for a player's gamepad.
+ *
+ * TODO: To support hot-swapping of joysticks, device_id shouldn't be used here.
+ */
+
+void gamepad_change_device (uint32_t player, int32_t index)
+{
+    Gamepad_Config *config;
+    SDL_Joystick **joystick;
+
+    switch (player)
+    {
+        case 1:
+            config = &gamepad_1_config;
+            joystick = &gamepad_1_joystick;
+            break;
+        case 2:
+            config = &gamepad_2_config;
+            joystick = &gamepad_2_joystick;
+            break;
+        default:
+            return;
+    }
+
+    /* Check that this is not already the active joystick */
+    if (config->device_id != gamepad_config [index].device_id)
+    {
+        /* Close the previous device */
+        if (*joystick != NULL)
+        {
+            SDL_JoystickClose (*joystick);
+            *joystick = NULL;
+        }
+        config->device_id = ID_NONE;
+
+        /* Open the new device */
+        if (gamepad_config [index].device_id == ID_KEYBOARD)
+        {
+            *config = gamepad_config [index];
+        }
+        else
+        {
+            *joystick = SDL_JoystickOpen (gamepad_config [index].device_id);
+            if (*joystick)
+            {
+                *config = gamepad_config [index];
+            }
+        }
+    }
+}

@@ -57,3 +57,9 @@ void gamepad_update_mapping (Gamepad_Config device);
 /* Detect input devices and populate the in-memory mapping list.  */
 void gamepad_init_input_devices (void);
 
+/* Get the name of a gamepad in our config array. */
+const char *gamepad_get_name (uint32_t index);
+
+/* Change input device for a player's gamepad. */
+void gamepad_change_device (uint32_t player, int32_t index);
+
