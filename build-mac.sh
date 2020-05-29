@@ -24,6 +24,7 @@ rm Work/*.o
 # Compile C11 code.
 eval $CC $CFLAGS -c Source/util.c           -o Work/util.o
 eval $CC $CFLAGS -c Source/config.c         -o Work/config.o
+eval $CC $CFLAGS -c Source/gamepad.c        -o Work/gamepad.o
 eval $CC $CFLAGS -c Source/cpu/z80.c        -o Work/z80.o
 eval $CC $CFLAGS -c Source/sound/sn76489.c  -o Work/sn76489.o
 eval $CC $CFLAGS -c Source/video/tms9918a.c -o Work/tms9918a.o

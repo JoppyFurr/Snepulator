@@ -2,31 +2,9 @@
  * Snepulator common header file.
  */
 
-#include "sega_gamepad.h"
-
 #define VIDEO_SIDE_BORDER 8
 #define VIDEO_BUFFER_WIDTH (256 + 2 * VIDEO_SIDE_BORDER)
 #define VIDEO_BUFFER_LINES 240
-
-#define ID_NONE     -1
-#define ID_KEYBOARD -2
-
-typedef struct Button_Mapping_s {
-    uint32_t type;
-    uint32_t value;
-    bool negative;
-} Button_Mapping;
-
-typedef struct Gamepad_Mapping_s {
-    int32_t device_id;
-    Button_Mapping direction_up;
-    Button_Mapping direction_down;
-    Button_Mapping direction_left;
-    Button_Mapping direction_right;
-    Button_Mapping button_1;
-    Button_Mapping button_2;
-    Button_Mapping pause;
-} Gamepad_Mapping;
 
 typedef enum Video_Filter_e {
     VIDEO_FILTER_NEAREST,
@@ -78,11 +56,6 @@ typedef struct Snepulator_State_s {
     Video_System system;
     Console_Region region;
 
-    /* Console inputs */
-    Sega_Gamepad gamepad_1;
-    Sega_Gamepad gamepad_2;
-    bool pause_button;
-
     /* Video */
     Video_Filter video_filter;
     float_Colour video_out_texture_data [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
@@ -105,8 +78,10 @@ typedef struct Snepulator_State_s {
 
 } Snepulator_State;
 
+#if 0
 /* Update the in-memory button mapping for an input device. */
 void snepulator_update_input_device (Gamepad_Mapping device);
+#endif
 
 /* Clean up after the previously running system */
 void snepulator_reset (void);

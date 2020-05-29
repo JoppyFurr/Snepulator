@@ -17,7 +17,6 @@
 
 #include <GL/gl3w.h>
 #include <SDL2/SDL.h>
-#include <SDL2/SDL_joystick.h>
 
 #include "imgui.h"
 
