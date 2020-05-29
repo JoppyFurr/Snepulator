@@ -8,7 +8,6 @@
 #include <vector>
 
 #include <SDL2/SDL.h>
-#include <SDL2/SDL_joystick.h>
 
 #include "imgui.h"
 
@@ -18,6 +17,7 @@ extern "C" {
 #include "snepulator.h"
 #include "config.h"
 
+#include "gamepad.h"
 #include "video/tms9918a.h"
 #include "video/sms_vdp.h"
 #include "cpu/z80.h"
@@ -45,10 +45,12 @@ void snepulator_load_colecovision_bios (char *path);
 SDL_Joystick *player_1_joystick;
 SDL_Joystick *player_2_joystick;
 
-extern Gamepad_Mapping map_to_edit;
-extern std::vector<Gamepad_Mapping> input_devices;
-extern Gamepad_Mapping player_1_mapping;
-extern Gamepad_Mapping player_2_mapping;
+/* TODO: Access through a function instead of accessing the array */
+extern Gamepad_Config gamepad_config[10];
+extern uint32_t gamepad_config_count;
+extern Gamepad_Config map_to_edit;
+extern Gamepad_Config gamepad_1_config;
+extern Gamepad_Config gamepad_2_config;
 
 /*
  * Render the menubar.
@@ -188,26 +190,26 @@ void snepulator_render_menubar (void)
         {
             if (ImGui::BeginMenu ("Player 1"))
             {
-                for (int i = 0; i < input_devices.size (); i++)
+                for (int i = 0; i < gamepad_config_count; i++)
                 {
                     const char *joystick_name;
-                    if (input_devices[i].device_id == ID_KEYBOARD)
+                    if (gamepad_config [i].device_id == ID_KEYBOARD)
                     {
                         joystick_name = "Keyboard";
                     }
                     else
                     {
-                        joystick_name = SDL_JoystickNameForIndex (input_devices[i].device_id);
+                        joystick_name = SDL_JoystickNameForIndex (gamepad_config [i].device_id);
                         if (joystick_name == NULL)
                         {
                             joystick_name = "Unknown Joystick";
                         }
                     }
 
-                    if (ImGui::MenuItem (joystick_name, NULL, player_1_mapping.device_id == input_devices[i].device_id))
+                    if (ImGui::MenuItem (joystick_name, NULL, gamepad_1_config.device_id == gamepad_config [i].device_id))
                     {
                         /* Check that this is not already the active joystick */
-                        if (player_1_mapping.device_id != input_devices[i].device_id)
+                        if (gamepad_1_config.device_id != gamepad_config [i].device_id)
                         {
                             /* Close the previous device */
                             if (player_1_joystick != NULL)
@@ -215,19 +217,19 @@ void snepulator_render_menubar (void)
                                 SDL_JoystickClose (player_1_joystick);
                                 player_1_joystick = NULL;
                             }
-                            player_1_mapping.device_id = ID_NONE;
+                            gamepad_1_config.device_id = ID_NONE;
 
                             /* Open the new device */
-                            if (input_devices[i].device_id == ID_KEYBOARD)
+                            if (gamepad_config [i].device_id == ID_KEYBOARD)
                             {
-                                player_1_mapping = input_devices[i];
+                                gamepad_1_config = gamepad_config [i];
                             }
                             else
                             {
-                                player_1_joystick = SDL_JoystickOpen (input_devices[i].device_id);
+                                player_1_joystick = SDL_JoystickOpen (gamepad_config [i].device_id);
                                 if (player_1_joystick)
                                 {
-                                    player_1_mapping = input_devices[i];
+                                    gamepad_1_config = gamepad_config [i];
                                 }
                             }
                         }
@@ -301,7 +303,7 @@ void snepulator_render_menubar (void)
     }
     if (input_modal)
     {
-        map_to_edit = player_1_mapping;
+        map_to_edit = gamepad_1_config;
         config_capture_events = true;
         ImGui::OpenPopup ("Configure input...");
     }

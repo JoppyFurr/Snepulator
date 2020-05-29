@@ -7,7 +7,6 @@
 
 #include <GL/gl3w.h>
 #include <SDL2/SDL.h>
-#include <SDL2/SDL_joystick.h>
 
 #include "imgui.h"
 #include "examples/imgui_impl_sdl.h"
@@ -25,6 +24,7 @@ extern "C" {
 #include "video/sms_vdp.h"
 #include "cpu/z80.h"
 
+#include "gamepad.h"
 #include "sg-1000.h"
 #include "sms.h"
 #include "colecovision.h"
@@ -42,11 +42,6 @@ extern "C" {
 /* Global state */
 Snepulator_State state;
 bool config_capture_events = false;
-
-/* Gamepads */
-std::vector<Gamepad_Mapping> input_devices;
-Gamepad_Mapping player_1_mapping;
-Gamepad_Mapping player_2_mapping;
 
 /* Implementation in input.cpp */
 bool input_modal_consume_event (SDL_Event event);
@@ -166,71 +161,6 @@ void snepulator_load_colecovision_bios (char *path)
 }
 
 
-
-
-/*
- * Update the in-memory button mapping for an input device.
- */
-void snepulator_update_input_device (Gamepad_Mapping device)
-{
-    for (int i = 0; i < input_devices.size (); i++)
-    {
-        if (input_devices[i].device_id == device.device_id)
-        {
-            /* Replace the old entry with the new one */
-            input_devices[i] = device;
-            return;
-        }
-    }
-
-    fprintf (stderr, "Warning: Unable to find device %d.\n", device.device_id);
-}
-
-
-/*
- * Detect input devices and populate the in-memory mapping list.
- * Note: It'd be nice to automatically add/remove mappings as devices are plugged in and removed.
- */
-void snepulator_init_input_devices (void)
-{
-    Gamepad_Mapping no_gamepad = {
-        .device_id       = ID_NONE,
-    };
-
-    /* TODO: Detect user's keyboard layout and adjust accordingly */
-    Gamepad_Mapping default_keyboard = {
-        .device_id       = ID_KEYBOARD,
-        .direction_up    = { .type = SDL_KEYDOWN, .value = SDLK_COMMA },
-        .direction_down  = { .type = SDL_KEYDOWN, .value = SDLK_o },
-        .direction_left  = { .type = SDL_KEYDOWN, .value = SDLK_a },
-        .direction_right = { .type = SDL_KEYDOWN, .value = SDLK_e },
-        .button_1        = { .type = SDL_KEYDOWN, .value = SDLK_v },
-        .button_2        = { .type = SDL_KEYDOWN, .value = SDLK_z },
-        .pause           = { .type = SDL_KEYDOWN, .value = SDLK_RETURN }
-    };
-    input_devices.push_back (default_keyboard);
-
-    /* TODO: Recall saved mappings from a file */
-    Gamepad_Mapping default_gamepad = {
-        .device_id       = ID_NONE,
-        .direction_up    = { .type = SDL_JOYAXISMOTION, .value = 1, .negative = true  },
-        .direction_down  = { .type = SDL_JOYAXISMOTION, .value = 1, .negative = false },
-        .direction_left  = { .type = SDL_JOYAXISMOTION, .value = 0, .negative = true  },
-        .direction_right = { .type = SDL_JOYAXISMOTION, .value = 0, .negative = false },
-        .button_1        = { .type = SDL_JOYBUTTONDOWN, .value = 2 },
-        .button_2        = { .type = SDL_JOYBUTTONDOWN, .value = 1 },
-        .pause           = { .type = SDL_JOYBUTTONDOWN, .value = 9 }
-    };
-    for (int i = 0; i < SDL_NumJoysticks (); i++)
-    {
-        default_gamepad.device_id = i;
-        input_devices.push_back (default_gamepad);
-    }
-
-    /* Set default devices for players */
-    player_1_mapping = default_keyboard;
-    player_2_mapping = no_gamepad;
-}
 
 
 /*
@@ -521,7 +451,7 @@ int main (int argc, char **argv)
     SDL_PauseAudioDevice (audio_device_id, 0);
 
     /* Detect input devices */
-    snepulator_init_input_devices ();
+    gamepad_init_input_devices ();
 
     /* If we have a valid ROM to run, start emulation */
     if (state.cart_filename)
@@ -547,6 +477,8 @@ int main (int argc, char **argv)
                 state.abort = true;
             }
 
+            gamepad_process_event (&event);
+
             /* Allow the input configuration dialogue to sample input */
             if (config_capture_events)
             {
@@ -554,18 +486,6 @@ int main (int argc, char **argv)
                 {
                     continue;
                 }
-            }
-
-            /* Keyboard */
-            if ((event.type == SDL_KEYDOWN || event.type == SDL_KEYUP) && player_1_mapping.device_id == ID_KEYBOARD)
-            {
-                if (event.key.keysym.sym == player_1_mapping.direction_up.value)    { state.gamepad_1.up       = (event.type == SDL_KEYDOWN); }
-                if (event.key.keysym.sym == player_1_mapping.direction_down.value)  { state.gamepad_1.down     = (event.type == SDL_KEYDOWN); }
-                if (event.key.keysym.sym == player_1_mapping.direction_left.value)  { state.gamepad_1.left     = (event.type == SDL_KEYDOWN); }
-                if (event.key.keysym.sym == player_1_mapping.direction_right.value) { state.gamepad_1.right    = (event.type == SDL_KEYDOWN); }
-                if (event.key.keysym.sym == player_1_mapping.button_1.value)        { state.gamepad_1.button_1 = (event.type == SDL_KEYDOWN); }
-                if (event.key.keysym.sym == player_1_mapping.button_2.value)        { state.gamepad_1.button_2 = (event.type == SDL_KEYDOWN); }
-                if (event.key.keysym.sym == player_1_mapping.pause.value)           { state.pause_button       = (event.type == SDL_KEYDOWN); }
             }
 
             /* Mouse */
@@ -576,33 +496,13 @@ int main (int argc, char **argv)
                 SDL_ShowCursor (SDL_ENABLE);
             }
 
-            /* Joystick */
-            else if ((event.type == SDL_JOYAXISMOTION) && event.jaxis.which == player_1_mapping.device_id)
-            {
-                /* TODO: Make the deadzone configurable */
-                /* TODO: Shorten these lines via macros */
-                if (player_1_mapping.direction_up.type    == SDL_JOYAXISMOTION && event.jaxis.axis == player_1_mapping.direction_up.value)    { state.gamepad_1.up       = (player_1_mapping.direction_up.negative    ? -event.jaxis.value : event.jaxis.value) > 1000; }
-                if (player_1_mapping.direction_down.type  == SDL_JOYAXISMOTION && event.jaxis.axis == player_1_mapping.direction_down.value)  { state.gamepad_1.down     = (player_1_mapping.direction_down.negative  ? -event.jaxis.value : event.jaxis.value) > 1000; }
-                if (player_1_mapping.direction_left.type  == SDL_JOYAXISMOTION && event.jaxis.axis == player_1_mapping.direction_left.value)  { state.gamepad_1.left     = (player_1_mapping.direction_left.negative  ? -event.jaxis.value : event.jaxis.value) > 1000; }
-                if (player_1_mapping.direction_right.type == SDL_JOYAXISMOTION && event.jaxis.axis == player_1_mapping.direction_right.value) { state.gamepad_1.right    = (player_1_mapping.direction_right.negative ? -event.jaxis.value : event.jaxis.value) > 1000; }
-                if (player_1_mapping.button_1.type        == SDL_JOYAXISMOTION && event.jaxis.axis == player_1_mapping.button_1.value)        { state.gamepad_1.button_1 = (player_1_mapping.button_1.negative        ? -event.jaxis.value : event.jaxis.value) > 1000; }
-                if (player_1_mapping.button_2.type        == SDL_JOYAXISMOTION && event.jaxis.axis == player_1_mapping.button_2.value)        { state.gamepad_1.button_2 = (player_1_mapping.button_2.negative        ? -event.jaxis.value : event.jaxis.value) > 1000; }
-                if (player_1_mapping.pause.type           == SDL_JOYAXISMOTION && event.jaxis.axis == player_1_mapping.pause.value)           { state.pause_button       = (player_1_mapping.pause.negative           ? -event.jaxis.value : event.jaxis.value) > 1000; }
-            }
-            else if ((event.type == SDL_JOYBUTTONDOWN || event.type == SDL_JOYBUTTONUP) && event.jbutton.which == player_1_mapping.device_id)
-            {
-                if (player_1_mapping.direction_up.type    == SDL_JOYBUTTONDOWN && event.jbutton.button == player_1_mapping.direction_up.value)    { state.gamepad_1.up       = (event.type == SDL_JOYBUTTONDOWN); }
-                if (player_1_mapping.direction_down.type  == SDL_JOYBUTTONDOWN && event.jbutton.button == player_1_mapping.direction_down.value)  { state.gamepad_1.down     = (event.type == SDL_JOYBUTTONDOWN); }
-                if (player_1_mapping.direction_left.type  == SDL_JOYBUTTONDOWN && event.jbutton.button == player_1_mapping.direction_left.value)  { state.gamepad_1.left     = (event.type == SDL_JOYBUTTONDOWN); }
-                if (player_1_mapping.direction_right.type == SDL_JOYBUTTONDOWN && event.jbutton.button == player_1_mapping.direction_right.value) { state.gamepad_1.right    = (event.type == SDL_JOYBUTTONDOWN); }
-                if (player_1_mapping.button_1.type        == SDL_JOYBUTTONDOWN && event.jbutton.button == player_1_mapping.button_1.value)        { state.gamepad_1.button_1 = (event.type == SDL_JOYBUTTONDOWN); }
-                if (player_1_mapping.button_2.type        == SDL_JOYBUTTONDOWN && event.jbutton.button == player_1_mapping.button_2.value)        { state.gamepad_1.button_2 = (event.type == SDL_JOYBUTTONDOWN); }
-                if (player_1_mapping.pause.type           == SDL_JOYBUTTONDOWN && event.jbutton.button == player_1_mapping.pause.value)           { state.pause_button       = (event.type == SDL_JOYBUTTONDOWN); }
-            }
 
             /* Device removal */
-            else if (event.type == SDL_JOYDEVICEREMOVED && event.jdevice.which == player_1_mapping.device_id)
+#if 0
+            /* TODO */
+            else if (event.type == SDL_JOYDEVICEREMOVED && event.jdevice.which == gamepad_1_mapping.device_id)
                 printf ("TODO: Player 1 joystick removed. Do something nice like pause the game until it's re-attached.\n");
+#endif
         }
 
         /* EMULATE */

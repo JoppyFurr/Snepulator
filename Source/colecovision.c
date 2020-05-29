@@ -14,6 +14,7 @@
 #include "util.h"
 #include "snepulator.h"
 
+#include "gamepad.h"
 #include "cpu/z80.h"
 #include "video/tms9918a.h"
 #include "sound/sn76489.h"
@@ -21,6 +22,8 @@
 #include "colecovision.h"
 
 extern Snepulator_State state;
+extern Snepulator_Gamepad gamepad_1;
+extern Snepulator_Gamepad gamepad_2;
 
 #define COLECOVISION_RAM_SIZE (1 << 10)
 
@@ -101,13 +104,13 @@ static uint8_t colecovision_io_read (uint8_t addr)
         {
             if (colecovision_input_mode == COLECOVISION_INPUT_MODE_JOYSTICK)
             {
-                return (state.gamepad_1.up        ? 0 : BIT_0) |
-                       (state.gamepad_1.right     ? 0 : BIT_1) |
-                       (state.gamepad_1.down      ? 0 : BIT_2) |
-                       (state.gamepad_1.left      ? 0 : BIT_3) |
-                       (                                BIT_4) |
-                       (                                BIT_5) |
-                       (state.gamepad_1.button_1  ? 0 : BIT_6);
+                return (gamepad_1.state [GAMEPAD_DIRECTION_UP]      ? 0 : BIT_0) |
+                       (gamepad_1.state [GAMEPAD_DIRECTION_RIGHT]   ? 0 : BIT_1) |
+                       (gamepad_1.state [GAMEPAD_DIRECTION_DOWN]    ? 0 : BIT_2) |
+                       (gamepad_1.state [GAMEPAD_DIRECTION_LEFT]    ? 0 : BIT_3) |
+                       (                                                  BIT_4) |
+                       (                                                  BIT_5) |
+                       (gamepad_1.state [GAMEPAD_BUTTON_1]          ? 0 : BIT_6);
             }
             else
             {
@@ -170,7 +173,7 @@ static uint8_t colecovision_io_read (uint8_t addr)
                     key = 0x0f;
                 }
 
-                return key | BIT_4 | BIT_5 | (state.gamepad_1.button_2  ? 0 : BIT_6);
+                return key | BIT_4 | BIT_5 | (gamepad_1.state [GAMEPAD_BUTTON_2] ? 0 : BIT_6);
             }
         }
         else
@@ -316,9 +319,8 @@ void colecovision_init (void)
     sn76489_init ();
 
     /* Initialize input */
-    memset (&state.gamepad_1, 0, sizeof (state.gamepad_1));
-    memset (&state.gamepad_2, 0, sizeof (state.gamepad_2));
-    state.pause_button = false;
+    memset (&gamepad_1, 0, sizeof (gamepad_1));
+    memset (&gamepad_2, 0, sizeof (gamepad_2));
 
     /* Hook up the audio callback */
     state.audio_callback = colecovision_audio_callback;

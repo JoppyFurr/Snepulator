@@ -13,13 +13,16 @@
 #include "util.h"
 #include "snepulator.h"
 
-#include "sms.h"
+#include "gamepad.h"
 #include "cpu/z80.h"
 #include "video/tms9918a.h"
 #include "video/sms_vdp.h"
 #include "sound/sn76489.h"
+#include "sms.h"
 
 extern Snepulator_State state;
+extern Snepulator_Gamepad gamepad_1;
+extern Snepulator_Gamepad gamepad_2;
 extern Z80_Regs z80_regs;
 
 #define SMS_RAM_SIZE (8 << 10)
@@ -195,14 +198,14 @@ static uint8_t sms_io_read (uint8_t addr)
         if ((addr & 0x01) == 0x00)
         {
             /* I/O Port A/B */
-            return (state.gamepad_1.up        ? 0 : BIT_0) |
-                   (state.gamepad_1.down      ? 0 : BIT_1) |
-                   (state.gamepad_1.left      ? 0 : BIT_2) |
-                   (state.gamepad_1.right     ? 0 : BIT_3) |
-                   (state.gamepad_1.button_1  ? 0 : BIT_4) |
-                   (state.gamepad_1.button_2  ? 0 : BIT_5) |
-                   (state.gamepad_2.up        ? 0 : BIT_6) |
-                   (state.gamepad_2.down      ? 0 : BIT_7);
+            return (gamepad_1.state [GAMEPAD_DIRECTION_UP]      ? 0 : BIT_0) |
+                   (gamepad_1.state [GAMEPAD_DIRECTION_DOWN]    ? 0 : BIT_1) |
+                   (gamepad_1.state [GAMEPAD_DIRECTION_LEFT]    ? 0 : BIT_2) |
+                   (gamepad_1.state [GAMEPAD_DIRECTION_RIGHT]   ? 0 : BIT_3) |
+                   (gamepad_1.state [GAMEPAD_BUTTON_1]          ? 0 : BIT_4) |
+                   (gamepad_1.state [GAMEPAD_BUTTON_2]          ? 0 : BIT_5) |
+                   (gamepad_2.state [GAMEPAD_DIRECTION_UP]      ? 0 : BIT_6) |
+                   (gamepad_2.state [GAMEPAD_DIRECTION_DOWN]    ? 0 : BIT_7);
         }
         else
         {
@@ -219,13 +222,13 @@ static uint8_t sms_io_read (uint8_t addr)
             }
 
             /* I/O Port B/misc */
-            return (state.gamepad_2.left      ? 0 : BIT_0) |
-                   (state.gamepad_2.right     ? 0 : BIT_1) |
-                   (state.gamepad_2.button_1  ? 0 : BIT_2) |
-                   (state.gamepad_2.button_2  ? 0 : BIT_3) |
-                   (/* TODO: RESET */ 0 ? 0 : BIT_4) |
-                   (port_1_th           ? BIT_6 : 0) |
-                   (port_2_th           ? BIT_7 : 0);
+            return (gamepad_2.state [GAMEPAD_DIRECTION_LEFT]    ? 0 : BIT_0) |
+                   (gamepad_2.state [GAMEPAD_DIRECTION_RIGHT]   ? 0 : BIT_1) |
+                   (gamepad_2.state [GAMEPAD_BUTTON_1]          ? 0 : BIT_2) |
+                   (gamepad_2.state [GAMEPAD_BUTTON_2]          ? 0 : BIT_3) |
+                   (/* TODO: RESET */                         0 ? 0 : BIT_4) |
+                   (port_1_th                                   ? BIT_6 : 0) |
+                   (port_2_th                                   ? BIT_7 : 0);
         }
     }
 
@@ -293,12 +296,12 @@ static bool sms_get_nmi ()
     static bool pause_button_previous = false;
     bool ret = false;
 
-    if (pause_button_previous == false && state.pause_button == true)
+    if (pause_button_previous == false && gamepad_1.state [GAMEPAD_BUTTON_START] == true)
     {
         ret = true;
     }
 
-    pause_button_previous = state.pause_button;
+    pause_button_previous = gamepad_1.state [GAMEPAD_BUTTON_START];
 
     return ret;
 }
@@ -394,9 +397,8 @@ void sms_init (void)
     sn76489_init ();
 
     /* Initialize input */
-    memset (&state.gamepad_1, 0, sizeof (state.gamepad_1));
-    memset (&state.gamepad_2, 0, sizeof (state.gamepad_2));
-    state.pause_button = false;
+    memset (&gamepad_1, 0, sizeof (gamepad_1));
+    memset (&gamepad_2, 0, sizeof (gamepad_2));
 
     /* Hook up callbacks */
     state.audio_callback = sms_audio_callback;
