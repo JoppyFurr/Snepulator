@@ -42,9 +42,6 @@ void snepulator_load_rom (char *path);
 void snepulator_load_sms_bios (char *path);
 void snepulator_load_colecovision_bios (char *path);
 
-SDL_Joystick *player_1_joystick;
-SDL_Joystick *player_2_joystick;
-
 /* TODO: Access through a function instead of accessing the array */
 extern Gamepad_Config gamepad_config[10];
 extern uint32_t gamepad_config_count;
@@ -192,55 +189,22 @@ void snepulator_render_menubar (void)
             {
                 for (int i = 0; i < gamepad_config_count; i++)
                 {
-                    const char *joystick_name;
-                    if (gamepad_config [i].device_id == ID_KEYBOARD)
+                    if (ImGui::MenuItem (gamepad_get_name (i), NULL, gamepad_1_config.device_id == gamepad_config [i].device_id))
                     {
-                        joystick_name = "Keyboard";
-                    }
-                    else
-                    {
-                        joystick_name = SDL_JoystickNameForIndex (gamepad_config [i].device_id);
-                        if (joystick_name == NULL)
-                        {
-                            joystick_name = "Unknown Joystick";
-                        }
-                    }
-
-                    if (ImGui::MenuItem (joystick_name, NULL, gamepad_1_config.device_id == gamepad_config [i].device_id))
-                    {
-                        /* Check that this is not already the active joystick */
-                        if (gamepad_1_config.device_id != gamepad_config [i].device_id)
-                        {
-                            /* Close the previous device */
-                            if (player_1_joystick != NULL)
-                            {
-                                SDL_JoystickClose (player_1_joystick);
-                                player_1_joystick = NULL;
-                            }
-                            gamepad_1_config.device_id = ID_NONE;
-
-                            /* Open the new device */
-                            if (gamepad_config [i].device_id == ID_KEYBOARD)
-                            {
-                                gamepad_1_config = gamepad_config [i];
-                            }
-                            else
-                            {
-                                player_1_joystick = SDL_JoystickOpen (gamepad_config [i].device_id);
-                                if (player_1_joystick)
-                                {
-                                    gamepad_1_config = gamepad_config [i];
-                                }
-                            }
-                        }
-
+                        gamepad_change_device (1, i);
                     }
                 }
                 ImGui::EndMenu ();
             }
             if (ImGui::BeginMenu ("Player 2"))
             {
-                if (ImGui::MenuItem ("Not Implemented", NULL)) { };
+                for (int i = 0; i < gamepad_config_count; i++)
+                {
+                    if (ImGui::MenuItem (gamepad_get_name (i), NULL, gamepad_2_config.device_id == gamepad_config [i].device_id))
+                    {
+                        gamepad_change_device (2, i);
+                    }
+                }
                 ImGui::EndMenu ();
             }
 
