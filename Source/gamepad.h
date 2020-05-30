@@ -26,6 +26,11 @@ typedef struct Gamepad_Mapping_s {
     int32_t sign;
 } Gamepad_Mapping;
 
+typedef enum Gamepad_Index_e {
+    GAMEPAD_INDEX_NONE = 0,
+    GAMEPAD_INDEX_KEYBOARD
+} Gamepad_Index;
+
 /* TODO: Make better use of the API:
  *
  *   device_id - Index from 0 to SDL_NumJoysticks (). Changes as joysticks are added / removed.

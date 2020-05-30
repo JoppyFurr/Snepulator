@@ -27,8 +27,6 @@ extern "C" {
 extern bool config_capture_events;
 
 extern Snepulator_State state;
-extern Gamepad_Config gamepad_1_config;
-extern Gamepad_Config gamepad_2_config;
 }
 
 typedef enum Remap_State_t {
@@ -343,9 +341,8 @@ void snepulator_render_input_modal (void)
         }
         ImGui::SameLine ();
         if (ImGui::Button ("OK", ImVec2 (120,0))) {
-            /* Store and use the new configuration */
+            /* Store the new configuration */
             gamepad_update_mapping (map_to_edit);
-            gamepad_1_config = map_to_edit;
 
             if (state.ready)
             {
