@@ -46,8 +46,8 @@ void snepulator_load_colecovision_bios (char *path);
 extern Gamepad_Config gamepad_config[10];
 extern uint32_t gamepad_config_count;
 extern Gamepad_Config map_to_edit;
-extern Gamepad_Config gamepad_1_config;
-extern Gamepad_Config gamepad_2_config;
+extern Gamepad_Config *gamepad_1_config;
+extern Gamepad_Config *gamepad_2_config;
 
 /*
  * Render the menubar.
@@ -189,7 +189,7 @@ void snepulator_render_menubar (void)
             {
                 for (int i = 0; i < gamepad_config_count; i++)
                 {
-                    if (ImGui::MenuItem (gamepad_get_name (i), NULL, gamepad_1_config.device_id == gamepad_config [i].device_id))
+                    if (ImGui::MenuItem (gamepad_get_name (i), NULL, gamepad_1_config->device_id == gamepad_config [i].device_id))
                     {
                         gamepad_change_device (1, i);
                     }
@@ -200,7 +200,7 @@ void snepulator_render_menubar (void)
             {
                 for (int i = 0; i < gamepad_config_count; i++)
                 {
-                    if (ImGui::MenuItem (gamepad_get_name (i), NULL, gamepad_2_config.device_id == gamepad_config [i].device_id))
+                    if (ImGui::MenuItem (gamepad_get_name (i), NULL, gamepad_2_config->device_id == gamepad_config [i].device_id))
                     {
                         gamepad_change_device (2, i);
                     }
@@ -267,7 +267,7 @@ void snepulator_render_menubar (void)
     }
     if (input_modal)
     {
-        map_to_edit = gamepad_1_config;
+        map_to_edit = *gamepad_1_config;
         config_capture_events = true;
         ImGui::OpenPopup ("Configure input...");
     }

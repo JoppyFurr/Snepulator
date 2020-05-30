@@ -12,18 +12,20 @@
 
 #include "gamepad.h"
 
-/* TODO: Should these be rolled into a struct? */
+
+/* TODO: Make array size dynamic */
+
+/* Stored gamepad configuration */
+Gamepad_Config gamepad_config [10];
+uint32_t gamepad_config_count = 0;
+
+/* Current gamepad configuration */
+Gamepad_Config *gamepad_1_config;
+Gamepad_Config *gamepad_2_config;
 SDL_Joystick *gamepad_1_joystick;
 SDL_Joystick *gamepad_2_joystick;
 
-/* Gamepad configuration */
-/* TODO: Make dynamic */
-Gamepad_Config gamepad_config [10];
-uint32_t gamepad_config_count = 0;
-Gamepad_Config gamepad_1_config; /* TODO: Should this be a pointer instead of a copy? */
-Gamepad_Config gamepad_2_config;
-
-/* Gamepad state */
+/* Current gamepad state */
 Snepulator_Gamepad gamepad_1;
 Snepulator_Gamepad gamepad_2;
 
@@ -40,11 +42,11 @@ void gamepad_process_event (SDL_Event *event)
         switch (player)
         {
             case 1:
-                config = &gamepad_1_config;
+                config = gamepad_1_config;
                 gamepad = &gamepad_1;
                 break;
             case 2:
-                config = &gamepad_2_config;
+                config = gamepad_2_config;
                 gamepad = &gamepad_2;
                 break;
             default:
@@ -104,6 +106,12 @@ void gamepad_init_input_devices (void)
         .device_id       = ID_NONE,
     };
 
+    /* GAMEPAD_INDEX_NONE */
+    gamepad_config [gamepad_config_count++] = no_gamepad;
+    gamepad_1_config = &gamepad_config [GAMEPAD_INDEX_NONE];
+    gamepad_2_config = &gamepad_config [GAMEPAD_INDEX_NONE];
+
+    /* GAMEPAD_INDEX_KEYBOARD */
     /* TODO: Detect user's keyboard layout and adjust accordingly */
     Gamepad_Config default_keyboard = { .device_id = ID_KEYBOARD };
     default_keyboard.mapping [GAMEPAD_DIRECTION_UP]     = (Gamepad_Mapping) { .type = SDL_KEYDOWN, .key = SDLK_COMMA };
@@ -132,8 +140,8 @@ void gamepad_init_input_devices (void)
     }
 
     /* Set default devices for players */
-    gamepad_1_config = default_keyboard;
-    gamepad_2_config = no_gamepad;
+    gamepad_change_device (1, GAMEPAD_INDEX_KEYBOARD);
+    gamepad_change_device (2, GAMEPAD_INDEX_NONE);
 }
 
 
@@ -162,7 +170,11 @@ void gamepad_update_mapping (Gamepad_Config device)
 const char *gamepad_get_name (uint32_t index)
 {
     const char *joystick_name;
-    if (gamepad_config [index].device_id == ID_KEYBOARD)
+    if (gamepad_config [index].device_id == ID_NONE)
+    {
+        joystick_name = "None";
+    }
+    else if (gamepad_config [index].device_id == ID_KEYBOARD)
     {
         joystick_name = "Keyboard";
     }
@@ -187,7 +199,7 @@ const char *gamepad_get_name (uint32_t index)
 
 void gamepad_change_device (uint32_t player, int32_t index)
 {
-    Gamepad_Config *config;
+    Gamepad_Config **config;
     SDL_Joystick **joystick;
 
     switch (player)
@@ -205,7 +217,7 @@ void gamepad_change_device (uint32_t player, int32_t index)
     }
 
     /* Check that this is not already the active joystick */
-    if (config->device_id != gamepad_config [index].device_id)
+    if ((*config)->device_id != gamepad_config [index].device_id)
     {
         /* Close the previous device */
         if (*joystick != NULL)
@@ -213,19 +225,18 @@ void gamepad_change_device (uint32_t player, int32_t index)
             SDL_JoystickClose (*joystick);
             *joystick = NULL;
         }
-        config->device_id = ID_NONE;
 
         /* Open the new device */
-        if (gamepad_config [index].device_id == ID_KEYBOARD)
+        if (gamepad_config [index].device_id == ID_NONE || gamepad_config [index].device_id == ID_KEYBOARD)
         {
-            *config = gamepad_config [index];
+            *config = &gamepad_config [index];
         }
         else
         {
             *joystick = SDL_JoystickOpen (gamepad_config [index].device_id);
             if (*joystick)
             {
-                *config = gamepad_config [index];
+                *config = &gamepad_config [index];
             }
         }
     }
