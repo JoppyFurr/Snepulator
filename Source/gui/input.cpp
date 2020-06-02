@@ -27,6 +27,11 @@ extern "C" {
 extern bool config_capture_events;
 
 extern Snepulator_State state;
+
+extern Gamepad_Instance gamepad_list [10];
+extern uint32_t gamepad_list_count;
+
+extern Snepulator_Gamepad gamepad_1;
 }
 
 typedef enum Remap_State_t {
@@ -42,10 +47,10 @@ typedef enum Remap_State_t {
 
 /* Global state */
 Gamepad_Config map_to_edit;
+
 Remap_State remap_state = REMAP_STATE_DEFAULT;
 
-/* TODO: Don't map "player 1" or "player 2". Instead, map a physical gamepad to a Snepulator_Gamepad.
- *       The user can then just select which physical gamepad is for which player */
+/* TODO: Implement a drop-down box, instead of assuming player-1's device */
 
 /*
  * Pass an event to the input modal.
@@ -60,7 +65,7 @@ bool input_modal_consume_event (SDL_Event event)
     }
 
     /* For now, hard-code that we are only interested in the keyboard */
-    if (map_to_edit.device_id == ID_KEYBOARD && event.type == SDL_KEYDOWN)
+    if (event.type == SDL_KEYDOWN && gamepad_1.instance_id == INSTANCE_ID_KEYBOARD)
     {
         switch (remap_state)
         {
@@ -76,7 +81,7 @@ bool input_modal_consume_event (SDL_Event event)
         return true;
     }
 
-    else if (event.type == SDL_JOYBUTTONDOWN && event.jbutton.which == map_to_edit.device_id)
+    else if (event.type == SDL_JOYBUTTONDOWN && event.jbutton.which == gamepad_1.instance_id)
     {
         switch (remap_state)
         {
@@ -106,7 +111,7 @@ bool input_modal_consume_event (SDL_Event event)
         return true;
     }
 
-    else if (event.type == SDL_JOYAXISMOTION && event.jaxis.which == map_to_edit.device_id)
+    else if (event.type == SDL_JOYAXISMOTION && event.jaxis.which == gamepad_1.instance_id)
     {
         if (event.jaxis.value > -1000 && event.jaxis.value < 1000)
         {
@@ -341,6 +346,7 @@ void snepulator_render_input_modal (void)
         }
         ImGui::SameLine ();
         if (ImGui::Button ("OK", ImVec2 (120,0))) {
+
             /* Store the new configuration */
             gamepad_update_mapping (map_to_edit);
 

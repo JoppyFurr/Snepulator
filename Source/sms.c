@@ -396,10 +396,6 @@ void sms_init (void)
     sms_vdp_init ();
     sn76489_init ();
 
-    /* Initialize input */
-    memset (&gamepad_1, 0, sizeof (gamepad_1));
-    memset (&gamepad_2, 0, sizeof (gamepad_2));
-
     /* Hook up callbacks */
     state.audio_callback = sms_audio_callback;
     state.get_clock_rate = sms_get_clock_rate;
