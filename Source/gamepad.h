@@ -2,8 +2,30 @@
  * Gamepad input.
  */
 
-#define ID_NONE     -1
-#define ID_KEYBOARD -2
+/* TODO: Make better use of the API:
+ *
+ *   device_id - Index from 0 to SDL_NumJoysticks (). Changes as joysticks are added / removed.
+ *
+ *   instance_id - Identifier of the current instance of the joystick. Increments if the joystick is reconnected.
+ *
+ *   GUID - Stable identifier for a model of joystick. Two joysticks with the same vendor / product / version may have the same GUID.
+ *
+ */
+
+#define INSTANCE_ID_NONE     -1
+#define INSTANCE_ID_KEYBOARD -2
+
+#define GUID_NONE     (SDL_JoystickGUID) { .data = { 'K', 'e', 'y', 'b', 'o', 'a', 'r', 'd' } }
+#define GUID_KEYBOARD (SDL_JoystickGUID) { .data = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } }
+
+/*
+ * Common indexes, valid both in the config list and in the gamepad list.
+ */
+typedef enum Gamepad_Index_e {
+    GAMEPAD_INDEX_NONE = 0,
+    GAMEPAD_INDEX_KEYBOARD
+} Gamepad_Index;
+
 
 typedef enum Gamepad_Button_e {
     GAMEPAD_DIRECTION_UP = 0,
@@ -26,38 +48,43 @@ typedef struct Gamepad_Mapping_s {
     int32_t sign;
 } Gamepad_Mapping;
 
-typedef enum Gamepad_Index_e {
-    GAMEPAD_INDEX_NONE = 0,
-    GAMEPAD_INDEX_KEYBOARD
-} Gamepad_Index;
-
-/* TODO: Make better use of the API:
- *
- *   device_id - Index from 0 to SDL_NumJoysticks (). Changes as joysticks are added / removed.
- *
- *   instance_id - Identifier of the current instance of the joystick. Increments if the joystick is reconnected.
- *
- *   GUID - Stable identifier
- *
+#ifdef SDL_h_
+/*
+ * Stored gamepad configuration.
  */
-
 typedef struct Gamepad_Config_s {
-    /* SDL_JoystickGUID guid; */
+    SDL_JoystickGUID guid;
     Gamepad_Mapping mapping [GAMEPAD_BUTTON_COUNT];
-    int32_t device_id;
 } Gamepad_Config;
+#endif /* SDL_h_ */
 
+
+/*
+ * Details for a detected gamepad.
+ *
+ * TODO: Recreate this structure each time a gamepad is connected / disconnected.
+ */
+typedef struct Gamepad_Instance_s {
+    int32_t instance_id;
+    uint32_t config_index;
+    int32_t device_id;
+} Gamepad_Instance;
+
+/*
+ * Current state of simulated gamepad.
+ */
 typedef struct Snepulator_Gamepad_t {
+    int32_t instance_id;
     bool state [GAMEPAD_BUTTON_COUNT];
 } Snepulator_Gamepad;
 
 #ifdef SDL_h_
 /* Update gamepad state when we see relevant SDL_Events. */
 void gamepad_process_event (SDL_Event *event);
-#endif /* SDL_h_ */
 
 /* Update the mapping for a known gamepad. */
 void gamepad_update_mapping (Gamepad_Config device);
+#endif /* SDL_h_ */
 
 /* Detect input devices and populate the in-memory mapping list.  */
 void gamepad_init_input_devices (void);

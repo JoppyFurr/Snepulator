@@ -271,10 +271,6 @@ void sg_1000_init (void)
     tms9918a_init ();
     sn76489_init ();
 
-    /* Initialize input */
-    memset (&gamepad_1, 0, sizeof (gamepad_1));
-    memset (&gamepad_2, 0, sizeof (gamepad_2));
-
     /* Hook up the audio callback */
     state.audio_callback = sg_1000_audio_callback;
     state.get_clock_rate = sg_1000_get_clock_rate;

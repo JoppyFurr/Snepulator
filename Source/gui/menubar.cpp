@@ -28,8 +28,18 @@ extern "C" {
 
 extern Z80_Regs z80_regs;
 extern TMS9918A_Mode sms_vdp_mode_get (void);
-}
 
+/* TODO: Access through a function instead of accessing the array */
+extern Gamepad_Instance gamepad_list[10];
+extern uint32_t gamepad_list_count;
+extern Gamepad_Config map_to_edit;
+extern Gamepad_Config *gamepad_1_config;
+extern Gamepad_Config *gamepad_2_config;
+extern SDL_Joystick *gamepad_1_joystick;
+extern SDL_Joystick *gamepad_2_joystick;
+extern Snepulator_Gamepad gamepad_1;
+extern Snepulator_Gamepad gamepad_2;
+}
 
 #include "gui/input.h"
 #include "gui/menubar.h"
@@ -41,13 +51,6 @@ extern bool config_capture_events; /* TODO: Move into state */
 void snepulator_load_rom (char *path);
 void snepulator_load_sms_bios (char *path);
 void snepulator_load_colecovision_bios (char *path);
-
-/* TODO: Access through a function instead of accessing the array */
-extern Gamepad_Config gamepad_config[10];
-extern uint32_t gamepad_config_count;
-extern Gamepad_Config map_to_edit;
-extern Gamepad_Config *gamepad_1_config;
-extern Gamepad_Config *gamepad_2_config;
 
 /*
  * Render the menubar.
@@ -185,11 +188,12 @@ void snepulator_render_menubar (void)
         /* TODO: Deal with joysticks being removed from the system mid-game. Maybe auto-pause? */
         if (ImGui::BeginMenu ("Input"))
         {
+
             if (ImGui::BeginMenu ("Player 1"))
             {
-                for (int i = 0; i < gamepad_config_count; i++)
+                for (int i = 0; i < gamepad_list_count; i++)
                 {
-                    if (ImGui::MenuItem (gamepad_get_name (i), NULL, gamepad_1_config->device_id == gamepad_config [i].device_id))
+                    if (ImGui::MenuItem (gamepad_get_name (i), NULL, gamepad_list [i].instance_id == gamepad_1.instance_id))
                     {
                         gamepad_change_device (1, i);
                     }
@@ -198,9 +202,9 @@ void snepulator_render_menubar (void)
             }
             if (ImGui::BeginMenu ("Player 2"))
             {
-                for (int i = 0; i < gamepad_config_count; i++)
+                for (int i = 0; i < gamepad_list_count; i++)
                 {
-                    if (ImGui::MenuItem (gamepad_get_name (i), NULL, gamepad_2_config->device_id == gamepad_config [i].device_id))
+                    if (ImGui::MenuItem (gamepad_get_name (i), NULL, gamepad_list [i].instance_id == gamepad_2.instance_id))
                     {
                         gamepad_change_device (2, i);
                     }
