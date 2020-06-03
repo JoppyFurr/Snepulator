@@ -35,8 +35,6 @@ extern uint32_t gamepad_list_count;
 extern Gamepad_Config map_to_edit;
 extern Gamepad_Config *gamepad_1_config;
 extern Gamepad_Config *gamepad_2_config;
-extern SDL_Joystick *gamepad_1_joystick;
-extern SDL_Joystick *gamepad_2_joystick;
 extern Snepulator_Gamepad gamepad_1;
 extern Snepulator_Gamepad gamepad_2;
 }
