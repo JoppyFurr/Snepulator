@@ -26,12 +26,11 @@ Gamepad_Instance gamepad_list [10];
 uint32_t gamepad_list_count = 0;
 
 /* Current gamepad configuration */
+/* TODO: Once the config array is dynamic, an index may be better than a pointer */
 Gamepad_Config *gamepad_1_config;
 Gamepad_Config *gamepad_2_config;
 
 /* Current gamepad state */
-SDL_Joystick *gamepad_1_joystick; /* TODO: Replace with SDL_JoysticckFromInstanceID () */
-SDL_Joystick *gamepad_2_joystick;
 Snepulator_Gamepad gamepad_1;
 Snepulator_Gamepad gamepad_2;
 
@@ -142,7 +141,7 @@ void gamepad_init_input_devices (void)
         default_gamepad.guid = SDL_JoystickGetDeviceGUID (i);
         gamepad_config [gamepad_config_count++] = default_gamepad;
         gamepad_list [gamepad_list_count++] = (Gamepad_Instance) { .instance_id = SDL_JoystickGetDeviceInstanceID (i),
-                                                                   .device_id = i, .config_index = gamepad_config_count };
+                                                                   .device_id = i, .config_index = gamepad_config_count - 1 };
     }
 
     gamepad_1.instance_id = INSTANCE_ID_NONE;
@@ -158,8 +157,6 @@ void gamepad_init_input_devices (void)
 
 /*
  * Update the mapping for a known gamepad.
- *
- * TODO: Switch to GUID
  */
 void gamepad_update_mapping (Gamepad_Config new_config)
 {
@@ -175,6 +172,7 @@ void gamepad_update_mapping (Gamepad_Config new_config)
         }
     }
 
+    /* TODO: Instead of printing an error, create a new entry */
     SDL_JoystickGetGUIDString (new_config.guid, guid_string, 33);
     fprintf (stderr, "Warning: Unable to find device %s.\n", guid_string);
 }
@@ -216,21 +214,19 @@ const char *gamepad_get_name (uint32_t index)
 
 void gamepad_change_device (uint32_t player, int32_t index)
 {
+    SDL_Joystick *joystick;
     Gamepad_Config **config;
     Snepulator_Gamepad *gamepad;
-    SDL_Joystick **joystick;
 
     switch (player)
     {
         case 1:
             config = &gamepad_1_config;
             gamepad = &gamepad_1;
-            joystick = &gamepad_1_joystick;
             break;
         case 2:
             config = &gamepad_2_config;
             gamepad = &gamepad_2;
-            joystick = &gamepad_2_joystick;
             break;
         default:
             return;
@@ -238,10 +234,10 @@ void gamepad_change_device (uint32_t player, int32_t index)
 
     /* Close the previous device */
     /* TODO: Check if it is being used by the other player */
-    if (*joystick != NULL)
+    if (gamepad->instance_id > INSTANCE_ID_KEYBOARD)
     {
-        SDL_JoystickClose (*joystick);
-        *joystick = NULL;
+        joystick = SDL_JoystickFromInstanceID (gamepad->instance_id);
+        SDL_JoystickClose (joystick);
     }
     gamepad->instance_id = INSTANCE_ID_NONE;
     *config = &gamepad_config [GAMEPAD_INDEX_NONE];
@@ -260,11 +256,11 @@ void gamepad_change_device (uint32_t player, int32_t index)
     else
     {
         /* TODO: Check if is already open by the other player */
-        *joystick = SDL_JoystickOpen (gamepad_list [index].device_id);
-        if (*joystick)
+        joystick = SDL_JoystickOpen (gamepad_list [index].device_id);
+        if (joystick)
         {
-            *config = &gamepad_config [index];
-            gamepad->instance_id = SDL_JoystickInstanceID (*joystick);
+            *config = &gamepad_config [gamepad_list [index].config_index];
+            gamepad->instance_id = SDL_JoystickInstanceID (joystick);
         }
     }
 }
