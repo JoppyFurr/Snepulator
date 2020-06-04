@@ -352,6 +352,8 @@ int main (int argc, char **argv)
         return EXIT_FAILURE;
     }
 
+    SDL_SetHint (SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, "1");
+
     /* Create a window */
     /* For now, lets assume Master System resolution.
      * 256 × 192, with 16 pixels for left/right border, and 32 pixels for top/bottom border */
