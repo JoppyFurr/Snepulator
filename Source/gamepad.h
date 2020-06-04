@@ -86,8 +86,11 @@ void gamepad_process_event (SDL_Event *event);
 void gamepad_update_mapping (Gamepad_Config device);
 #endif /* SDL_h_ */
 
-/* Detect input devices and populate the in-memory mapping list.  */
-void gamepad_init_input_devices (void);
+/* Initialise gamepad support. */
+void gamepad_init (void);
+
+/* Refresh the list of detected gamepads. */
+void gamepad_list_update (void);
 
 /* Get the name of a gamepad in our config array. */
 const char *gamepad_get_name (uint32_t index);

@@ -450,8 +450,8 @@ int main (int argc, char **argv)
 
     SDL_PauseAudioDevice (audio_device_id, 0);
 
-    /* Detect input devices */
-    gamepad_init_input_devices ();
+    /* Initialise gamepad support */
+    gamepad_init ();
 
     /* If we have a valid ROM to run, start emulation */
     if (state.cart_filename)
@@ -466,8 +466,6 @@ int main (int argc, char **argv)
         SDL_GetWindowSize (window, &state.host_width, &state.host_height);
         SDL_Event event;
 
-        /* TODO: For now, we hard-code the USB Saturn gamepad on my desk. A "Configure gamepad" option needs to be created. */
-        /* TODO: For any saved configuration, use UUID instead of "id". */
         while (SDL_PollEvent (&event))
         {
             ImGui_ImplSDL2_ProcessEvent (&event);
@@ -496,13 +494,11 @@ int main (int argc, char **argv)
                 SDL_ShowCursor (SDL_ENABLE);
             }
 
-
-            /* Device removal */
-#if 0
-            /* TODO */
-            else if (event.type == SDL_JOYDEVICEREMOVED && event.jdevice.which == gamepad_1_mapping.device_id)
-                printf ("TODO: Player 1 joystick removed. Do something nice like pause the game until it's re-attached.\n");
-#endif
+            /* Device change */
+            else if (event.type == SDL_JOYDEVICEADDED | event.type == SDL_JOYDEVICEREMOVED)
+            {
+                gamepad_list_update ();
+            }
         }
 
         /* EMULATE */
