@@ -44,8 +44,12 @@ typedef struct Gamepad_Mapping_s {
         uint32_t key;
         uint32_t button;
         uint32_t axis;
+        uint32_t hat;
     };
-    int32_t sign;
+    union {
+        uint32_t direction;
+        int32_t sign;
+    };
 } Gamepad_Mapping;
 
 #ifdef SDL_h_

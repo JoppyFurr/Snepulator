@@ -86,6 +86,18 @@ void gamepad_process_event (SDL_Event *event)
             }
         }
 
+        /* Joystick Hat */
+        else if ((event->type == SDL_JOYHATMOTION) && event->jhat.which == gamepad->instance_id)
+        {
+            for (int i = 0; i < GAMEPAD_BUTTON_COUNT; i++)
+            {
+                if ((config->mapping [i].type == SDL_JOYHATMOTION) && (event->jhat.hat == config->mapping [i].hat))
+                {
+                    gamepad->state [i] = (event->jhat.value & config->mapping [i].direction) ? 1 : 0;
+                }
+            }
+        }
+
         /* Joystick Button */
         else if ((event->type == SDL_JOYBUTTONDOWN || event->type == SDL_JOYBUTTONUP) && event->jbutton.which == gamepad->instance_id)
         {
@@ -119,8 +131,6 @@ static uint32_t gamepad_config_create (int32_t device_id)
         SDL_GameController *game_controller = SDL_GameControllerOpen (device_id);
         SDL_GameControllerButtonBind bind;
 
-        printf ("GameController %p detected: '%s'\n", game_controller, SDL_GameControllerName (game_controller));
-
         uint32_t sdl_button_name [GAMEPAD_BUTTON_COUNT] = { SDL_CONTROLLER_BUTTON_DPAD_UP,      SDL_CONTROLLER_BUTTON_DPAD_DOWN,
                                                             SDL_CONTROLLER_BUTTON_DPAD_LEFT,    SDL_CONTROLLER_BUTTON_DPAD_RIGHT,
                                                             SDL_CONTROLLER_BUTTON_A,            SDL_CONTROLLER_BUTTON_B,
@@ -138,6 +148,9 @@ static uint32_t gamepad_config_create (int32_t device_id)
                     break;
                 case SDL_CONTROLLER_BINDTYPE_AXIS:
                     new_config.mapping [i] = (Gamepad_Mapping) { .type = SDL_JOYAXISMOTION, .axis = bind.value.axis, .sign = axis_sign [i] };
+                    break;
+                case SDL_CONTROLLER_BINDTYPE_HAT:
+                    new_config.mapping [i] = (Gamepad_Mapping) { .type = SDL_JOYHATMOTION, .hat = bind.value.hat.hat, .direction = bind.value.hat.hat_mask };
                     break;
                 default:
                     /* Do nothing */
