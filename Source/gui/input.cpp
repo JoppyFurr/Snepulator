@@ -34,34 +34,20 @@ extern uint32_t gamepad_list_count;
 extern Snepulator_Gamepad gamepad_1;
 }
 
-typedef enum Remap_State_t {
-    REMAP_STATE_DEFAULT,
-    REMAP_STATE_UP,
-    REMAP_STATE_DOWN,
-    REMAP_STATE_LEFT,
-    REMAP_STATE_RIGHT,
-    REMAP_STATE_BUTTON_1,
-    REMAP_STATE_BUTTON_2,
-    REMAP_STATE_PAUSE,
-} Remap_State;
-
 /* Global state */
 Gamepad_Config map_to_edit;
-
-Remap_State remap_state = REMAP_STATE_DEFAULT;
-
-/* TODO: Implement a drop-down box, instead of assuming player-1's device */
+uint32_t remap_button = GAMEPAD_BUTTON_COUNT;
 
 /*
  * Pass an event to the input modal.
  * Returns true when an event is consumed.
  *
  * TODO: Move input handling to gamepad.c
- * TODO: Loop over gamepad buttons instead of listing them.
+ * TODO: Implement a drop-down box, instead of assuming player-1's device.
  */
 bool input_modal_consume_event (SDL_Event event)
 {
-    if (remap_state == REMAP_STATE_DEFAULT)
+    if (remap_button >= GAMEPAD_BUTTON_COUNT)
     {
         /* Eventually it will be nice to have a joystick-test mode here */
         return false;
@@ -70,97 +56,22 @@ bool input_modal_consume_event (SDL_Event event)
     /* For now, hard-code that we are only interested in the keyboard */
     if (event.type == SDL_KEYDOWN && gamepad_1.instance_id == INSTANCE_ID_KEYBOARD)
     {
-        switch (remap_state)
-        {
-            case REMAP_STATE_UP:       map_to_edit.mapping [GAMEPAD_DIRECTION_UP].key    = event.key.keysym.sym; remap_state = REMAP_STATE_DOWN;     break;
-            case REMAP_STATE_DOWN:     map_to_edit.mapping [GAMEPAD_DIRECTION_DOWN].key  = event.key.keysym.sym; remap_state = REMAP_STATE_LEFT;     break;
-            case REMAP_STATE_LEFT:     map_to_edit.mapping [GAMEPAD_DIRECTION_LEFT].key  = event.key.keysym.sym; remap_state = REMAP_STATE_RIGHT;    break;
-            case REMAP_STATE_RIGHT:    map_to_edit.mapping [GAMEPAD_DIRECTION_RIGHT].key = event.key.keysym.sym; remap_state = REMAP_STATE_BUTTON_1; break;
-            case REMAP_STATE_BUTTON_1: map_to_edit.mapping [GAMEPAD_BUTTON_1].key        = event.key.keysym.sym; remap_state = REMAP_STATE_BUTTON_2; break;
-            case REMAP_STATE_BUTTON_2: map_to_edit.mapping [GAMEPAD_BUTTON_2].key        = event.key.keysym.sym; remap_state = REMAP_STATE_PAUSE;    break;
-            case REMAP_STATE_PAUSE:    map_to_edit.mapping [GAMEPAD_BUTTON_START].key    = event.key.keysym.sym; remap_state = REMAP_STATE_DEFAULT;  break;
-            default: return false;
-        }
+        map_to_edit.mapping [remap_button].key = event.key.keysym.sym;
+        remap_button++;
         return true;
     }
 
     else if (event.type == SDL_JOYBUTTONDOWN && event.jbutton.which == gamepad_1.instance_id)
     {
-        switch (remap_state)
-        {
-            case REMAP_STATE_UP:       map_to_edit.mapping [GAMEPAD_DIRECTION_UP].type          = event.type;
-                                       map_to_edit.mapping [GAMEPAD_DIRECTION_UP].button        = event.jbutton.button;
-                                       remap_state = REMAP_STATE_DOWN;          break;
-            case REMAP_STATE_DOWN:     map_to_edit.mapping [GAMEPAD_DIRECTION_DOWN].type        = event.type;
-                                       map_to_edit.mapping [GAMEPAD_DIRECTION_DOWN].button      = event.jbutton.button;
-                                       remap_state = REMAP_STATE_LEFT;          break;
-            case REMAP_STATE_LEFT:     map_to_edit.mapping [GAMEPAD_DIRECTION_LEFT].type        = event.type;
-                                       map_to_edit.mapping [GAMEPAD_DIRECTION_LEFT].button      = event.jbutton.button;
-                                       remap_state = REMAP_STATE_RIGHT;         break;
-            case REMAP_STATE_RIGHT:    map_to_edit.mapping [GAMEPAD_DIRECTION_RIGHT].type       = event.type;
-                                       map_to_edit.mapping [GAMEPAD_DIRECTION_RIGHT].button     = event.jbutton.button;
-                                       remap_state = REMAP_STATE_BUTTON_1;      break;
-            case REMAP_STATE_BUTTON_1: map_to_edit.mapping [GAMEPAD_BUTTON_1].type              = event.type;
-                                       map_to_edit.mapping [GAMEPAD_BUTTON_1].button            = event.jbutton.button;
-                                       remap_state = REMAP_STATE_BUTTON_2;      break;
-            case REMAP_STATE_BUTTON_2: map_to_edit.mapping [GAMEPAD_BUTTON_2].type              = event.type;
-                                       map_to_edit.mapping [GAMEPAD_BUTTON_2].button            = event.jbutton.button;
-                                       remap_state = REMAP_STATE_PAUSE;         break;
-            case REMAP_STATE_PAUSE:    map_to_edit.mapping [GAMEPAD_BUTTON_START].type          = event.type;
-                                       map_to_edit.mapping [GAMEPAD_BUTTON_START].button        = event.jbutton.button;
-                                       remap_state = REMAP_STATE_DEFAULT;       break;
-            default: return false;
-        }
-        return true;
-    }
-
-    else if (event.type == SDL_JOYAXISMOTION && event.jaxis.which == gamepad_1.instance_id)
-    {
-        if (event.jaxis.value > -1000 && event.jaxis.value < 1000)
-        {
-            return false;
-        }
-
-        int32_t sign = (event.jaxis.value < 0) ? -1 : 1;
-
-        switch (remap_state)
-        {
-            case REMAP_STATE_UP:       map_to_edit.mapping [GAMEPAD_DIRECTION_UP].type    = event.type;
-                                       map_to_edit.mapping [GAMEPAD_DIRECTION_UP].axis    = event.jaxis.axis;
-                                       map_to_edit.mapping [GAMEPAD_DIRECTION_UP].sign    = sign;
-                                       remap_state = REMAP_STATE_DOWN;      break;
-            case REMAP_STATE_DOWN:     map_to_edit.mapping [GAMEPAD_DIRECTION_DOWN].type  = event.type;
-                                       map_to_edit.mapping [GAMEPAD_DIRECTION_DOWN].axis  = event.jaxis.axis;
-                                       map_to_edit.mapping [GAMEPAD_DIRECTION_DOWN].sign  = sign;
-                                       remap_state = REMAP_STATE_LEFT;      break;
-            case REMAP_STATE_LEFT:     map_to_edit.mapping [GAMEPAD_DIRECTION_LEFT].type  = event.type;
-                                       map_to_edit.mapping [GAMEPAD_DIRECTION_LEFT].axis  = event.jaxis.axis;
-                                       map_to_edit.mapping [GAMEPAD_DIRECTION_LEFT].sign  = sign;
-                                       remap_state = REMAP_STATE_RIGHT;     break;
-            case REMAP_STATE_RIGHT:    map_to_edit.mapping [GAMEPAD_DIRECTION_RIGHT].type = event.type;
-                                       map_to_edit.mapping [GAMEPAD_DIRECTION_RIGHT].axis = event.jaxis.axis;
-                                       map_to_edit.mapping [GAMEPAD_DIRECTION_RIGHT].sign = sign;
-                                       remap_state = REMAP_STATE_BUTTON_1;  break;
-            case REMAP_STATE_BUTTON_1: map_to_edit.mapping [GAMEPAD_BUTTON_1].type        = event.type;
-                                       map_to_edit.mapping [GAMEPAD_BUTTON_1].axis        = event.jaxis.axis;
-                                       map_to_edit.mapping [GAMEPAD_BUTTON_1].sign        = sign;
-                                       remap_state = REMAP_STATE_BUTTON_2;  break;
-            case REMAP_STATE_BUTTON_2: map_to_edit.mapping [GAMEPAD_BUTTON_2].type        = event.type;
-                                       map_to_edit.mapping [GAMEPAD_BUTTON_2].axis        = event.jaxis.axis;
-                                       map_to_edit.mapping [GAMEPAD_BUTTON_2].sign        = sign;
-                                       remap_state = REMAP_STATE_PAUSE;     break;
-            case REMAP_STATE_PAUSE:    map_to_edit.mapping [GAMEPAD_BUTTON_START].type    = event.type;
-                                       map_to_edit.mapping [GAMEPAD_BUTTON_START].axis    = event.jaxis.axis;
-                                       map_to_edit.mapping [GAMEPAD_BUTTON_START].sign    = sign;
-                                       remap_state = REMAP_STATE_DEFAULT;   break;
-            default: return false;
-        }
+        map_to_edit.mapping [remap_button].type = SDL_JOYBUTTONDOWN;
+        map_to_edit.mapping [remap_button].button = event.jbutton.button;
+        remap_button++;
         return true;
     }
 
     else if (event.type == SDL_JOYHATMOTION && event.jhat.which == gamepad_1.instance_id)
     {
-        uint32_t direction;
+        uint32_t direction = SDL_HAT_CENTERED;
         switch (event.jhat.value)
         {
             case SDL_HAT_UP:
@@ -170,42 +81,29 @@ bool input_modal_consume_event (SDL_Event event)
                 direction = event.jhat.value;
                 break;
             default:
-                return false;
+                return true;
         }
 
-        switch (remap_state)
+        map_to_edit.mapping [remap_button].type = SDL_JOYHATMOTION;
+        map_to_edit.mapping [remap_button].hat = event.jhat.hat;
+        map_to_edit.mapping [remap_button].direction = direction;
+        remap_button++;
+        return true;
+    }
+
+    else if (event.type == SDL_JOYAXISMOTION && event.jaxis.which == gamepad_1.instance_id)
+    {
+        if (event.jaxis.value > -1000 && event.jaxis.value < 1000)
         {
-            case REMAP_STATE_UP:       map_to_edit.mapping [GAMEPAD_DIRECTION_UP].type      = event.type;
-                                       map_to_edit.mapping [GAMEPAD_DIRECTION_UP].hat       = event.jhat.hat;
-                                       map_to_edit.mapping [GAMEPAD_DIRECTION_UP].direction = direction;
-                                       remap_state = REMAP_STATE_DOWN;      break;
-            case REMAP_STATE_DOWN:     map_to_edit.mapping [GAMEPAD_DIRECTION_DOWN].type    = event.type;
-                                       map_to_edit.mapping [GAMEPAD_DIRECTION_DOWN].hat     = event.jhat.hat;
-                                       map_to_edit.mapping [GAMEPAD_DIRECTION_DOWN].direction  = direction;
-                                       remap_state = REMAP_STATE_LEFT;      break;
-            case REMAP_STATE_LEFT:     map_to_edit.mapping [GAMEPAD_DIRECTION_LEFT].type    = event.type;
-                                       map_to_edit.mapping [GAMEPAD_DIRECTION_LEFT].hat     = event.jhat.hat;
-                                       map_to_edit.mapping [GAMEPAD_DIRECTION_LEFT].direction = direction;
-                                       remap_state = REMAP_STATE_RIGHT;     break;
-            case REMAP_STATE_RIGHT:    map_to_edit.mapping [GAMEPAD_DIRECTION_RIGHT].type   = event.type;
-                                       map_to_edit.mapping [GAMEPAD_DIRECTION_RIGHT].hat    = event.jhat.hat;
-                                       map_to_edit.mapping [GAMEPAD_DIRECTION_RIGHT].direction = direction;
-                                       remap_state = REMAP_STATE_BUTTON_1;  break;
-            case REMAP_STATE_BUTTON_1: map_to_edit.mapping [GAMEPAD_BUTTON_1].type          = event.type;
-                                       map_to_edit.mapping [GAMEPAD_BUTTON_1].hat           = event.jhat.hat;
-                                       map_to_edit.mapping [GAMEPAD_BUTTON_1].direction     = direction;
-                                       remap_state = REMAP_STATE_BUTTON_2;  break;
-            case REMAP_STATE_BUTTON_2: map_to_edit.mapping [GAMEPAD_BUTTON_2].type          = event.type;
-                                       map_to_edit.mapping [GAMEPAD_BUTTON_2].hat           = event.jhat.hat;
-                                       map_to_edit.mapping [GAMEPAD_BUTTON_2].direction     = direction;
-                                       remap_state = REMAP_STATE_PAUSE;     break;
-            case REMAP_STATE_PAUSE:    map_to_edit.mapping [GAMEPAD_BUTTON_START].type      = event.type;
-                                       map_to_edit.mapping [GAMEPAD_BUTTON_START].hat       = event.jhat.hat;
-                                       map_to_edit.mapping [GAMEPAD_BUTTON_START].direction = direction;
-                                       remap_state = REMAP_STATE_DEFAULT;   break;
-            default:
-                return false;
+            return true;
         }
+
+        int32_t sign = (event.jaxis.value < 0) ? -1 : 1;
+
+        map_to_edit.mapping [remap_button].type = SDL_JOYAXISMOTION;
+        map_to_edit.mapping [remap_button].axis = event.jaxis.axis;
+        map_to_edit.mapping [remap_button].sign = sign;
+        remap_button++;
         return true;
     }
 
@@ -308,25 +206,25 @@ void snepulator_render_input_modal (void)
                 ImVec2 (origin.x + scale * 0.16, origin.y + scale * 0.08),
                 ImVec2 (origin.x + scale * 0.38, origin.y + scale * 0.32), ButtonDefault, scale * 0.06);
 
-            if (remap_state == REMAP_STATE_UP)
+            if (remap_button == GAMEPAD_DIRECTION_UP)
             {
                 draw_list->AddRectFilled (
                     ImVec2 (origin.x + scale * 0.16, origin.y + scale * 0.08),
                     ImVec2 (origin.x + scale * 0.38, origin.y + scale * 0.20), ButtonWaiting, scale * 0.06);
             }
-            else if (remap_state == REMAP_STATE_DOWN)
+            else if (remap_button == GAMEPAD_DIRECTION_DOWN)
             {
                 draw_list->AddRectFilled (
                     ImVec2 (origin.x + scale * 0.16, origin.y + scale * 0.20),
                     ImVec2 (origin.x + scale * 0.38, origin.y + scale * 0.32), ButtonWaiting, scale * 0.06);
             }
-            else if (remap_state == REMAP_STATE_LEFT)
+            else if (remap_button == GAMEPAD_DIRECTION_LEFT)
             {
                 draw_list->AddRectFilled (
                     ImVec2 (origin.x + scale * 0.16, origin.y + scale * 0.08),
                     ImVec2 (origin.x + scale * 0.27, origin.y + scale * 0.32), ButtonWaiting, scale * 0.06);
             }
-            else if (remap_state == REMAP_STATE_RIGHT)
+            else if (remap_button == GAMEPAD_DIRECTION_RIGHT)
             {
                 draw_list->AddRectFilled (
                     ImVec2 (origin.x + scale * 0.27, origin.y + scale * 0.08),
@@ -340,44 +238,37 @@ void snepulator_render_input_modal (void)
             /* Button 1 */
             draw_list->AddCircleFilled (
                 ImVec2 ( origin.x + scale * 0.70, origin.y + scale * 0.25), scale * 0.06,
-                (remap_state == REMAP_STATE_BUTTON_1) ? ButtonWaiting : ButtonDefault, 32);
+                (remap_button == GAMEPAD_BUTTON_1) ? ButtonWaiting : ButtonDefault, 32);
             draw_list->AddCircle (
                 ImVec2 (origin.x + scale * 0.70, origin.y + scale * 0.25), scale * 0.06, White, 32);
 
             /* Button 2 */
             draw_list->AddCircleFilled (
                 ImVec2 (origin.x + scale * 0.87, origin.y + scale * 0.25), scale * 0.06,
-                (remap_state == REMAP_STATE_BUTTON_2) ? ButtonWaiting : ButtonDefault, 32);
+                (remap_button == GAMEPAD_BUTTON_2) ? ButtonWaiting : ButtonDefault, 32);
             draw_list->AddCircle (
                 ImVec2 (origin.x + scale * 0.87, origin.y + scale * 0.25), scale * 0.06, White, 32);
 
             /* Move cursor to below gamepad diagram */
             ImGui::SetCursorScreenPos (ImVec2 (origin.x - 10, origin.y + scale * 0.4 + 16));
-            ImGui::TextColored (
-                (remap_state == REMAP_STATE_UP )       ? ButtonWaiting_V : White_V,
-                "  Up:        %s", button_mapping_to_string (map_to_edit.mapping [GAMEPAD_DIRECTION_UP]));
-            ImGui::TextColored (
-                (remap_state == REMAP_STATE_DOWN )     ? ButtonWaiting_V : White_V,
-                "  Down:      %s", button_mapping_to_string (map_to_edit.mapping [GAMEPAD_DIRECTION_DOWN]));
-            ImGui::TextColored (
-                (remap_state == REMAP_STATE_LEFT )     ? ButtonWaiting_V : White_V,
-                "  Left:      %s", button_mapping_to_string (map_to_edit.mapping [GAMEPAD_DIRECTION_LEFT]));
-            ImGui::TextColored (
-                (remap_state == REMAP_STATE_RIGHT )    ? ButtonWaiting_V : White_V,
-                "  Right:     %s", button_mapping_to_string (map_to_edit.mapping [GAMEPAD_DIRECTION_RIGHT]));
+            ImGui::TextColored ((remap_button == GAMEPAD_DIRECTION_UP )     ? ButtonWaiting_V : White_V,
+                                "  Up:        %s", button_mapping_to_string (map_to_edit.mapping [GAMEPAD_DIRECTION_UP]));
+            ImGui::TextColored ((remap_button == GAMEPAD_DIRECTION_DOWN )   ? ButtonWaiting_V : White_V,
+                                "  Down:      %s", button_mapping_to_string (map_to_edit.mapping [GAMEPAD_DIRECTION_DOWN]));
+            ImGui::TextColored ((remap_button == GAMEPAD_DIRECTION_LEFT )   ? ButtonWaiting_V : White_V,
+                                "  Left:      %s", button_mapping_to_string (map_to_edit.mapping [GAMEPAD_DIRECTION_LEFT]));
+            ImGui::TextColored ((remap_button == GAMEPAD_DIRECTION_RIGHT )  ? ButtonWaiting_V : White_V,
+                                "  Right:     %s", button_mapping_to_string (map_to_edit.mapping [GAMEPAD_DIRECTION_RIGHT]));
 
             ImGui::SetCursorScreenPos (ImVec2 (origin.x + scale * 0.5, origin.y + scale * 0.4 + 16));
-            ImGui::TextColored (
-                (remap_state == REMAP_STATE_BUTTON_1 ) ? ButtonWaiting_V : White_V,
-                "  Button 1:  %s", button_mapping_to_string (map_to_edit.mapping [GAMEPAD_BUTTON_1]));
+            ImGui::TextColored ((remap_button == GAMEPAD_BUTTON_1 )         ? ButtonWaiting_V : White_V,
+                                "  Button 1:  %s", button_mapping_to_string (map_to_edit.mapping [GAMEPAD_BUTTON_1]));
             ImGui::SetCursorScreenPos (ImVec2 (origin.x + scale * 0.5, origin.y + scale * 0.4 + 33));
-            ImGui::TextColored (
-                (remap_state == REMAP_STATE_BUTTON_2 ) ? ButtonWaiting_V : White_V,
-                "  Button 2:  %s", button_mapping_to_string (map_to_edit.mapping [GAMEPAD_BUTTON_2]));
+            ImGui::TextColored ((remap_button == GAMEPAD_BUTTON_2 )         ? ButtonWaiting_V : White_V,
+                                "  Button 2:  %s", button_mapping_to_string (map_to_edit.mapping [GAMEPAD_BUTTON_2]));
             ImGui::SetCursorScreenPos (ImVec2 (origin.x + scale * 0.5, origin.y + scale * 0.4 + 50));
-            ImGui::TextColored (
-                (remap_state == REMAP_STATE_PAUSE )    ? ButtonWaiting_V : White_V,
-                "  Pause:     %s", button_mapping_to_string (map_to_edit.mapping [GAMEPAD_BUTTON_START]));
+            ImGui::TextColored ((remap_button == GAMEPAD_BUTTON_START )     ? ButtonWaiting_V : White_V,
+                                "  Pause:     %s", button_mapping_to_string (map_to_edit.mapping [GAMEPAD_BUTTON_START]));
         }
 
         ImGui::EndChild ();
@@ -386,7 +277,7 @@ void snepulator_render_input_modal (void)
         ImGui::Spacing ();
         ImGui::SameLine (ImGui::GetContentRegionAvail().x + 16 - 128 * 3);
         if (ImGui::Button ("Cancel", ImVec2 (120,0))) {
-            remap_state = REMAP_STATE_DEFAULT;
+            remap_button = GAMEPAD_BUTTON_COUNT;
             if (state.ready)
             {
                 state.running = true;
@@ -403,7 +294,7 @@ void snepulator_render_input_modal (void)
             map_to_edit.mapping [GAMEPAD_BUTTON_1].button           = SDLK_UNKNOWN;
             map_to_edit.mapping [GAMEPAD_BUTTON_2].button           = SDLK_UNKNOWN;
             map_to_edit.mapping [GAMEPAD_BUTTON_START].button       = SDLK_UNKNOWN;
-            remap_state = REMAP_STATE_UP;
+            remap_button = GAMEPAD_DIRECTION_UP;
         }
         ImGui::SameLine ();
         if (ImGui::Button ("OK", ImVec2 (120,0))) {
@@ -417,7 +308,7 @@ void snepulator_render_input_modal (void)
                 state.running = true;
             }
 
-            remap_state = REMAP_STATE_DEFAULT;
+            remap_button = GAMEPAD_BUTTON_COUNT;
             config_capture_events = false;
             ImGui::CloseCurrentPopup ();
         }
