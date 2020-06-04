@@ -58,8 +58,6 @@ void snepulator_render_menubar (void)
     bool open_modal = false;
     bool input_modal = false;
 
-    /* What colour should this be? A "Snepulator" theme, or should it blend in with the overscan colour? */
-    /* TODO: Some measure should be taken to prevent the menu from obscuring the gameplay */
     if (ImGui::BeginMainMenuBar ())
     {
         if (ImGui::BeginMenu ("File"))

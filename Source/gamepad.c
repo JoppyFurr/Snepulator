@@ -100,18 +100,90 @@ void gamepad_process_event (SDL_Event *event)
     }
 }
 
+/*
+ * Generate a configuration entry for a new gamepad.
+ *
+ * Returns the configuration index of the new entry.
+ *
+ * TODO: Use the SDL_GameController API to get a sane default mapping.
+ */
+static uint32_t gamepad_config_create (int32_t device_id)
+{
+    Gamepad_Config new_config = { };
+
+    new_config.guid = SDL_JoystickGetDeviceGUID (device_id);
+
+    /* For now, a generic configuration that happens to work on the controller I have */
+    new_config.mapping [GAMEPAD_DIRECTION_UP]       = (Gamepad_Mapping) { .type = SDL_JOYAXISMOTION, .axis = 1, .sign = -1 };
+    new_config.mapping [GAMEPAD_DIRECTION_DOWN]     = (Gamepad_Mapping) { .type = SDL_JOYAXISMOTION, .axis = 1, .sign =  1 };
+    new_config.mapping [GAMEPAD_DIRECTION_LEFT]     = (Gamepad_Mapping) { .type = SDL_JOYAXISMOTION, .axis = 0, .sign = -1 };
+    new_config.mapping [GAMEPAD_DIRECTION_RIGHT]    = (Gamepad_Mapping) { .type = SDL_JOYAXISMOTION, .axis = 0, .sign =  1 };
+    new_config.mapping [GAMEPAD_BUTTON_1]           = (Gamepad_Mapping) { .type = SDL_JOYBUTTONDOWN, .button = 2 };
+    new_config.mapping [GAMEPAD_BUTTON_2]           = (Gamepad_Mapping) { .type = SDL_JOYBUTTONDOWN, .button = 1 };
+    new_config.mapping [GAMEPAD_BUTTON_START]       = (Gamepad_Mapping) { .type = SDL_JOYBUTTONDOWN, .button = 9 };
+
+    gamepad_config [gamepad_config_count] = new_config;
+
+    return gamepad_config_count++;
+}
 
 /*
- * Detect input devices and populate the in-memory mapping list.
- * Note: It'd be nice to automatically add/remove mappings as devices are plugged in and removed.
+ * Refresh the list of detected gamepads.
  */
-void gamepad_init_input_devices (void)
+void gamepad_list_update (void)
+{
+    gamepad_list_count = 0;
+
+    gamepad_list [gamepad_list_count++] = (Gamepad_Instance) { .instance_id = INSTANCE_ID_NONE, .config_index = GAMEPAD_INDEX_NONE };
+    gamepad_list [gamepad_list_count++] = (Gamepad_Instance) { .instance_id = INSTANCE_ID_KEYBOARD, .config_index = GAMEPAD_INDEX_KEYBOARD };
+
+    for (int device_id = 0; device_id < SDL_NumJoysticks (); device_id++)
+    {
+        int32_t instance_id = SDL_JoystickGetDeviceInstanceID (device_id);
+        int32_t config_index = GAMEPAD_INDEX_NONE;
+        SDL_JoystickGUID guid = SDL_JoystickGetDeviceGUID (device_id);
+
+        /* Find config for device */
+        for (int i = 0; i < gamepad_config_count; i++)
+        {
+            if (memcmp (&gamepad_config [i].guid, &guid, sizeof (SDL_JoystickGUID)) == 0)
+            {
+                config_index = i;
+                break;
+            }
+        }
+
+        /* If no config was found, generate a new config */
+        if (config_index == GAMEPAD_INDEX_NONE)
+        {
+            config_index = gamepad_config_create (device_id);
+        }
+
+        gamepad_list [gamepad_list_count++] = (Gamepad_Instance) { .instance_id = instance_id,
+                                                                   .device_id = device_id,
+                                                                   .config_index = config_index };
+    }
+
+    /* TODO: Check if an in-use gamepad was disconnected and pause the game */
+}
+
+/*
+ * Initialise gamepad support.
+ *
+ * TODO: Load saved mappings from the config file.
+ */
+void gamepad_init (void)
 {
     Gamepad_Config no_gamepad = { .guid = GUID_NONE };
 
     /* Add entry for GAMEPAD_INDEX_NONE */
     gamepad_config [gamepad_config_count++] = no_gamepad;
-    gamepad_list [gamepad_list_count++] = (Gamepad_Instance) { .instance_id = INSTANCE_ID_NONE, .config_index = GAMEPAD_INDEX_NONE };
+
+    /* Initialise both players to GAMEPAD_INDEX_NONE */
+    gamepad_1.instance_id = INSTANCE_ID_NONE;
+    gamepad_1_config = &gamepad_config [GAMEPAD_INDEX_NONE];
+    gamepad_2.instance_id = INSTANCE_ID_NONE;
+    gamepad_2_config = &gamepad_config [GAMEPAD_INDEX_NONE];
 
     /* TODO: Detect user's keyboard layout and adjust accordingly */
     /* Add entry for GAMEPAD_INDEX_KEYBOARD */
@@ -124,30 +196,9 @@ void gamepad_init_input_devices (void)
     default_keyboard.mapping [GAMEPAD_BUTTON_2]         = (Gamepad_Mapping) { .type = SDL_KEYDOWN, .key = SDLK_z };
     default_keyboard.mapping [GAMEPAD_BUTTON_START]     = (Gamepad_Mapping) { .type = SDL_KEYDOWN, .key = SDLK_RETURN };
     gamepad_config [gamepad_config_count++] = default_keyboard;
-    gamepad_list [gamepad_list_count++] = (Gamepad_Instance) { .instance_id = INSTANCE_ID_KEYBOARD, .config_index = GAMEPAD_INDEX_KEYBOARD };
 
-    /* TODO: Recall saved mappings from a file */
-    Gamepad_Config default_gamepad = { };
-    default_gamepad.mapping [GAMEPAD_DIRECTION_UP]      = (Gamepad_Mapping) { .type = SDL_JOYAXISMOTION, .axis = 1, .sign = -1 };
-    default_gamepad.mapping [GAMEPAD_DIRECTION_DOWN]    = (Gamepad_Mapping) { .type = SDL_JOYAXISMOTION, .axis = 1, .sign =  1 };
-    default_gamepad.mapping [GAMEPAD_DIRECTION_LEFT]    = (Gamepad_Mapping) { .type = SDL_JOYAXISMOTION, .axis = 0, .sign = -1 };
-    default_gamepad.mapping [GAMEPAD_DIRECTION_RIGHT]   = (Gamepad_Mapping) { .type = SDL_JOYAXISMOTION, .axis = 0, .sign =  1 };
-    default_gamepad.mapping [GAMEPAD_BUTTON_1]          = (Gamepad_Mapping) { .type = SDL_JOYBUTTONDOWN, .button = 2 };
-    default_gamepad.mapping [GAMEPAD_BUTTON_2]          = (Gamepad_Mapping) { .type = SDL_JOYBUTTONDOWN, .button = 1 };
-    default_gamepad.mapping [GAMEPAD_BUTTON_START]      = (Gamepad_Mapping) { .type = SDL_JOYBUTTONDOWN, .button = 9 };
-
-    for (int i = 0; i < SDL_NumJoysticks (); i++)
-    {
-        default_gamepad.guid = SDL_JoystickGetDeviceGUID (i);
-        gamepad_config [gamepad_config_count++] = default_gamepad;
-        gamepad_list [gamepad_list_count++] = (Gamepad_Instance) { .instance_id = SDL_JoystickGetDeviceInstanceID (i),
-                                                                   .device_id = i, .config_index = gamepad_config_count - 1 };
-    }
-
-    gamepad_1.instance_id = INSTANCE_ID_NONE;
-    gamepad_1_config = &gamepad_config [GAMEPAD_INDEX_NONE];
-    gamepad_2.instance_id = INSTANCE_ID_NONE;
-    gamepad_2_config = &gamepad_config [GAMEPAD_INDEX_NONE];
+    /* Populate the gamepad list */
+    gamepad_list_update ();
 
     /* Set default devices for players */
     gamepad_change_device (1, GAMEPAD_INDEX_KEYBOARD);
