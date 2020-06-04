@@ -55,6 +55,9 @@ Remap_State remap_state = REMAP_STATE_DEFAULT;
 /*
  * Pass an event to the input modal.
  * Returns true when an event is consumed.
+ *
+ * TODO: Move input handling to gamepad.c
+ * TODO: Loop over gamepad buttons instead of listing them.
  */
 bool input_modal_consume_event (SDL_Event event)
 {
@@ -155,6 +158,57 @@ bool input_modal_consume_event (SDL_Event event)
         return true;
     }
 
+    else if (event.type == SDL_JOYHATMOTION && event.jhat.which == gamepad_1.instance_id)
+    {
+        uint32_t direction;
+        switch (event.jhat.value)
+        {
+            case SDL_HAT_UP:
+            case SDL_HAT_DOWN:
+            case SDL_HAT_LEFT:
+            case SDL_HAT_RIGHT:
+                direction = event.jhat.value;
+                break;
+            default:
+                return false;
+        }
+
+        switch (remap_state)
+        {
+            case REMAP_STATE_UP:       map_to_edit.mapping [GAMEPAD_DIRECTION_UP].type      = event.type;
+                                       map_to_edit.mapping [GAMEPAD_DIRECTION_UP].hat       = event.jhat.hat;
+                                       map_to_edit.mapping [GAMEPAD_DIRECTION_UP].direction = direction;
+                                       remap_state = REMAP_STATE_DOWN;      break;
+            case REMAP_STATE_DOWN:     map_to_edit.mapping [GAMEPAD_DIRECTION_DOWN].type    = event.type;
+                                       map_to_edit.mapping [GAMEPAD_DIRECTION_DOWN].hat     = event.jhat.hat;
+                                       map_to_edit.mapping [GAMEPAD_DIRECTION_DOWN].direction  = direction;
+                                       remap_state = REMAP_STATE_LEFT;      break;
+            case REMAP_STATE_LEFT:     map_to_edit.mapping [GAMEPAD_DIRECTION_LEFT].type    = event.type;
+                                       map_to_edit.mapping [GAMEPAD_DIRECTION_LEFT].hat     = event.jhat.hat;
+                                       map_to_edit.mapping [GAMEPAD_DIRECTION_LEFT].direction = direction;
+                                       remap_state = REMAP_STATE_RIGHT;     break;
+            case REMAP_STATE_RIGHT:    map_to_edit.mapping [GAMEPAD_DIRECTION_RIGHT].type   = event.type;
+                                       map_to_edit.mapping [GAMEPAD_DIRECTION_RIGHT].hat    = event.jhat.hat;
+                                       map_to_edit.mapping [GAMEPAD_DIRECTION_RIGHT].direction = direction;
+                                       remap_state = REMAP_STATE_BUTTON_1;  break;
+            case REMAP_STATE_BUTTON_1: map_to_edit.mapping [GAMEPAD_BUTTON_1].type          = event.type;
+                                       map_to_edit.mapping [GAMEPAD_BUTTON_1].hat           = event.jhat.hat;
+                                       map_to_edit.mapping [GAMEPAD_BUTTON_1].direction     = direction;
+                                       remap_state = REMAP_STATE_BUTTON_2;  break;
+            case REMAP_STATE_BUTTON_2: map_to_edit.mapping [GAMEPAD_BUTTON_2].type          = event.type;
+                                       map_to_edit.mapping [GAMEPAD_BUTTON_2].hat           = event.jhat.hat;
+                                       map_to_edit.mapping [GAMEPAD_BUTTON_2].direction     = direction;
+                                       remap_state = REMAP_STATE_PAUSE;     break;
+            case REMAP_STATE_PAUSE:    map_to_edit.mapping [GAMEPAD_BUTTON_START].type      = event.type;
+                                       map_to_edit.mapping [GAMEPAD_BUTTON_START].hat       = event.jhat.hat;
+                                       map_to_edit.mapping [GAMEPAD_BUTTON_START].direction = direction;
+                                       remap_state = REMAP_STATE_DEFAULT;   break;
+            default:
+                return false;
+        }
+        return true;
+    }
+
     return false;
 }
 
@@ -174,9 +228,16 @@ const char *button_mapping_to_string (Gamepad_Mapping b)
     switch (b.type)
     {
         case SDL_KEYDOWN:
-            return SDL_GetKeyName (b.button);
+            return SDL_GetKeyName (b.key);
         case SDL_JOYAXISMOTION:
-            sprintf (buff, "Axis %d %s", b.button, (b.sign < 0.0) ? "-" : "+");
+            sprintf (buff, "Axis %d %s", b.axis, (b.sign < 0.0) ? "-" : "+");
+            break;
+        case SDL_JOYHATMOTION:
+            sprintf (buff, "Hat %d %s", b.hat, (b.direction == SDL_HAT_UP)    ? "Up"
+                                             : (b.direction == SDL_HAT_DOWN)  ? "Down"
+                                             : (b.direction == SDL_HAT_LEFT)  ? "Left"
+                                             : (b.direction == SDL_HAT_RIGHT) ? "Right"
+                                             : "Unknown");
             break;
         case SDL_JOYBUTTONDOWN:
             sprintf (buff, "Button %d", b.button);
