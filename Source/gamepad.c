@@ -105,7 +105,7 @@ void gamepad_process_event (SDL_Event *event)
  *
  * Returns the configuration index of the new entry.
  *
- * TODO: Use the SDL_GameController API to get a sane default mapping.
+ * TODO: Fallback to SDL_GameControllerGetBindForAxis if DPAD buttons are not found.
  */
 static uint32_t gamepad_config_create (int32_t device_id)
 {
@@ -113,14 +113,51 @@ static uint32_t gamepad_config_create (int32_t device_id)
 
     new_config.guid = SDL_JoystickGetDeviceGUID (device_id);
 
-    /* For now, a generic configuration that happens to work on the controller I have */
-    new_config.mapping [GAMEPAD_DIRECTION_UP]       = (Gamepad_Mapping) { .type = SDL_JOYAXISMOTION, .axis = 1, .sign = -1 };
-    new_config.mapping [GAMEPAD_DIRECTION_DOWN]     = (Gamepad_Mapping) { .type = SDL_JOYAXISMOTION, .axis = 1, .sign =  1 };
-    new_config.mapping [GAMEPAD_DIRECTION_LEFT]     = (Gamepad_Mapping) { .type = SDL_JOYAXISMOTION, .axis = 0, .sign = -1 };
-    new_config.mapping [GAMEPAD_DIRECTION_RIGHT]    = (Gamepad_Mapping) { .type = SDL_JOYAXISMOTION, .axis = 0, .sign =  1 };
-    new_config.mapping [GAMEPAD_BUTTON_1]           = (Gamepad_Mapping) { .type = SDL_JOYBUTTONDOWN, .button = 2 };
-    new_config.mapping [GAMEPAD_BUTTON_2]           = (Gamepad_Mapping) { .type = SDL_JOYBUTTONDOWN, .button = 1 };
-    new_config.mapping [GAMEPAD_BUTTON_START]       = (Gamepad_Mapping) { .type = SDL_JOYBUTTONDOWN, .button = 9 };
+    /* If we can, pull the config from the SDL_GameController interface */
+    if (SDL_IsGameController (device_id))
+    {
+        SDL_GameController *game_controller = SDL_GameControllerOpen (device_id);
+        SDL_GameControllerButtonBind bind;
+
+        printf ("GameController %p detected: '%s'\n", game_controller, SDL_GameControllerName (game_controller));
+
+        uint32_t sdl_button_name [GAMEPAD_BUTTON_COUNT] = { SDL_CONTROLLER_BUTTON_DPAD_UP,      SDL_CONTROLLER_BUTTON_DPAD_DOWN,
+                                                            SDL_CONTROLLER_BUTTON_DPAD_LEFT,    SDL_CONTROLLER_BUTTON_DPAD_RIGHT,
+                                                            SDL_CONTROLLER_BUTTON_A,            SDL_CONTROLLER_BUTTON_B,
+                                                            SDL_CONTROLLER_BUTTON_START };
+        uint32_t axis_sign [GAMEPAD_BUTTON_COUNT] = { -1, 1, -1, 1 };
+
+        for (int i = 0; i < GAMEPAD_BUTTON_COUNT; i++)
+        {
+            bind = SDL_GameControllerGetBindForButton (game_controller, sdl_button_name [i]);
+
+            switch (bind.bindType)
+            {
+                case SDL_CONTROLLER_BINDTYPE_BUTTON:
+                    new_config.mapping [i] = (Gamepad_Mapping) { .type = SDL_JOYBUTTONDOWN, .button = bind.value.button };
+                    break;
+                case SDL_CONTROLLER_BINDTYPE_AXIS:
+                    new_config.mapping [i] = (Gamepad_Mapping) { .type = SDL_JOYAXISMOTION, .axis = bind.value.axis, .sign = axis_sign [i] };
+                    break;
+                default:
+                    /* Do nothing */
+                    continue;
+            }
+        }
+
+        SDL_GameControllerClose (game_controller);
+    }
+    else
+    {
+        /* Default config if this is not an identified game controller */
+        new_config.mapping [GAMEPAD_DIRECTION_UP]       = (Gamepad_Mapping) { .type = SDL_JOYAXISMOTION, .axis = 1, .sign = -1 };
+        new_config.mapping [GAMEPAD_DIRECTION_DOWN]     = (Gamepad_Mapping) { .type = SDL_JOYAXISMOTION, .axis = 1, .sign =  1 };
+        new_config.mapping [GAMEPAD_DIRECTION_LEFT]     = (Gamepad_Mapping) { .type = SDL_JOYAXISMOTION, .axis = 0, .sign = -1 };
+        new_config.mapping [GAMEPAD_DIRECTION_RIGHT]    = (Gamepad_Mapping) { .type = SDL_JOYAXISMOTION, .axis = 0, .sign =  1 };
+        new_config.mapping [GAMEPAD_BUTTON_1]           = (Gamepad_Mapping) { .type = SDL_JOYBUTTONDOWN, .button = 2 };
+        new_config.mapping [GAMEPAD_BUTTON_2]           = (Gamepad_Mapping) { .type = SDL_JOYBUTTONDOWN, .button = 1 };
+        new_config.mapping [GAMEPAD_BUTTON_START]       = (Gamepad_Mapping) { .type = SDL_JOYBUTTONDOWN, .button = 9 };
+    }
 
     gamepad_config [gamepad_config_count] = new_config;
 
