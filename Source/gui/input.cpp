@@ -47,18 +47,19 @@ uint32_t remap_button = GAMEPAD_BUTTON_COUNT;
  */
 bool input_modal_consume_event (SDL_Event event)
 {
+    bool consumed = false;
+
     if (remap_button >= GAMEPAD_BUTTON_COUNT)
     {
-        /* Eventually it will be nice to have a joystick-test mode here */
-        return false;
+        consumed = false;
     }
 
     /* For now, hard-code that we are only interested in the keyboard */
-    if (event.type == SDL_KEYDOWN && gamepad_1.instance_id == INSTANCE_ID_KEYBOARD)
+    else if (event.type == SDL_KEYDOWN && gamepad_1.instance_id == INSTANCE_ID_KEYBOARD)
     {
         map_to_edit.mapping [remap_button].key = event.key.keysym.sym;
         remap_button++;
-        return true;
+        consumed = true;
     }
 
     else if (event.type == SDL_JOYBUTTONDOWN && event.jbutton.which == gamepad_1.instance_id)
@@ -66,7 +67,7 @@ bool input_modal_consume_event (SDL_Event event)
         map_to_edit.mapping [remap_button].type = SDL_JOYBUTTONDOWN;
         map_to_edit.mapping [remap_button].button = event.jbutton.button;
         remap_button++;
-        return true;
+        consumed = true;
     }
 
     else if (event.type == SDL_JOYHATMOTION && event.jhat.which == gamepad_1.instance_id)
@@ -81,21 +82,21 @@ bool input_modal_consume_event (SDL_Event event)
                 direction = event.jhat.value;
                 break;
             default:
-                return true;
+                consumed = true;
         }
 
         map_to_edit.mapping [remap_button].type = SDL_JOYHATMOTION;
         map_to_edit.mapping [remap_button].hat = event.jhat.hat;
         map_to_edit.mapping [remap_button].direction = direction;
         remap_button++;
-        return true;
+        consumed = true;
     }
 
     else if (event.type == SDL_JOYAXISMOTION && event.jaxis.which == gamepad_1.instance_id)
     {
         if (event.jaxis.value > -1000 && event.jaxis.value < 1000)
         {
-            return true;
+            consumed = true;
         }
 
         int32_t sign = (event.jaxis.value < 0) ? -1 : 1;
@@ -104,10 +105,16 @@ bool input_modal_consume_event (SDL_Event event)
         map_to_edit.mapping [remap_button].axis = event.jaxis.axis;
         map_to_edit.mapping [remap_button].sign = sign;
         remap_button++;
-        return true;
+        consumed = true;
     }
 
-    return false;
+    if (consumed == true && remap_button == GAMEPAD_BUTTON_COUNT)
+    {
+        /* Apply the new mapping */
+        gamepad_update_mapping (map_to_edit);
+    }
+
+    return consumed;
 }
 
 
@@ -176,7 +183,7 @@ void snepulator_render_input_modal (void)
             ImVec4 Dark_V          = ImVec4 (0.1f, 0.1f, 0.1f, 1.0f);
             ImVec4 ButtonDefault_V = ImVec4 (0.2f, 0.2f, 0.2f, 1.0f);
             ImVec4 ButtonWaiting_V = ImVec4 (0.8f, 0.5f, 0.1f, 1.0f);
-            ImVec4 ButtonPressed_V = ImVec4 (0.8f, 0.5f, 0.1f, 1.0f);
+            ImVec4 ButtonPressed_V = ImVec4 (0.4f, 0.8f, 0.6f, 1.0f);
 
             const ImU32 White         = ImColor (White_V);
             const ImU32 Dark          = ImColor (Dark_V);
@@ -184,7 +191,7 @@ void snepulator_render_input_modal (void)
             const ImU32 ButtonWaiting = ImColor (ButtonWaiting_V);
             const ImU32 ButtonPressed = ImColor (ButtonPressed_V);
 
-            /* Gamepad */
+            /* Gamepad shape */
             draw_list->AddRectFilled (
                 ImVec2 (origin.x + scale * 0.0,  origin.y + scale * 0.0 ),
                 ImVec2 (origin.x + scale * 1.0,  origin.y + scale * 0.4 ), Dark);
@@ -201,53 +208,88 @@ void snepulator_render_input_modal (void)
                 ImVec2 (origin.x + scale * 0.48, origin.y + scale * 0.36),
                 ImVec2 (origin.x + scale * 1.0,  origin.y + scale * 0.4 ), White);
 
-            /* D-pad */
-            draw_list->AddRectFilled (
-                ImVec2 (origin.x + scale * 0.16, origin.y + scale * 0.08),
-                ImVec2 (origin.x + scale * 0.38, origin.y + scale * 0.32), ButtonDefault, scale * 0.06);
+            /* Button backgrounds */
+            draw_list->AddRectFilled   (ImVec2 (origin.x + scale * 0.16, origin.y + scale * 0.08),
+                                        ImVec2 (origin.x + scale * 0.38, origin.y + scale * 0.32), ButtonDefault, scale * 0.06);
+            draw_list->AddCircleFilled (ImVec2 (origin.x + scale * 0.70, origin.y + scale * 0.25), scale * 0.06, ButtonDefault, 32);
+            draw_list->AddCircleFilled (ImVec2 (origin.x + scale * 0.87, origin.y + scale * 0.25), scale * 0.06, ButtonDefault, 32);
 
-            if (remap_button == GAMEPAD_DIRECTION_UP)
+            /* Highlight the button to remap */
+            if (remap_button != GAMEPAD_BUTTON_COUNT)
             {
-                draw_list->AddRectFilled (
-                    ImVec2 (origin.x + scale * 0.16, origin.y + scale * 0.08),
-                    ImVec2 (origin.x + scale * 0.38, origin.y + scale * 0.20), ButtonWaiting, scale * 0.06);
+                switch (remap_button)
+                {
+                    case GAMEPAD_DIRECTION_UP:
+                        draw_list->AddRectFilled (ImVec2 (origin.x + scale * 0.16, origin.y + scale * 0.08),
+                                                  ImVec2 (origin.x + scale * 0.38, origin.y + scale * 0.20), ButtonWaiting, scale * 0.06);
+                        break;
+                    case GAMEPAD_DIRECTION_DOWN:
+                        draw_list->AddRectFilled (ImVec2 (origin.x + scale * 0.16, origin.y + scale * 0.20),
+                                                  ImVec2 (origin.x + scale * 0.38, origin.y + scale * 0.32), ButtonWaiting, scale * 0.06);
+                        break;
+                    case GAMEPAD_DIRECTION_LEFT:
+                        draw_list->AddRectFilled (ImVec2 (origin.x + scale * 0.16, origin.y + scale * 0.08),
+                                                  ImVec2 (origin.x + scale * 0.27, origin.y + scale * 0.32), ButtonWaiting, scale * 0.06);
+                        break;
+                    case GAMEPAD_DIRECTION_RIGHT:
+                        draw_list->AddRectFilled (ImVec2 (origin.x + scale * 0.27, origin.y + scale * 0.08),
+                                                  ImVec2 (origin.x + scale * 0.38, origin.y + scale * 0.32), ButtonWaiting, scale * 0.06);
+                        break;
+                    case GAMEPAD_BUTTON_1:
+                        draw_list->AddCircleFilled (ImVec2 ( origin.x + scale * 0.70, origin.y + scale * 0.25), scale * 0.06, ButtonWaiting, 32);
+                        break;
+                    case GAMEPAD_BUTTON_2:
+                        draw_list->AddCircleFilled (ImVec2 (origin.x + scale * 0.87, origin.y + scale * 0.25), scale * 0.06, ButtonWaiting, 32);
+                        break;
+                    default:
+                        /* Nothing to highlight for the pause button yet */
+                        break;
+                }
+
             }
-            else if (remap_button == GAMEPAD_DIRECTION_DOWN)
+            /* If we're not currently remapping, show the current gamepad state */
+            /* TODO: Something other than gamepad_1 */
+            else
             {
-                draw_list->AddRectFilled (
-                    ImVec2 (origin.x + scale * 0.16, origin.y + scale * 0.20),
-                    ImVec2 (origin.x + scale * 0.38, origin.y + scale * 0.32), ButtonWaiting, scale * 0.06);
-            }
-            else if (remap_button == GAMEPAD_DIRECTION_LEFT)
-            {
-                draw_list->AddRectFilled (
-                    ImVec2 (origin.x + scale * 0.16, origin.y + scale * 0.08),
-                    ImVec2 (origin.x + scale * 0.27, origin.y + scale * 0.32), ButtonWaiting, scale * 0.06);
-            }
-            else if (remap_button == GAMEPAD_DIRECTION_RIGHT)
-            {
-                draw_list->AddRectFilled (
-                    ImVec2 (origin.x + scale * 0.27, origin.y + scale * 0.08),
-                    ImVec2 (origin.x + scale * 0.38, origin.y + scale * 0.32), ButtonWaiting, scale * 0.06);
+                if (gamepad_1.state[GAMEPAD_DIRECTION_UP])
+                {
+                draw_list->AddRectFilled (ImVec2 (origin.x + scale * 0.16, origin.y + scale * 0.08),
+                                          ImVec2 (origin.x + scale * 0.38, origin.y + scale * 0.20), ButtonPressed, scale * 0.06);
+                }
+                if (gamepad_1.state[GAMEPAD_DIRECTION_DOWN])
+                {
+                    draw_list->AddRectFilled (ImVec2 (origin.x + scale * 0.16, origin.y + scale * 0.20),
+                                              ImVec2 (origin.x + scale * 0.38, origin.y + scale * 0.32), ButtonPressed, scale * 0.06);
+                }
+                if (gamepad_1.state[GAMEPAD_DIRECTION_LEFT])
+                {
+                    draw_list->AddRectFilled (ImVec2 (origin.x + scale * 0.16, origin.y + scale * 0.08),
+                                              ImVec2 (origin.x + scale * 0.27, origin.y + scale * 0.32), ButtonPressed, scale * 0.06);
+                }
+                if (gamepad_1.state[GAMEPAD_DIRECTION_RIGHT])
+                {
+                    draw_list->AddRectFilled (ImVec2 (origin.x + scale * 0.27, origin.y + scale * 0.08),
+                                              ImVec2 (origin.x + scale * 0.38, origin.y + scale * 0.32), ButtonPressed, scale * 0.06);
+                }
+                if (gamepad_1.state[GAMEPAD_BUTTON_1])
+                {
+                    draw_list->AddCircleFilled (ImVec2 ( origin.x + scale * 0.70, origin.y + scale * 0.25), scale * 0.06, ButtonPressed, 32);
+                }
+                if (gamepad_1.state[GAMEPAD_BUTTON_2])
+                {
+                    draw_list->AddCircleFilled (ImVec2 (origin.x + scale * 0.87, origin.y + scale * 0.25), scale * 0.06, ButtonPressed, 32);
+                }
+                if (gamepad_1.state[GAMEPAD_BUTTON_START])
+                {
+                    /* Nothing to highlight for the pause button yet */
+                }
             }
 
-            draw_list->AddRect (
-                ImVec2 (origin.x + scale * 0.16, origin.y + scale * 0.08),
-                ImVec2 (origin.x + scale * 0.38, origin.y + scale * 0.32), White, scale * 0.06);
-
-            /* Button 1 */
-            draw_list->AddCircleFilled (
-                ImVec2 ( origin.x + scale * 0.70, origin.y + scale * 0.25), scale * 0.06,
-                (remap_button == GAMEPAD_BUTTON_1) ? ButtonWaiting : ButtonDefault, 32);
-            draw_list->AddCircle (
-                ImVec2 (origin.x + scale * 0.70, origin.y + scale * 0.25), scale * 0.06, White, 32);
-
-            /* Button 2 */
-            draw_list->AddCircleFilled (
-                ImVec2 (origin.x + scale * 0.87, origin.y + scale * 0.25), scale * 0.06,
-                (remap_button == GAMEPAD_BUTTON_2) ? ButtonWaiting : ButtonDefault, 32);
-            draw_list->AddCircle (
-                ImVec2 (origin.x + scale * 0.87, origin.y + scale * 0.25), scale * 0.06, White, 32);
+            /* Button outlines */
+            draw_list->AddRect   (ImVec2 (origin.x + scale * 0.16, origin.y + scale * 0.08),
+                                  ImVec2 (origin.x + scale * 0.38, origin.y + scale * 0.32), White, scale * 0.06);
+            draw_list->AddCircle (ImVec2 (origin.x + scale * 0.70, origin.y + scale * 0.25), scale * 0.06, White, 32);
+            draw_list->AddCircle (ImVec2 (origin.x + scale * 0.87, origin.y + scale * 0.25), scale * 0.06, White, 32);
 
             /* Move cursor to below gamepad diagram */
             ImGui::SetCursorScreenPos (ImVec2 (origin.x - 10, origin.y + scale * 0.4 + 16));
@@ -277,6 +319,9 @@ void snepulator_render_input_modal (void)
         ImGui::Spacing ();
         ImGui::SameLine (ImGui::GetContentRegionAvail().x + 16 - 128 * 3);
         if (ImGui::Button ("Cancel", ImVec2 (120,0))) {
+
+            /* TODO: Restore the saved configuration */
+
             remap_button = GAMEPAD_BUTTON_COUNT;
             if (state.ready)
             {
@@ -299,8 +344,8 @@ void snepulator_render_input_modal (void)
         ImGui::SameLine ();
         if (ImGui::Button ("OK", ImVec2 (120,0))) {
 
-            /* Store the new configuration */
-            gamepad_update_mapping (map_to_edit);
+            /* TODO: Save config to file */
+            /* TODO: An apply button? */
 
             if (state.ready)
             {
