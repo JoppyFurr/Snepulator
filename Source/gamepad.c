@@ -317,13 +317,24 @@ const char *gamepad_get_name (uint32_t index)
     return name;
 }
 
+static uint32_t gamepad_joystick_user_count (uint32_t instance_id)
+{
+    uint32_t count = 0;
+
+    if (gamepad_1.instance_id == instance_id)
+        count++;
+
+    if (gamepad_2.instance_id == instance_id)
+        count++;
+
+    return count;
+}
 
 /*
  * Change input device for a player's gamepad.
  *
  * Index is into the gamepad_list.
  */
-
 void gamepad_change_device (uint32_t player, int32_t index)
 {
     SDL_Joystick *joystick;
@@ -344,9 +355,8 @@ void gamepad_change_device (uint32_t player, int32_t index)
             return;
     }
 
-    /* Close the previous device */
-    /* TODO: Check if it is being used by the other player */
-    if (gamepad->instance_id > INSTANCE_ID_KEYBOARD)
+    /* Close the previous joystick if we are the only user */
+    if (gamepad->instance_id > INSTANCE_ID_NONE && gamepad_joystick_user_count (gamepad->instance_id) == 1)
     {
         joystick = SDL_JoystickFromInstanceID (gamepad->instance_id);
         SDL_JoystickClose (joystick);
@@ -367,8 +377,14 @@ void gamepad_change_device (uint32_t player, int32_t index)
     }
     else
     {
-        /* TODO: Check if is already open by the other player */
-        joystick = SDL_JoystickOpen (gamepad_list [index].device_id);
+        joystick = SDL_JoystickFromInstanceID (gamepad_list [index].instance_id);
+
+        /* Open the joystick if needed */
+        if (joystick == NULL || SDL_JoystickGetAttached (joystick) == false)
+        {
+            joystick = SDL_JoystickOpen (gamepad_list [index].device_id);
+        }
+
         if (joystick)
         {
             *config = &gamepad_config [gamepad_list [index].config_index];
