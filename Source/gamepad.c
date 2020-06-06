@@ -284,8 +284,9 @@ void gamepad_update_mapping (Gamepad_Config new_config)
  */
 const char *gamepad_get_name (uint32_t index)
 {
-    const char *name;
+    const char *name = NULL;
 
+    /* First, check for hard-coded names */
     if (index == GAMEPAD_INDEX_NONE)
     {
         name = "None";
@@ -294,13 +295,23 @@ const char *gamepad_get_name (uint32_t index)
     {
         name = "Keyboard";
     }
-    else
+
+    /* Next, try the GameController API */
+    else if (SDL_IsGameController (gamepad_list [index].device_id))
+    {
+        name = SDL_GameControllerNameForIndex (gamepad_list [index].device_id);
+    }
+
+    /* Next, try the Joystick API */
+    if (name == NULL)
     {
         name = SDL_JoystickNameForIndex (gamepad_list [index].device_id);
-        if (name == NULL)
-        {
-            name = "Unknown Joystick";
-        }
+    }
+
+    /* Fallback if no name was found */
+    if (name == NULL)
+    {
+        name = "Unknown Joystick";
     }
 
     return name;
