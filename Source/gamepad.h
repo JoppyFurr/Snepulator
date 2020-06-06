@@ -96,6 +96,9 @@ void gamepad_init (void);
 /* Refresh the list of detected gamepads. */
 void gamepad_list_update (void);
 
+/* Return the number of players using the specified joystick instance_id. */
+uint32_t gamepad_joystick_user_count (uint32_t instance_id);
+
 /* Get the name of a gamepad in our config array. */
 const char *gamepad_get_name (uint32_t index);
 

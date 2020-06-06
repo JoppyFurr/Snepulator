@@ -317,7 +317,10 @@ const char *gamepad_get_name (uint32_t index)
     return name;
 }
 
-static uint32_t gamepad_joystick_user_count (uint32_t instance_id)
+/*
+ * Return the number of players using the specified joystick instance_id.
+ */
+uint32_t gamepad_joystick_user_count (uint32_t instance_id)
 {
     uint32_t count = 0;
 

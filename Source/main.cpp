@@ -499,6 +499,13 @@ int main (int argc, char **argv)
             /* Device change */
             else if (event.type == SDL_JOYDEVICEADDED | event.type == SDL_JOYDEVICEREMOVED)
             {
+                /* If a player's joystick has been disconnected, pause the game */
+                if (event.type == SDL_JOYDEVICEREMOVED && gamepad_joystick_user_count (event.jdevice.which) != 0)
+                {
+                    /* TODO: Make it more obvious to the user that we've paused */
+                    state.running = false;
+                }
+
                 gamepad_list_update ();
             }
         }
