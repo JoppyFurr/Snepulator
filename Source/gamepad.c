@@ -29,10 +29,12 @@ uint32_t gamepad_list_count = 0;
 /* TODO: Once the config array is dynamic, an index may be better than a pointer */
 Gamepad_Config *gamepad_1_config;
 Gamepad_Config *gamepad_2_config;
+Gamepad_Config *gamepad_3_config;
 
 /* Current gamepad state */
 Snepulator_Gamepad gamepad_1;
 Snepulator_Gamepad gamepad_2;
+Snepulator_Gamepad gamepad_3; /* Used for the 'configure' dialogue */
 
 /*
  * Process an SDL_Event.
@@ -42,7 +44,7 @@ void gamepad_process_event (SDL_Event *event)
     Gamepad_Config *config;
     Snepulator_Gamepad *gamepad;
 
-    for (uint32_t player = 1; player <= 2; player++)
+    for (uint32_t player = 1; player <= 3; player++)
     {
         switch (player)
         {
@@ -53,6 +55,10 @@ void gamepad_process_event (SDL_Event *event)
             case 2:
                 config = gamepad_2_config;
                 gamepad = &gamepad_2;
+                break;
+            case 3:
+                config = gamepad_3_config;
+                gamepad = &gamepad_3;
                 break;
             default:
                 return;
@@ -234,6 +240,8 @@ void gamepad_init (void)
     gamepad_1_config = &gamepad_config [GAMEPAD_INDEX_NONE];
     gamepad_2.instance_id = INSTANCE_ID_NONE;
     gamepad_2_config = &gamepad_config [GAMEPAD_INDEX_NONE];
+    gamepad_3.instance_id = INSTANCE_ID_NONE;
+    gamepad_3_config = &gamepad_config [GAMEPAD_INDEX_NONE];
 
     /* TODO: Detect user's keyboard layout and adjust accordingly */
     /* Add entry for GAMEPAD_INDEX_KEYBOARD */
@@ -253,6 +261,7 @@ void gamepad_init (void)
     /* Set default devices for players */
     gamepad_change_device (1, GAMEPAD_INDEX_KEYBOARD);
     gamepad_change_device (2, GAMEPAD_INDEX_NONE);
+    gamepad_change_device (3, GAMEPAD_INDEX_NONE);
 }
 
 
@@ -330,6 +339,9 @@ uint32_t gamepad_joystick_user_count (uint32_t instance_id)
     if (gamepad_2.instance_id == instance_id)
         count++;
 
+    if (gamepad_3.instance_id == instance_id)
+        count++;
+
     return count;
 }
 
@@ -353,6 +365,10 @@ void gamepad_change_device (uint32_t player, int32_t index)
         case 2:
             config = &gamepad_2_config;
             gamepad = &gamepad_2;
+            break;
+        case 3:
+            config = &gamepad_3_config;
+            gamepad = &gamepad_3;
             break;
         default:
             return;

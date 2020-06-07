@@ -32,11 +32,9 @@ extern TMS9918A_Mode sms_vdp_mode_get (void);
 /* TODO: Access through a function instead of accessing the array */
 extern Gamepad_Instance gamepad_list[10];
 extern uint32_t gamepad_list_count;
-extern Gamepad_Config map_to_edit;
-extern Gamepad_Config *gamepad_1_config;
-extern Gamepad_Config *gamepad_2_config;
 extern Snepulator_Gamepad gamepad_1;
 extern Snepulator_Gamepad gamepad_2;
+extern uint32_t input_combo_index;
 }
 
 #include "gui/input.h"
@@ -211,6 +209,7 @@ void snepulator_render_menubar (void)
             if (ImGui::MenuItem ("Configure...", NULL))
             {
                 state.running = false;
+                input_combo_index = 0;
                 input_modal = true;
             }
             ImGui::EndMenu ();
@@ -267,9 +266,8 @@ void snepulator_render_menubar (void)
     }
     if (input_modal)
     {
-        map_to_edit = *gamepad_1_config;
         config_capture_events = true;
-        ImGui::OpenPopup ("Configure input...");
+        ImGui::OpenPopup ("Configure device...");
     }
 
 }

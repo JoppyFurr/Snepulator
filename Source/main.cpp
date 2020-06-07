@@ -406,18 +406,20 @@ int main (int argc, char **argv)
     ImGui_ImplOpenGL3_Init ();
 
     /* Style */
-    ImGui::PushStyleColor (ImGuiCol_MenuBarBg,     ImVec4 (0.5, 0.0, 0.0, 1.0));
-    ImGui::PushStyleColor (ImGuiCol_TitleBgActive, ImVec4 (0.5, 0.0, 0.0, 1.0));
-    ImGui::PushStyleColor (ImGuiCol_PopupBg,       ImVec4 (0.2, 0.0, 0.0, 1.0));
-    ImGui::PushStyleColor (ImGuiCol_Header,        ImVec4 (0.8, 0.0, 0.0, 1.0));
-    ImGui::PushStyleColor (ImGuiCol_HeaderHovered, ImVec4 (0.8, 0.0, 0.0, 1.0));
-    ImGui::PushStyleColor (ImGuiCol_ScrollbarBg,   ImVec4 (0.1, 0.0, 0.0, 1.0));
-    ImGui::PushStyleColor (ImGuiCol_ScrollbarGrab, ImVec4 (0.5, 0.0, 0.0, 1.0));
+    ImGui::PushStyleColor (ImGuiCol_MenuBarBg,      ImVec4 (0.4, 0.0, 0.0, 1.0));
+    ImGui::PushStyleColor (ImGuiCol_TitleBgActive,  ImVec4 (0.5, 0.0, 0.0, 1.0));
+    ImGui::PushStyleColor (ImGuiCol_PopupBg,        ImVec4 (0.2, 0.0, 0.0, 1.0));
+    ImGui::PushStyleColor (ImGuiCol_Header,         ImVec4 (0.6, 0.0, 0.0, 1.0));
+    ImGui::PushStyleColor (ImGuiCol_HeaderHovered,  ImVec4 (0.8, 0.0, 0.0, 1.0));
+    ImGui::PushStyleColor (ImGuiCol_ScrollbarBg,    ImVec4 (0.1, 0.0, 0.0, 1.0));
+    ImGui::PushStyleColor (ImGuiCol_ScrollbarGrab,  ImVec4 (0.5, 0.0, 0.0, 1.0));
     ImGui::PushStyleColor (ImGuiCol_ScrollbarGrabHovered, ImVec4 (0.8, 0.0, 0.0, 1.0));
     ImGui::PushStyleColor (ImGuiCol_ScrollbarGrabActive,  ImVec4 (0.9, 0.0, 0.0, 1.0));
-    ImGui::PushStyleColor (ImGuiCol_Button,        ImVec4 (0.5, 0.0, 0.0, 1.0));
-    ImGui::PushStyleColor (ImGuiCol_ButtonHovered, ImVec4 (0.8, 0.0, 0.0, 1.0));
-    ImGui::PushStyleColor (ImGuiCol_ButtonActive,  ImVec4 (0.9, 0.0, 0.0, 1.0));
+    ImGui::PushStyleColor (ImGuiCol_Button,         ImVec4 (0.5, 0.0, 0.0, 1.0));
+    ImGui::PushStyleColor (ImGuiCol_ButtonHovered,  ImVec4 (0.8, 0.0, 0.0, 1.0));
+    ImGui::PushStyleColor (ImGuiCol_ButtonActive,   ImVec4 (0.9, 0.0, 0.0, 1.0));
+    ImGui::PushStyleColor (ImGuiCol_FrameBg,        ImVec4 (0.3, 0.0, 0.0, 1.0));
+    ImGui::PushStyleColor (ImGuiCol_FrameBgHovered, ImVec4 (0.4, 0.0, 0.0, 1.0));
     ImGui::PushStyleVar (ImGuiStyleVar_WindowRounding, 4.0);
     ImGui::PushStyleVar (ImGuiStyleVar_WindowBorderSize, 0.0);
 
