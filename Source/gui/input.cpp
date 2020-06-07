@@ -31,19 +31,20 @@ extern Snepulator_State state;
 extern Gamepad_Instance gamepad_list [10];
 extern uint32_t gamepad_list_count;
 
-extern Snepulator_Gamepad gamepad_1;
+extern Gamepad_Config *gamepad_3_config;
+extern Snepulator_Gamepad gamepad_3;
 }
 
 /* Global state */
 Gamepad_Config map_to_edit;
 uint32_t remap_button = GAMEPAD_BUTTON_COUNT;
+uint32_t input_combo_index = 0;
 
 /*
  * Pass an event to the input modal.
  * Returns true when an event is consumed.
  *
  * TODO: Move input handling to gamepad.c
- * TODO: Implement a drop-down box, instead of assuming player-1's device.
  */
 bool input_modal_consume_event (SDL_Event event)
 {
@@ -55,14 +56,14 @@ bool input_modal_consume_event (SDL_Event event)
     }
 
     /* For now, hard-code that we are only interested in the keyboard */
-    else if (event.type == SDL_KEYDOWN && gamepad_1.instance_id == INSTANCE_ID_KEYBOARD)
+    else if (event.type == SDL_KEYDOWN && gamepad_3.instance_id == INSTANCE_ID_KEYBOARD)
     {
         map_to_edit.mapping [remap_button].key = event.key.keysym.sym;
         remap_button++;
         consumed = true;
     }
 
-    else if (event.type == SDL_JOYBUTTONDOWN && event.jbutton.which == gamepad_1.instance_id)
+    else if (event.type == SDL_JOYBUTTONDOWN && event.jbutton.which == gamepad_3.instance_id)
     {
         map_to_edit.mapping [remap_button].type = SDL_JOYBUTTONDOWN;
         map_to_edit.mapping [remap_button].button = event.jbutton.button;
@@ -70,7 +71,7 @@ bool input_modal_consume_event (SDL_Event event)
         consumed = true;
     }
 
-    else if (event.type == SDL_JOYHATMOTION && event.jhat.which == gamepad_1.instance_id)
+    else if (event.type == SDL_JOYHATMOTION && event.jhat.which == gamepad_3.instance_id)
     {
         uint32_t direction = SDL_HAT_CENTERED;
         switch (event.jhat.value)
@@ -92,7 +93,7 @@ bool input_modal_consume_event (SDL_Event event)
         consumed = true;
     }
 
-    else if (event.type == SDL_JOYAXISMOTION && event.jaxis.which == gamepad_1.instance_id)
+    else if (event.type == SDL_JOYAXISMOTION && event.jaxis.which == gamepad_3.instance_id)
     {
         if (event.jaxis.value > -1000 && event.jaxis.value < 1000)
         {
@@ -162,14 +163,34 @@ const char *button_mapping_to_string (Gamepad_Mapping b)
  */
 void snepulator_render_input_modal (void)
 {
-    if (ImGui::BeginPopupModal ("Configure input...", NULL, ImGuiWindowFlags_AlwaysAutoResize |
-                                                            ImGuiWindowFlags_NoMove |
-                                                            ImGuiWindowFlags_NoScrollbar))
+    if (ImGui::BeginPopupModal ("Configure device...", NULL, ImGuiWindowFlags_AlwaysAutoResize |
+                                                             ImGuiWindowFlags_NoMove |
+                                                             ImGuiWindowFlags_NoScrollbar))
     {
         int width = 512; /* TODO: Something more responsive */
         int height = 384;
 
-        /* TODO: Show name of the device we're configuring */
+        ImGui::PushItemWidth (width);
+        if (ImGui::BeginCombo ("##Device", gamepad_get_name (input_combo_index)))
+        {
+            for (int i = 0; i < gamepad_list_count; i++)
+            {
+                if (ImGui::Selectable (gamepad_get_name (i), i == 1))
+                {
+                    gamepad_change_device (3, i);
+                    map_to_edit = *gamepad_3_config;
+                    remap_button = GAMEPAD_BUTTON_COUNT;
+                    input_combo_index = i;
+                }
+                if (i == 0)
+                {
+                    ImGui::SetItemDefaultFocus ();
+                }
+            }
+            ImGui::EndCombo ();
+        }
+        ImGui::PopItemWidth ();
+
         /* Master System gamepad */
         ImGui::BeginChild ("SMS Gamepad", ImVec2 (width, height - 64), true);
         {
@@ -248,38 +269,37 @@ void snepulator_render_input_modal (void)
 
             }
             /* If we're not currently remapping, show the current gamepad state */
-            /* TODO: Something other than gamepad_1 */
             else
             {
-                if (gamepad_1.state[GAMEPAD_DIRECTION_UP])
+                if (gamepad_3.state[GAMEPAD_DIRECTION_UP])
                 {
                 draw_list->AddRectFilled (ImVec2 (origin.x + scale * 0.16, origin.y + scale * 0.08),
                                           ImVec2 (origin.x + scale * 0.38, origin.y + scale * 0.20), ButtonPressed, scale * 0.06);
                 }
-                if (gamepad_1.state[GAMEPAD_DIRECTION_DOWN])
+                if (gamepad_3.state[GAMEPAD_DIRECTION_DOWN])
                 {
                     draw_list->AddRectFilled (ImVec2 (origin.x + scale * 0.16, origin.y + scale * 0.20),
                                               ImVec2 (origin.x + scale * 0.38, origin.y + scale * 0.32), ButtonPressed, scale * 0.06);
                 }
-                if (gamepad_1.state[GAMEPAD_DIRECTION_LEFT])
+                if (gamepad_3.state[GAMEPAD_DIRECTION_LEFT])
                 {
                     draw_list->AddRectFilled (ImVec2 (origin.x + scale * 0.16, origin.y + scale * 0.08),
                                               ImVec2 (origin.x + scale * 0.27, origin.y + scale * 0.32), ButtonPressed, scale * 0.06);
                 }
-                if (gamepad_1.state[GAMEPAD_DIRECTION_RIGHT])
+                if (gamepad_3.state[GAMEPAD_DIRECTION_RIGHT])
                 {
                     draw_list->AddRectFilled (ImVec2 (origin.x + scale * 0.27, origin.y + scale * 0.08),
                                               ImVec2 (origin.x + scale * 0.38, origin.y + scale * 0.32), ButtonPressed, scale * 0.06);
                 }
-                if (gamepad_1.state[GAMEPAD_BUTTON_1])
+                if (gamepad_3.state[GAMEPAD_BUTTON_1])
                 {
                     draw_list->AddCircleFilled (ImVec2 ( origin.x + scale * 0.70, origin.y + scale * 0.25), scale * 0.06, ButtonPressed, 32);
                 }
-                if (gamepad_1.state[GAMEPAD_BUTTON_2])
+                if (gamepad_3.state[GAMEPAD_BUTTON_2])
                 {
                     draw_list->AddCircleFilled (ImVec2 (origin.x + scale * 0.87, origin.y + scale * 0.25), scale * 0.06, ButtonPressed, 32);
                 }
-                if (gamepad_1.state[GAMEPAD_BUTTON_START])
+                if (gamepad_3.state[GAMEPAD_BUTTON_START])
                 {
                     /* Nothing to highlight for the pause button yet */
                 }
@@ -323,6 +343,7 @@ void snepulator_render_input_modal (void)
             /* TODO: Restore the saved configuration */
 
             remap_button = GAMEPAD_BUTTON_COUNT;
+            gamepad_change_device (3, GAMEPAD_INDEX_NONE);
             if (state.ready)
             {
                 state.running = true;
@@ -354,6 +375,7 @@ void snepulator_render_input_modal (void)
             }
 
             remap_button = GAMEPAD_BUTTON_COUNT;
+            gamepad_change_device (3, GAMEPAD_INDEX_NONE);
             config_capture_events = false;
             ImGui::CloseCurrentPopup ();
         }
