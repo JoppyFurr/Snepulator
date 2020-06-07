@@ -95,17 +95,16 @@ bool input_modal_consume_event (SDL_Event event)
 
     else if (event.type == SDL_JOYAXISMOTION && event.jaxis.which == gamepad_3.instance_id)
     {
-        if (event.jaxis.value > -1000 && event.jaxis.value < 1000)
+        if (event.jaxis.value < -1000 || event.jaxis.value > 1000)
         {
-            consumed = true;
+            int32_t sign = (event.jaxis.value < 0) ? -1 : 1;
+
+            map_to_edit.mapping [remap_button].type = SDL_JOYAXISMOTION;
+            map_to_edit.mapping [remap_button].axis = event.jaxis.axis;
+            map_to_edit.mapping [remap_button].sign = sign;
+            remap_button++;
         }
 
-        int32_t sign = (event.jaxis.value < 0) ? -1 : 1;
-
-        map_to_edit.mapping [remap_button].type = SDL_JOYAXISMOTION;
-        map_to_edit.mapping [remap_button].axis = event.jaxis.axis;
-        map_to_edit.mapping [remap_button].sign = sign;
-        remap_button++;
         consumed = true;
     }
 
