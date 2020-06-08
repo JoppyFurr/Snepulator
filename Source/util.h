@@ -37,3 +37,6 @@ int32_t snepulator_load_rom (uint8_t **buffer, uint32_t *buffer_size, char *file
 
 /* Take a screenshot */
 void snepulator_take_screenshot (void);
+
+/* Convert a float_Colour to greyscale. */
+float_Colour to_greyscale (float_Colour c);

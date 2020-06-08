@@ -91,3 +91,6 @@ void system_init (void);
 
 /* Display an error message */
 void snepulator_error (const char *title, const char *message);
+
+/* Pause emulation and show the pause screen. */
+void snepulator_pause (void);
