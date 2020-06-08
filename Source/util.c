@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include <SDL2/SDL.h>
 
@@ -99,4 +100,25 @@ void snepulator_take_screenshot (void)
 
     SDL_FreeSurface (screenshot_surface);
     free (buffer);
+}
+
+/*
+ * Convert a float_Colour to greyscale.
+ */
+float_Colour to_greyscale (float_Colour c)
+{
+    /* Convert to linear colour */
+    c.r = (c.r < 0.04045) ? (c.r / 12.92) : pow ((c.r + 0.055) / 1.055, 2.4);
+    c.g = (c.g < 0.04045) ? (c.g / 12.92) : pow ((c.g + 0.055) / 1.055, 2.4);
+    c.b = (c.b < 0.04045) ? (c.b / 12.92) : pow ((c.b + 0.055) / 1.055, 2.4);
+
+    /* Convert linear colour to greyscale */
+    c.r = c.g = c.b = c.r * 0.2126 + c.g * 0.7152 + c.b * 0.0722;
+
+    /* Convert back to sRGB */
+    c.r = (c.r <= 0.0031308) ? (12.92 * c.r) : (1.055 * pow (c.r, 1.0 / 2.4) - 0.055);
+    c.g = (c.g <= 0.0031308) ? (12.92 * c.g) : (1.055 * pow (c.g, 1.0 / 2.4) - 0.055);
+    c.b = (c.b <= 0.0031308) ? (12.92 * c.b) : (1.055 * pow (c.b, 1.0 / 2.4) - 0.055);
+
+    return c;
 }

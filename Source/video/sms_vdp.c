@@ -46,7 +46,7 @@ extern Snepulator_State state;
     VDP_TO_FLOAT (0x0f), /* Light Yellow */ \
     VDP_TO_FLOAT (0x04), /* Dark Green */ \
     VDP_TO_FLOAT (0x33), /* Magenta */ \
-    VDP_TO_FLOAT (0x15), /* Gray */ \
+    VDP_TO_FLOAT (0x15), /* Grey */ \
     VDP_TO_FLOAT (0x3f)  /* White */ \
 }
 

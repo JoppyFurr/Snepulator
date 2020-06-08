@@ -38,6 +38,7 @@ extern "C" {
 /* Images */
 #include "../Images/snepulator_icon.c"
 #include "../Images/snepulator_logo.c"
+#include "../Images/snepulator_paused.c"
 
 /* Global state */
 Snepulator_State state;
@@ -256,6 +257,9 @@ void snepulator_reset (void)
 }
 
 
+/*
+ * Call the appropriate initialisation for the chosen ROM
+ */
 void system_init ()
 {
     char extension[16] = { '\0' };
@@ -288,6 +292,45 @@ void system_init ()
     {
         /* Default to Master System */
         sms_init ();
+    }
+}
+
+
+/*
+ * Pause emulation and show the pause screen.
+ */
+void snepulator_pause (void)
+{
+
+    state.running = false;
+
+    /* Convert the screen to black and white */
+    for (int x = 0; x < (VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES); x++)
+    {
+        state.video_out_texture_data [x] = to_greyscale (state.video_out_texture_data [x]);
+    }
+
+    /* Draw the "Pause" splash over the screen */
+    for (int y = 0; y < snepulator_paused.height; y++)
+    {
+        uint32_t x_offset = VIDEO_BUFFER_WIDTH / 2 - snepulator_paused.width / 2;
+        uint32_t y_offset = VIDEO_BUFFER_LINES / 2 - snepulator_paused.height / 2;
+
+        for (int x = 0; x < snepulator_paused.width; x++)
+        {
+            /* Treat black as transparent */
+            if (snepulator_paused.pixel_data [(x + y * snepulator_paused.width) * 3 + 0] == 0)
+            {
+                continue;
+            }
+
+            state.video_out_texture_data [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].r =
+                snepulator_paused.pixel_data [(x + y * snepulator_paused.width) * 3 + 0] / 255.0;
+            state.video_out_texture_data [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].g =
+                snepulator_paused.pixel_data [(x + y * snepulator_paused.width) * 3 + 1] / 255.0;
+            state.video_out_texture_data [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].b =
+                snepulator_paused.pixel_data [(x + y * snepulator_paused.width) * 3 + 2] / 255.0;
+        }
     }
 }
 
@@ -504,8 +547,7 @@ int main (int argc, char **argv)
                 /* If a player's joystick has been disconnected, pause the game */
                 if (event.type == SDL_JOYDEVICEREMOVED && gamepad_joystick_user_count (event.jdevice.which) != 0)
                 {
-                    /* TODO: Make it more obvious to the user that we've paused */
-                    state.running = false;
+                    snepulator_pause ();
                 }
 
                 gamepad_list_update ();

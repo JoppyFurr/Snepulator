@@ -89,7 +89,18 @@ void snepulator_render_menubar (void)
                 ImGui::EndMenu ();
             }
 
-            if (ImGui::MenuItem ("Pause", NULL, !state.running)) { if (state.ready) { state.running = !state.running; } }
+            if (ImGui::MenuItem ("Pause", NULL, !state.running)) {
+                if (state.ready) {
+                    if (state.running)
+                    {
+                        snepulator_pause ();
+                    }
+                    else
+                    {
+                        state.running = true;
+                    }
+                }
+            }
             ImGui::Separator ();
             if (ImGui::MenuItem ("Quit", NULL)) { state.abort = true; }
             ImGui::EndMenu ();
