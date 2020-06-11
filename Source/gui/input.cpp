@@ -73,24 +73,20 @@ bool input_modal_consume_event (SDL_Event event)
 
     else if (event.type == SDL_JOYHATMOTION && event.jhat.which == gamepad_3.instance_id)
     {
-        uint32_t direction = SDL_HAT_CENTERED;
         switch (event.jhat.value)
         {
             case SDL_HAT_UP:
             case SDL_HAT_DOWN:
             case SDL_HAT_LEFT:
             case SDL_HAT_RIGHT:
-                direction = event.jhat.value;
-                break;
+                map_to_edit.mapping [remap_button].type = SDL_JOYHATMOTION;
+                map_to_edit.mapping [remap_button].hat = event.jhat.hat;
+                map_to_edit.mapping [remap_button].direction = event.jhat.value;
+                remap_button++;
+                /* fall-through */
             default:
                 consumed = true;
         }
-
-        map_to_edit.mapping [remap_button].type = SDL_JOYHATMOTION;
-        map_to_edit.mapping [remap_button].hat = event.jhat.hat;
-        map_to_edit.mapping [remap_button].direction = direction;
-        remap_button++;
-        consumed = true;
     }
 
     else if (event.type == SDL_JOYAXISMOTION && event.jaxis.which == gamepad_3.instance_id)
