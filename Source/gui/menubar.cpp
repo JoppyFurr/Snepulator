@@ -34,7 +34,6 @@ extern Gamepad_Instance gamepad_list[10];
 extern uint32_t gamepad_list_count;
 extern Snepulator_Gamepad gamepad_1;
 extern Snepulator_Gamepad gamepad_2;
-extern uint32_t input_combo_index;
 }
 
 #include "gui/input.h"
@@ -219,8 +218,7 @@ void snepulator_render_menubar (void)
 
             if (ImGui::MenuItem ("Configure...", NULL))
             {
-                state.running = false;
-                input_combo_index = 0;
+                input_start ();
                 input_modal = true;
             }
             ImGui::EndMenu ();

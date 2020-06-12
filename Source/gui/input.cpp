@@ -33,12 +33,14 @@ extern uint32_t gamepad_list_count;
 
 extern Gamepad_Config *gamepad_3_config;
 extern Snepulator_Gamepad gamepad_3;
+extern Snepulator_Gamepad gamepad_1;
 }
 
 /* Global state */
 Gamepad_Config map_to_edit;
 uint32_t remap_button = GAMEPAD_BUTTON_COUNT;
-uint32_t input_combo_index = 0;
+
+static uint32_t input_combo_index = 0;
 
 /*
  * Pass an event to the input modal.
@@ -115,6 +117,29 @@ bool input_modal_consume_event (SDL_Event event)
 
 
 /*
+ * Open the input dialogue.
+ */
+void input_start (void)
+{
+    state.running = false;
+    input_combo_index = 0;
+
+    /* Initially selected device is player-1's device */
+    for (int i = 0; i < gamepad_list_count; i++)
+    {
+        if (gamepad_list [i].instance_id == gamepad_1.instance_id)
+        {
+            gamepad_change_device (3, i);
+            map_to_edit = *gamepad_3_config;
+            remap_button = GAMEPAD_BUTTON_COUNT;
+            input_combo_index = i;
+            break;
+        }
+    }
+}
+
+
+/*
  * Get a printable name for an input button.
  */
 const char *button_mapping_to_string (Gamepad_Mapping b)
@@ -170,7 +195,7 @@ void snepulator_render_input_modal (void)
         {
             for (int i = 0; i < gamepad_list_count; i++)
             {
-                if (ImGui::Selectable (gamepad_get_name (i), i == 1))
+                if (ImGui::Selectable (gamepad_get_name (i), i == input_combo_index))
                 {
                     gamepad_change_device (3, i);
                     map_to_edit = *gamepad_3_config;
