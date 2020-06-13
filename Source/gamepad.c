@@ -87,7 +87,7 @@ void gamepad_process_event (SDL_Event *event)
                 if ((config->mapping [i].type == SDL_JOYAXISMOTION) && (event->jaxis.axis == config->mapping [i].axis))
                 {
                     /* TODO: Make the deadzone configurable */
-                    gamepad->state [i] = ((event->jaxis.value * config->mapping [i].sign ) > 1000) ? 1 : 0;
+                    gamepad->state [i] = ((event->jaxis.value * config->mapping [i].sign ) > 16000) ? 1 : 0;
                 }
             }
         }
