@@ -93,9 +93,25 @@ bool input_modal_consume_event (SDL_Event event)
 
     else if (event.type == SDL_JOYAXISMOTION && event.jaxis.which == gamepad_3.instance_id)
     {
-        if (event.jaxis.value < -1000 || event.jaxis.value > 1000)
+        /* If an axis is triggered, ignore all axis motions while it returns to the centre */
+        static bool waiting = false;
+        static uint32_t waiting_axis;
+
+        printf ("Value: %d.\n", event.jaxis.value);
+
+        if (waiting)
+        {
+            if (event.jaxis.axis == waiting_axis && event.jaxis.value < 4000 && event.jaxis.value > -4000)
+            {
+                waiting = false;
+            }
+        }
+        else if (event.jaxis.value > 16000 || event.jaxis.value < -16000)
         {
             int32_t sign = (event.jaxis.value < 0) ? -1 : 1;
+
+            waiting = true;
+            waiting_axis = event.jaxis.axis;
 
             map_to_edit.mapping [remap_button].type = SDL_JOYAXISMOTION;
             map_to_edit.mapping [remap_button].axis = event.jaxis.axis;
