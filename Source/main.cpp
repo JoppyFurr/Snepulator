@@ -48,6 +48,30 @@ bool config_capture_events = false;
 bool input_modal_consume_event (SDL_Event event);
 void snepulator_render_input_modal (void);
 
+
+/*
+ * Draw the logo to the output texture.
+ */
+void draw_logo (void)
+{
+    for (int y = 0; y < snepulator_logo.height; y++)
+    {
+        uint32_t x_offset = VIDEO_BUFFER_WIDTH / 2 - snepulator_logo.width / 2;
+        uint32_t y_offset = VIDEO_BUFFER_LINES / 2 - snepulator_logo.height / 2;
+
+        for (int x = 0; x < snepulator_logo.width; x++)
+        {
+            state.video_out_texture_data [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].r =
+                snepulator_logo.pixel_data [(x + y * snepulator_logo.width) * 3 + 0] / 255.0;
+            state.video_out_texture_data [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].g =
+                snepulator_logo.pixel_data [(x + y * snepulator_logo.width) * 3 + 1] / 255.0;
+            state.video_out_texture_data [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].b =
+                snepulator_logo.pixel_data [(x + y * snepulator_logo.width) * 3 + 2] / 255.0;
+        }
+    }
+}
+
+
 /*
  * Display an error message.
  */
@@ -86,8 +110,9 @@ void snepulator_render_error ()
 
         ImGui::Spacing ();
         ImGui::SameLine (ImGui::GetContentRegionAvail().x + 16 - 128);
-        if (ImGui::Button ("Exit", ImVec2 (120,0))) {
-            state.abort = true;
+        if (ImGui::Button ("Close", ImVec2 (120,0))) {
+            draw_logo ();
+            ImGui::CloseCurrentPopup ();
         }
         ImGui::EndPopup ();
     }
@@ -473,23 +498,7 @@ int main (int argc, char **argv)
     glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     float Float4_Black[4] = { 0.0, 0.0, 0.0, 0.0 };
     glTexParameterfv (GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, Float4_Black);
-
-    /* Load the logo to display before a rom is loaded */
-    for (int y = 0; y < snepulator_logo.height; y++)
-    {
-        uint32_t x_offset = VIDEO_BUFFER_WIDTH / 2 - snepulator_logo.width / 2;
-        uint32_t y_offset = VIDEO_BUFFER_LINES / 2 - snepulator_logo.height / 2;
-
-        for (int x = 0; x < snepulator_logo.width; x++)
-        {
-            state.video_out_texture_data [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].r =
-                snepulator_logo.pixel_data [(x + y * snepulator_logo.width) * 3 + 0] / 255.0;
-            state.video_out_texture_data [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].g =
-                snepulator_logo.pixel_data [(x + y * snepulator_logo.width) * 3 + 1] / 255.0;
-            state.video_out_texture_data [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].b =
-                snepulator_logo.pixel_data [(x + y * snepulator_logo.width) * 3 + 2] / 255.0;
-        }
-    }
+    draw_logo ();
 
     /* Open the default audio device */
     audio_device_id = SDL_OpenAudioDevice (NULL, 0, &desired_audiospec, &obtained_audiospec,
