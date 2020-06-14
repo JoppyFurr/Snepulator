@@ -293,6 +293,8 @@ void gamepad_update_mapping (Gamepad_Config new_config)
  */
 const char *gamepad_get_name (uint32_t index)
 {
+    /* TODO: Make this dynamic */
+    static char name_data [10] [80];
     const char *name = NULL;
 
     /* First, check for hard-coded names */
@@ -323,7 +325,10 @@ const char *gamepad_get_name (uint32_t index)
         name = "Unknown Joystick";
     }
 
-    return name;
+    /* Finally, store the name, along with a unique tag */
+    sprintf (name_data [index], "%s##%d", name, index);
+
+    return name_data [index];
 }
 
 /*
