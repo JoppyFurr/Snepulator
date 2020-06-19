@@ -426,7 +426,6 @@ static uint8_t tms9918a_mode_get (void)
 void tms9918a_render_line (const TMS9918A_Config *config, uint16_t line)
 {
     float_Colour video_background =     { .r = 0.0f, .g = 0.0f, .b = 0.0f };
-    float_Colour video_background_dim = { .r = 0.0f, .g = 0.0f, .b = 0.0f };
 
     state.video_out_first_active_line = (VIDEO_BUFFER_LINES - config->lines_active) / 2;
 
@@ -439,12 +438,8 @@ void tms9918a_render_line (const TMS9918A_Config *config, uint16_t line)
     {
         video_background = config->palette [tms9918a_state.regs.background_colour & 0x0f];
     }
-    video_background_dim.r = video_background.r * 0.5;
-    video_background_dim.g = video_background.g * 0.5;
-    video_background_dim.b = video_background.b * 0.5;
 
-    /* Note: For now the top/bottom borders just copy the background from the first
-     *       and last active lines. Do any games change the value outside of this? */
+    /* Note: The top/bottom borders use the background colour of the first and last active lines. */
 
     /* Top border */
     if (line == 0)
@@ -453,7 +448,7 @@ void tms9918a_render_line (const TMS9918A_Config *config, uint16_t line)
         {
             for (int x = 0; x < VIDEO_BUFFER_WIDTH; x++)
             {
-                tms9918a_state.frame_current [x + top_line * VIDEO_BUFFER_WIDTH] = video_background_dim;
+                tms9918a_state.frame_current [x + top_line * VIDEO_BUFFER_WIDTH] = video_background;
             }
         }
     }
@@ -461,9 +456,7 @@ void tms9918a_render_line (const TMS9918A_Config *config, uint16_t line)
     /* Side borders */
     for (int x = 0; x < VIDEO_BUFFER_WIDTH; x++)
     {
-        bool border = x < VIDEO_SIDE_BORDER || x >= VIDEO_SIDE_BORDER + 256;
-
-        tms9918a_state.frame_current [x + (state.video_out_first_active_line + line) * VIDEO_BUFFER_WIDTH] = (border ? video_background_dim : video_background);
+        tms9918a_state.frame_current [x + (state.video_out_first_active_line + line) * VIDEO_BUFFER_WIDTH] = video_background;
     }
 
     /* Bottom border */
@@ -473,7 +466,7 @@ void tms9918a_render_line (const TMS9918A_Config *config, uint16_t line)
         {
             for (int x = 0; x < VIDEO_BUFFER_WIDTH; x++)
             {
-                tms9918a_state.frame_current [x + bottom_line * VIDEO_BUFFER_WIDTH] = video_background_dim;
+                tms9918a_state.frame_current [x + bottom_line * VIDEO_BUFFER_WIDTH] = video_background;
             }
         }
     }
@@ -534,7 +527,7 @@ void tms9918a_run_one_scanline (void)
     {
         state.video_width = 256;
         state.video_height = 192;
-        memcpy (state.video_out_texture_data, tms9918a_state.frame_current, sizeof (tms9918a_state.frame_current));
+        memcpy (state.video_out_data, tms9918a_state.frame_current, sizeof (tms9918a_state.frame_current));
 
         /* Update statistics (rolling average) */
         static int vdp_previous_completion_time = 0;

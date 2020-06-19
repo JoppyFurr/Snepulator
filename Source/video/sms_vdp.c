@@ -473,7 +473,6 @@ void sms_vdp_render_mode4_sprites_line (const TMS9918A_Config *mode, uint16_t li
 void sms_vdp_render_line (const TMS9918A_Config *config, uint16_t line)
 {
     float_Colour video_background =     { .r = 0.0f, .g = 0.0f, .b = 0.0f };
-    float_Colour video_background_dim = { .r = 0.0f, .g = 0.0f, .b = 0.0f };
 
     state.video_out_first_active_line = (VIDEO_BUFFER_LINES - config->lines_active) / 2;
 
@@ -494,10 +493,6 @@ void sms_vdp_render_line (const TMS9918A_Config *config, uint16_t line)
     {
         video_background = config->palette [tms9918a_state.regs.background_colour & 0x0f];
     }
-    video_background_dim.r = video_background.r * 0.5;
-    video_background_dim.g = video_background.g * 0.5;
-    video_background_dim.b = video_background.b * 0.5;
-
     /* Note: For now the top/bottom borders just copy the background from the first
      *       and last active lines. Do any games change the value outside of this? */
 
@@ -508,7 +503,7 @@ void sms_vdp_render_line (const TMS9918A_Config *config, uint16_t line)
         {
             for (int x = 0; x < VIDEO_BUFFER_WIDTH; x++)
             {
-                tms9918a_state.frame_current [x + top_line * VIDEO_BUFFER_WIDTH] = video_background_dim;
+                tms9918a_state.frame_current [x + top_line * VIDEO_BUFFER_WIDTH] = video_background;
             }
         }
     }
@@ -516,10 +511,16 @@ void sms_vdp_render_line (const TMS9918A_Config *config, uint16_t line)
     /* Side borders */
     for (int x = 0; x < VIDEO_BUFFER_WIDTH; x++)
     {
-        bool border = x < VIDEO_SIDE_BORDER || x >= VIDEO_SIDE_BORDER + 256 ||
-                      (tms9918a_state.regs.ctrl_0 & SMS_VDP_CTRL_0_MASK_COL_1 && x < VIDEO_SIDE_BORDER + 8);
+        tms9918a_state.frame_current [x + (state.video_out_first_active_line + line) * VIDEO_BUFFER_WIDTH] = video_background;
+    }
 
-        tms9918a_state.frame_current [x + (state.video_out_first_active_line + line) * VIDEO_BUFFER_WIDTH] = (border ? video_background_dim : video_background);
+    if (tms9918a_state.regs.ctrl_0 & SMS_VDP_CTRL_0_MASK_COL_1)
+    {
+        state.video_extra_left_border = 8;
+    }
+    else
+    {
+        state.video_extra_left_border = 0;
     }
 
     /* Bottom border */
@@ -529,7 +530,7 @@ void sms_vdp_render_line (const TMS9918A_Config *config, uint16_t line)
         {
             for (int x = 0; x < VIDEO_BUFFER_WIDTH; x++)
             {
-                tms9918a_state.frame_current [x + bottom_line * VIDEO_BUFFER_WIDTH] = video_background_dim;
+                tms9918a_state.frame_current [x + bottom_line * VIDEO_BUFFER_WIDTH] = video_background;
             }
         }
     }
@@ -607,7 +608,7 @@ void sms_vdp_run_one_scanline ()
     {
         state.video_width = 256;
         state.video_height = config->lines_active;
-        memcpy (state.video_out_texture_data, tms9918a_state.frame_current, sizeof (tms9918a_state.frame_current));
+        memcpy (state.video_out_data, tms9918a_state.frame_current, sizeof (tms9918a_state.frame_current));
 
         /* Update statistics (rolling average) */
         static int vdp_previous_completion_time = 0;

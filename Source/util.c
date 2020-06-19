@@ -66,6 +66,7 @@ int32_t snepulator_load_rom (uint8_t **buffer, uint32_t *buffer_size, char *file
     return EXIT_SUCCESS;
 }
 
+
 /*
  * Take a screenshot.
  */
@@ -84,9 +85,9 @@ void snepulator_take_screenshot (void)
     {
         for (int x = 0; x < width; x++)
         {
-            buffer [(x + y * width) * 3 + 0] = state.video_out_texture_data [x + VIDEO_SIDE_BORDER + (y + state.video_out_first_active_line) * stride].r * 255.0;
-            buffer [(x + y * width) * 3 + 1] = state.video_out_texture_data [x + VIDEO_SIDE_BORDER + (y + state.video_out_first_active_line) * stride].g * 255.0;
-            buffer [(x + y * width) * 3 + 2] = state.video_out_texture_data [x + VIDEO_SIDE_BORDER + (y + state.video_out_first_active_line) * stride].b * 255.0;
+            buffer [(x + y * width) * 3 + 0] = state.video_out_data [x + VIDEO_SIDE_BORDER + (y + state.video_out_first_active_line) * stride].r * 255.0;
+            buffer [(x + y * width) * 3 + 1] = state.video_out_data [x + VIDEO_SIDE_BORDER + (y + state.video_out_first_active_line) * stride].g * 255.0;
+            buffer [(x + y * width) * 3 + 2] = state.video_out_data [x + VIDEO_SIDE_BORDER + (y + state.video_out_first_active_line) * stride].b * 255.0;
         }
     }
 
@@ -101,6 +102,7 @@ void snepulator_take_screenshot (void)
     SDL_FreeSurface (screenshot_surface);
     free (buffer);
 }
+
 
 /*
  * Convert a float_Colour to greyscale.
@@ -121,4 +123,29 @@ float_Colour to_greyscale (float_Colour c)
     c.b = (c.b <= 0.0031308) ? (12.92 * c.b) : (1.055 * pow (c.b, 1.0 / 2.4) - 0.055);
 
     return c;
+}
+
+
+/*
+ * Dim the non-active part of the video_out_texture.
+ */
+void video_dim (uint32_t x_scale, uint32_t y_scale)
+{
+    uint32_t stride = VIDEO_BUFFER_WIDTH * x_scale;
+
+    for (uint32_t y = 0; y < VIDEO_BUFFER_LINES * y_scale; y++)
+    {
+        for (uint32_t x = 0; x < stride; x++)
+        {
+            if ( ( (y / y_scale) < state.video_out_first_active_line) ||                        /* Top border */
+                 ( (y / y_scale) >= state.video_out_first_active_line + state.video_height) ||  /* Bottom border */
+                 ( (x / x_scale) < VIDEO_SIDE_BORDER + state.video_extra_left_border ) ||       /* Left border */
+                 ( (x / x_scale) >= VIDEO_SIDE_BORDER + state.video_width ))                    /* Right border */
+            {
+                state.video_out_texture_data [x + y * stride].r *= 0.5;
+                state.video_out_texture_data [x + y * stride].g *= 0.5;
+                state.video_out_texture_data [x + y * stride].b *= 0.5;
+            }
+        }
+    }
 }

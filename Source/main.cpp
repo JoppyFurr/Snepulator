@@ -61,11 +61,11 @@ void draw_logo (void)
 
         for (int x = 0; x < snepulator_logo.width; x++)
         {
-            state.video_out_texture_data [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].r =
+            state.video_out_data [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].r =
                 snepulator_logo.pixel_data [(x + y * snepulator_logo.width) * 3 + 0] / 255.0;
-            state.video_out_texture_data [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].g =
+            state.video_out_data [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].g =
                 snepulator_logo.pixel_data [(x + y * snepulator_logo.width) * 3 + 1] / 255.0;
-            state.video_out_texture_data [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].b =
+            state.video_out_data [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].b =
                 snepulator_logo.pixel_data [(x + y * snepulator_logo.width) * 3 + 2] / 255.0;
         }
     }
@@ -263,6 +263,9 @@ void snepulator_reset (void)
     state.audio_callback = NULL;
     state.get_clock_rate = NULL;
 
+    /* Clear additonal video parameters */
+    state.video_extra_left_border = 0;
+
     /* Free memory */
     if (state.ram != NULL)
     {
@@ -332,7 +335,7 @@ void snepulator_pause (void)
     /* Convert the screen to black and white */
     for (int x = 0; x < (VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES); x++)
     {
-        state.video_out_texture_data [x] = to_greyscale (state.video_out_texture_data [x]);
+        state.video_out_data [x] = to_greyscale (state.video_out_data [x]);
     }
 
     /* Draw the "Pause" splash over the screen */
@@ -349,11 +352,11 @@ void snepulator_pause (void)
                 continue;
             }
 
-            state.video_out_texture_data [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].r =
+            state.video_out_data [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].r =
                 snepulator_paused.pixel_data [(x + y * snepulator_paused.width) * 3 + 0] / 255.0;
-            state.video_out_texture_data [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].g =
+            state.video_out_data [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].g =
                 snepulator_paused.pixel_data [(x + y * snepulator_paused.width) * 3 + 1] / 255.0;
-            state.video_out_texture_data [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].b =
+            state.video_out_data [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].b =
                 snepulator_paused.pixel_data [(x + y * snepulator_paused.width) * 3 + 2] / 255.0;
         }
     }
@@ -569,8 +572,6 @@ int main (int argc, char **argv)
 
         /* RENDER VDP */
         glBindTexture (GL_TEXTURE_2D, video_out_texture);
-        glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, state.video_filter);
-        glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, state.video_filter);
         glTexParameterfv (GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, Float4_Black);
 
         switch (state.video_filter)
@@ -578,12 +579,20 @@ int main (int argc, char **argv)
             case VIDEO_FILTER_NEAREST:
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+                memcpy (state.video_out_texture_data, state.video_out_data, sizeof (state.video_out_data));
+                video_dim (1, 1);
+
                 glTexImage2D    (GL_TEXTURE_2D, 0, GL_RGB, VIDEO_BUFFER_WIDTH, VIDEO_BUFFER_LINES, 0, GL_RGB, GL_FLOAT,
                                  state.video_out_texture_data);
                 break;
             case VIDEO_FILTER_LINEAR:
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+                memcpy (state.video_out_texture_data, state.video_out_data, sizeof (state.video_out_data));
+                video_dim (1, 1);
+
                 glTexImage2D    (GL_TEXTURE_2D, 0, GL_RGB, VIDEO_BUFFER_WIDTH, VIDEO_BUFFER_LINES, 0, GL_RGB, GL_FLOAT,
                                  state.video_out_texture_data);
                 break;
@@ -591,8 +600,8 @@ int main (int argc, char **argv)
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-                float_Colour *source = state.video_out_texture_data;
-                float_Colour *dest   = state.video_out_texture_data_scanlines;
+                float_Colour *source = state.video_out_data;
+                float_Colour *dest   = state.video_out_texture_data;
 
                 /* Prescale by 2x3, then add scanlines */
                 uint32_t output_width  = VIDEO_BUFFER_WIDTH * 2;
@@ -627,8 +636,9 @@ int main (int argc, char **argv)
                         }
                     }
                 }
+                video_dim (2, 3);
                 glTexImage2D    (GL_TEXTURE_2D, 0, GL_RGB, VIDEO_BUFFER_WIDTH * 2, VIDEO_BUFFER_LINES * 3, 0, GL_RGB, GL_FLOAT,
-                                 state.video_out_texture_data_scanlines);
+                                 state.video_out_texture_data);
                 break;
         }
 
