@@ -35,8 +35,11 @@ typedef struct float_Colour_s {
 /* Load a rom file into a buffer. The buffer should be freed when no-longer needed. */
 int32_t snepulator_load_rom (uint8_t **buffer, uint32_t *buffer_size, char *filename);
 
-/* Take a screenshot */
+/* Take a screenshot. */
 void snepulator_take_screenshot (void);
 
 /* Convert a float_Colour to greyscale. */
 float_Colour to_greyscale (float_Colour c);
+
+/* Dim the non-active part of the video_out_texture. */
+void video_dim (uint32_t x_scale, uint32_t y_scale);

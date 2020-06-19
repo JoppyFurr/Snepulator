@@ -58,9 +58,10 @@ typedef struct Snepulator_State_s {
 
     /* Video */
     Video_Filter video_filter;
-    float_Colour video_out_texture_data [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
-    float_Colour video_out_texture_data_scanlines [VIDEO_BUFFER_WIDTH * 2 * VIDEO_BUFFER_LINES * 3];
+    float_Colour video_out_data [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
+    float_Colour video_out_texture_data [VIDEO_BUFFER_WIDTH * 2 * VIDEO_BUFFER_LINES * 3];
     uint32_t     video_out_first_active_line;
+    uint32_t     video_extra_left_border;
     uint32_t     video_height;
     uint32_t     video_width;
     int          host_width;
