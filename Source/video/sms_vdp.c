@@ -23,13 +23,9 @@ extern Snepulator_State state;
 #define SMS_VDP_CRAM_SIZE (32)
 
 /* Macros */
-#define VDP_TO_RED(C)   ((0xff / 3) * (((C) & 0x03) >> 0))
-#define VDP_TO_GREEN(C) ((0xff / 3) * (((C) & 0x0c) >> 2))
-#define VDP_TO_BLUE(C)  ((0xff / 3) * (((C) & 0x30) >> 4))
-
-/* TODO: Does the v_counter exist outside of Mode4? */
-
-#define VDP_TO_FLOAT(C) { .r = VDP_TO_RED (C) / 255.0f, .g = VDP_TO_GREEN (C) / 255.0f, .b = VDP_TO_BLUE (C) / 255.0f }
+#define VDP_TO_FLOAT(C) { .r = ((0xff / 3) * (((C) & 0x03) >> 0)) / 255.0f, \
+                          .g = ((0xff / 3) * (((C) & 0x0c) >> 2)) / 255.0f, \
+                          .b = ((0xff / 3) * (((C) & 0x30) >> 4)) / 255.0f }
 
 #define SMS_VDP_LEGACY_PALETTE { \
     VDP_TO_FLOAT (0x00), /* Transparent */ \
@@ -49,6 +45,8 @@ extern Snepulator_State state;
     VDP_TO_FLOAT (0x15), /* Grey */ \
     VDP_TO_FLOAT (0x3f)  /* White */ \
 }
+
+/* TODO: Does the v_counter exist outside of Mode4? */
 
 /* Display mode details */
 static const TMS9918A_Config Mode0_PAL = {
@@ -120,6 +118,8 @@ static const TMS9918A_Config Mode4_NTSC240 = {
                        { .first = 0x00, .last = 0x06 } }
 };
 
+float_Colour vdp_to_float [64] = { };
+
 
 /* SMS VDP State */
 extern TMS9918A_State tms9918a_state;
@@ -130,6 +130,12 @@ static uint8_t cram [SMS_VDP_CRAM_SIZE];
  */
 void sms_vdp_init (void)
 {
+    /* Populate vdp_to_float colour table */
+    for (uint32_t i = 0; i < 64; i++)
+    {
+        vdp_to_float [i] = (float_Colour) VDP_TO_FLOAT(i);
+    }
+
     /* TODO: Are there any nonzero default values? */
     memset (&tms9918a_state.regs, 0, sizeof (tms9918a_state.regs));
     memset (&tms9918a_state.vram, 0, sizeof (tms9918a_state.vram));
@@ -321,9 +327,8 @@ void sms_vdp_render_mode4_pattern_line (const TMS9918A_Config *mode, uint16_t li
 
         uint8_t pixel = cram[palette + colour_index];
 
-        tms9918a_state.frame_current [(offset.x + x + VIDEO_SIDE_BORDER) + (state.video_out_first_active_line + line) * VIDEO_BUFFER_WIDTH].r = VDP_TO_RED   (pixel) / 255.0f;
-        tms9918a_state.frame_current [(offset.x + x + VIDEO_SIDE_BORDER) + (state.video_out_first_active_line + line) * VIDEO_BUFFER_WIDTH].g = VDP_TO_GREEN (pixel) / 255.0f;
-        tms9918a_state.frame_current [(offset.x + x + VIDEO_SIDE_BORDER) + (state.video_out_first_active_line + line) * VIDEO_BUFFER_WIDTH].b = VDP_TO_BLUE  (pixel) / 255.0f;
+        tms9918a_state.frame_current [(offset.x + x + VIDEO_SIDE_BORDER) + (state.video_out_first_active_line + line) * VIDEO_BUFFER_WIDTH] = vdp_to_float [pixel];
+
     }
 }
 
@@ -485,9 +490,7 @@ void sms_vdp_render_line (const TMS9918A_Config *config, uint16_t line)
     {
         uint8_t bg_colour;
         bg_colour = cram [16 + (tms9918a_state.regs.background_colour & 0x0f)];
-        video_background.r = VDP_TO_RED   (bg_colour) / 255.0f;
-        video_background.g = VDP_TO_GREEN (bg_colour) / 255.0f;
-        video_background.b = VDP_TO_BLUE  (bg_colour) / 255.0f;
+        video_background = vdp_to_float [bg_colour];
     }
     else
     {
