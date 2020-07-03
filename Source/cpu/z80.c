@@ -601,6 +601,8 @@ uint32_t z80_ix_iy_bit_instruction (uint16_t reg_ix_iy_w)
 
 
 void z80_instruction (void);
+
+/* TODO: Additional cycles? */
 #define FALL_THROUGH() { PC--; z80_instruction (); }
 
 
@@ -708,7 +710,7 @@ uint16_t z80_ix_iy_instruction (uint16_t reg_ix_iy_in)
         case 0x4d: /* LD C,IXL     */ C = reg_ix_iy.l;          CYCLES (8);     break;
         case 0x4e: /* LD C,(IX+*)  */ C = memory_read (reg_ix_iy.w + (int8_t) N);
                                                                 CYCLES (19);    break;
-        case 0x4f: /* -            */ PC--; z80_instruction ();                 break;
+        case 0x4f: /* -            */ FALL_THROUGH ();                          break;
 
         case 0x50: /* -            */ FALL_THROUGH ();                          break;
         case 0x51: /* -            */ FALL_THROUGH ();                          break;
@@ -773,54 +775,65 @@ uint16_t z80_ix_iy_instruction (uint16_t reg_ix_iy_in)
         case 0x7f: /* -            */ FALL_THROUGH ();                          break;
 
         case 0x84: /* ADD A,IXH    */ SET_FLAGS_ADD (A, reg_ix_iy.h);
-                                      A += reg_ix_iy.h;                         break;
+                                      A += reg_ix_iy.h;         CYCLES (8);     break;
         case 0x85: /* ADD A,IXL    */ SET_FLAGS_ADD (A, reg_ix_iy.l);
-                                      A += reg_ix_iy.l;                         break;
+                                      A += reg_ix_iy.l;         CYCLES (8);     break;
         case 0x86: /* ADD A,(IX+*) */ temp = memory_read (reg_ix_iy.w + (int8_t) N);
                                       SET_FLAGS_ADD (A, temp);
                                       A += temp;                CYCLES (19);    break;
 
         case 0x8c: /* ADC A,IXH    */ temp = reg_ix_iy.h + CARRY_BIT;
                                       SET_FLAGS_ADC (reg_ix_iy.h);
-                                      A += temp;                                break;
+                                      A += temp;                CYCLES (8);     break;
         case 0x8d: /* ADC A,IXL    */ temp = reg_ix_iy.l + CARRY_BIT;
-                                      SET_FLAGS_ADC (reg_ix_iy.l); A += temp;   break;
+                                      SET_FLAGS_ADC (reg_ix_iy.l);
+                                      A += temp;                CYCLES (8);     break;
         case 0x8e: /* ADC A,(IX+*) */ value_read = memory_read (reg_ix_iy.w + (int8_t) N);
                                       temp = value_read + CARRY_BIT;
                                       SET_FLAGS_ADC (value_read);
                                       A += temp;                CYCLES (19);    break;
 
         case 0x94: /* SUB A,IXH    */ SET_FLAGS_SUB (A, reg_ix_iy.h);
-                                      A -= reg_ix_iy.h;                         break;
+                                      A -= reg_ix_iy.h;         CYCLES (8);     break;
         case 0x95: /* SUB A,IXL    */ SET_FLAGS_SUB (A, reg_ix_iy.l);
-                                      A -= reg_ix_iy.l;                         break;
+                                      A -= reg_ix_iy.l;         CYCLES (8);     break;
         case 0x96: /* SUB A,(IX+*) */ temp = memory_read (reg_ix_iy.w + (int8_t) N);
                                       SET_FLAGS_SUB (A, temp);
                                       A -= temp;                CYCLES (19);    break;
         case 0x9c: /* SBC A,IXH    */ temp = reg_ix_iy.h + CARRY_BIT;
-                                      SET_FLAGS_SBC (reg_ix_iy.h); A -= temp;   break;
+                                      SET_FLAGS_SBC (reg_ix_iy.h);
+                                      A -= temp;                CYCLES (8);     break;
         case 0x9d: /* SBC A,IXL    */ temp = reg_ix_iy.l + CARRY_BIT;
-                                      SET_FLAGS_SBC (reg_ix_iy.l); A -= temp;   break;
+                                      SET_FLAGS_SBC (reg_ix_iy.l);
+                                      A -= temp;                CYCLES (8);     break;
         case 0x9e: /* SBC A,(IX+*) */ value_read= memory_read (reg_ix_iy.w + (int8_t) N);
                                       temp = value_read + CARRY_BIT;
                                       SET_FLAGS_SBC (value_read);
                                       A -= temp;                CYCLES (19);    break;
 
-        case 0xa4: /* AND A,IXH    */ A &= reg_ix_iy.h; SET_FLAGS_AND;          break;
-        case 0xa5: /* AND A,IXL    */ A &= reg_ix_iy.l; SET_FLAGS_AND;          break;
+        case 0xa4: /* AND A,IXH    */ A &= reg_ix_iy.h; SET_FLAGS_AND;
+                                                                CYCLES (8);     break;
+        case 0xa5: /* AND A,IXL    */ A &= reg_ix_iy.l; SET_FLAGS_AND;
+                                                                CYCLES (8);     break;
         case 0xa6: /* AND A,(IX+*) */ A &= memory_read (reg_ix_iy.w + (int8_t) N);
                                       SET_FLAGS_AND;            CYCLES (19);    break;
-        case 0xac: /* XOR A,IXH    */ A ^= reg_ix_iy.h; SET_FLAGS_OR_XOR;       break;
-        case 0xad: /* XOR A,IXL    */ A ^= reg_ix_iy.l; SET_FLAGS_OR_XOR;       break;
+        case 0xac: /* XOR A,IXH    */ A ^= reg_ix_iy.h; SET_FLAGS_OR_XOR;
+                                                                CYCLES (8);     break;
+        case 0xad: /* XOR A,IXL    */ A ^= reg_ix_iy.l; SET_FLAGS_OR_XOR;
+                                                                CYCLES (8);     break;
         case 0xae: /* XOR A,(IX+*) */ A ^= memory_read (reg_ix_iy.w + (int8_t) N);
                                       SET_FLAGS_OR_XOR;         CYCLES (19);    break;
 
-        case 0xb4: /* OR A,IXH     */ A |= reg_ix_iy.h; SET_FLAGS_OR_XOR;       break;
-        case 0xb5: /* OR A,IXL     */ A |= reg_ix_iy.l; SET_FLAGS_OR_XOR;       break;
+        case 0xb4: /* OR A,IXH     */ A |= reg_ix_iy.h; SET_FLAGS_OR_XOR;
+                                                                CYCLES (8);     break;
+        case 0xb5: /* OR A,IXL     */ A |= reg_ix_iy.l; SET_FLAGS_OR_XOR;
+                                                                CYCLES (8);     break;
         case 0xb6: /* OR A,(IX+*)  */ A |= memory_read (reg_ix_iy.w + (int8_t) N);
                                       SET_FLAGS_OR_XOR;         CYCLES (19);    break;
-        case 0xbc: /* CP  A,IXH    */ SET_FLAGS_SUB (A, reg_ix_iy.h);           break;
-        case 0xbd: /* CP  A,IXL    */ SET_FLAGS_SUB (A, reg_ix_iy.l);           break;
+        case 0xbc: /* CP  A,IXH    */ SET_FLAGS_SUB (A, reg_ix_iy.h);
+                                                                CYCLES (8);     break;
+        case 0xbd: /* CP  A,IXL    */ SET_FLAGS_SUB (A, reg_ix_iy.l);
+                                                                CYCLES (8);     break;
         case 0xbe: /* CP  A,(IX+*) */ temp = memory_read (reg_ix_iy.w + (int8_t) N);
                                       SET_FLAGS_SUB (A, temp);  CYCLES (19);    break;
 
