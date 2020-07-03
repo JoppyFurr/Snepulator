@@ -54,6 +54,8 @@ void snepulator_render_input_modal (void);
  */
 void draw_logo (void)
 {
+    memset (state.video_out_data, 0, sizeof (state.video_out_data));
+
     for (int y = 0; y < snepulator_logo.height; y++)
     {
         uint32_t x_offset = VIDEO_BUFFER_WIDTH / 2 - snepulator_logo.width / 2;
