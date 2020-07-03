@@ -348,6 +348,7 @@ uint32_t z80_extended_instruction ()
         case 0x4d: /* RETI       */ z80_regs.pc_l = memory_read (SP++);
                                     z80_regs.pc_h = memory_read (SP++);
                                                                 CYCLES (14);    break; /* TODO: Signals the IO device that the interrupt is handled? */
+        case 0x4f: /* LD R, A    */ R = A;                      CYCLES (9);     break;
 
         case 0x51: /* OUT (C),D  */ io_write (C, D);            CYCLES (12);    break;
         case 0x52: /* SBC HL,DE  */ temp_16 = DE + CARRY_BIT;
@@ -463,6 +464,12 @@ uint32_t z80_extended_instruction ()
                                         PC -= 2;                CYCLES (21); }
                                     else {                      CYCLES (16); }
                                     SET_FLAGS_CPD_CPI (temp_1);                 break;
+        case 0xb2: /* INIR       */ memory_write (HL, io_read (z80_regs.c));
+                                    HL++; z80_regs.b--;
+                                    F = (F      & Z80_FLAG_CARRY) |
+                                        (Z80_FLAG_SUB | Z80_FLAG_ZERO );
+                                    if (B == 0) {               CYCLES (16); }
+                                    else { PC -= 2;             CYCLES (21); }  break;
         case 0xb3: /* OTIR       */ io_write (C, memory_read (HL));
                                     HL++; B--;
                                     F = (F & Z80_FLAG_CARRY) |
@@ -843,6 +850,12 @@ uint16_t z80_ix_iy_instruction (uint16_t reg_ix_iy_in)
         case 0xe1: /* POP IX       */ reg_ix_iy.l = memory_read (SP++);
                                       reg_ix_iy.h = memory_read (SP++);
                                                                 CYCLES (14);    break;
+        case 0xe3: /* EX (SP),IX */ temp = reg_ix_iy.l;
+                                    reg_ix_iy.l = memory_read (SP);
+                                    memory_write (SP, temp);
+                                    temp = reg_ix_iy.h;
+                                    reg_ix_iy.h = memory_read (SP + 1);
+                                    memory_write (SP + 1, temp); CYCLES (23);   break;
         case 0xe5: /* PUSH IX      */ memory_write (--SP, reg_ix_iy.h);
                                       memory_write (--SP, reg_ix_iy.l);
                                                                 CYCLES (15);    break;
