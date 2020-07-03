@@ -115,6 +115,13 @@ void snepulator_render_error ()
         if (ImGui::Button ("Close", ImVec2 (120,0))) {
             draw_logo ();
             ImGui::CloseCurrentPopup ();
+
+            /* Reset the error popup */
+            free (state.error_title);
+            state.error_title = NULL;
+            free (state.error_message);
+            state.error_message = NULL;
+            first = true;
         }
         ImGui::EndPopup ();
     }
