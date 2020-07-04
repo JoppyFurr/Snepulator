@@ -100,7 +100,7 @@ static uint8_t colecovision_io_read (uint8_t addr)
     /* Controller input */
     else if (addr >= 0xe0 && addr <= 0xff)
     {
-        if (addr & 0x02)
+        if ((addr & 0x02) == 0)
         {
             if (colecovision_input_mode == COLECOVISION_INPUT_MODE_JOYSTICK)
             {
