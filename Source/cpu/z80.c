@@ -1548,18 +1548,20 @@ void z80_run_cycles (uint64_t cycles)
         if (instructions_before_interrupts)
             instructions_before_interrupts--;
 
-        /* TODO: Make this less Master System specific */
         if (!instructions_before_interrupts)
         {
-            /* First, check for non-maskable interrupts */
-            if (state.get_nmi ())
+            /* First, check for a non-maskable interrupt (edge-triggerd) */
+            static bool nmi_previous = 0;
+            bool nmi = state.get_nmi ();
+            if (nmi && nmi_previous == 0)
             {
                 IFF1 = false;
-                /* TODO: Cycle count? */
+                CYCLES (11);
                 memory_write (--SP, z80_regs.pc_h);
                 memory_write (--SP, z80_regs.pc_l);
                 PC = 0x66;
             }
+            nmi_previous = nmi;
 
             /* Then check for maskable interrupts */
             if (IFF1 && state.get_int())
