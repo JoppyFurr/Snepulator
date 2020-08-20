@@ -444,9 +444,9 @@ void tms9918a_render_line (const TMS9918A_Config *config, uint16_t line)
     /* Top border */
     if (line == 0)
     {
-        for (int top_line = 0; top_line < state.video_out_first_active_line; top_line++)
+        for (uint32_t top_line = 0; top_line < state.video_out_first_active_line; top_line++)
         {
-            for (int x = 0; x < VIDEO_BUFFER_WIDTH; x++)
+            for (uint32_t x = 0; x < VIDEO_BUFFER_WIDTH; x++)
             {
                 tms9918a_state.frame_current [x + top_line * VIDEO_BUFFER_WIDTH] = video_background;
             }
@@ -462,9 +462,9 @@ void tms9918a_render_line (const TMS9918A_Config *config, uint16_t line)
     /* Bottom border */
     if (line == config->lines_active - 1)
     {
-        for (int bottom_line = state.video_out_first_active_line + config->lines_active; bottom_line < VIDEO_BUFFER_LINES; bottom_line++)
+        for (uint32_t bottom_line = state.video_out_first_active_line + config->lines_active; bottom_line < VIDEO_BUFFER_LINES; bottom_line++)
         {
-            for (int x = 0; x < VIDEO_BUFFER_WIDTH; x++)
+            for (uint32_t x = 0; x < VIDEO_BUFFER_WIDTH; x++)
             {
                 tms9918a_state.frame_current [x + bottom_line * VIDEO_BUFFER_WIDTH] = video_background;
             }

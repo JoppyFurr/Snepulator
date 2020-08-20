@@ -200,7 +200,7 @@ void gamepad_list_update (void)
         SDL_JoystickGUID guid = SDL_JoystickGetDeviceGUID (device_id);
 
         /* Find config for device */
-        for (int i = 0; i < gamepad_config_count; i++)
+        for (uint32_t i = 0; i < gamepad_config_count; i++)
         {
             if (memcmp (&gamepad_config [i].guid, &guid, sizeof (SDL_JoystickGUID)) == 0)
             {
@@ -272,7 +272,7 @@ void gamepad_update_mapping (Gamepad_Config new_config)
 {
     char guid_string [33];
 
-    for (int i = 0; i < gamepad_config_count; i++)
+    for (uint32_t i = 0; i < gamepad_config_count; i++)
     {
         if (memcmp (&gamepad_config [i].guid, &new_config.guid, sizeof (SDL_JoystickGUID)) == 0)
         {
