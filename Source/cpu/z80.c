@@ -347,7 +347,7 @@ uint32_t z80_extended_instruction ()
                                     B = memory_read (NN + 1);   CYCLES (20);    break;
         case 0x4d: /* RETI       */ z80_regs.pc_l = memory_read (SP++);
                                     z80_regs.pc_h = memory_read (SP++);
-                                                                CYCLES (14);    break; /* TODO: Signals the IO device that the interrupt is handled? */
+                                                                CYCLES (14);    break;
         case 0x4f: /* LD R, A    */ R = A;                      CYCLES (9);     break;
 
         case 0x51: /* OUT (C),D  */ io_write (C, D);            CYCLES (12);    break;
@@ -1556,10 +1556,10 @@ void z80_run_cycles (uint64_t cycles)
             if (nmi && nmi_previous == 0)
             {
                 IFF1 = false;
-                CYCLES (11);
                 memory_write (--SP, z80_regs.pc_h);
                 memory_write (--SP, z80_regs.pc_l);
                 PC = 0x66;
+                CYCLES (11);
             }
             nmi_previous = nmi;
 
@@ -1582,6 +1582,7 @@ void z80_run_cycles (uint64_t cycles)
                         memory_write (--SP, z80_regs.pc_h);
                         memory_write (--SP, z80_regs.pc_l);
                         PC = 0x38;
+                        CYCLES (11);
                         break;
                     default:
                         snprintf (state.error_buffer, 79, "Unsupported interrupt mode %d.", z80_regs.im);

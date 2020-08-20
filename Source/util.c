@@ -81,9 +81,9 @@ void snepulator_take_screenshot (void)
     buffer = malloc (state.video_width * state.video_height * 3);
 
     /* Convert from float to uint8_t */
-    for (int y = 0; y < height; y++)
+    for (uint32_t y = 0; y < height; y++)
     {
-        for (int x = 0; x < width; x++)
+        for (uint32_t x = 0; x < width; x++)
         {
             buffer [(x + y * width) * 3 + 0] = state.video_out_data [x + VIDEO_SIDE_BORDER + (y + state.video_out_first_active_line) * stride].r * 255.0;
             buffer [(x + y * width) * 3 + 1] = state.video_out_data [x + VIDEO_SIDE_BORDER + (y + state.video_out_first_active_line) * stride].g * 255.0;
