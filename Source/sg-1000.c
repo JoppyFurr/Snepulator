@@ -222,9 +222,15 @@ static uint32_t sg_1000_get_clock_rate ()
 /*
  * Emulate the SG-1000 for the specified length of time.
  */
-static void sg_1000_run (double ms)
+static void sg_1000_run (uint32_t ms)
 {
-    int lines = (ms * sg_1000_get_clock_rate () / 228.0) / 1000.0;
+    /* TODO: Make these calculations common */
+    static uint64_t millicycles = 0;
+    uint64_t lines;
+
+    millicycles += (uint64_t) ms * sg_1000_get_clock_rate();
+    lines = millicycles / 228000;
+    millicycles -= lines * 228000;
 
     while (lines--)
     {
