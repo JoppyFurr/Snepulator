@@ -36,8 +36,19 @@ eval $CC $CFLAGS -c Source/colecovision.c   -o Work/colecovision.o
 # C Libraries
 eval $CC $CFLAGS -c Libraries/SDL_SavePNG/savepng.c -o Work/SDL_SavePNG.o
 
+# OS-specific compiler options
+if [ $(uname) = "Darwin" ]
+then
+    # MacOS
+    DATE=$(date "+%Y-%m-%d")
+    OSFLAGS="-framework OpenGL -framework CoreFoundation"
+else
+    # Linux
+    DATE=$(date --rfc-3339=date)
+    OSFLAGS="-lGL"
+fi
+
 # Compile C++11 GUI and link to the rest of the code.
-DATE=`date --rfc-3339=date`
 eval $CXX \
     Work/*.o \
     Source/main.cpp \
@@ -53,6 +64,7 @@ eval $CXX \
     -I Libraries/imgui-1.76/ \
     -I Libraries/imgui-1.76/examples/libs/gl3w/ \
     `sdl2-config --libs` \
-    -lGL -ldl -lpng -lm -DBUILD_DATE=\\\"$DATE\\\" \
+    -ldl -lpng -lm -DBUILD_DATE=\\\"$DATE\\\" \
     -lpthread \
+    $OSFLAGS \
     -o Snepulator -std=c++11
