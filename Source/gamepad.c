@@ -118,6 +118,7 @@ void gamepad_process_event (SDL_Event *event)
     }
 }
 
+
 /*
  * Generate a configuration entry for a new gamepad.
  *
@@ -183,6 +184,7 @@ static uint32_t gamepad_config_create (int32_t device_id)
     return gamepad_config_count++;
 }
 
+
 /*
  * Refresh the list of detected gamepads.
  */
@@ -222,6 +224,7 @@ void gamepad_list_update (void)
 
     /* TODO: Check if an in-use gamepad was disconnected and pause the game */
 }
+
 
 /*
  * Initialise gamepad support.
@@ -331,6 +334,7 @@ const char *gamepad_get_name (uint32_t index)
     return name_data [index];
 }
 
+
 /*
  * Return the number of players using the specified joystick instance_id.
  */
@@ -349,6 +353,7 @@ uint32_t gamepad_joystick_user_count (uint32_t instance_id)
 
     return count;
 }
+
 
 /*
  * Change input device for a player's gamepad.

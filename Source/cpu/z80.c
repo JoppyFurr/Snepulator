@@ -66,7 +66,7 @@ uint8_t instructions_before_interrupts = 0;
 
 #define X 1 /* Extended */
 #define U 0 /* Unused */
-static const uint8_t z80_instruction_size[256] = {
+static const uint8_t z80_instruction_size [256] = {
     1, 3, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1,
     2, 3, 1, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 1, 2, 1,
     2, 3, 3, 1, 1, 1, 2, 1, 2, 1, 3, 1, 1, 1, 2, 1,
@@ -85,7 +85,7 @@ static const uint8_t z80_instruction_size[256] = {
     1, 1, 3, 1, 3, 1, 2, 1, 1, 1, 3, 1, 3, X, 2, 1,
 };
 
-static const uint8_t z80_instruction_size_extended[256] = {
+static const uint8_t z80_instruction_size_extended [256] = {
     U, U, U, U, U, U, U, U, U, U, U, U, U, U, U, U,
     U, U, U, U, U, U, U, U, U, U, U, U, U, U, U, U,
     U, U, U, U, U, U, U, U, U, U, U, U, U, U, U, U,
@@ -104,7 +104,7 @@ static const uint8_t z80_instruction_size_extended[256] = {
     U, U, U, U, U, U, U, U, U, U, U, U, U, U, U, U,
 };
 
-static const uint8_t z80_instruction_size_ix[256] = {
+static const uint8_t z80_instruction_size_ix [256] = {
     U, U, U, U, U, U, U, U, U, 1, U, U, U, U, U, U,
     U, U, U, U, U, U, U, U, U, 1, U, U, U, U, U, U,
     U, 3, 3, 1, 1, 1, 2, U, U, 1, 3, 1, 1, 1, 2, U,
@@ -124,7 +124,7 @@ static const uint8_t z80_instruction_size_ix[256] = {
     U, U, U, U, U, U, U, U, U, 1, U, U, U, U, U, U,
 };
 
-static const uint8_t uint8_even_parity[256] = {
+static const uint8_t uint8_even_parity [256] = {
     1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,
     0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0,
     0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0,
@@ -164,14 +164,15 @@ void z80_init (uint8_t (* _memory_read) (uint16_t),
     SP = 0xffff;
 }
 
-#define SET_FLAGS_AND { F = (uint8_even_parity[z80_regs.a] ? Z80_FLAG_PARITY : 0) | \
-                            (                                Z80_FLAG_HALF      ) | \
-                            (A == 0x00            ? Z80_FLAG_ZERO   : 0) | \
-                            ((A & 0x80)           ? Z80_FLAG_SIGN   : 0); }
 
-#define SET_FLAGS_OR_XOR { F = (uint8_even_parity[z80_regs.a] ? Z80_FLAG_PARITY : 0) | \
-                               (A == 0x00                     ? Z80_FLAG_ZERO   : 0) | \
-                               ((A & 0x80)                    ? Z80_FLAG_SIGN   : 0); }
+#define SET_FLAGS_AND { F = (uint8_even_parity [z80_regs.a] ? Z80_FLAG_PARITY : 0) | \
+                            (                                 Z80_FLAG_HALF      ) | \
+                            (A == 0x00                      ? Z80_FLAG_ZERO   : 0) | \
+                            ((A & 0x80)                     ? Z80_FLAG_SIGN   : 0); }
+
+#define SET_FLAGS_OR_XOR { F = (uint8_even_parity [z80_regs.a] ? Z80_FLAG_PARITY : 0) | \
+                               (A == 0x00                      ? Z80_FLAG_ZERO   : 0) | \
+                               ((A & 0x80)                     ? Z80_FLAG_SIGN   : 0); }
 
 #define SET_FLAGS_ADD(X,Y) { F = (((uint16_t)X + (uint16_t)Y) & 0x100                    ? Z80_FLAG_CARRY    : 0) | \
                                  (((((int16_t)(int8_t)X) + ((int16_t)(int8_t)Y)) >  127 ||                          \
@@ -254,35 +255,35 @@ void z80_init (uint8_t (* _memory_read) (uint16_t),
 #define SET_FLAGS_RLCA(X) { F = (F & (Z80_FLAG_PARITY | Z80_FLAG_ZERO | Z80_FLAG_SIGN)) | \
                                 ((X & 0x01)                           ? Z80_FLAG_CARRY : 0); }
 
-#define SET_FLAGS_RLC(X) { F = (uint8_even_parity[X]                   ? Z80_FLAG_PARITY : 0) | \
+#define SET_FLAGS_RLC(X) { F = (uint8_even_parity [X]                  ? Z80_FLAG_PARITY : 0) | \
                                ((X & 0x01)                             ? Z80_FLAG_CARRY  : 0) | \
                                (X == 0x00                              ? Z80_FLAG_ZERO   : 0) | \
                                ((X & 0x80)                             ? Z80_FLAG_SIGN   : 0); }
 
-#define SET_FLAGS_RRC(X) { F = (uint8_even_parity[X]                   ? Z80_FLAG_PARITY : 0) | \
+#define SET_FLAGS_RRC(X) { F = (uint8_even_parity [X]                  ? Z80_FLAG_PARITY : 0) | \
                                ((X & 0x80)                             ? Z80_FLAG_CARRY  : 0) | \
                                (X == 0x00                              ? Z80_FLAG_ZERO   : 0) | \
                                ((X & 0x80)                             ? Z80_FLAG_SIGN   : 0); }
 
-#define SET_FLAGS_RL(X) { F = (uint8_even_parity[X]                    ? Z80_FLAG_PARITY : 0) | \
+#define SET_FLAGS_RL(X) { F = (uint8_even_parity [X]                   ? Z80_FLAG_PARITY : 0) | \
                               (X == 0x00                               ? Z80_FLAG_ZERO   : 0) | \
                               ((X & 0x80)                              ? Z80_FLAG_SIGN   : 0); }
 
-#define SET_FLAGS_RR(X) { F = (uint8_even_parity[X]                    ? Z80_FLAG_PARITY : 0) | \
+#define SET_FLAGS_RR(X) { F = (uint8_even_parity [X]                   ? Z80_FLAG_PARITY : 0) | \
                               (X == 0x00                               ? Z80_FLAG_ZERO   : 0) | \
                               ((X & 0x80)                              ? Z80_FLAG_SIGN   : 0); }
 
 #define SET_FLAGS_RRD_RLD { F = (F                                & Z80_FLAG_CARRY)      | \
-                                (uint8_even_parity[z80_regs.a]    ? Z80_FLAG_PARITY : 0) | \
+                                (uint8_even_parity [z80_regs.a]   ? Z80_FLAG_PARITY : 0) | \
                                 (A == 0x00                        ? Z80_FLAG_ZERO   : 0) | \
                                 (A & 0x80                         ? Z80_FLAG_SIGN   : 0); }
 
 
 #define IN_C(X) { X = io_read (C);                                   \
-                  F = (F                    & Z80_FLAG_CARRY     ) | \
-                      (X & 0x80             ? Z80_FLAG_SIGN   : 0) | \
-                      (X == 0               ? Z80_FLAG_ZERO   : 0) | \
-                      (uint8_even_parity[X] ? Z80_FLAG_PARITY : 0); }
+                  F = (F                     & Z80_FLAG_CARRY     ) | \
+                      (X & 0x80              ? Z80_FLAG_SIGN   : 0) | \
+                      (X == 0                ? Z80_FLAG_ZERO   : 0) | \
+                      (uint8_even_parity [X] ? Z80_FLAG_PARITY : 0); }
 
 
 /*
@@ -304,7 +305,7 @@ uint32_t z80_extended_instruction ()
         };
     } param;
 
-    switch (z80_instruction_size_extended[instruction])
+    switch (z80_instruction_size_extended [instruction])
     {
         case 3:
             param.l = memory_read (PC++);
@@ -874,6 +875,7 @@ uint16_t z80_ix_iy_instruction (uint16_t reg_ix_iy_in)
     return reg_ix_iy.w;
 }
 
+
 /*
  * Read and execute a bit instruction.
  * Called after reading the 0xcb prefix.
@@ -1033,12 +1035,12 @@ void z80_instruction_daa ()
     else
         A += diff;
 
-    F = (F                    & Z80_FLAG_SUB       ) |
-        (uint8_even_parity[A] ? Z80_FLAG_PARITY : 0) |
-        (set_carry            ? Z80_FLAG_CARRY  : 0) |
-        (set_half             ? Z80_FLAG_HALF   : 0) |
-        (A == 0x00            ? Z80_FLAG_ZERO   : 0) |
-        (A & 0x80             ? Z80_FLAG_SIGN   : 0);
+    F = (F                     & Z80_FLAG_SUB       ) |
+        (uint8_even_parity [A] ? Z80_FLAG_PARITY : 0) |
+        (set_carry             ? Z80_FLAG_CARRY  : 0) |
+        (set_half              ? Z80_FLAG_HALF   : 0) |
+        (A == 0x00             ? Z80_FLAG_ZERO   : 0) |
+        (A & 0x80              ? Z80_FLAG_SIGN   : 0);
 }
 
 #define LD(X,Y) { X = Y; }
@@ -1097,7 +1099,7 @@ void z80_instruction ()
     /* Fetch */
     instruction = memory_read (PC++);
 
-    switch (z80_instruction_size[instruction])
+    switch (z80_instruction_size [instruction])
     {
         case 3:
             param.l = memory_read (PC++);
@@ -1564,7 +1566,7 @@ void z80_run_cycles (uint64_t cycles)
             nmi_previous = nmi;
 
             /* Then check for maskable interrupts */
-            if (IFF1 && state.get_int())
+            if (IFF1 && state.get_int ())
             {
                 if (z80_regs.halt)
                 {
