@@ -103,7 +103,7 @@ uint8_t tms9918a_data_read ()
 
     tms9918a_state.first_byte_received = false;
 
-    tms9918a_state.read_buffer = tms9918a_state.vram[tms9918a_state.address];
+    tms9918a_state.read_buffer = tms9918a_state.vram [tms9918a_state.address];
 
     tms9918a_state.address = (tms9918a_state.address + 1) & 0x3fff;
 
@@ -124,7 +124,7 @@ void tms9918a_data_write (uint8_t value)
         case TMS9918A_CODE_VRAM_READ:
         case TMS9918A_CODE_VRAM_WRITE:
         case TMS9918A_CODE_REG_WRITE:
-            tms9918a_state.vram[tms9918a_state.address] = value;
+            tms9918a_state.vram [tms9918a_state.address] = value;
             break;
 
         default:
@@ -283,7 +283,7 @@ void tms9918a_render_sprites_line (const TMS9918A_Config *config, uint16_t line)
      * Done in reverse order so that the first sprite is the one left on the screen */
     while (line_sprite_count--)
     {
-        TMS9918A_Sprite *sprite = line_sprite_buffer[line_sprite_count];
+        TMS9918A_Sprite *sprite = line_sprite_buffer [line_sprite_count];
         uint8_t pattern_index = sprite->pattern;
 
         /* The most-significant bit of the colour byte decides if we 'early-clock' the sprite */
@@ -356,8 +356,8 @@ void tms9918a_render_mode0_background_line (const TMS9918A_Config *config, uint1
         uint16_t tile = tms9918a_state.vram [name_table_base + ((tile_y << 5) | tile_x)];
 
         /* TODO: Is the base-address in bytes, or in patterns? */
-        TMS9918A_Pattern *pattern = (TMS9918A_Pattern *) &tms9918a_state.vram[pattern_generator_base + (tile * sizeof (TMS9918A_Pattern))];
-        uint8_t colours = tms9918a_state.vram[colour_table_base + (tile >> 3)];
+        TMS9918A_Pattern *pattern = (TMS9918A_Pattern *) &tms9918a_state.vram [pattern_generator_base + (tile * sizeof (TMS9918A_Pattern))];
+        uint8_t colours = tms9918a_state.vram [colour_table_base + (tile >> 3)];
 
         position.x = 8 * tile_x;
         position.y = 8 * tile_y;
@@ -400,9 +400,9 @@ void tms9918a_render_mode2_background_line (const TMS9918A_Config *config, uint1
         uint16_t colour_tile  = tile & ((((uint16_t) tms9918a_state.regs.colour_table_base) << 3) | 0x07);
 
         /* TODO: Is the base-address in bytes, or in patterns? */
-        TMS9918A_Pattern *pattern = (TMS9918A_Pattern *) &tms9918a_state.vram[pattern_generator_base + (pattern_tile * sizeof (TMS9918A_Pattern))];
+        TMS9918A_Pattern *pattern = (TMS9918A_Pattern *) &tms9918a_state.vram [pattern_generator_base + (pattern_tile * sizeof (TMS9918A_Pattern))];
 
-        uint8_t colours = tms9918a_state.vram[colour_table_base + colour_tile * 8 + (line & 0x07)];
+        uint8_t colours = tms9918a_state.vram [colour_table_base + colour_tile * 8 + (line & 0x07)];
 
         position.x = 8 * tile_x;
         position.y = 8 * tile_y;

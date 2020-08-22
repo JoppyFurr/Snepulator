@@ -41,14 +41,14 @@ static uint8_t colecovision_memory_read (uint16_t addr)
         if (state.bios != NULL)
         {
 
-            return state.bios[(addr) & (state.bios_size - 1)];
+            return state.bios [(addr) & (state.bios_size - 1)];
         }
     }
 
     /* 1 KiB RAM (mirrored) */
     if (addr >= 0x6000 && addr <= 0x7fff)
     {
-        return state.ram[addr & (COLECOVISION_RAM_SIZE - 1)];
+        return state.ram [addr & (COLECOVISION_RAM_SIZE - 1)];
     }
 
     /* Cartridge slot */
@@ -56,7 +56,7 @@ static uint8_t colecovision_memory_read (uint16_t addr)
     {
         if (state.rom != NULL)
         {
-            return state.rom[addr & (state.rom_size - 1)];
+            return state.rom [addr & (state.rom_size - 1)];
         }
     }
 
@@ -72,7 +72,7 @@ static void colecovision_memory_write (uint16_t addr, uint8_t data)
     /* 1 KiB RAM (mirrored) */
     if (addr >= 0x6000 && addr <= 0x7fff)
     {
-        state.ram[addr & (COLECOVISION_RAM_SIZE - 1)] = data;
+        state.ram [addr & (COLECOVISION_RAM_SIZE - 1)] = data;
     }
 }
 
@@ -263,7 +263,7 @@ static void colecovision_run (uint32_t ms)
     static uint64_t millicycles = 0;
     uint64_t lines;
 
-    millicycles += (uint64_t) ms * colecovision_get_clock_rate();
+    millicycles += (uint64_t) ms * colecovision_get_clock_rate ();
     lines = millicycles / 228000;
     millicycles -= lines * 228000;
 
@@ -277,6 +277,7 @@ static void colecovision_run (uint32_t ms)
         tms9918a_run_one_scanline ();
     }
 }
+
 
 /*
  * Maskable interrupt line is not used.

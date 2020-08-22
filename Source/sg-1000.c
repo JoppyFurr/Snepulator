@@ -26,7 +26,7 @@ extern Snepulator_Gamepad gamepad_2;
 #define SG_1000_RAM_SIZE (1 << 10)
 
 /* Sega Mapper */
-static uint8_t mapper_bank[3] = { 0x00, 0x01, 0x02 };
+static uint8_t mapper_bank [3] = { 0x00, 0x01, 0x02 };
 
 
 /*
@@ -37,8 +37,8 @@ static uint8_t sg_1000_memory_read (uint16_t addr)
     /* Cartridge slot */
     if (addr >= 0x0000 && addr <= 0xbfff)
     {
-        uint8_t  slot = (addr >> 14);
-        uint32_t bank_base = mapper_bank[slot] * ((uint32_t) 16 << 10);
+        uint8_t slot = (addr >> 14);
+        uint32_t bank_base = mapper_bank [slot] * ((uint32_t) 16 << 10);
         uint16_t offset    = addr & 0x3fff;
 
         /* The first 1 KiB of slot 0 is not affected by mapping */
@@ -47,14 +47,14 @@ static uint8_t sg_1000_memory_read (uint16_t addr)
 
         if (state.rom != NULL)
         {
-            return state.rom[(bank_base + offset) & (state.rom_size - 1)];
+            return state.rom [(bank_base + offset) & (state.rom_size - 1)];
         }
     }
 
     /* 1 KiB RAM (mirrored) */
     if (addr >= 0xc000 && addr <= 0xffff)
     {
-        return state.ram[addr & (SG_1000_RAM_SIZE - 1)];
+        return state.ram [addr & (SG_1000_RAM_SIZE - 1)];
     }
 
     return 0xff;
@@ -75,21 +75,21 @@ static void sg_1000_memory_write (uint16_t addr, uint8_t data)
     }
     else if (addr == 0xfffd)
     {
-        mapper_bank[0] = data & 0x3f;
+        mapper_bank [0] = data & 0x3f;
     }
     else if (addr == 0xfffe)
     {
-        mapper_bank[1] = data & 0x3f;
+        mapper_bank [1] = data & 0x3f;
     }
     else if (addr == 0xffff)
     {
-        mapper_bank[2] = data & 0x3f;
+        mapper_bank [2] = data & 0x3f;
     }
 
     /* 1 KiB RAM (mirrored) */
     if (addr >= 0xc000 && addr <= 0xffff)
     {
-        state.ram[addr & (SG_1000_RAM_SIZE - 1)] = data;
+        state.ram [addr & (SG_1000_RAM_SIZE - 1)] = data;
     }
 }
 
@@ -228,7 +228,7 @@ static void sg_1000_run (uint32_t ms)
     static uint64_t millicycles = 0;
     uint64_t lines;
 
-    millicycles += (uint64_t) ms * sg_1000_get_clock_rate();
+    millicycles += (uint64_t) ms * sg_1000_get_clock_rate ();
     lines = millicycles / 228000;
     millicycles -= lines * 228000;
 
@@ -250,9 +250,9 @@ static void sg_1000_run (uint32_t ms)
 void sg_1000_init (void)
 {
     /* Reset the mapper */
-    mapper_bank[0] = 0;
-    mapper_bank[1] = 1;
-    mapper_bank[2] = 2;
+    mapper_bank [0] = 0;
+    mapper_bank [1] = 1;
+    mapper_bank [2] = 2;
 
     /* Create RAM */
     state.ram = calloc (SG_1000_RAM_SIZE, 1);

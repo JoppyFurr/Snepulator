@@ -32,7 +32,7 @@ uint8_t memory_control = 0x00;
 uint8_t io_control = 0x00;
 
 /* Sega Mapper */
-static uint8_t mapper_bank[3] = { 0x00, 0x01, 0x02 };
+static uint8_t mapper_bank [3] = { 0x00, 0x01, 0x02 };
 
 /* 0: Output
  * 1: Input */
@@ -60,8 +60,8 @@ static uint8_t sms_memory_read (uint16_t addr)
     /* Cartridge, card, BIOS, expansion slot */
     if (addr >= 0x0000 && addr <= 0xbfff)
     {
-        uint8_t  slot = (addr >> 14);
-        uint32_t bank_base = mapper_bank[slot] * ((uint32_t) 16 << 10);
+        uint8_t slot = (addr >> 14);
+        uint32_t bank_base = mapper_bank [slot] * ((uint32_t) 16 << 10);
         uint16_t offset    = addr & 0x3fff;
 
         /* The first 1 KiB of slot 0 is not affected by mapping */
@@ -69,16 +69,16 @@ static uint8_t sms_memory_read (uint16_t addr)
             bank_base = 0;
 
         if (state.bios != NULL && !(memory_control & SMS_MEMORY_CTRL_BIOS_DISABLE))
-            return state.bios[(bank_base + offset) & (state.bios_size - 1)];
+            return state.bios [(bank_base + offset) & (state.bios_size - 1)];
 
         if (state.rom != NULL && !(memory_control & SMS_MEMORY_CTRL_CART_DISABLE))
-            return state.rom[(bank_base + offset) & (state.rom_size - 1)];
+            return state.rom [(bank_base + offset) & (state.rom_size - 1)];
     }
 
     /* 8 KiB RAM + mirror */
     if (addr >= 0xc000 && addr <= 0xffff)
     {
-        return state.ram[addr & (SMS_RAM_SIZE - 1)];
+        return state.ram [addr & (SMS_RAM_SIZE - 1)];
     }
 
     return 0xff;
@@ -104,15 +104,15 @@ static void sms_memory_write (uint16_t addr, uint8_t data)
     }
     else if (addr == 0xfffd)
     {
-        mapper_bank[0] = data & 0x3f;
+        mapper_bank [0] = data & 0x3f;
     }
     else if (addr == 0xfffe)
     {
-        mapper_bank[1] = data & 0x3f;
+        mapper_bank [1] = data & 0x3f;
     }
     else if (addr == 0xffff)
     {
-        mapper_bank[2] = data & 0x3f;
+        mapper_bank [2] = data & 0x3f;
     }
 
     /* CodeMasters Mapper */
@@ -121,15 +121,15 @@ static void sms_memory_write (uint16_t addr, uint8_t data)
      *  2. The first 1KB is not protected. */
     if (addr == 0x0000)
     {
-        mapper_bank[0] = data & 0x3f;
+        mapper_bank [0] = data & 0x3f;
     }
     if (addr == 0x4000)
     {
-        mapper_bank[1] = data & 0x3f;
+        mapper_bank [1] = data & 0x3f;
     }
     else if (addr == 0x8000)
     {
-        mapper_bank[2] = data & 0x3f;
+        mapper_bank [2] = data & 0x3f;
     }
 
     /* Cartridge, card, BIOS, expansion slot */
@@ -140,7 +140,7 @@ static void sms_memory_write (uint16_t addr, uint8_t data)
     /* RAM + mirror */
     if (addr >= 0xc000 && addr <= 0xffff)
     {
-        state.ram[addr & (SMS_RAM_SIZE - 1)] = data;
+        state.ram [addr & (SMS_RAM_SIZE - 1)] = data;
     }
 }
 
@@ -342,7 +342,7 @@ static void sms_run (uint32_t ms)
     static uint64_t millicycles = 0;
     uint64_t lines;
 
-    millicycles += (uint64_t) ms * sms_get_clock_rate();
+    millicycles += (uint64_t) ms * sms_get_clock_rate ();
     lines = millicycles / 228000;
     millicycles -= lines * 228000;
 
@@ -364,9 +364,9 @@ static void sms_run (uint32_t ms)
 void sms_init (void)
 {
     /* Reset the mapper */
-    mapper_bank[0] = 0;
-    mapper_bank[1] = 1;
-    mapper_bank[2] = 2;
+    mapper_bank [0] = 0;
+    mapper_bank [1] = 1;
+    mapper_bank [2] = 2;
 
     /* Create RAM */
     state.ram = calloc (SMS_RAM_SIZE, 1);

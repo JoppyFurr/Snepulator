@@ -50,9 +50,9 @@ static int32_t config_section_get (ConfigSection **section_ptr, char const *sect
     /* First, check if the section exists */
     for (uint32_t i = 0; i < config.section_count; i++)
     {
-        if (strcmp (section_name, config.section[i].name) == 0)
+        if (strcmp (section_name, config.section [i].name) == 0)
         {
-            section = &config.section[i];
+            section = &config.section [i];
             break;
         }
     }
@@ -111,9 +111,9 @@ static int32_t config_entry_get (ConfigEntry **entry_ptr, char const *section_na
     /* Check if the entry already exists */
     for (uint32_t i = 0; i < section->entry_count; i++)
     {
-        if (strcmp (key, section->entry[i].key) == 0)
+        if (strcmp (key, section->entry [i].key) == 0)
         {
-            entry = &section->entry[i];
+            entry = &section->entry [i];
         }
     }
 
@@ -458,7 +458,7 @@ int32_t config_read (void)
             }
 
             /* Unsigned Integer */
-            else if (isdigit(buffer[0]))
+            else if (isdigit (buffer [0]))
             {
                 config_uint_set (section, key, strtoul (buffer, NULL, 0));
             }
@@ -495,13 +495,13 @@ int32_t config_write (void)
     /* Now, export the configuration structure to file */
     for (uint32_t s = 0; s < config.section_count; s++)
     {
-        ConfigSection *section = &config.section[s];
+        ConfigSection *section = &config.section [s];
 
         fprintf (config_file, "[%s]\n", section->name);
 
         for (uint32_t e = 0; e < section->entry_count; e++)
         {
-            ConfigEntry *entry = &section->entry[e];
+            ConfigEntry *entry = &section->entry [e];
 
             switch (entry->type)
             {

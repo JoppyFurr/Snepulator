@@ -289,5 +289,5 @@ void sn76489_get_samples (int16_t *stream, int count)
         stream [i] = psg_sample_ring [read_index % PSG_RING_SIZE];
 
         soundcard_sample_count++;
-   }
+    }
 }
