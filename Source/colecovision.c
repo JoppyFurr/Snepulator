@@ -245,7 +245,7 @@ static void colecovision_audio_callback (void *userdata, uint8_t *stream, int le
  */
 static uint32_t colecovision_get_clock_rate ()
 {
-    if (state.system == VIDEO_SYSTEM_PAL)
+    if (state.format == VIDEO_FORMAT_PAL)
     {
         return COLECOVISION_CLOCK_RATE_PAL;
     }

@@ -12,10 +12,10 @@ typedef enum Video_Filter_e {
     VIDEO_FILTER_SCANLINES,
 } Video_Filter;
 
-typedef enum Video_System_e {
-    VIDEO_SYSTEM_NTSC,
-    VIDEO_SYSTEM_PAL
-} Video_System;
+typedef enum Video_Format_e {
+    VIDEO_FORMAT_NTSC,
+    VIDEO_FORMAT_PAL
+} Video_Format;
 
 typedef enum Console_Region_t {
     REGION_WORLD,
@@ -53,7 +53,7 @@ typedef struct Snepulator_State_s {
     uint32_t bios_size;
 
     /* Console configuration */
-    Video_System system;
+    Video_Format format;
     Console_Region region;
 
     /* Video */

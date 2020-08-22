@@ -573,26 +573,26 @@ void sms_vdp_run_one_scanline ()
     switch (mode)
     {
         case TMS9918A_MODE_0:
-            config = (state.system == VIDEO_SYSTEM_NTSC) ? &Mode0_NTSC : &Mode0_PAL;
+            config = (state.format == VIDEO_FORMAT_NTSC) ? &Mode0_NTSC : &Mode0_PAL;
             break;
 
         case TMS9918A_MODE_2: /* Mode 2: 32 × 24 8-byte tiles, sprites enabled, three colour/pattern tables */
-            config = (state.system == VIDEO_SYSTEM_NTSC) ? &Mode2_NTSC : &Mode2_PAL;
+            config = (state.format == VIDEO_FORMAT_NTSC) ? &Mode2_NTSC : &Mode2_PAL;
             break;
 
         case SMS_VDP_MODE_4: /* Mode 4, 192 lines */
         case SMS_VDP_MODE_4_2:
         case SMS_VDP_MODE_4_3:
         case SMS_VDP_MODE_4_3_2_1:
-            config = (state.system == VIDEO_SYSTEM_NTSC) ? &Mode4_NTSC192 : &Mode4_PAL192;
+            config = (state.format == VIDEO_FORMAT_NTSC) ? &Mode4_NTSC192 : &Mode4_PAL192;
             break;
 
         case SMS_VDP_MODE_4_224:
-            config = (state.system == VIDEO_SYSTEM_NTSC) ? &Mode4_NTSC224 : &Mode4_PAL224;
+            config = (state.format == VIDEO_FORMAT_NTSC) ? &Mode4_NTSC224 : &Mode4_PAL224;
             break;
 
         case SMS_VDP_MODE_4_240:
-            config = (state.system == VIDEO_SYSTEM_NTSC) ? &Mode4_NTSC240 : &Mode4_PAL240;
+            config = (state.format == VIDEO_FORMAT_NTSC) ? &Mode4_NTSC240 : &Mode4_PAL240;
             break;
 
         default: /* Unsupported */
