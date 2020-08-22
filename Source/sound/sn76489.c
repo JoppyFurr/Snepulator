@@ -15,6 +15,15 @@ extern Snepulator_State state;
 SN76489_Regs psg_regs;
 pthread_mutex_t psg_mutex = PTHREAD_MUTEX_INITIALIZER;
 
+/*
+ * PSG output ring buffer.
+ * Stores samples at the PSG internal clock rate (~334 kHz).
+ * As the read/write index are 64-bit, they should never overflow.
+ */
+static int16_t psg_sample_ring [PSG_RING_SIZE];
+static uint64_t read_index = 0;
+static uint64_t write_index = 0;
+
 
 /*
  * Handle data writes sent to the PSG.
@@ -128,47 +137,40 @@ void sn76489_init (void)
 }
 
 
-static int16_t psg_sample_ring[PSG_RING_SIZE];
-static uint64_t read_index = 0;
-static uint64_t write_index = 0;
-
-
 /*
  * Run the PSG for a number of CPU clock cycles
  */
 void _psg_run_cycles (uint64_t cycles)
 {
 
-    static int excess = 0;
+    static uint32_t excess = 0;
     cycles += excess;
 
     /* Divide the system clock by 16, store the excess cycles for next time */
-    int psg_cycles = cycles >> 4;
+    uint32_t psg_cycles = cycles >> 4;
     excess = cycles - (psg_cycles << 4);
 
-    /* Aim to keep the ring about half-full */
-    if (write_index + psg_cycles > read_index + (PSG_RING_SIZE / 2))
+    /* Try to avoid having more than two sound-card buffers worth of sound. */
+    if (psg_cycles + (write_index - read_index) > PSG_RING_SIZE / 2)
     {
-        psg_cycles *= 0.80;
+        psg_cycles *= 0.90;
     }
 
-    /* Abort our cycles if they would cause an overflow */
-    if (write_index + psg_cycles > read_index + PSG_RING_SIZE)
+    /* Limit the number of cycles we run to what will fit in the ring */
+    if (psg_cycles + (write_index - read_index) > PSG_RING_SIZE)
     {
-        psg_cycles = 0;
+        psg_cycles = PSG_RING_SIZE - (write_index - read_index);
     }
 
-    /* Ensure that the next read-index is always valid by the time we return */
-    if (read_index >= write_index)
+    /* The read_index points to the next sample that will be passed to the sound card.
+     * Make sure that by the time we return, there is valid data at the read_index. */
+    if (write_index + psg_cycles <= read_index)
     {
-        if (psg_cycles < read_index - write_index + 1)
-            psg_cycles = read_index - write_index + 1;
+        psg_cycles = read_index - write_index + 1;
     }
 
     while (psg_cycles--)
     {
-        assert (psg_cycles >= 0);
-
         /* Decrement counters */
         if (psg_regs.counter_0) { psg_regs.counter_0--; }
         if (psg_regs.counter_1) { psg_regs.counter_1--; }
@@ -231,16 +233,16 @@ void _psg_run_cycles (uint64_t cycles)
         }
 
         /* Store this sample in the ring */
-        psg_sample_ring[write_index++ % PSG_RING_SIZE] = psg_regs.output_0    * (0x0f - psg_regs.vol_0) * BASE_VOLUME
-                                                       + psg_regs.output_1    * (0x0f - psg_regs.vol_1) * BASE_VOLUME
-                                                       + psg_regs.output_2    * (0x0f - psg_regs.vol_2) * BASE_VOLUME
-                                                       + psg_regs.output_lfsr * (0x0f - psg_regs.vol_3) * BASE_VOLUME;
+        psg_sample_ring [write_index++ % PSG_RING_SIZE] = psg_regs.output_0    * (0x0f - psg_regs.vol_0) * BASE_VOLUME
+                                                        + psg_regs.output_1    * (0x0f - psg_regs.vol_1) * BASE_VOLUME
+                                                        + psg_regs.output_2    * (0x0f - psg_regs.vol_2) * BASE_VOLUME
+                                                        + psg_regs.output_lfsr * (0x0f - psg_regs.vol_3) * BASE_VOLUME;
 
     }
 
     /* Update statistics (rolling average) */
-    state.audio_ring_utilisation *= 0.999;
-    state.audio_ring_utilisation += 0.001 * ((write_index - read_index) / (double) PSG_RING_SIZE);
+    state.audio_ring_utilisation *= 0.9995;
+    state.audio_ring_utilisation += 0.0005 * ((write_index - read_index) / (double) PSG_RING_SIZE);
 }
 
 
@@ -250,6 +252,12 @@ void _psg_run_cycles (uint64_t cycles)
  * Allows two threads to request sound to be generated:
  *  1. The emulation loop, this is the usual case.
  *  2. SDL may request additional samples to keep the sound card from running out.
+ *
+ * TODO: The reason we fall behind and have audio glitches may be the relationship between video
+ *       and audio sync. If we drop a video frame, do we also drop a frames worth of sound generation?
+ *
+ *       Maybe we want to replace "state.run (1000.0 / 60.0);" with something based on SDL_GetTick()?
+ *       Or maybe we want to completely separate emulation and the GUI into two separate threads?
  */
 void psg_run_cycles (uint64_t cycles)
 {
@@ -278,7 +286,7 @@ void sn76489_get_samples (int16_t *stream, int count)
             psg_run_cycles (0);
         }
 
-        stream[i] = psg_sample_ring [read_index % PSG_RING_SIZE];
+        stream [i] = psg_sample_ring [read_index % PSG_RING_SIZE];
 
         soundcard_sample_count++;
    }

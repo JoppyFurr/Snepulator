@@ -2,6 +2,9 @@
  * API for the SN76489 PSG chip.
  */
 
+#define PSG_RING_SIZE 32768
+#define BASE_VOLUME 100
+
 typedef struct SN76489_Regs_s {
 
     /* 4-bit volume registers */
@@ -33,9 +36,6 @@ typedef struct SN76489_Regs_s {
     int16_t output_lfsr;
 
 } SN76489_Regs;
-
-#define BASE_VOLUME 100
-#define PSG_RING_SIZE 32768
 
 /* Reset PSG to initial power-on state. */
 void sn76489_init (void);

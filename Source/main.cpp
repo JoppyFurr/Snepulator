@@ -391,7 +391,7 @@ int main (int argc, char **argv)
     desired_audiospec.freq = 48000;
     desired_audiospec.format = AUDIO_S16LSB;
     desired_audiospec.channels = 1;
-    desired_audiospec.samples = 2048;
+    desired_audiospec.samples = 1024;
     desired_audiospec.callback = snepulator_audio_callback;
 
     printf ("Snepulator.\n");
