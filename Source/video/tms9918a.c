@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <pthread.h>
 
 #include <SDL2/SDL.h>
 
@@ -15,6 +16,7 @@
 #include "tms9918a.h"
 
 extern Snepulator_State state;
+extern pthread_mutex_t video_mutex;
 TMS9918A_State tms9918a_state;
 
 const char *tms9918a_mode_name [16] = {
@@ -525,9 +527,11 @@ void tms9918a_run_one_scanline (void)
     /* If this the final active line, copy to the frame buffer */
     if (line == config->lines_active - 1)
     {
+        pthread_mutex_lock (&video_mutex);
         state.video_width = 256;
         state.video_height = 192;
         memcpy (state.video_out_data, tms9918a_state.frame_current, sizeof (tms9918a_state.frame_current));
+        pthread_mutex_unlock (&video_mutex);
 
         /* Update statistics (rolling average) */
         static int vdp_previous_completion_time = 0;

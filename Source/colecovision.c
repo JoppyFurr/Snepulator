@@ -257,9 +257,15 @@ static uint32_t colecovision_get_clock_rate ()
 /*
  * Emulate the ColecoVision for the specified length of time.
  */
-static void colecovision_run (double ms)
+static void colecovision_run (uint32_t ms)
 {
-    int lines = (ms * colecovision_get_clock_rate () / 228.0) / 1000.0;
+    /* TODO: Make these calculations common */
+    static uint64_t millicycles = 0;
+    uint64_t lines;
+
+    millicycles += (uint64_t) ms * colecovision_get_clock_rate();
+    lines = millicycles / 228000;
+    millicycles -= lines * 228000;
 
     while (lines--)
     {

@@ -54,4 +54,5 @@ eval $CXX \
     -I Libraries/imgui-1.76/examples/libs/gl3w/ \
     `sdl2-config --libs` \
     -framework OpenGL -framework CoreFoundation -ldl -lpng -lm -DBUILD_DATE=\\\"$DATE\\\" \
+    -lpthread \
     -o Snepulator -std=c++11

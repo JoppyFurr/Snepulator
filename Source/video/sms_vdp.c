@@ -8,6 +8,7 @@
 #include <inttypes.h>
 #include <stdbool.h>
 #include <string.h>
+#include <pthread.h>
 
 #include <SDL2/SDL.h>
 
@@ -15,6 +16,7 @@
 #include "../snepulator.h"
 #include "../sms.h"
 extern Snepulator_State state;
+extern pthread_mutex_t video_mutex;
 
 #include "tms9918a.h"
 #include "sms_vdp.h"
@@ -609,9 +611,11 @@ void sms_vdp_run_one_scanline ()
     /* TODO: This is okay for single-threaded code, but locking may be needed if multi-threading is added */
     if (line == config->lines_active - 1)
     {
+        pthread_mutex_lock (&video_mutex);
         state.video_width = 256;
         state.video_height = config->lines_active;
         memcpy (state.video_out_data, tms9918a_state.frame_current, sizeof (tms9918a_state.frame_current));
+        pthread_mutex_unlock (&video_mutex);
 
         /* Update statistics (rolling average) */
         static int vdp_previous_completion_time = 0;

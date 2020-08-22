@@ -38,7 +38,7 @@ typedef struct Snepulator_State_s {
     char *cart_filename;
 
     /* Console API */
-    void (*run) (double ms);
+    void (*run) (uint32_t ms);
     void (*audio_callback) (void *userdata, uint8_t *stream, int len);
     uint32_t (*get_clock_rate) (void);
     bool (*get_int) (void);
