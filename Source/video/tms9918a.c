@@ -505,11 +505,11 @@ void tms9918a_run_one_scanline (void)
     switch (mode)
     {
         case TMS9918A_MODE_0: /* Mode 0: 32 x 24 8-byte tiles, sprites enabled. */
-            config = (state.system == VIDEO_SYSTEM_NTSC) ? &Mode0_NTSC : &Mode0_PAL;
+            config = (state.format == VIDEO_FORMAT_NTSC) ? &Mode0_NTSC : &Mode0_PAL;
             break;
 
         case TMS9918A_MODE_2: /* Mode 2: 32 × 24 8-byte tiles, sprites enabled, three colour/pattern tables */
-            config = (state.system == VIDEO_SYSTEM_NTSC) ? &Mode2_NTSC : &Mode2_PAL;
+            config = (state.format == VIDEO_FORMAT_NTSC) ? &Mode2_NTSC : &Mode2_PAL;
             break;
 
         default: /* Unsupported */

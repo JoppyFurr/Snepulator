@@ -210,7 +210,7 @@ static void sg_1000_audio_callback (void *userdata, uint8_t *stream, int len)
  */
 static uint32_t sg_1000_get_clock_rate ()
 {
-    if (state.system == VIDEO_SYSTEM_PAL)
+    if (state.format == VIDEO_FORMAT_PAL)
     {
         return SG_1000_CLOCK_RATE_PAL;
     }

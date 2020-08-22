@@ -176,13 +176,13 @@ void snepulator_render_menubar (void)
             }
             ImGui::Separator ();
 
-            if (ImGui::MenuItem ("NTSC", NULL, state.system == VIDEO_SYSTEM_NTSC)) {
-                state.system = VIDEO_SYSTEM_NTSC;
+            if (ImGui::MenuItem ("NTSC", NULL, state.format == VIDEO_FORMAT_NTSC)) {
+                state.format = VIDEO_FORMAT_NTSC;
                 config_string_set ("sms", "format", "NTSC");
                 config_write ();
             }
-            if (ImGui::MenuItem ("PAL",  NULL, state.system == VIDEO_SYSTEM_PAL))  {
-                state.system = VIDEO_SYSTEM_PAL;
+            if (ImGui::MenuItem ("PAL",  NULL, state.format == VIDEO_FORMAT_PAL))  {
+                state.format = VIDEO_FORMAT_PAL;
                 config_string_set ("sms", "format", "PAL");
                 config_write ();
             }

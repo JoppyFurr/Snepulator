@@ -229,12 +229,12 @@ int config_import (void)
     }
 
     /* SMS Format - Defaults to NTSC */
-    state.system = VIDEO_SYSTEM_NTSC;
+    state.format = VIDEO_FORMAT_NTSC;
     if (config_string_get ("sms", "format", &string) == 0)
     {
         if (strcmp (string, "PAL") == 0)
         {
-            state.system = VIDEO_SYSTEM_PAL;
+            state.format = VIDEO_FORMAT_PAL;
         }
     }
 

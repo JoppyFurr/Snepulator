@@ -325,7 +325,7 @@ static void sms_audio_callback (void *userdata, uint8_t *stream, int len)
  */
 static uint32_t sms_get_clock_rate ()
 {
-    if (state.system == VIDEO_SYSTEM_PAL)
+    if (state.format == VIDEO_FORMAT_PAL)
     {
         return SMS_CLOCK_RATE_PAL;
     }
