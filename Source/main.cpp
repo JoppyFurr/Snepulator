@@ -428,6 +428,8 @@ int main_gui_loop (void)
         SDL_GetWindowSize (window, &state.host_width, &state.host_height);
         SDL_Event event;
 
+        /* Issue: SDL_PollEvent can take over 400 ms when attaching a
+         * gamepad, but also needs to be called from the main thread. */
         while (SDL_PollEvent (&event))
         {
             ImGui_ImplSDL2_ProcessEvent (&event);
