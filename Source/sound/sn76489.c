@@ -150,10 +150,15 @@ void _psg_run_cycles (uint64_t cycles)
     uint32_t psg_cycles = cycles >> 4;
     excess = cycles - (psg_cycles << 4);
 
-    /* Try to avoid having more than two sound-card buffers worth of sound. */
-    if (psg_cycles + (write_index - read_index) > PSG_RING_SIZE / 2)
+    /* Try to avoid having more than two sound-card buffers worth of sound.
+     * The ring buffer can fit ~74 ms of sound.
+     * The sound card is configured to ask for sound in ~21 ms blocks. */
+    if (psg_cycles + (write_index - read_index) > PSG_RING_SIZE * 0.6)
     {
-        psg_cycles *= 0.90;
+        if (psg_cycles > 1)
+        {
+            psg_cycles -= 1;
+        }
     }
 
     /* Limit the number of cycles we run to what will fit in the ring */
@@ -252,12 +257,6 @@ void _psg_run_cycles (uint64_t cycles)
  * Allows two threads to request sound to be generated:
  *  1. The emulation loop, this is the usual case.
  *  2. SDL may request additional samples to keep the sound card from running out.
- *
- * TODO: The reason we fall behind and have audio glitches may be the relationship between video
- *       and audio sync. If we drop a video frame, do we also drop a frames worth of sound generation?
- *
- *       Maybe we want to replace "state.run (1000.0 / 60.0);" with something based on SDL_GetTick()?
- *       Or maybe we want to completely separate emulation and the GUI into two separate threads?
  */
 void psg_run_cycles (uint64_t cycles)
 {
