@@ -637,6 +637,25 @@ int main_gui_loop (void)
     return 0;
 }
 
+/*
+ * Initial text sent to stdout when starting.
+ */
+static void about (void)
+{
+    char sdl_version [16] = { };
+    SDL_version sdl_v;
+
+    SDL_GetVersion (&sdl_v);
+    snprintf (sdl_version, 15, "%d.%d.%d", sdl_v.major, sdl_v.minor, sdl_v.patch);
+
+    printf ("────────────────────────────────────╮\n");
+    printf (" Snepulator, the emulator with mow! │\n");
+    printf (" Built on %-10s                │\n", BUILD_DATE);
+    printf (" ImGui version: %-9s           │\n", IMGUI_VERSION);
+    printf (" SDL Version %-10s             │\n", sdl_version);
+    printf ("────────────────────────────────────╯\n\n");
+}
+
 
 /*
  * Entry point.
@@ -656,8 +675,7 @@ int main (int argc, char **argv)
     desired_audiospec.samples = 1024;
     desired_audiospec.callback = snepulator_audio_callback;
 
-    printf ("Snepulator.\n");
-    printf ("Built on " BUILD_DATE ".\n");
+    about ();
 
     /* Initialize Snepulator state */
     memset (&state, 0, sizeof (state));
