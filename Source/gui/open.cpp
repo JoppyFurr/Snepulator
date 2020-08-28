@@ -71,7 +71,7 @@ void snepulator_render_open_modal (void)
 
                 if (config_string_get ("paths", "sms_roms", &stored_path) == 0)
                 {
-                    strncpy (path, stored_path, 179);
+                    strncpy (path, stored_path, 159);
                 }
             }
 
