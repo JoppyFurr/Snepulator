@@ -250,18 +250,18 @@ void snepulator_render_menubar (void)
 
             ImGui::Separator ();
 
-            if (ImGui::MenuItem ("Time One Minute", NULL))
+            if (ImGui::MenuItem ("Time Five Minutes", NULL))
             {
                 uint32_t start_time;
                 uint32_t end_time;
                 state.running = false;
                 start_time = SDL_GetTicks ();
-                state.run (60000); /* Simulate 60 seconds */
+                state.run (5 * 60000); /* Simulate five minutes */
                 end_time = SDL_GetTicks ();
                 state.running = true;
 
-                fprintf (stdout, "[DEBUG] Took %d ms to emulate one minute. (%fx speed-up)\n",
-                         end_time - start_time, 60000.0 / (end_time - start_time));
+                fprintf (stdout, "[DEBUG] Took %d ms to emulate five minutes. (%fx speed-up)\n",
+                         end_time - start_time, (5.0 * 60000.0) / (end_time - start_time));
             }
 
             ImGui::EndMenu ();

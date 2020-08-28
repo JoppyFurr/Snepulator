@@ -336,6 +336,8 @@ static uint32_t sms_get_clock_rate ()
 
 /*
  * Emulate the SMS for the specified length of time.
+ *
+ * TODO: Something better than millicycles.
  */
 static void sms_run (uint32_t ms)
 {
