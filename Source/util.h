@@ -21,6 +21,14 @@
 #define BIT_14      (1 << 14)
 #define BIT_15      (1 << 15)
 
+typedef union uint16_t_Split_u {
+    uint16_t w;
+    struct {
+        uint8_t l;
+        uint8_t h;
+    };
+} uint16_t_Split;
+
 typedef struct int32_Point_2D_s {
     int32_t x;
     int32_t y;
