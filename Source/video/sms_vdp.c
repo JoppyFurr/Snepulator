@@ -330,8 +330,8 @@ void sms_vdp_render_mode4_pattern_line (const TMS9918A_Config *mode, uint16_t li
 
         uint8_t pixel = cram [palette + colour_index];
 
-        tms9918a_state.frame_current [(offset.x + x + VIDEO_SIDE_BORDER) + (state.video_out_first_active_line + line) * VIDEO_BUFFER_WIDTH] = vdp_to_float [pixel];
-
+        tms9918a_state.frame_current [(offset.x + x + VIDEO_SIDE_BORDER) +
+                                      (state.video_out_first_active_line + line) * VIDEO_BUFFER_WIDTH] = vdp_to_float [pixel & 0x3f];
     }
 }
 
@@ -493,7 +493,7 @@ void sms_vdp_render_line (const TMS9918A_Config *config, uint16_t line)
     {
         uint8_t bg_colour;
         bg_colour = cram [16 + (tms9918a_state.regs.background_colour & 0x0f)];
-        video_background = vdp_to_float [bg_colour];
+        video_background = vdp_to_float [bg_colour & 0x3f];
     }
     else
     {
