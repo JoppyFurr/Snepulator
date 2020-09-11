@@ -1154,14 +1154,19 @@ static void z80_ed_66_im_0 (void)
 /* RRD */
 static void z80_ed_67_rrd (void)
 {
-    /* TODO: Tidy this up */
-    uint8_t temp_1 = memory_read (z80_regs.hl);
-    uint8_t temp_2 = z80_regs.a;
-    z80_regs.a &= 0xf0;
-    z80_regs.a |= (temp_1 & 0x0f);
-    temp_1 >>= 4;
-    temp_1 |= (temp_2 << 4);
-    memory_write (z80_regs.hl, temp_1);
+    uint16_t_Split shifted;
+
+    /* Calculate 12-bit value */
+    shifted.l = memory_read (z80_regs.hl);
+    shifted.h = z80_regs.a & 0x0f;
+    shifted.w = (shifted.w >> 4) | ((shifted.w & 0x000f) << 8);
+
+    /* Lower 8 bits go to memory */
+    memory_write (z80_regs.hl, shifted.l);
+
+    /* Upper 4 bits go to A */
+    z80_regs.a = (z80_regs.a & 0xf0) | shifted.h;
+
     SET_FLAGS_RRD_RLD;
     z80_cycle += 18;
 }
@@ -1231,14 +1236,17 @@ static void z80_ed_6e_im_0 (void)
 /* RLD */
 static void z80_ed_6f_rld (void)
 {
-    /* TODO: Tidy this up */
-    uint8_t temp_1 = memory_read (z80_regs.hl);
-    uint8_t temp_2 = z80_regs.a;
-    z80_regs.a &= 0xf0;
-    z80_regs.a |= (temp_1 >> 4);
-    temp_1 <<= 4;
-    temp_1 |= (temp_2 & 0x0f);
-    memory_write (z80_regs.hl, temp_1);
+    uint16_t_Split shifted;
+
+    /* Calculate 12-bit value */
+    shifted.w = ((uint16_t) memory_read (z80_regs.hl) << 4) | (z80_regs.a & 0x0f);
+
+    /* Lower 8 bits go to memory */
+    memory_write (z80_regs.hl, shifted.l);
+
+    /* Upper 4 bits go to A */
+    z80_regs.a = (z80_regs.a & 0xf0) | shifted.h;
+
     SET_FLAGS_RRD_RLD;
     z80_cycle += 18;
 }
