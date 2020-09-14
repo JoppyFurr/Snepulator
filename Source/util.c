@@ -19,16 +19,38 @@
 /* Global state */
 extern Snepulator_State state;
 
+/*
+ * Round up to the next power-of-two
+ */
+static uint32_t round_up (uint32_t n)
+{
+    uint32_t result = 1;
+
+    if (n  > 0x80000000)
+    {
+        snepulator_error ("Size Error", "Number too large for round_up.");
+        return 0;
+    }
+
+    while (result < n)
+    {
+        result <<= 1;
+    }
+
+    return result;
+}
 
 /*
  * Load a rom file into a buffer.
- * The buffer should be freed when no-longer needed.
+ * If the rom is not a power-of-two size, the buffer will be rounded up and
+ * padded with zeros. The buffer should be freed when no-longer needed.
  */
 int32_t snepulator_load_rom (uint8_t **buffer, uint32_t *buffer_size, char *filename)
 {
     uint32_t bytes_read = 0;
-    uint32_t file_size = 0;
-    uint32_t skip = 0;
+    uint32_t file_size;
+    uint32_t rom_size;
+    uint32_t skip;
 
     /* Open ROM file */
     FILE *rom_file = fopen (filename, "rb");
@@ -42,13 +64,17 @@ int32_t snepulator_load_rom (uint8_t **buffer, uint32_t *buffer_size, char *file
     fseek (rom_file, 0, SEEK_END);
     file_size = ftell (rom_file);
 
-    /* Some roms seem to have an extra header at the start. Skip this. */
+    /* Some ROM files begin with a 512 byte header, possibly added when dumped
+     * by a Super Magic Drive. Skip over this by rounding to the nearest 1 KiB. */
     skip = file_size & 0x3ff;
     fseek (rom_file, skip, SEEK_SET);
-    *buffer_size = file_size - skip;
+    rom_size = file_size - skip;
+
+    /* Increase buffer size to a power-of-two */
+    *buffer_size = round_up (rom_size);
 
     /* Allocate memory */
-    *buffer = (uint8_t *) malloc (*buffer_size);
+    *buffer = (uint8_t *) calloc (*buffer_size, 1);
     if (!*buffer)
     {
         snepulator_error ("Load Error", strerror (errno));
@@ -56,9 +82,9 @@ int32_t snepulator_load_rom (uint8_t **buffer, uint32_t *buffer_size, char *file
     }
 
     /* Copy to memory */
-    while (bytes_read < *buffer_size)
+    while (bytes_read < rom_size)
     {
-        bytes_read += fread (*buffer + bytes_read, 1, *buffer_size - bytes_read, rom_file);
+        bytes_read += fread (*buffer + bytes_read, 1, rom_size - bytes_read, rom_file);
     }
 
     fclose (rom_file);
