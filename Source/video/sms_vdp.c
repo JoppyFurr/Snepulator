@@ -294,7 +294,7 @@ bool sms_vdp_get_interrupt (void)
  * Render one line of an 8x8 pattern.
  */
 void sms_vdp_render_mode4_pattern_line (const TMS9918A_Config *mode, uint16_t line, SMS_VDP_Mode4_Pattern *pattern_base, SMS_VDP_Palette palette,
-                                        int32_Point_2D offset, bool h_flip, bool v_flip, bool transparency)
+                                        int32_Point_2D offset, bool h_flip, bool v_flip, bool transparency, bool collisions)
 {
     char *line_base;
 
@@ -327,6 +327,17 @@ void sms_vdp_render_mode4_pattern_line (const TMS9918A_Config *mode, uint16_t li
 
         if (transparency == true && colour_index == 0)
             continue;
+
+        /* Sprite collision detection */
+        if (collisions)
+        {
+            if (tms9918a_state.collision_buffer [x + offset.x])
+            {
+                tms9918a_state.status |= TMS9918A_SPRITE_COLLISION;
+            }
+
+            tms9918a_state.collision_buffer [x + offset.x] = true;
+        }
 
         uint8_t pixel = cram [palette + colour_index];
 
@@ -399,16 +410,13 @@ void sms_vdp_render_mode4_background_line (const TMS9918A_Config *mode, uint16_t
 
         position.x = 8 * tile_x + fine_scroll_x;
         position.y = 8 * tile_y - fine_scroll_y;
-        sms_vdp_render_mode4_pattern_line (mode, line, pattern, palette, position, h_flip, v_flip, false | priority);
+        sms_vdp_render_mode4_pattern_line (mode, line, pattern, palette, position, h_flip, v_flip, false | priority, false);
     }
 }
 
-
 /* TODO: Set sprite-overflow flag */
 /* TODO: If we allow more than eight sprites per line, will games use it? */
-/* TODO: Collision detection */
 /* TODO: Pixel-doubling */
-
 
 /*
  * Render one line of the sprite layer.
@@ -446,6 +454,9 @@ void sms_vdp_render_mode4_sprites_line (const TMS9918A_Config *mode, uint16_t li
         }
     }
 
+    /* Clear the sprite collision buffer */
+    memset (tms9918a_state.collision_buffer, 0, sizeof (tms9918a_state.collision_buffer));
+
     /* Render the sprites in the line sprite buffer.
      * Done in reverse order so that the first sprite is the one left on the screen */
     while (line_sprite_count--)
@@ -473,13 +484,13 @@ void sms_vdp_render_mode4_sprites_line (const TMS9918A_Config *mode, uint16_t li
             pattern_index &= 0xfe;
 
         pattern = (SMS_VDP_Mode4_Pattern *) &tms9918a_state.vram [(sprite_pattern_offset + pattern_index) * sizeof (SMS_VDP_Mode4_Pattern)];
-        sms_vdp_render_mode4_pattern_line (mode, line, pattern, SMS_VDP_PALETTE_SPRITE, position, false, false, true);
+        sms_vdp_render_mode4_pattern_line (mode, line, pattern, SMS_VDP_PALETTE_SPRITE, position, false, false, true, true);
 
         if (tms9918a_state.regs.ctrl_1 & TMS9918A_CTRL_1_SPRITE_SIZE)
         {
             position.y += 8;
             pattern = (SMS_VDP_Mode4_Pattern *) &tms9918a_state.vram [(sprite_pattern_offset + pattern_index + 1) * sizeof (SMS_VDP_Mode4_Pattern)];
-            sms_vdp_render_mode4_pattern_line (mode, line, pattern, SMS_VDP_PALETTE_SPRITE, position, false, false, true);
+            sms_vdp_render_mode4_pattern_line (mode, line, pattern, SMS_VDP_PALETTE_SPRITE, position, false, false, true, true);
         }
     }
 }
