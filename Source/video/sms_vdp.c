@@ -407,7 +407,6 @@ void sms_vdp_render_mode4_background_line (const TMS9918A_Config *mode, uint16_t
 /* TODO: Set sprite-overflow flag */
 /* TODO: If we allow more than eight sprites per line, will games use it? */
 /* TODO: Collision detection */
-/* TODO: VDP Flag BIT_3 of ctrl_1 subtracts 8 from x position of sprites */
 /* TODO: Pixel-doubling */
 
 
@@ -457,6 +456,12 @@ void sms_vdp_render_mode4_sprites_line (const TMS9918A_Config *mode, uint16_t li
         uint8_t pattern_index = tms9918a_state.vram [sprite_attribute_table_base + 0x80 + i * 2 + 1];
 
         position.x = x;
+
+        /* Bit 3 in ctrl_0 shifts all sprites eight pixels to the left */
+        if (tms9918a_state.regs.ctrl_0 & SMS_VDP_CTRL_0_EC)
+        {
+            position.x -= 8;
+        }
 
         /* TODO: Can we remove these duplicated lines? */
         if (y >= 0xe0)
