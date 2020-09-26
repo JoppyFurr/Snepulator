@@ -363,17 +363,24 @@ void sms_vdp_render_mode4_background_line (const TMS9918A_Config *mode, uint16_t
         name_table_base = ((((uint16_t) tms9918a_state.regs.name_table_base) << 10) & 0x3000) + 0x700;
     }
 
-    /* A bit in ctrl_0 can disable scrolling for the first two rows */
+    /* Bit 6 in ctrl_0 can disable horizontal scrolling for the first two rows */
     if (tms9918a_state.regs.ctrl_0 & SMS_VDP_CTRL_0_LOCK_ROW_0_1 && line < 16)
     {
         start_column = 0;
         fine_scroll_x = 0;
     }
 
-    /* TODO: Implement SMS_VDP_CTRL_0_SCROLL_DISABLE_COL_24_31 */
     /* TODO: The vertical scroll value should only take affect between active frames, not mid-frame */
     for (uint32_t tile_x = 0; tile_x < 32; tile_x++)
     {
+        /* Bit 7 in ctrl_0 can disable vertical scrolling for the rightmost eight columns */
+        if (tile_x == 24 && (tms9918a_state.regs.ctrl_0 & SMS_VDP_CTRL_0_LOCK_COL_24_31))
+        {
+            start_row = 0;
+            fine_scroll_y = 0;
+            tile_y = line / 8;
+        }
+
         uint16_t tile_address = name_table_base + ((((tile_y + start_row) % num_rows) << 6) | ((tile_x + start_column) % 32 << 1));
 
         uint16_t tile = ((uint16_t)(tms9918a_state.vram [tile_address])) +
