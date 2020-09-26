@@ -89,6 +89,7 @@ typedef struct TMS9918A_State_s {
     uint16_t address;
     uint8_t  read_buffer;
     uint8_t  status;
+    bool collision_buffer [256];
 
     /* SMS VDP extensions */
     uint8_t  line_interrupt_counter;    /* Line interrupt counter current value */
