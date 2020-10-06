@@ -42,7 +42,7 @@ typedef enum TMS9918A_Mode_e {
     SMS_VDP_MODE_4_3_2_1 = 15
 } TMS9918A_Mode;
 
-typedef enum TMS9918A_Code_t {
+typedef enum TMS9918A_Code_e {
     TMS9918A_CODE_VRAM_READ  = 0x00,
     TMS9918A_CODE_VRAM_WRITE = 0x40,
     TMS9918A_CODE_REG_WRITE  = 0x80,
