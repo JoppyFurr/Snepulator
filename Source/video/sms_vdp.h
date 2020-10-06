@@ -4,7 +4,7 @@
 
 /* Enums */
 
-typedef enum SMS_VDP_Palette_t {
+typedef enum SMS_VDP_Palette_e {
     SMS_VDP_PALETTE_BACKGROUND = 0,
     SMS_VDP_PALETTE_SPRITE = 16,
 } SMS_VDP_Palette;

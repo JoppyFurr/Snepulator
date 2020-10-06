@@ -31,7 +31,8 @@ extern Z80_Regs z80_regs;
 uint8_t memory_control = 0x00;
 uint8_t io_control = 0x00;
 
-/* Sega Mapper */
+/* Cartridge Mapper */
+static SMS_Mapper mapper = SMS_MAPPER_UNKNOWN;
 static uint8_t mapper_bank [3] = { 0x00, 0x01, 0x02 };
 
 /* 0: Output
@@ -97,45 +98,82 @@ static void sms_memory_write (uint16_t addr, uint8_t data)
     {
     }
 
-    /* Sega Mapper */
-    if (addr == 0xfffc)
+    if (mapper == SMS_MAPPER_UNKNOWN)
     {
-        /* fprintf (stderr, "Error: Sega Memory Mapper register 0xfffc not implemented.\n"); */
-    }
-    else if (addr == 0xfffd)
-    {
-        mapper_bank [0] = data & 0x3f;
-    }
-    else if (addr == 0xfffe)
-    {
-        mapper_bank [1] = data & 0x3f;
-    }
-    else if (addr == 0xffff)
-    {
-        mapper_bank [2] = data & 0x3f;
-    }
-
-    /* CodeMasters Mapper */
-    /* TODO: There are differences from the Sega mapper. Do any games rely on them?
-     *  1. Initial banks are different (0, 1, 0) instead of (0, 1, 2).
-     *  2. The first 1KB is not protected. */
-    if (addr == 0x0000)
-    {
-        mapper_bank [0] = data & 0x3f;
-    }
-    else if (addr == 0x4000)
-    {
-        mapper_bank [1] = data & 0x3f;
-    }
-    else if (addr == 0x8000)
-    {
-        mapper_bank [2] = data & 0x3f;
+        if (addr == 0xfffc || addr == 0xfffd ||
+            addr == 0xfffe || addr == 0xffff)
+        {
+            mapper = SMS_MAPPER_SEGA;
+        }
+        else if (addr == 0x4000 || addr == 0x8000)
+        {
+            mapper = SMS_MAPPER_CODEMASTERS;
+        }
+        else if (addr == 0xa000)
+        {
+            mapper = SMS_MAPPER_KOREAN;
+        }
     }
 
-    /* Korean Mapper */
-    if (addr == 0xa000)
+    if (mapper == SMS_MAPPER_SEGA)
     {
-        mapper_bank [2] = data & 0x3f;
+        if (addr == 0xfffc)
+        {
+            if (data & (BIT_0 | BIT_1))
+            {
+                snepulator_error ("Error", "Bank shifting not implemented.");
+            }
+
+            if (data & (BIT_2 | BIT_3 | BIT_4))
+            {
+                snepulator_error ("Error", "Cartridge RAM not implemented.");
+            }
+        }
+        else if (addr == 0xfffd)
+        {
+            mapper_bank [0] = data & 0x3f;
+        }
+        else if (addr == 0xfffe)
+        {
+            mapper_bank [1] = data & 0x3f;
+        }
+        else if (addr == 0xffff)
+        {
+            mapper_bank [2] = data & 0x3f;
+        }
+    }
+
+    if (mapper == SMS_MAPPER_CODEMASTERS)
+    {
+        /* TODO: There are differences from the Sega mapper. Do any games rely on them?
+         *  1. Initial banks are different (0, 1, 0) instead of (0, 1, 2).
+         *  2. The first 1KB is not protected.
+         */
+        if (addr == 0x0000)
+        {
+            mapper_bank [0] = data & 0x3f;
+        }
+        else if (addr == 0x4000)
+        {
+            mapper_bank [1] = data & 0x3f;
+        }
+        else if (addr == 0x8000)
+        {
+            mapper_bank [2] = data & 0x3f;
+
+            if (data & BIT_7)
+            {
+                snepulator_error ("Error", "Cartridge RAM not implemented.");
+            }
+        }
+    }
+
+    if (mapper == SMS_MAPPER_KOREAN)
+    {
+        if (addr == 0xa000)
+        {
+            mapper_bank [2] = data & 0x3f;
+        }
     }
 
     /* Cartridge, card, BIOS, expansion slot */
@@ -372,6 +410,7 @@ static void sms_run (uint32_t ms)
 void sms_init (void)
 {
     /* Reset the mapper */
+    mapper = SMS_MAPPER_UNKNOWN;
     mapper_bank [0] = 0;
     mapper_bank [1] = 1;
     mapper_bank [2] = 2;
