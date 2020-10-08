@@ -4059,7 +4059,7 @@ static void z80_e2_jp_po_xx (void)
     addr.l = memory_read (z80_regs.pc++);
     addr.h = memory_read (z80_regs.pc++);
 
-    if (z80_regs.f & Z80_FLAG_PARITY)
+    if (!(z80_regs.f & Z80_FLAG_PARITY))
     {
         z80_regs.pc = addr.w;
     }
