@@ -468,5 +468,9 @@ void sms_init (void)
         /* Leave the VDP in Mode4 */
         sms_vdp_control_write (SMS_VDP_CTRL_0_MODE_4);
         sms_vdp_control_write (TMS9918A_CODE_REG_WRITE | 0x00);
+
+        /* Line counter starts at 0xff */
+        sms_vdp_control_write (0xff);
+        sms_vdp_control_write (TMS9918A_CODE_REG_WRITE | 0x0a);
     }
 }
