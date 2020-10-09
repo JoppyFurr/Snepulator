@@ -462,7 +462,10 @@ void sms_init (void)
     /* Minimal alternative to the BIOS */
     if (!state.sms_bios_filename)
     {
+        /* Z80 interrupt mode and stack pointer */
         z80_regs.im = 1;
+        z80_regs.sp = 0xdff0;
+
         memory_control |= SMS_MEMORY_CTRL_BIOS_DISABLE;
 
         /* Leave the VDP in Mode4 */
