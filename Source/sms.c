@@ -31,6 +31,7 @@ extern Z80_Regs z80_regs;
 uint8_t memory_control = 0x00;
 uint8_t io_control = 0x00;
 bool export_paddle = false;
+SMS_3D_Field sms_3d_field = SMS_3D_FIELD_NONE;
 
 /* Cartridge Mapper */
 static SMS_Mapper mapper = SMS_MAPPER_UNKNOWN;
@@ -97,6 +98,14 @@ static void sms_memory_write (uint16_t addr, uint8_t data)
     /* 3D glasses */
     if (addr >= 0xfff8 && addr <= 0xfffb)
     {
+        if (data & 0x01)
+        {
+            sms_3d_field = SMS_3D_FIELD_LEFT;
+        }
+        else
+        {
+            sms_3d_field = SMS_3D_FIELD_RIGHT;
+        }
     }
 
     if (mapper == SMS_MAPPER_UNKNOWN)
@@ -499,6 +508,7 @@ void sms_init (void)
     }
 
     export_paddle = false;
+    sms_3d_field = SMS_3D_FIELD_NONE;
 
     /* Initialise CPU and VDP */
     z80_init (sms_memory_read, sms_memory_write, sms_io_read, sms_io_write);

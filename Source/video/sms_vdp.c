@@ -17,6 +17,7 @@
 #include "../sms.h"
 extern Snepulator_State state;
 extern pthread_mutex_t video_mutex;
+SMS_3D_Field sms_3d_field;
 
 #include "tms9918a.h"
 #include "sms_vdp.h"
@@ -287,6 +288,38 @@ bool sms_vdp_get_interrupt (void)
     }
 
     return interrupt;
+}
+
+
+/*
+ * Process the new 3d field to update the anaglyph output image.
+ *
+ * TODO: * Support multiple anaglyph types.
+ *       * Adjustable saturation.
+ *       * Single-eye mode.
+ */
+void sms_vdp_process_3d_field (void)
+{
+    float_Colour pixel;
+
+    /* For now, assuming magenta-green glasses. */
+    if (sms_3d_field == SMS_3D_FIELD_LEFT)
+    {
+        for (uint32_t i = 0; i < (VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES); i++)
+        {
+            pixel = to_greyscale (tms9918a_state.frame_current [i]);
+            state.video_out_data [i].r = pixel.r;
+            state.video_out_data [i].b = pixel.b;
+        }
+    }
+    else
+    {
+        for (uint32_t i = 0; i < (VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES); i++)
+        {
+            pixel = to_greyscale (tms9918a_state.frame_current [i]);
+            state.video_out_data [i].g = pixel.g;
+        }
+    }
 }
 
 
@@ -638,7 +671,16 @@ void sms_vdp_run_one_scanline ()
         pthread_mutex_lock (&video_mutex);
         state.video_width = 256;
         state.video_height = config->lines_active;
-        memcpy (state.video_out_data, tms9918a_state.frame_current, sizeof (tms9918a_state.frame_current));
+
+        if (sms_3d_field == SMS_3D_FIELD_NONE)
+        {
+            memcpy (state.video_out_data, tms9918a_state.frame_current, sizeof (tms9918a_state.frame_current));
+        }
+        else
+        {
+            sms_vdp_process_3d_field ();
+        }
+
         pthread_mutex_unlock (&video_mutex);
 
         /* Update statistics (rolling average) */
