@@ -30,6 +30,7 @@ extern Z80_Regs z80_regs;
 /* Console state */
 uint8_t memory_control = 0x00;
 uint8_t io_control = 0x00;
+bool export_paddle = false;
 
 /* Cartridge Mapper */
 static SMS_Mapper mapper = SMS_MAPPER_UNKNOWN;
@@ -246,10 +247,25 @@ static uint8_t sms_io_read (uint8_t addr)
 
             if (gamepad_1.type == GAMEPAD_TYPE_SMS_PADDLE)
             {
-                /* TODO: This should be 8 kHz */
-                /* TODO: Automate detection of 'export' paddle games */
                 static uint8_t paddle_clock = 0;
-                paddle_clock++;
+
+                /* The "export paddle" uses the TH pin for a clock signal */
+                if (export_paddle)
+                {
+                    if ((io_control & SMS_IO_TH_A_DIRECTION) == 0 && (io_control & SMS_IO_TH_A_LEVEL))
+                    {
+                        paddle_clock = 1;
+                    }
+                    else
+                    {
+                        paddle_clock = 0;
+                    }
+                }
+                /* The Japanese paddle has an internal 8 kHz clock */
+                else
+                {
+                    paddle_clock ^= 0x01;
+                }
 
                 if ((paddle_clock & 0x01) == 0x00)
                 {
@@ -283,10 +299,20 @@ static uint8_t sms_io_read (uint8_t addr)
             if (state.region == REGION_WORLD)
             {
                 if ((io_control & SMS_IO_TH_A_DIRECTION) == 0)
+                {
                     port_1_th = io_control & SMS_IO_TH_A_LEVEL;
 
+                    if (gamepad_1.type == GAMEPAD_TYPE_SMS_PADDLE)
+                    {
+                        export_paddle = true;
+                    }
+
+                }
+
                 if ((io_control & SMS_IO_TH_B_DIRECTION) == 0)
+                {
                     port_2_th = io_control & SMS_IO_TH_B_LEVEL;
+                }
             }
 
             /* I/O Port B/misc */
@@ -471,6 +497,8 @@ void sms_init (void)
         }
         fprintf (stdout, "%d KiB ROM %s loaded.\n", state.rom_size >> 10, state.cart_filename);
     }
+
+    export_paddle = false;
 
     /* Initialise CPU and VDP */
     z80_init (sms_memory_read, sms_memory_write, sms_io_read, sms_io_write);
