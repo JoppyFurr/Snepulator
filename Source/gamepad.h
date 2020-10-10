@@ -27,6 +27,12 @@ typedef enum Gamepad_Index_e {
 } Gamepad_Index;
 
 
+typedef enum Gamepad_Type_e {
+    GAMEPAD_TYPE_SMS = 0,
+    GAMEPAD_TYPE_SMS_PADDLE
+} Gamepad_Type;
+
+
 typedef enum Gamepad_Button_e {
     GAMEPAD_DIRECTION_UP = 0,
     GAMEPAD_DIRECTION_DOWN,
@@ -78,8 +84,11 @@ typedef struct Gamepad_Instance_s {
  * Current state of simulated gamepad.
  */
 typedef struct Snepulator_Gamepad_t {
+    Gamepad_Type type;
     int32_t instance_id;
     bool state [GAMEPAD_BUTTON_COUNT];
+    float paddle_velocity;
+    uint8_t paddle_position;
 } Snepulator_Gamepad;
 
 #ifdef SDL_h_
@@ -95,6 +104,9 @@ void gamepad_init (void);
 
 /* Refresh the list of detected gamepads. */
 void gamepad_list_update (void);
+
+/* Called to simulate gamepad hardware. (paddle) */
+void gamepad_paddle_tick (uint32_t ms);
 
 /* Return the number of players using the specified joystick instance_id. */
 uint32_t gamepad_joystick_user_count (uint32_t instance_id);

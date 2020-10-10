@@ -195,6 +195,21 @@ void snepulator_render_menubar (void)
 
             if (ImGui::BeginMenu ("Player 1"))
             {
+                if (ImGui::BeginMenu ("Type"))
+                {
+                    if (ImGui::MenuItem ("SMS Gamepad", NULL, gamepad_1.type == GAMEPAD_TYPE_SMS))
+                    {
+                        gamepad_1.type = GAMEPAD_TYPE_SMS;
+                    }
+                    if (ImGui::MenuItem ("SMS Paddle", NULL, gamepad_1.type == GAMEPAD_TYPE_SMS_PADDLE))
+                    {
+                        gamepad_1.type = GAMEPAD_TYPE_SMS_PADDLE;
+                    }
+                    ImGui::EndMenu ();
+                }
+
+                ImGui::Separator ();
+
                 for (int i = 0; i < gamepad_list_count; i++)
                 {
                     if (ImGui::MenuItem (gamepad_get_name (i), NULL, gamepad_list [i].instance_id == gamepad_1.instance_id))

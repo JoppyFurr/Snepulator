@@ -120,6 +120,54 @@ void gamepad_process_event (SDL_Event *event)
 
 
 /*
+ * Called to apply paddle velocity.
+ *
+ * TODO: * Make paddle_speed configurable
+ *       * Support variable speeds with analogue input
+ *       * Mouse support?
+ *       * Direct vs relative?
+ */
+void gamepad_paddle_tick (uint32_t ms)
+{
+    static float remainder = 0.0;
+    float paddle_speed = 250.0;
+    float delta;
+    int16_t new_position = gamepad_1.paddle_position;
+
+    /* Temporary™ digital-only support */
+    if (gamepad_1.state [GAMEPAD_DIRECTION_LEFT])
+    {
+        gamepad_1.paddle_velocity = -1.0;
+    }
+    else if (gamepad_1.state [GAMEPAD_DIRECTION_RIGHT])
+    {
+        gamepad_1.paddle_velocity = 1.0;
+    }
+    else
+    {
+        gamepad_1.paddle_velocity = 0.0;
+    }
+
+    /* Calculate and apply movement */
+    delta = gamepad_1.paddle_velocity * paddle_speed * (ms * 0.001) + remainder;
+    new_position += (int16_t) delta;
+    remainder = fmodf (delta, 1.0);
+
+    /* Bounds checking */
+    if (new_position > 255)
+    {
+        new_position = 255;
+    }
+    else if (new_position < 0)
+    {
+        new_position = 0;
+    }
+
+    gamepad_1.paddle_position = new_position;
+}
+
+
+/*
  * Generate a configuration entry for a new gamepad.
  *
  * Returns the configuration index of the new entry.
@@ -240,10 +288,17 @@ void gamepad_init (void)
 
     /* Initialise both players to GAMEPAD_INDEX_NONE */
     gamepad_1.instance_id = INSTANCE_ID_NONE;
+    gamepad_1.type = GAMEPAD_TYPE_SMS;
     gamepad_1_config = &gamepad_config [GAMEPAD_INDEX_NONE];
+    gamepad_1.paddle_velocity = 0;
+    gamepad_1.paddle_position = 128;
+
     gamepad_2.instance_id = INSTANCE_ID_NONE;
+    gamepad_2.type = GAMEPAD_TYPE_SMS;
     gamepad_2_config = &gamepad_config [GAMEPAD_INDEX_NONE];
+
     gamepad_3.instance_id = INSTANCE_ID_NONE;
+    gamepad_3.type = GAMEPAD_TYPE_SMS;
     gamepad_3_config = &gamepad_config [GAMEPAD_INDEX_NONE];
 
     /* TODO: Detect user's keyboard layout and adjust accordingly */
