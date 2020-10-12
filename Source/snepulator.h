@@ -9,8 +9,16 @@
 typedef enum Video_Filter_e {
     VIDEO_FILTER_NEAREST,
     VIDEO_FILTER_LINEAR,
-    VIDEO_FILTER_SCANLINES,
+    VIDEO_FILTER_SCANLINES
 } Video_Filter;
+
+typedef enum Video_3D_Mode_e {
+        VIDEO_3D_LEFT_ONLY,
+        VIDEO_3D_RIGHT_ONLY,
+        VIDEO_3D_RED_CYAN,
+        VIDEO_3D_RED_GREEN,
+        VIDEO_3D_MAGENTA_GREEN
+} Video_3D_Mode;
 
 typedef enum Video_Format_e {
     VIDEO_FORMAT_NTSC,
@@ -66,6 +74,10 @@ typedef struct Snepulator_State_s {
     uint32_t     video_width;
     int          host_width;
     int          host_height;
+
+    /* 3D */
+    Video_3D_Mode video_3d_mode;
+    float         video_3d_saturation;
 
     /* Statistics */
     double host_framerate;

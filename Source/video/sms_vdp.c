@@ -293,31 +293,91 @@ bool sms_vdp_get_interrupt (void)
 
 /*
  * Process the new 3d field to update the anaglyph output image.
- *
- * TODO: * Support multiple anaglyph types.
- *       * Adjustable saturation.
- *       * Single-eye mode.
  */
 void sms_vdp_process_3d_field (void)
 {
+    bool update_red = false;
+    bool update_green = false;
+    bool update_blue = false;
     float_Colour pixel;
 
-    /* For now, assuming magenta-green glasses. */
-    if (sms_3d_field == SMS_3D_FIELD_LEFT)
+    switch (state.video_3d_mode)
     {
-        for (uint32_t i = 0; i < (VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES); i++)
+        case VIDEO_3D_LEFT_ONLY:
+            if (sms_3d_field == SMS_3D_FIELD_LEFT)
+            {
+                update_red = true;
+                update_green = true;
+                update_blue = true;
+            }
+            break;
+
+        case VIDEO_3D_RIGHT_ONLY:
+            if (sms_3d_field == SMS_3D_FIELD_RIGHT)
+            {
+                update_red = true;
+                update_green = true;
+                update_blue = true;
+            }
+            break;
+
+        case VIDEO_3D_RED_CYAN:
+            if (sms_3d_field == SMS_3D_FIELD_LEFT)
+            {
+                update_red = true;
+            }
+            else
+            {
+                update_green = true;
+                update_blue = true;
+            }
+            break;
+
+        case VIDEO_3D_RED_GREEN:
+            if (sms_3d_field == SMS_3D_FIELD_LEFT)
+            {
+                update_red = true;
+            }
+            else
+            {
+                update_green = true;
+            }
+            break;
+
+        case VIDEO_3D_MAGENTA_GREEN:
+            if (sms_3d_field == SMS_3D_FIELD_LEFT)
+            {
+                update_red = true;
+                update_blue = true;
+            }
+            else
+            {
+                update_green = true;
+            }
+            break;
+    }
+
+    for (uint32_t i = 0; i < (VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES); i++)
+    {
+        pixel = colour_saturation (tms9918a_state.frame_current [i], state.video_3d_saturation);
+
+        if (update_red)
         {
-            pixel = to_greyscale (tms9918a_state.frame_current [i]);
             state.video_out_data [i].r = pixel.r;
+        }
+        if (update_green)
+        {
+            state.video_out_data [i].g = pixel.g;
+        }
+        if (update_blue)
+        {
             state.video_out_data [i].b = pixel.b;
         }
-    }
-    else
-    {
-        for (uint32_t i = 0; i < (VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES); i++)
+
+        /* Special case where blue is not used */
+        if (state.video_3d_mode == VIDEO_3D_RED_GREEN)
         {
-            pixel = to_greyscale (tms9918a_state.frame_current [i]);
-            state.video_out_data [i].g = pixel.g;
+            state.video_out_data [i].b = 0.0;
         }
     }
 }

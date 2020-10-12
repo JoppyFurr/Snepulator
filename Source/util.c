@@ -153,6 +153,32 @@ float_Colour to_greyscale (float_Colour c)
 
 
 /*
+ * Reduce saturation of a float_Colour.
+ */
+float_Colour colour_saturation (float_Colour c, float saturation)
+{
+    float_Colour mix;
+
+    /* Convert to linear colour */
+    c.r = (c.r < 0.04045) ? (c.r / 12.92) : pow ((c.r + 0.055) / 1.055, 2.4);
+    c.g = (c.g < 0.04045) ? (c.g / 12.92) : pow ((c.g + 0.055) / 1.055, 2.4);
+    c.b = (c.b < 0.04045) ? (c.b / 12.92) : pow ((c.b + 0.055) / 1.055, 2.4);
+
+    /* Desaturate */
+    mix.r = saturation * c.r + (1.0 - saturation) * (c.r * 0.2126 + c.g * 0.7152 + c.b * 0.0722);
+    mix.g = saturation * c.g + (1.0 - saturation) * (c.r * 0.2126 + c.g * 0.7152 + c.b * 0.0722);
+    mix.b = saturation * c.b + (1.0 - saturation) * (c.r * 0.2126 + c.g * 0.7152 + c.b * 0.0722);
+
+    /* Convert back to sRGB */
+    c.r = (mix.r <= 0.0031308) ? (12.92 * mix.r) : (1.055 * pow (mix.r, 1.0 / 2.4) - 0.055);
+    c.g = (mix.g <= 0.0031308) ? (12.92 * mix.g) : (1.055 * pow (mix.g, 1.0 / 2.4) - 0.055);
+    c.b = (mix.b <= 0.0031308) ? (12.92 * mix.b) : (1.055 * pow (mix.b, 1.0 / 2.4) - 0.055);
+
+    return c;
+}
+
+
+/*
  * Dim the non-active part of the video_out_texture.
  */
 void video_dim (uint32_t x_scale, uint32_t y_scale)
