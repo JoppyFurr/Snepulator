@@ -148,6 +148,59 @@ void snepulator_render_menubar (void)
                 ImGui::EndMenu ();
             }
 
+            if (ImGui::BeginMenu ("3D Mode"))
+            {
+                if (ImGui::MenuItem ("Left image only", NULL, state.video_3d_mode == VIDEO_3D_LEFT_ONLY))
+                {
+                    state.video_3d_mode = VIDEO_3D_LEFT_ONLY;
+                }
+                if (ImGui::MenuItem ("Right image only", NULL, state.video_3d_mode == VIDEO_3D_RIGHT_ONLY))
+                {
+                    state.video_3d_mode = VIDEO_3D_RIGHT_ONLY;
+                }
+                if (ImGui::MenuItem ("Red-Cyan", NULL, state.video_3d_mode == VIDEO_3D_RED_CYAN))
+                {
+                    state.video_3d_mode = VIDEO_3D_RED_CYAN;
+                }
+                if (ImGui::MenuItem ("Red-Green", NULL, state.video_3d_mode == VIDEO_3D_RED_GREEN))
+                {
+                    state.video_3d_mode = VIDEO_3D_RED_GREEN;
+                }
+                if (ImGui::MenuItem ("Magenta-Green", NULL, state.video_3d_mode == VIDEO_3D_MAGENTA_GREEN))
+                {
+                    state.video_3d_mode = VIDEO_3D_MAGENTA_GREEN;
+                }
+
+                ImGui::Separator ();
+
+                if (ImGui::BeginMenu ("Colour"))
+                {
+                    if (ImGui::MenuItem ("Saturation 0%", NULL, state.video_3d_saturation == 0.0))
+                    {
+                        state.video_3d_saturation = 0.0;
+                    }
+                    if (ImGui::MenuItem ("Saturation 25%", NULL, state.video_3d_saturation == 0.25))
+                    {
+                        state.video_3d_saturation = 0.25;
+                    }
+                    if (ImGui::MenuItem ("Saturation 50%", NULL, state.video_3d_saturation == 0.50))
+                    {
+                        state.video_3d_saturation = 0.50;
+                    }
+                    if (ImGui::MenuItem ("Saturation 75%", NULL, state.video_3d_saturation == 0.75))
+                    {
+                        state.video_3d_saturation = 0.75;
+                    }
+                    if (ImGui::MenuItem ("Saturation 100%", NULL, state.video_3d_saturation == 1.0))
+                    {
+                        state.video_3d_saturation = 1.0;
+                    }
+                    ImGui::EndMenu ();
+                }
+
+                ImGui::EndMenu ();
+            }
+
             if (ImGui::MenuItem ("Take Screenshot"))
             {
                 snepulator_take_screenshot ();

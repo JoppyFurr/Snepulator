@@ -684,6 +684,8 @@ int main (int argc, char **argv)
     state.show_gui = true;
     state.video_width = 256;
     state.video_height = 192;
+    state.video_3d_mode = VIDEO_3D_RED_CYAN;
+    state.video_3d_saturation = 0.25;
 
     /* Parse all CLI arguments */
     while (*(++argv))

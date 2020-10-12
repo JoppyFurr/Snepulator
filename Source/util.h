@@ -49,5 +49,8 @@ void snepulator_take_screenshot (void);
 /* Convert a float_Colour to greyscale. */
 float_Colour to_greyscale (float_Colour c);
 
+/* Reduce saturation of a float_Colour. */
+float_Colour colour_saturation (float_Colour c, float saturation);
+
 /* Dim the non-active part of the video_out_texture. */
 void video_dim (uint32_t x_scale, uint32_t y_scale);
