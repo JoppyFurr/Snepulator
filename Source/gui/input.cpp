@@ -97,8 +97,6 @@ bool input_modal_consume_event (SDL_Event event)
         static bool waiting = false;
         static uint32_t waiting_axis;
 
-        printf ("Value: %d.\n", event.jaxis.value);
-
         if (waiting)
         {
             if (event.jaxis.axis == waiting_axis && event.jaxis.value < 4000 && event.jaxis.value > -4000)
