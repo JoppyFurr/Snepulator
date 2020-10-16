@@ -26,6 +26,7 @@ extern Snepulator_Gamepad gamepad_2;
 extern Z80_Regs z80_regs;
 
 #define SMS_RAM_SIZE (8 << 10)
+#define SMS_SRAM_SIZE (8 << 10)
 
 /* Console state */
 uint8_t memory_control = 0x00;
@@ -36,6 +37,7 @@ SMS_3D_Field sms_3d_field = SMS_3D_FIELD_NONE;
 /* Cartridge Mapper */
 static SMS_Mapper mapper = SMS_MAPPER_UNKNOWN;
 static uint8_t mapper_bank [3] = { 0x00, 0x01, 0x02 };
+static bool sram_enable = false;
 
 /* 0: Output
  * 1: Input */
@@ -69,13 +71,27 @@ static uint8_t sms_memory_read (uint16_t addr)
 
         /* The first 1 KiB of slot 0 is not affected by mapping */
         if (slot == 0 && offset < (1 << 10))
+        {
             bank_base = 0;
+        }
 
+        /* BIOS */
         if (state.bios != NULL && !(memory_control & SMS_MEMORY_CTRL_BIOS_DISABLE))
+        {
             return state.bios [(bank_base + offset) & (state.bios_size - 1)];
+        }
 
+        /* On-cartridge SRAM */
+        if (sram_enable && slot == 2)
+        {
+            return state.sram [offset & (SMS_SRAM_SIZE - 1)];
+        }
+
+        /* Cartridge ROM */
         if (state.rom != NULL && !(memory_control & SMS_MEMORY_CTRL_CART_DISABLE))
+        {
             return state.rom [(bank_base + offset) & (state.rom_size - 1)];
+        }
     }
 
     /* 8 KiB RAM + mirror */
@@ -129,14 +145,15 @@ static void sms_memory_write (uint16_t addr, uint8_t data)
     {
         if (addr == 0xfffc)
         {
+            sram_enable = (data & BIT_3) ? true : false;
+
             if (data & (BIT_0 | BIT_1))
             {
                 snepulator_error ("Error", "Bank shifting not implemented.");
             }
-
-            if (data & (BIT_2 | BIT_3 | BIT_4))
+            if (data & (BIT_2 | BIT_4))
             {
-                snepulator_error ("Error", "Cartridge RAM not implemented.");
+                snepulator_error ("Error", "SRAM bank not implemented.");
             }
         }
         else if (addr == 0xfffd)
@@ -173,7 +190,7 @@ static void sms_memory_write (uint16_t addr, uint8_t data)
 
             if (data & BIT_7)
             {
-                snepulator_error ("Error", "Cartridge RAM not implemented.");
+                snepulator_error ("Error", "Codemasters SRAM not implemented.");
             }
         }
     }
@@ -186,9 +203,10 @@ static void sms_memory_write (uint16_t addr, uint8_t data)
         }
     }
 
-    /* Cartridge, card, BIOS, expansion slot */
-    if (addr >= 0x0000 && addr <= 0xbfff)
+    /* On-cartridge SRAM */
+    if (sram_enable && addr >= 0x8000 && addr <= 0xbfff)
     {
+        state.sram [addr & (SMS_SRAM_SIZE - 1)] = data;
     }
 
     /* RAM + mirror */
@@ -484,6 +502,14 @@ void sms_init (void)
     if (state.ram == NULL)
     {
         snepulator_error ("Error", "Unable to allocate SMS RAM.");
+        return;
+    }
+
+    /* Create Cartridge SRAM */
+    state.sram = calloc (SMS_SRAM_SIZE, 1);
+    if (state.sram == NULL)
+    {
+        snepulator_error ("Error", "Unable to allocate SMS Cartridge RAM.");
         return;
     }
 
