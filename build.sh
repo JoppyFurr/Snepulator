@@ -34,6 +34,8 @@ eval $CC $CFLAGS -c Source/sms.c            -o Work/sms.o
 eval $CC $CFLAGS -c Source/colecovision.c   -o Work/colecovision.o
 
 # C Libraries
+eval $CC $CFLAGS -c Libraries/BLAKE3/blake3.c -o Work/blake3.o
+eval $CC $CFLAGS -c Libraries/BLAKE3/blake3_portable.c -o Work/blake3_portable.o
 eval $CC $CFLAGS -c Libraries/SDL_SavePNG/savepng.c -o Work/SDL_SavePNG.o
 
 # OS-specific compiler options

@@ -6,6 +6,8 @@
 #define VIDEO_BUFFER_WIDTH (256 + 2 * VIDEO_SIDE_BORDER)
 #define VIDEO_BUFFER_LINES 240
 
+#define HASH_LENGTH 12
+
 typedef enum Video_Filter_e {
     VIDEO_FILTER_NEAREST,
     VIDEO_FILTER_LINEAR,
@@ -44,6 +46,7 @@ typedef struct Snepulator_State_s {
     char *sms_bios_filename;
     char *colecovision_bios_filename;
     char *cart_filename;
+    uint8_t rom_hash [HASH_LENGTH];
 
     /* Console API */
     void (*run) (uint32_t ms);
