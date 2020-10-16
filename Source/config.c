@@ -10,6 +10,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include "util.h"
+
 typedef enum ConfigType_e
 {
     ENTRY_TYPE_NONE = 0,
@@ -254,38 +256,6 @@ int32_t config_string_set (char const *section_name, char const *key, char const
 
 
 /*
- * Get the directory that the config file resides in.
- */
-static int32_t config_directory (char **path_ptr)
-{
-    static char *path = NULL;
-
-    if (path == NULL)
-    {
-        char *home = getenv ("HOME");
-        int len;
-
-        if (home == NULL)
-        {
-            fprintf (stderr, "Error: ${HOME} not defined.");
-            return -1;
-        }
-
-        /* Get the path length */
-        len = snprintf (NULL, 0, "%s/.config", home) + 1;
-
-        /* Create the string */
-        path = calloc (len, 1);
-        snprintf (path, len, "%s/.config", home);
-    }
-
-    *path_ptr = path;
-
-    return 0;
-}
-
-
-/*
  * Get the full path to the config file.
  */
 static int32_t config_path (char **path_ptr)
@@ -297,7 +267,7 @@ static int32_t config_path (char **path_ptr)
         char *dir;
         int len;
 
-        if (config_directory (&dir) == -1)
+        if (snepulator_directory (&dir) == -1)
         {
             return -1;
         }
@@ -325,7 +295,7 @@ static int32_t config_open (FILE **config_file, char *mode)
     char        *path;
     struct stat  stat_buf;
 
-    if (config_directory (&directory) == -1)
+    if (snepulator_directory (&directory) == -1)
     {
         return -1;
     }
@@ -340,26 +310,8 @@ static int32_t config_open (FILE **config_file, char *mode)
     {
         if (errno == ENOENT)
         {
-            if (strcmp (mode, "r") == 0)
-            {
-                /* No configuration file to read */
-                return 0;
-            }
-            else if (strcmp (mode, "w") == 0)
-            {
-                /* Create the directory */
-                printf ("Creating directory %s.\n", directory);
-                if (mkdir (directory, S_IRWXU) == -1)
-                {
-                    perror ("Error: Unable to create configuration directory.");
-                    return -1;
-                }
-            }
-            else
-            {
-                /* Unsupported mode */
-                return -1;
-            }
+            perror ("Error: .snepulator directory not found.");
+            return -1;
         }
         else
         {

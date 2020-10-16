@@ -3,11 +3,14 @@
  */
 
 #include <errno.h>
+#include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #include <SDL2/SDL.h>
 
@@ -19,6 +22,58 @@
 
 /* Global state */
 extern Snepulator_State state;
+
+
+/*
+ * Get the directory that the snepulator files reside in.
+ */
+int32_t snepulator_directory (char **path_ptr)
+{
+    static char *path = NULL;
+
+    if (path == NULL)
+    {
+        struct stat  stat_buf;
+        char *home = getenv ("HOME");
+        int len;
+
+        if (home == NULL)
+        {
+            snepulator_error ("Environment Error", "${HOME} not defined.");
+            return -1;
+        }
+
+        /* Get the path length */
+        len = snprintf (NULL, 0, "%s/.snepulator", home) + 1;
+
+        /* Create the string */
+        path = calloc (len, 1);
+        snprintf (path, len, "%s/.snepulator", home);
+
+        /* Create the directory if it doesn't exist */
+        if (stat (path, &stat_buf) == -1)
+        {
+            if (errno == ENOENT)
+            {
+                if (mkdir (path, S_IRWXU) == -1)
+                {
+                    snepulator_error ("Filesystem Error", "Unable to create .snepulator directory.");
+                }
+            }
+            else
+            {
+                snepulator_error ("Filesystem Error", "Unable to stat configuration directory.");
+                return -1;
+            }
+        }
+    }
+
+
+    *path_ptr = path;
+
+    return 0;
+}
+
 
 /*
  * Round up to the next power-of-two
