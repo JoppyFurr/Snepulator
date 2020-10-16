@@ -43,6 +43,9 @@ typedef struct float_Colour_s {
 /* Get the directory that the snepulator files reside in. */
 int32_t snepulator_directory (char **path_ptr);
 
+/* Get the directory that the SRAM files reside in. */
+int32_t snepulator_sram_directory (char **path_ptr);
+
 /* Load a rom file into a buffer. The buffer should be freed when no-longer needed. */
 int32_t snepulator_load_rom (uint8_t **buffer, uint32_t *buffer_size, char *filename);
 

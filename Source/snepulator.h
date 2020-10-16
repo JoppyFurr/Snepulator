@@ -54,6 +54,7 @@ typedef struct Snepulator_State_s {
     uint32_t (*get_clock_rate) (void);
     bool (*get_int) (void);
     bool (*get_nmi) (void);
+    void (*sync) (void);
 
     /* Console memory */
     uint8_t *ram;

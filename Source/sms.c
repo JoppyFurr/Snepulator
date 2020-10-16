@@ -38,6 +38,7 @@ SMS_3D_Field sms_3d_field = SMS_3D_FIELD_NONE;
 static SMS_Mapper mapper = SMS_MAPPER_UNKNOWN;
 static uint8_t mapper_bank [3] = { 0x00, 0x01, 0x02 };
 static bool sram_enable = false;
+static bool sram_modified = false;
 
 /* 0: Output
  * 1: Input */
@@ -207,6 +208,7 @@ static void sms_memory_write (uint16_t addr, uint8_t data)
     if (sram_enable && addr >= 0x8000 && addr <= 0xbfff)
     {
         state.sram [addr & (SMS_SRAM_SIZE - 1)] = data;
+        sram_modified = true;
     }
 
     /* RAM + mirror */
@@ -487,6 +489,62 @@ static void sms_run (uint32_t ms)
 
 
 /*
+ * Generate the SRAM backup path.
+ *
+ * This string needs to be freed.
+ */
+static char *sram_path (void)
+{
+    static char *path;
+    char *dir;
+    int len;
+
+    if (snepulator_sram_directory (&dir) == -1)
+    {
+        return NULL;
+    }
+
+    /* Get the path length */
+    len = snprintf (NULL, 0, "%s/000000000000000000000000.sram", dir) + 1;
+
+    /* Create the string */
+    path = calloc (len, 1);
+    snprintf (path, len, "%s/%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x.sram", dir,
+            state.rom_hash [ 0], state.rom_hash [ 1], state.rom_hash [ 2], state.rom_hash [ 3],
+            state.rom_hash [ 4], state.rom_hash [ 5], state.rom_hash [ 6], state.rom_hash [ 7],
+            state.rom_hash [ 8], state.rom_hash [ 9], state.rom_hash [10], state.rom_hash [11]);
+
+    return path;
+}
+
+
+/*
+ * Backup the on-cartridge SRAM.
+ */
+static void sms_sync (void)
+{
+    if (sram_modified)
+    {
+        uint32_t bytes_written = 0;
+        char *path = sram_path ();
+        FILE *sram_file = fopen (path, "wb");
+
+        if (sram_file != NULL)
+        {
+            while (bytes_written < SMS_SRAM_SIZE)
+            {
+                bytes_written += fwrite (state.sram + bytes_written, 1, SMS_SRAM_SIZE - bytes_written, sram_file);
+            }
+
+            fclose (sram_file);
+        }
+
+        free (path);
+    }
+}
+
+
+/*
  * Reset the SMS and load a new BIOS and/or cartridge ROM.
  */
 void sms_init (void)
@@ -496,6 +554,8 @@ void sms_init (void)
     mapper_bank [0] = 0;
     mapper_bank [1] = 1;
     mapper_bank [2] = 2;
+    sram_enable = false;
+    sram_modified = false;
 
     /* Create RAM */
     state.ram = calloc (SMS_RAM_SIZE, 1);
@@ -533,6 +593,22 @@ void sms_init (void)
         fprintf (stdout, "%d KiB ROM %s loaded.\n", state.rom_size >> 10, state.cart_filename);
     }
 
+    /* Load SRAM if it exists */
+    char *_sram_path = sram_path ();
+    FILE *sram_file = fopen (_sram_path, "rb");
+    if (sram_file != NULL)
+    {
+        uint32_t bytes_read = 0;
+
+        while (bytes_read < SMS_SRAM_SIZE)
+        {
+            bytes_read += fread (state.sram + bytes_read, 1, SMS_SRAM_SIZE - bytes_read, sram_file);
+        }
+
+        fclose (sram_file);
+    }
+    free (_sram_path);
+
     export_paddle = false;
     sms_3d_field = SMS_3D_FIELD_NONE;
 
@@ -546,6 +622,7 @@ void sms_init (void)
     state.get_clock_rate = sms_get_clock_rate;
     state.get_int = sms_vdp_get_interrupt;
     state.get_nmi = sms_get_nmi;
+    state.sync = sms_sync;
     state.run = sms_run;
 
     /* Begin emulation */

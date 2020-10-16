@@ -68,6 +68,54 @@ int32_t snepulator_directory (char **path_ptr)
         }
     }
 
+    *path_ptr = path;
+
+    return 0;
+}
+
+
+/*
+ * Get the directory that the SRAM files reside in.
+ */
+int32_t snepulator_sram_directory (char **path_ptr)
+{
+    static char *path = NULL;
+
+    if (path == NULL)
+    {
+        struct stat  stat_buf;
+        char *base;
+        int len;
+
+        if (snepulator_directory (&base) == -1)
+        {
+            return -1;
+        }
+
+        /* Get the path length */
+        len = snprintf (NULL, 0, "%s/sram", base) + 1;
+
+        /* Create the string */
+        path = calloc (len, 1);
+        snprintf (path, len, "%s/sram", base);
+
+        /* Create the directory if it doesn't exist */
+        if (stat (path, &stat_buf) == -1)
+        {
+            if (errno == ENOENT)
+            {
+                if (mkdir (path, S_IRWXU) == -1)
+                {
+                    snepulator_error ("Filesystem Error", "Unable to create SRAM directory.");
+                }
+            }
+            else
+            {
+                snepulator_error ("Filesystem Error", "Unable to stat SRAM directory.");
+                return -1;
+            }
+        }
+    }
 
     *path_ptr = path;
 

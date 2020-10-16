@@ -271,16 +271,30 @@ void snepulator_audio_callback (void *userdata, uint8_t *stream, int len)
 void snepulator_reset (void)
 {
     /* Stop emulation */
-    state.ready = false;
     state.running = false;
+
+    /* Save any battery-backed memory. */
+    if (state.sync != NULL)
+    {
+        state.sync ();
+    }
+
+    /* Mark the system as not-ready. */
+    state.ready = false;
 
     /* Clear callback functions */
     state.run = NULL;
     state.audio_callback = NULL;
     state.get_clock_rate = NULL;
+    state.get_int = NULL;
+    state.get_nmi = NULL;
+    state.sync = NULL;
 
     /* Clear additonal video parameters */
     state.video_extra_left_border = 0;
+
+    /* Clear hash */
+    memset (state.rom_hash, 0, sizeof (state.rom_hash));
 
     /* Free memory */
     if (state.ram != NULL)
@@ -819,6 +833,7 @@ int main (int argc, char **argv)
     /* Run the main GUI loop until the user quits. */
     main_gui_loop ();
 
+    snepulator_reset ();
     pthread_join (emulation_thread, NULL);
 
     if (state.error_title)
