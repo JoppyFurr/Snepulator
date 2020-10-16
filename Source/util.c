@@ -14,6 +14,7 @@
 #include "util.h"
 #include "snepulator.h"
 
+#include "../Libraries/BLAKE3/blake3.h"
 #include "../Libraries/SDL_SavePNG/savepng.h"
 
 /* Global state */
@@ -38,6 +39,18 @@ static uint32_t round_up (uint32_t n)
     }
 
     return result;
+}
+
+/*
+ * Use BLAKE3 to make a 12-byte hash for the current ROM.
+ */
+void snepulator_hash_rom (uint8_t *buffer, uint32_t rom_size)
+{
+    blake3_hasher hasher;
+
+    blake3_hasher_init (&hasher);
+    blake3_hasher_update (&hasher, buffer, rom_size);
+    blake3_hasher_finalize (&hasher, state.rom_hash, HASH_LENGTH);
 }
 
 /*
@@ -88,6 +101,10 @@ int32_t snepulator_load_rom (uint8_t **buffer, uint32_t *buffer_size, char *file
     }
 
     fclose (rom_file);
+
+    /* Only the hash of the most recently loaded ROM is held on to,
+     * so any BIOS should be loaded first, saving the ROM for last. */
+    snepulator_hash_rom (*buffer, rom_size);
 
     return EXIT_SUCCESS;
 }
