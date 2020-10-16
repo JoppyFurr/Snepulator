@@ -288,6 +288,11 @@ void snepulator_reset (void)
         free (state.ram);
         state.ram = NULL;
     }
+    if (state.sram != NULL)
+    {
+        free (state.sram);
+        state.sram = NULL;
+    }
     if (state.bios != NULL)
     {
         free (state.bios);
