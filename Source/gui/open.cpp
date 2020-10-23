@@ -46,13 +46,17 @@ static char path[160] = { '\0' };
  */
 void snepulator_render_open_modal (void)
 {
-    if (ImGui::BeginPopupModal (open_state.title, NULL, ImGuiWindowFlags_AlwaysAutoResize |
-                                                     ImGuiWindowFlags_NoMove |
-                                                     ImGuiWindowFlags_NoScrollbar))
-    {
-        int width = (state.host_width / 2 > 512) ? state.host_width / 2 : 512;
-        int height = (state.host_height / 2 > 384) ? state.host_width / 2 : 384;
+    int width = state.host_width - 64;
+    int height = state.host_height - 64;
 
+    /* Centre */
+    ImGui::SetNextWindowSize (ImVec2 (width, height), ImGuiCond_Always);
+    ImGui::SetNextWindowPos (ImVec2 (state.host_width / 2, state.host_height / 2), ImGuiCond_Always, ImVec2 (0.5f, 0.5f));
+
+    if (ImGui::BeginPopupModal (open_state.title, NULL, ImGuiWindowFlags_AlwaysAutoResize |
+                                                        ImGuiWindowFlags_NoMove |
+                                                        ImGuiWindowFlags_NoScrollbar))
+    {
         /* State */
         /* TODO: path_cached needs to clear whenever the regex changes */
         static bool path_cached = false;
@@ -136,7 +140,7 @@ void snepulator_render_open_modal (void)
         ImGui::Text ("%s", path);
 
         /* Current directory contents */
-        ImGui::BeginChild ("Files", ImVec2 (width, height - 64), true);
+        ImGui::BeginChild ("Files", ImVec2 (width - 16, height - 8 - 64), true);
         for (int i = 0; i < file_list.size (); i++)
         {
             /* TODO: Can we get the text height rather than hard-coding it? */
