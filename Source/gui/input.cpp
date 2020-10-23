@@ -189,22 +189,24 @@ const char *button_mapping_to_string (Gamepad_Mapping b)
 }
 
 
-/* TODO: It would be nice to re-centre upon window resizing */
-
-
 /*
  * Render the input configuration modal.
  */
 void snepulator_render_input_modal (void)
 {
+    int width = state.host_width - 64;
+    int height = state.host_height - 64;
+
+    /* Centre */
+    ImGui::SetNextWindowSize (ImVec2 (width, height), ImGuiCond_Always);
+    ImGui::SetNextWindowPos (ImVec2 (state.host_width / 2, state.host_height / 2), ImGuiCond_Always, ImVec2 (0.5f, 0.5f));
+
     if (ImGui::BeginPopupModal ("Configure device...", NULL, ImGuiWindowFlags_AlwaysAutoResize |
                                                              ImGuiWindowFlags_NoMove |
                                                              ImGuiWindowFlags_NoScrollbar))
     {
-        int width = 512; /* TODO: Something more responsive */
-        int height = 384;
 
-        ImGui::PushItemWidth (width);
+        ImGui::PushItemWidth (width - 16);
         if (ImGui::BeginCombo ("##Device", gamepad_get_name (input_combo_index)))
         {
             for (int i = 0; i < gamepad_list_count; i++)
@@ -226,11 +228,11 @@ void snepulator_render_input_modal (void)
         ImGui::PopItemWidth ();
 
         /* Master System gamepad */
-        ImGui::BeginChild ("SMS Gamepad", ImVec2 (width, height - 64), true);
+        ImGui::BeginChild ("SMS Gamepad", ImVec2 (width - 16, height - 16 - 64), true);
         {
             ImVec2 origin = ImGui::GetCursorScreenPos ();
-            float scale = width * 0.9;
-            origin.x += 10;
+            float scale = (width - 64);
+            origin.x += 16;
             origin.y += 10;
 
             ImDrawList* draw_list  = ImGui::GetWindowDrawList ();
