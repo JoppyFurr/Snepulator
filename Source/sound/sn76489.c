@@ -269,15 +269,27 @@ void psg_run_cycles (uint64_t cycles)
 /*
  * Retrieves a block of samples from the sample-ring.
  * Assumes a sample-rate of 48 KHz.
+ *
+ * TODO: Proper sample-rate conversion.
  */
 void sn76489_get_samples (int16_t *stream, int count)
 {
     static uint64_t soundcard_sample_count = 0;
+    static uint32_t clock_rate = 0;
+
+    /* Reset the ring buffer if the clock rate changes */
+    if (clock_rate != state.get_clock_rate ())
+    {
+        clock_rate = state.get_clock_rate ();
+        soundcard_sample_count = 0;
+        read_index = 0;
+        write_index = 0;
+    }
 
     /* Take samples from the PSG ring to pass to the sound card */
     for (int i = 0; i < count; i++)
     {
-        read_index = (soundcard_sample_count * (state.get_clock_rate () >> 4)) / 48000;
+        read_index = (soundcard_sample_count * (clock_rate >> 4)) / 48000;
 
         if (read_index >= write_index)
         {
