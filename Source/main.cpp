@@ -458,6 +458,13 @@ int main_gui_loop (void)
                 state.abort = true;
             }
 
+            /* Allow ROM files to be dropped onto the Snepulator window */
+            if (event.type == SDL_DROPFILE && event.drop.file != NULL)
+            {
+                snepulator_load_rom (event.drop.file);
+                SDL_free (event.drop.file);
+            }
+
             gamepad_process_event (&event);
 
             /* Allow the input configuration dialogue to sample input */
