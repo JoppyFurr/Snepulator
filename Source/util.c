@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -222,6 +223,14 @@ void snepulator_take_screenshot (void)
     uint32_t height = state.video_height;
     uint32_t stride = VIDEO_BUFFER_WIDTH;
     uint8_t *buffer;
+    char    *home = getenv ("HOME");
+    char     path [80] = { '\0' };
+
+    if (home == NULL)
+    {
+        snepulator_error ("Environment Error", "${HOME} not defined.");
+        return;
+    }
 
     /* 24-bits per pixel */
     buffer = malloc (state.video_width * state.video_height * 3);
@@ -240,7 +249,15 @@ void snepulator_take_screenshot (void)
     SDL_Surface *screenshot_surface = SDL_CreateRGBSurfaceFrom (buffer, width, height,
                                       24, state.video_width * 3, 0xff << 0, 0xff << 8, 0xff << 16, 0x00);
 
-    if (SDL_SavePNG (screenshot_surface, "screenshot.png") < 0)
+    /* Include the date in the filename */
+    time_t time_val;
+    time (&time_val);
+    struct tm *time_ptr = localtime (&time_val);
+    snprintf (path, 79, "%s/Snepulator %04d-%02d-%02d %02d:%02d:%02d.png", home,
+              time_ptr->tm_year + 1900, time_ptr->tm_mon + 1, time_ptr->tm_mday,
+              time_ptr->tm_hour, time_ptr->tm_min, time_ptr->tm_sec);
+
+    if (SDL_SavePNG (screenshot_surface, path) < 0)
     {
         snepulator_error ("SDL Error", SDL_GetError ());
     }
