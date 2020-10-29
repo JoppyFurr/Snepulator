@@ -207,22 +207,22 @@ bool tms9918a_get_interrupt (void)
  * Render one line of an 8x8 pattern.
  */
 static void tms9918a_render_pattern_line (const TMS9918A_Config *config, uint16_t line, TMS9918A_Pattern *pattern_base,
-                                          uint8_t tile_colours, int32_Point_2D offset, bool sprite)
+                                          uint8_t tile_colours, int32_Point_2D offset, bool sprite, bool magnify)
 {
     uint8_t line_data;
 
     uint8_t background_colour = tile_colours & 0x0f;
     uint8_t foreground_colour = tile_colours >> 4;
 
-    line_data = pattern_base->data [line - offset.y];
+    line_data = pattern_base->data [(line - offset.y) >> magnify];
 
-    for (uint32_t x = 0; x < 8; x++)
+    for (uint32_t x = 0; x < (8 << magnify); x++)
     {
         /* Don't draw texture pixels that fall outside of the screen */
         if (x + offset.x >= 256)
             continue;
 
-        uint8_t colour_index = ((line_data & (0x80 >> x)) ? foreground_colour : background_colour);
+        uint8_t colour_index = ((line_data & (0x80 >> (x >> magnify))) ? foreground_colour : background_colour);
 
         if (colour_index == TMS9918A_COLOUR_TRANSPARENT)
         {
@@ -250,11 +250,18 @@ void tms9918a_render_sprites_line (const TMS9918A_Config *config, uint16_t line)
 {
     uint16_t sprite_attribute_table_base = (((uint16_t) tms9918a_state.regs.sprite_attr_table_base) << 7) & 0x3f10;
     uint16_t pattern_generator_base = (((uint16_t) tms9918a_state.regs.sprite_pg_base) << 11) & 0x3800;
-    uint8_t sprite_height = (tms9918a_state.regs.ctrl_1 & TMS9918A_CTRL_1_SPRITE_SIZE) ? 16 : 8;
+    uint8_t sprite_size = (tms9918a_state.regs.ctrl_1 & TMS9918A_CTRL_1_SPRITE_SIZE) ? 16 : 8;
     TMS9918A_Sprite *line_sprite_buffer [4];
     uint8_t line_sprite_count = 0;
     TMS9918A_Pattern *pattern;
     int32_Point_2D position;
+    bool magnify = false;
+
+    /* Sprite magnification */
+    if (tms9918a_state.regs.ctrl_1 & TMS9918A_CTRL_1_SPRITE_MAG)
+    {
+        magnify = true;
+    }
 
     /* Traverse the sprite list, filling the line sprite buffer */
     for (int i = 0; i < 32 && line_sprite_count < 4; i++)
@@ -273,7 +280,7 @@ void tms9918a_render_sprites_line (const TMS9918A_Config *config, uint16_t line)
             position.y = sprite->y + 1;
 
         /* If the sprite is on this line, add it to the buffer */
-        if (line >= position.y && line < position.y + sprite_height)
+        if (line >= position.y && line < position.y + (sprite_size << magnify))
         {
             line_sprite_buffer [line_sprite_count++] = sprite;
         }
@@ -308,8 +315,6 @@ void tms9918a_render_sprites_line (const TMS9918A_Config *config, uint16_t line)
 
         /* TODO: Sprite collisions */
 
-        /* TODO: Support 'magnified' sprites, (SPRITE_MAG) */
-
         if (tms9918a_state.regs.ctrl_1 & TMS9918A_CTRL_1_SPRITE_SIZE)
         {
             pattern_index &= 0xfc;
@@ -318,9 +323,9 @@ void tms9918a_render_sprites_line (const TMS9918A_Config *config, uint16_t line)
 
             for (int i = 0; i < 4; i++)
             {
-                sub_position.x = position.x + ((i & 2) ? 8 : 0);
-                sub_position.y = position.y + ((i & 1) ? 8 : 0);
-                tms9918a_render_pattern_line (config, line, pattern + i, sprite->colour_ec << 4, sub_position, true);
+                sub_position.x = position.x + ((i & 2) ? (8 << magnify) : 0);
+                sub_position.y = position.y + ((i & 1) ? (8 << magnify) : 0);
+                tms9918a_render_pattern_line (config, line, pattern + i, sprite->colour_ec << 4, sub_position, true, magnify);
             }
         }
         else
@@ -328,7 +333,7 @@ void tms9918a_render_sprites_line (const TMS9918A_Config *config, uint16_t line)
             /* TODO: It looks like maybe in some places, the base address is in bytes, and in other places it is in patterns...
              *       (or is that just when it is zero?) Find out what's going on and comment. */
             pattern = (TMS9918A_Pattern *) &tms9918a_state.vram [pattern_generator_base + (pattern_index * sizeof (TMS9918A_Pattern))];
-            tms9918a_render_pattern_line (config, line, pattern, sprite->colour_ec << 4, position, true);
+            tms9918a_render_pattern_line (config, line, pattern, sprite->colour_ec << 4, position, true, magnify);
         }
     }
 }
@@ -361,7 +366,7 @@ void tms9918a_render_mode0_background_line (const TMS9918A_Config *config, uint1
 
         position.x = 8 * tile_x;
         position.y = 8 * tile_y;
-        tms9918a_render_pattern_line (config, line, pattern, colours, position, false);
+        tms9918a_render_pattern_line (config, line, pattern, colours, position, false, false);
     }
 }
 
@@ -406,7 +411,7 @@ void tms9918a_render_mode2_background_line (const TMS9918A_Config *config, uint1
 
         position.x = 8 * tile_x;
         position.y = 8 * tile_y;
-        tms9918a_render_pattern_line (config, line, pattern, colours, position, false);
+        tms9918a_render_pattern_line (config, line, pattern, colours, position, false, false);
     }
 }
 
