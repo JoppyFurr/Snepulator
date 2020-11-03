@@ -178,17 +178,7 @@ static void sg_1000_io_write (uint8_t addr, uint8_t data)
  */
 static bool sg_1000_get_nmi ()
 {
-    static bool pause_button_previous = false;
-    bool ret = false;
-
-    if (pause_button_previous == false && gamepad_1.state [GAMEPAD_BUTTON_START] == true)
-    {
-        ret = true;
-    }
-
-    pause_button_previous = gamepad_1.state [GAMEPAD_BUTTON_START];
-
-    return ret;
+    return !! gamepad_1.state [GAMEPAD_BUTTON_START];
 }
 
 
