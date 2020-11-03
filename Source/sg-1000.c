@@ -14,7 +14,7 @@
 
 #include "gamepad.h"
 #include "cpu/z80.h"
-#include "video/tms9918a.h"
+#include "video/tms9928a.h"
 #include "sound/sn76489.h"
 
 #include "sg-1000.h"
@@ -99,18 +99,18 @@ static void sg_1000_memory_write (uint16_t addr, uint8_t data)
  */
 static uint8_t sg_1000_io_read (uint8_t addr)
 {
-    /* tms9918a */
+    /* tms9928a */
     if (addr >= 0x80 && addr <= 0xbf)
     {
         if ((addr & 0x01) == 0x00)
         {
-            /* tms9918a Data Register */
-            return tms9918a_data_read ();
+            /* tms9928a Data Register */
+            return tms9928a_data_read ();
         }
         else
         {
-            /* tms9918a Status Flags */
-            return tms9918a_status_read ();
+            /* tms9928a Status Flags */
+            return tms9928a_status_read ();
         }
     }
 
@@ -162,12 +162,12 @@ static void sg_1000_io_write (uint8_t addr, uint8_t data)
         if ((addr & 0x01) == 0x00)
         {
             /* VDP Data Register */
-            tms9918a_data_write (data);
+            tms9928a_data_write (data);
         }
         else
         {
             /* VDP Control Register */
-            tms9918a_control_write (data);
+            tms9928a_control_write (data);
         }
     }
 }
@@ -239,7 +239,7 @@ static void sg_1000_run (uint32_t ms)
         /* 228 CPU cycles per scanline */
         z80_run_cycles (228);
         psg_run_cycles (228);
-        tms9918a_run_one_scanline ();
+        tms9928a_run_one_scanline ();
     }
 }
 
@@ -274,13 +274,13 @@ void sg_1000_init (void)
 
     /* Initialise hardware */
     z80_init (sg_1000_memory_read, sg_1000_memory_write, sg_1000_io_read, sg_1000_io_write);
-    tms9918a_init ();
+    tms9928a_init ();
     sn76489_init ();
 
     /* Hook up the audio callback */
     state.audio_callback = sg_1000_audio_callback;
     state.get_clock_rate = sg_1000_get_clock_rate;
-    state.get_int = tms9918a_get_interrupt;
+    state.get_int = tms9928a_get_interrupt;
     state.get_nmi = sg_1000_get_nmi;
     state.run = sg_1000_run;
 

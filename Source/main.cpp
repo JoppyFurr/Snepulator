@@ -21,7 +21,7 @@ extern "C" {
 #include "snepulator.h"
 #include "config.h"
 
-#include "video/tms9918a.h"
+#include "video/tms9928a.h"
 #include "video/sms_vdp.h"
 #include "cpu/z80.h"
 

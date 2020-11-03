@@ -16,7 +16,7 @@
 
 #include "gamepad.h"
 #include "cpu/z80.h"
-#include "video/tms9918a.h"
+#include "video/tms9928a.h"
 #include "sound/sn76489.h"
 
 #include "colecovision.h"
@@ -82,18 +82,18 @@ static void colecovision_memory_write (uint16_t addr, uint8_t data)
  */
 static uint8_t colecovision_io_read (uint8_t addr)
 {
-    /* tms9918a */
+    /* tms9928a */
     if (addr >= 0xa0 && addr <= 0xbf)
     {
         if ((addr & 0x01) == 0x00)
         {
-            /* tms9918a Data Register */
-            return tms9918a_data_read ();
+            /* tms9928a Data Register */
+            return tms9928a_data_read ();
         }
         else
         {
-            /* tms9918a Status Flags */
-            return tms9918a_status_read ();
+            /* tms9928a Status Flags */
+            return tms9928a_status_read ();
         }
     }
 
@@ -198,18 +198,18 @@ static void colecovision_io_write (uint8_t addr, uint8_t data)
         colecovision_input_mode = COLECOVISION_INPUT_MODE_KEYPAD;
     }
 
-    /* tms9918a */
+    /* tms9928a */
     if (addr >= 0xa0 && addr <= 0xbf)
     {
         if ((addr & 0x01) == 0x00)
         {
             /* VDP Data Register */
-            tms9918a_data_write (data);
+            tms9928a_data_write (data);
         }
         else
         {
             /* VDP Control Register */
-            tms9918a_control_write (data);
+            tms9928a_control_write (data);
         }
     }
 
@@ -274,7 +274,7 @@ static void colecovision_run (uint32_t ms)
         /* 228 CPU cycles per scanline */
         z80_run_cycles (228);
         psg_run_cycles (228);
-        tms9918a_run_one_scanline ();
+        tms9928a_run_one_scanline ();
     }
 }
 
@@ -322,14 +322,14 @@ void colecovision_init (void)
 
     /* Initialise hardware */
     z80_init (colecovision_memory_read, colecovision_memory_write, colecovision_io_read, colecovision_io_write);
-    tms9918a_init ();
+    tms9928a_init ();
     sn76489_init ();
 
     /* Hook up the audio callback */
     state.audio_callback = colecovision_audio_callback;
     state.get_clock_rate = colecovision_get_clock_rate;
     state.get_int = colecovision_get_int;
-    state.get_nmi = tms9918a_get_interrupt;
+    state.get_nmi = tms9928a_get_interrupt;
     state.run = colecovision_run;
 
     /* Begin emulation */

@@ -27,7 +27,7 @@ eval $CC $CFLAGS -c Source/config.c         -o Work/config.o
 eval $CC $CFLAGS -c Source/gamepad.c        -o Work/gamepad.o
 eval $CC $CFLAGS -c Source/cpu/z80.c        -o Work/z80.o
 eval $CC $CFLAGS -c Source/sound/sn76489.c  -o Work/sn76489.o
-eval $CC $CFLAGS -c Source/video/tms9918a.c -o Work/tms9918a.o
+eval $CC $CFLAGS -c Source/video/tms9928a.c -o Work/tms9928a.o
 eval $CC $CFLAGS -c Source/video/sms_vdp.c  -o Work/sms_vdp.o
 eval $CC $CFLAGS -c Source/sg-1000.c        -o Work/sg-1000.o
 eval $CC $CFLAGS -c Source/sms.c            -o Work/sms.o
