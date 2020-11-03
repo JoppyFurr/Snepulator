@@ -4552,6 +4552,11 @@ void z80_run_cycles (uint64_t cycles)
             bool nmi = state.get_nmi ();
             if (nmi && nmi_previous == 0)
             {
+                if (z80_regs.halt)
+                {
+                    z80_regs.halt = false;
+                    PC += 1;
+                }
                 IFF1 = false;
                 memory_write (--z80_regs.sp, z80_regs.pc_h);
                 memory_write (--z80_regs.sp, z80_regs.pc_l);
