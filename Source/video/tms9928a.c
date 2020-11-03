@@ -1,5 +1,5 @@
 /*
- * Implementation for the TI TMS9918A video chip.
+ * Implementation of the TI TMS9928A / TMS9929A video chip.
  */
 
 #include <stdbool.h>
@@ -13,13 +13,13 @@
 #include "../util.h"
 #include "../snepulator.h"
 
-#include "tms9918a.h"
+#include "tms9928a.h"
 
 extern Snepulator_State state;
 extern pthread_mutex_t video_mutex;
-TMS9918A_State tms9918a_state;
+TMS9928A_State tms9928a_state;
 
-const char *tms9918a_mode_name [16] = {
+const char *tms9928a_mode_name [16] = {
     "Mode 0 - Graphics I Mode",
     "Mode 1 - Text Mode",
     "Mode 2 - Graphics II Mode",
@@ -38,7 +38,7 @@ const char *tms9918a_mode_name [16] = {
     "Mode 4+3+2+1 - SMS 192 lines"
 };
 
-#define TMS9918A_NTSC_PALETTE { \
+#define TMS9928A_NTSC_PALETTE { \
     {   0 / 255.0f,   0 / 255.0f,   0 / 255.0f }, /* Transparent */ \
     {   0 / 255.0f,   0 / 255.0f,   0 / 255.0f }, /* Black */ \
     {  33 / 255.0f, 200 / 255.0f,  66 / 255.0f }, /* Medium Green */ \
@@ -59,53 +59,53 @@ const char *tms9918a_mode_name [16] = {
 
 /* Display mode details */
 /* TODO: Confirm PAL palette */
-static const TMS9918A_Config Mode0_PAL = {
-    .mode = TMS9918A_MODE_0,
+static const TMS9928A_Config Mode0_PAL = {
+    .mode = TMS9928A_MODE_0,
     .lines_active = 192,
     .lines_total = 313,
-    .palette = TMS9918A_NTSC_PALETTE
+    .palette = TMS9928A_NTSC_PALETTE
 };
-static const TMS9918A_Config Mode0_NTSC = {
-    .mode = TMS9918A_MODE_0,
+static const TMS9928A_Config Mode0_NTSC = {
+    .mode = TMS9928A_MODE_0,
     .lines_active = 192,
     .lines_total = 262,
-    .palette = TMS9918A_NTSC_PALETTE
+    .palette = TMS9928A_NTSC_PALETTE
 };
-static const TMS9918A_Config Mode2_PAL = {
-    .mode = TMS9918A_MODE_2,
+static const TMS9928A_Config Mode2_PAL = {
+    .mode = TMS9928A_MODE_2,
     .lines_active = 192,
     .lines_total = 313,
-    .palette = TMS9918A_NTSC_PALETTE
+    .palette = TMS9928A_NTSC_PALETTE
 };
-static const TMS9918A_Config Mode2_NTSC = {
-    .mode = TMS9918A_MODE_2,
+static const TMS9928A_Config Mode2_NTSC = {
+    .mode = TMS9928A_MODE_2,
     .lines_active = 192,
     .lines_total = 262,
-    .palette = TMS9918A_NTSC_PALETTE
+    .palette = TMS9928A_NTSC_PALETTE
 };
 
 
 /*
  * Supply a human-readable string describing the specified mode.
  */
-const char *tms9918a_mode_name_get (TMS9918A_Mode mode)
+const char *tms9928a_mode_name_get (TMS9928A_Mode mode)
 {
-    return tms9918a_mode_name [mode & 0x0f];
+    return tms9928a_mode_name [mode & 0x0f];
 }
 
 
 /*
- * Read one byte from the tms9918a data port.
+ * Read one byte from the tms9928a data port.
  */
-uint8_t tms9918a_data_read ()
+uint8_t tms9928a_data_read ()
 {
-    uint8_t data = tms9918a_state.read_buffer;
+    uint8_t data = tms9928a_state.read_buffer;
 
-    tms9918a_state.first_byte_received = false;
+    tms9928a_state.first_byte_received = false;
 
-    tms9918a_state.read_buffer = tms9918a_state.vram [tms9918a_state.address];
+    tms9928a_state.read_buffer = tms9928a_state.vram [tms9928a_state.address];
 
-    tms9918a_state.address = (tms9918a_state.address + 1) & 0x3fff;
+    tms9928a_state.address = (tms9928a_state.address + 1) & 0x3fff;
 
     return data;
 
@@ -113,70 +113,70 @@ uint8_t tms9918a_data_read ()
 
 
 /*
- * Write one byte to the tms9918a data port.
+ * Write one byte to the tms9928a data port.
  */
-void tms9918a_data_write (uint8_t value)
+void tms9928a_data_write (uint8_t value)
 {
-    tms9918a_state.first_byte_received = false;
+    tms9928a_state.first_byte_received = false;
 
-    switch (tms9918a_state.code)
+    switch (tms9928a_state.code)
     {
-        case TMS9918A_CODE_VRAM_READ:
-        case TMS9918A_CODE_VRAM_WRITE:
-        case TMS9918A_CODE_REG_WRITE:
-            tms9918a_state.vram [tms9918a_state.address] = value;
+        case TMS9928A_CODE_VRAM_READ:
+        case TMS9928A_CODE_VRAM_WRITE:
+        case TMS9928A_CODE_REG_WRITE:
+            tms9928a_state.vram [tms9928a_state.address] = value;
             break;
 
         default:
             break;
     }
-    tms9918a_state.address = (tms9918a_state.address + 1) & 0x3fff;
+    tms9928a_state.address = (tms9928a_state.address + 1) & 0x3fff;
 }
 
 
 /*
- * Read one byte from the tms9918a control (status) port.
+ * Read one byte from the tms9928a control (status) port.
  */
-uint8_t tms9918a_status_read ()
+uint8_t tms9928a_status_read ()
 {
-    uint8_t status = tms9918a_state.status;
-    tms9918a_state.first_byte_received = false;
+    uint8_t status = tms9928a_state.status;
+    tms9928a_state.first_byte_received = false;
 
     /* Clear on read */
-    tms9918a_state.status = 0x00;
-    tms9918a_state.line_interrupt = false; /* "The flag remains set until the control port (IO port 0xbf) is read */
+    tms9928a_state.status = 0x00;
+    tms9928a_state.line_interrupt = false; /* "The flag remains set until the control port (IO port 0xbf) is read */
 
     return status;
 }
 
 
 /*
- * Write one byte to the tms9918a control port.
+ * Write one byte to the tms9928a control port.
  */
-void tms9918a_control_write (uint8_t value)
+void tms9928a_control_write (uint8_t value)
 {
-    if (!tms9918a_state.first_byte_received) /* First byte */
+    if (!tms9928a_state.first_byte_received) /* First byte */
     {
-        tms9918a_state.first_byte_received = true;
-        tms9918a_state.address = (tms9918a_state.address & 0x3f00) | ((uint16_t) value << 0);
+        tms9928a_state.first_byte_received = true;
+        tms9928a_state.address = (tms9928a_state.address & 0x3f00) | ((uint16_t) value << 0);
     }
     else /* Second byte */
     {
-        tms9918a_state.first_byte_received = false;
-        tms9918a_state.address = (tms9918a_state.address & 0x00ff) | ((uint16_t) (value & 0x3f) << 8);
-        tms9918a_state.code = value & 0xc0;
+        tms9928a_state.first_byte_received = false;
+        tms9928a_state.address = (tms9928a_state.address & 0x00ff) | ((uint16_t) (value & 0x3f) << 8);
+        tms9928a_state.code = value & 0xc0;
 
-        switch (tms9918a_state.code)
+        switch (tms9928a_state.code)
         {
-            case TMS9918A_CODE_VRAM_READ:
-                tms9918a_state.read_buffer = tms9918a_state.vram[tms9918a_state.address++];
+            case TMS9928A_CODE_VRAM_READ:
+                tms9928a_state.read_buffer = tms9928a_state.vram[tms9928a_state.address++];
                 break;
-            case TMS9918A_CODE_VRAM_WRITE:
+            case TMS9928A_CODE_VRAM_WRITE:
                 break;
-            case TMS9918A_CODE_REG_WRITE:
+            case TMS9928A_CODE_REG_WRITE:
                 if ((value & 0x0f) <= 10)
                 {
-                    ((uint8_t *) &tms9918a_state.regs) [value & 0x0f] = tms9918a_state.address & 0x00ff;
+                    ((uint8_t *) &tms9928a_state.regs) [value & 0x0f] = tms9928a_state.address & 0x00ff;
                 }
                 break;
             default:
@@ -187,14 +187,14 @@ void tms9918a_control_write (uint8_t value)
 
 
 /*
- * Check if the tms9918a is currently requesting an interrupt.
+ * Check if the tms9928a is currently requesting an interrupt.
  */
-bool tms9918a_get_interrupt (void)
+bool tms9928a_get_interrupt (void)
 {
     bool interrupt = false;
 
     /* Frame interrupt */
-    if ((tms9918a_state.regs.ctrl_1 & TMS9918A_CTRL_1_FRAME_INT_EN) && (tms9918a_state.status & TMS9918A_STATUS_INT))
+    if ((tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_FRAME_INT_EN) && (tms9928a_state.status & TMS9928A_STATUS_INT))
     {
         interrupt = true;
     }
@@ -206,7 +206,7 @@ bool tms9918a_get_interrupt (void)
 /*
  * Render one line of an 8x8 pattern.
  */
-static void tms9918a_render_pattern_line (const TMS9918A_Config *config, uint16_t line, TMS9918A_Pattern *pattern_base,
+static void tms9928a_render_pattern_line (const TMS9928A_Config *config, uint16_t line, TMS9928A_Pattern *pattern_base,
                                           uint8_t tile_colours, int32_Point_2D offset, bool sprite, bool magnify)
 {
     uint8_t line_data;
@@ -224,7 +224,7 @@ static void tms9918a_render_pattern_line (const TMS9918A_Config *config, uint16_
 
         uint8_t colour_index = ((line_data & (0x80 >> (x >> magnify))) ? foreground_colour : background_colour);
 
-        if (colour_index == TMS9918A_COLOUR_TRANSPARENT)
+        if (colour_index == TMS9928A_COLOUR_TRANSPARENT)
         {
             if (sprite == true)
             {
@@ -232,12 +232,12 @@ static void tms9918a_render_pattern_line (const TMS9918A_Config *config, uint16_
             }
             else
             {
-                colour_index = tms9918a_state.regs.background_colour & 0x0f;
+                colour_index = tms9928a_state.regs.background_colour & 0x0f;
             }
         }
 
         float_Colour pixel = config->palette [colour_index];
-        tms9918a_state.frame_current [(offset.x + x + VIDEO_SIDE_BORDER) + (state.video_out_first_active_line + line) * VIDEO_BUFFER_WIDTH] = pixel;
+        tms9928a_state.frame_current [(offset.x + x + VIDEO_SIDE_BORDER) + (state.video_out_first_active_line + line) * VIDEO_BUFFER_WIDTH] = pixel;
     }
 }
 
@@ -246,19 +246,19 @@ static void tms9918a_render_pattern_line (const TMS9918A_Config *config, uint16_
  * Render this line's sprites for modes with sprite support.
  * Sprites can be either 8×8 pixels, or 16×16.
  */
-void tms9918a_render_sprites_line (const TMS9918A_Config *config, uint16_t line)
+void tms9928a_render_sprites_line (const TMS9928A_Config *config, uint16_t line)
 {
-    uint16_t sprite_attribute_table_base = (((uint16_t) tms9918a_state.regs.sprite_attr_table_base) << 7) & 0x3f10;
-    uint16_t pattern_generator_base = (((uint16_t) tms9918a_state.regs.sprite_pg_base) << 11) & 0x3800;
-    uint8_t sprite_size = (tms9918a_state.regs.ctrl_1 & TMS9918A_CTRL_1_SPRITE_SIZE) ? 16 : 8;
-    TMS9918A_Sprite *line_sprite_buffer [4];
+    uint16_t sprite_attribute_table_base = (((uint16_t) tms9928a_state.regs.sprite_attr_table_base) << 7) & 0x3f10;
+    uint16_t pattern_generator_base = (((uint16_t) tms9928a_state.regs.sprite_pg_base) << 11) & 0x3800;
+    uint8_t sprite_size = (tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_SPRITE_SIZE) ? 16 : 8;
+    TMS9928A_Sprite *line_sprite_buffer [4];
     uint8_t line_sprite_count = 0;
-    TMS9918A_Pattern *pattern;
+    TMS9928A_Pattern *pattern;
     int32_Point_2D position;
     bool magnify = false;
 
     /* Sprite magnification */
-    if (tms9918a_state.regs.ctrl_1 & TMS9918A_CTRL_1_SPRITE_MAG)
+    if (tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_SPRITE_MAG)
     {
         magnify = true;
     }
@@ -266,7 +266,7 @@ void tms9918a_render_sprites_line (const TMS9918A_Config *config, uint16_t line)
     /* Traverse the sprite list, filling the line sprite buffer */
     for (int i = 0; i < 32 && line_sprite_count < 4; i++)
     {
-        TMS9918A_Sprite *sprite = (TMS9918A_Sprite *) &tms9918a_state.vram [sprite_attribute_table_base + i * sizeof (TMS9918A_Sprite)];
+        TMS9928A_Sprite *sprite = (TMS9928A_Sprite *) &tms9928a_state.vram [sprite_attribute_table_base + i * sizeof (TMS9928A_Sprite)];
 
         /* Break if there are no more sprites */
         if (sprite->y == 0xd0)
@@ -290,7 +290,7 @@ void tms9918a_render_sprites_line (const TMS9918A_Config *config, uint16_t line)
      * Done in reverse order so that the first sprite is the one left on the screen */
     while (line_sprite_count--)
     {
-        TMS9918A_Sprite *sprite = line_sprite_buffer [line_sprite_count];
+        TMS9928A_Sprite *sprite = line_sprite_buffer [line_sprite_count];
         uint8_t pattern_index = sprite->pattern;
 
         /* The most-significant bit of the colour byte decides if we 'early-clock' the sprite */
@@ -315,25 +315,25 @@ void tms9918a_render_sprites_line (const TMS9918A_Config *config, uint16_t line)
 
         /* TODO: Sprite collisions */
 
-        if (tms9918a_state.regs.ctrl_1 & TMS9918A_CTRL_1_SPRITE_SIZE)
+        if (tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_SPRITE_SIZE)
         {
             pattern_index &= 0xfc;
-            pattern = (TMS9918A_Pattern *) &tms9918a_state.vram [pattern_generator_base + (pattern_index * sizeof (TMS9918A_Pattern))];
+            pattern = (TMS9928A_Pattern *) &tms9928a_state.vram [pattern_generator_base + (pattern_index * sizeof (TMS9928A_Pattern))];
             int32_Point_2D sub_position;
 
             for (int i = 0; i < 4; i++)
             {
                 sub_position.x = position.x + ((i & 2) ? (8 << magnify) : 0);
                 sub_position.y = position.y + ((i & 1) ? (8 << magnify) : 0);
-                tms9918a_render_pattern_line (config, line, pattern + i, sprite->colour_ec << 4, sub_position, true, magnify);
+                tms9928a_render_pattern_line (config, line, pattern + i, sprite->colour_ec << 4, sub_position, true, magnify);
             }
         }
         else
         {
             /* TODO: It looks like maybe in some places, the base address is in bytes, and in other places it is in patterns...
              *       (or is that just when it is zero?) Find out what's going on and comment. */
-            pattern = (TMS9918A_Pattern *) &tms9918a_state.vram [pattern_generator_base + (pattern_index * sizeof (TMS9918A_Pattern))];
-            tms9918a_render_pattern_line (config, line, pattern, sprite->colour_ec << 4, position, true, magnify);
+            pattern = (TMS9928A_Pattern *) &tms9928a_state.vram [pattern_generator_base + (pattern_index * sizeof (TMS9928A_Pattern))];
+            tms9928a_render_pattern_line (config, line, pattern, sprite->colour_ec << 4, position, true, magnify);
         }
     }
 }
@@ -342,7 +342,7 @@ void tms9918a_render_sprites_line (const TMS9918A_Config *config, uint16_t line)
 /*
  * Render one line of the mode0 background layer.
  */
-void tms9918a_render_mode0_background_line (const TMS9918A_Config *config, uint16_t line)
+void tms9928a_render_mode0_background_line (const TMS9928A_Config *config, uint16_t line)
 {
     uint16_t name_table_base;
     uint16_t pattern_generator_base;
@@ -350,23 +350,23 @@ void tms9918a_render_mode0_background_line (const TMS9918A_Config *config, uint1
     uint32_t tile_y = line / 8;
     int32_Point_2D position;
 
-    name_table_base = (((uint16_t) tms9918a_state.regs.name_table_base) << 10) & 0x3c00;
+    name_table_base = (((uint16_t) tms9928a_state.regs.name_table_base) << 10) & 0x3c00;
 
-    pattern_generator_base = (((uint16_t) tms9918a_state.regs.background_pg_base) << 11) & 0x3800;
+    pattern_generator_base = (((uint16_t) tms9928a_state.regs.background_pg_base) << 11) & 0x3800;
 
-    colour_table_base = (((uint16_t) tms9918a_state.regs.colour_table_base) << 6) & 0x3fc0;
+    colour_table_base = (((uint16_t) tms9928a_state.regs.colour_table_base) << 6) & 0x3fc0;
 
     for (uint32_t tile_x = 0; tile_x < 32; tile_x++)
     {
-        uint16_t tile = tms9918a_state.vram [name_table_base + ((tile_y << 5) | tile_x)];
+        uint16_t tile = tms9928a_state.vram [name_table_base + ((tile_y << 5) | tile_x)];
 
         /* TODO: Is the base-address in bytes, or in patterns? */
-        TMS9918A_Pattern *pattern = (TMS9918A_Pattern *) &tms9918a_state.vram [pattern_generator_base + (tile * sizeof (TMS9918A_Pattern))];
-        uint8_t colours = tms9918a_state.vram [colour_table_base + (tile >> 3)];
+        TMS9928A_Pattern *pattern = (TMS9928A_Pattern *) &tms9928a_state.vram [pattern_generator_base + (tile * sizeof (TMS9928A_Pattern))];
+        uint8_t colours = tms9928a_state.vram [colour_table_base + (tile >> 3)];
 
         position.x = 8 * tile_x;
         position.y = 8 * tile_y;
-        tms9918a_render_pattern_line (config, line, pattern, colours, position, false, false);
+        tms9928a_render_pattern_line (config, line, pattern, colours, position, false, false);
     }
 }
 
@@ -374,7 +374,7 @@ void tms9918a_render_mode0_background_line (const TMS9918A_Config *config, uint1
 /*
  * Render one line of the mode2 background layer.
  */
-void tms9918a_render_mode2_background_line (const TMS9918A_Config *config, uint16_t line)
+void tms9928a_render_mode2_background_line (const TMS9928A_Config *config, uint16_t line)
 {
     uint16_t name_table_base;
     uint16_t pattern_generator_base;
@@ -382,15 +382,15 @@ void tms9918a_render_mode2_background_line (const TMS9918A_Config *config, uint1
     uint32_t tile_y = line / 8;
     int32_Point_2D position;
 
-    name_table_base = (((uint16_t) tms9918a_state.regs.name_table_base) << 10) & 0x3c00;
+    name_table_base = (((uint16_t) tms9928a_state.regs.name_table_base) << 10) & 0x3c00;
 
-    pattern_generator_base = (((uint16_t) tms9918a_state.regs.background_pg_base) << 11) & 0x2000;
+    pattern_generator_base = (((uint16_t) tms9928a_state.regs.background_pg_base) << 11) & 0x2000;
 
-    colour_table_base = (((uint16_t) tms9918a_state.regs.colour_table_base) << 6) & 0x2000;
+    colour_table_base = (((uint16_t) tms9928a_state.regs.colour_table_base) << 6) & 0x2000;
 
     for (uint32_t tile_x = 0; tile_x < 32; tile_x++)
     {
-        uint16_t tile = tms9918a_state.vram [name_table_base + ((tile_y << 5) | tile_x)];
+        uint16_t tile = tms9928a_state.vram [name_table_base + ((tile_y << 5) | tile_x)];
 
         /* The screen is broken into three 8-row sections */
         if (tile_y >= 8 && tile_y < 16)
@@ -401,17 +401,17 @@ void tms9918a_render_mode2_background_line (const TMS9918A_Config *config, uint1
         {
             tile += 0x200;
         }
-        uint16_t pattern_tile = tile & ((((uint16_t) tms9918a_state.regs.background_pg_base) << 8) | 0xff);
-        uint16_t colour_tile  = tile & ((((uint16_t) tms9918a_state.regs.colour_table_base) << 3) | 0x07);
+        uint16_t pattern_tile = tile & ((((uint16_t) tms9928a_state.regs.background_pg_base) << 8) | 0xff);
+        uint16_t colour_tile  = tile & ((((uint16_t) tms9928a_state.regs.colour_table_base) << 3) | 0x07);
 
         /* TODO: Is the base-address in bytes, or in patterns? */
-        TMS9918A_Pattern *pattern = (TMS9918A_Pattern *) &tms9918a_state.vram [pattern_generator_base + (pattern_tile * sizeof (TMS9918A_Pattern))];
+        TMS9928A_Pattern *pattern = (TMS9928A_Pattern *) &tms9928a_state.vram [pattern_generator_base + (pattern_tile * sizeof (TMS9928A_Pattern))];
 
-        uint8_t colours = tms9918a_state.vram [colour_table_base + colour_tile * 8 + (line & 0x07)];
+        uint8_t colours = tms9928a_state.vram [colour_table_base + colour_tile * 8 + (line & 0x07)];
 
         position.x = 8 * tile_x;
         position.y = 8 * tile_y;
-        tms9918a_render_pattern_line (config, line, pattern, colours, position, false, false);
+        tms9928a_render_pattern_line (config, line, pattern, colours, position, false, false);
     }
 }
 
@@ -419,31 +419,31 @@ void tms9918a_render_mode2_background_line (const TMS9918A_Config *config, uint1
 /*
  * Assemble the three mode-bits.
  */
-static uint8_t tms9918a_mode_get (void)
+static uint8_t tms9928a_mode_get (void)
 {
-    return ((tms9918a_state.regs.ctrl_1 & TMS9918A_CTRL_1_MODE_1) ? BIT_0 : 0) +
-           ((tms9918a_state.regs.ctrl_0 & TMS9918A_CTRL_0_MODE_2) ? BIT_1 : 0) +
-           ((tms9918a_state.regs.ctrl_1 & TMS9918A_CTRL_1_MODE_3) ? BIT_2 : 0);
+    return ((tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_MODE_1) ? BIT_0 : 0) +
+           ((tms9928a_state.regs.ctrl_0 & TMS9928A_CTRL_0_MODE_2) ? BIT_1 : 0) +
+           ((tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_MODE_3) ? BIT_2 : 0);
 }
 
 
 /*
- * Render one active line of output for the tms9918a.
+ * Render one active line of output for the tms9928a.
  */
-void tms9918a_render_line (const TMS9918A_Config *config, uint16_t line)
+void tms9928a_render_line (const TMS9928A_Config *config, uint16_t line)
 {
     float_Colour video_background =     { .r = 0.0f, .g = 0.0f, .b = 0.0f };
 
     state.video_out_first_active_line = (VIDEO_BUFFER_LINES - config->lines_active) / 2;
 
     /* Background */
-    if (!(tms9918a_state.regs.ctrl_1 & TMS9918A_CTRL_1_BLANK))
+    if (!(tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_BLANK))
     {
         /* Display is blank */
     }
     else
     {
-        video_background = config->palette [tms9918a_state.regs.background_colour & 0x0f];
+        video_background = config->palette [tms9928a_state.regs.background_colour & 0x0f];
     }
 
     /* Note: The top/bottom borders use the background colour of the first and last active lines. */
@@ -455,7 +455,7 @@ void tms9918a_render_line (const TMS9918A_Config *config, uint16_t line)
         {
             for (uint32_t x = 0; x < VIDEO_BUFFER_WIDTH; x++)
             {
-                tms9918a_state.frame_current [x + top_line * VIDEO_BUFFER_WIDTH] = video_background;
+                tms9928a_state.frame_current [x + top_line * VIDEO_BUFFER_WIDTH] = video_background;
             }
         }
     }
@@ -463,7 +463,7 @@ void tms9918a_render_line (const TMS9918A_Config *config, uint16_t line)
     /* Side borders */
     for (int x = 0; x < VIDEO_BUFFER_WIDTH; x++)
     {
-        tms9918a_state.frame_current [x + (state.video_out_first_active_line + line) * VIDEO_BUFFER_WIDTH] = video_background;
+        tms9928a_state.frame_current [x + (state.video_out_first_active_line + line) * VIDEO_BUFFER_WIDTH] = video_background;
     }
 
     /* Bottom border */
@@ -473,60 +473,60 @@ void tms9918a_render_line (const TMS9918A_Config *config, uint16_t line)
         {
             for (uint32_t x = 0; x < VIDEO_BUFFER_WIDTH; x++)
             {
-                tms9918a_state.frame_current [x + bottom_line * VIDEO_BUFFER_WIDTH] = video_background;
+                tms9928a_state.frame_current [x + bottom_line * VIDEO_BUFFER_WIDTH] = video_background;
             }
         }
     }
 
     /* Return without rendering patterns if BLANK is enabled */
-    if (!(tms9918a_state.regs.ctrl_1 & TMS9918A_CTRL_1_BLANK))
+    if (!(tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_BLANK))
     {
         return;
     }
 
-    if (config->mode == TMS9918A_MODE_0)
+    if (config->mode == TMS9928A_MODE_0)
     {
-        tms9918a_render_mode0_background_line (config, line);
-        tms9918a_render_sprites_line (config, line);
+        tms9928a_render_mode0_background_line (config, line);
+        tms9928a_render_sprites_line (config, line);
     }
-    else if (config->mode & TMS9918A_MODE_2)
+    else if (config->mode & TMS9928A_MODE_2)
     {
-        tms9918a_render_mode2_background_line (config, line);
-        tms9918a_render_sprites_line (config, line);
+        tms9928a_render_mode2_background_line (config, line);
+        tms9928a_render_sprites_line (config, line);
     }
 }
 
 
 /*
- * Run one scanline on the tms9918a.
+ * Run one scanline on the tms9928a.
  */
-void tms9918a_run_one_scanline (void)
+void tms9928a_run_one_scanline (void)
 {
     static uint16_t line = 0;
 
-    const TMS9918A_Config *config;
-    TMS9918A_Mode mode = tms9918a_mode_get ();
+    const TMS9928A_Config *config;
+    TMS9928A_Mode mode = tms9928a_mode_get ();
 
     switch (mode)
     {
-        case TMS9918A_MODE_0: /* Mode 0: 32 x 24 8-byte tiles, sprites enabled. */
+        case TMS9928A_MODE_0: /* Mode 0: 32 x 24 8-byte tiles, sprites enabled. */
             config = (state.format == VIDEO_FORMAT_NTSC) ? &Mode0_NTSC : &Mode0_PAL;
             break;
 
-        case TMS9918A_MODE_2: /* Mode 2: 32 × 24 8-byte tiles, sprites enabled, three colour/pattern tables */
+        case TMS9928A_MODE_2: /* Mode 2: 32 × 24 8-byte tiles, sprites enabled, three colour/pattern tables */
             config = (state.format == VIDEO_FORMAT_NTSC) ? &Mode2_NTSC : &Mode2_PAL;
             break;
 
         default: /* Unsupported */
-            snprintf (state.error_buffer, 79, "Unsupported mode: %s.", tms9918a_mode_name_get (mode));
-            snepulator_error ("tms9918a Error", state.error_buffer);
+            snprintf (state.error_buffer, 79, "Unsupported mode: %s.", tms9928a_mode_name_get (mode));
+            snepulator_error ("tms9928a Error", state.error_buffer);
             return;
     }
 
     /* If this is an active line, render it */
     if (line < config->lines_active)
     {
-        tms9918a_render_line (config, line);
+        tms9928a_render_line (config, line);
     }
 
     /* If this the final active line, copy to the frame buffer */
@@ -535,7 +535,7 @@ void tms9918a_run_one_scanline (void)
         pthread_mutex_lock (&video_mutex);
         state.video_width = 256;
         state.video_height = 192;
-        memcpy (state.video_out_data, tms9918a_state.frame_current, sizeof (tms9918a_state.frame_current));
+        memcpy (state.video_out_data, tms9928a_state.frame_current, sizeof (tms9928a_state.frame_current));
         pthread_mutex_unlock (&video_mutex);
 
         /* Update statistics (rolling average) */
@@ -552,7 +552,7 @@ void tms9918a_run_one_scanline (void)
 
     /* Check for frame interrupt */
     if (line == config->lines_active + 1)
-        tms9918a_state.status |= TMS9918A_STATUS_INT;
+        tms9928a_state.status |= TMS9928A_STATUS_INT;
 
     /* Update values for the next line */
     line = (line + 1) % config->lines_total;
@@ -560,10 +560,10 @@ void tms9918a_run_one_scanline (void)
 
 
 /*
- * Reset the tms9918a registers and memory to power-on defaults.
+ * Reset the tms9928a registers and memory to power-on defaults.
  */
-void tms9918a_init (void)
+void tms9928a_init (void)
 {
-    memset (&tms9918a_state.regs, 0, sizeof (tms9918a_state.regs));
-    memset (&tms9918a_state.vram, 0, sizeof (tms9918a_state.vram));
+    memset (&tms9928a_state.regs, 0, sizeof (tms9928a_state.regs));
+    memset (&tms9928a_state.vram, 0, sizeof (tms9928a_state.vram));
 }

@@ -18,7 +18,7 @@ extern "C" {
 #include "config.h"
 
 #include "gamepad.h"
-#include "video/tms9918a.h"
+#include "video/tms9928a.h"
 #include "video/sms_vdp.h"
 #include "cpu/z80.h"
 
@@ -27,7 +27,7 @@ extern "C" {
 #include "colecovision.h"
 
 extern Z80_Regs z80_regs;
-extern TMS9918A_Mode sms_vdp_mode_get (void);
+extern TMS9928A_Mode sms_vdp_mode_get (void);
 
 /* TODO: Access through a function instead of accessing the array */
 extern Gamepad_Instance gamepad_list[10];
@@ -304,7 +304,7 @@ void snepulator_render_menubar (void)
             ImGui::Separator ();
 
             ImGui::Text ("Video");
-            ImGui::Text ("Mode : %s", tms9918a_mode_name_get (sms_vdp_mode_get ()));
+            ImGui::Text ("Mode : %s", tms9928a_mode_name_get (sms_vdp_mode_get ()));
 
             ImGui::Separator ();
 

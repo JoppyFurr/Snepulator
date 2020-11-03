@@ -15,7 +15,7 @@
 
 #include "gamepad.h"
 #include "cpu/z80.h"
-#include "video/tms9918a.h"
+#include "video/tms9928a.h"
 #include "video/sms_vdp.h"
 #include "sound/sn76489.h"
 #include "sms.h"
@@ -640,10 +640,10 @@ void sms_init (void)
 
         /* Leave the VDP in Mode4 */
         sms_vdp_control_write (SMS_VDP_CTRL_0_MODE_4);
-        sms_vdp_control_write (TMS9918A_CODE_REG_WRITE | 0x00);
+        sms_vdp_control_write (TMS9928A_CODE_REG_WRITE | 0x00);
 
         /* Line counter starts at 0xff */
         sms_vdp_control_write (0xff);
-        sms_vdp_control_write (TMS9918A_CODE_REG_WRITE | 0x0a);
+        sms_vdp_control_write (TMS9928A_CODE_REG_WRITE | 0x0a);
     }
 }
