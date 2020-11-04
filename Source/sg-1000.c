@@ -24,9 +24,7 @@ extern Snepulator_Gamepad gamepad_1;
 extern Snepulator_Gamepad gamepad_2;
 
 #define SG_1000_RAM_SIZE (1 << 10)
-
-/* Sega Mapper */
-static uint8_t mapper_bank [3] = { 0x00, 0x01, 0x02 };
+#define SG_1000_SRAM_SIZE (8 << 10)
 
 
 /*
@@ -35,20 +33,15 @@ static uint8_t mapper_bank [3] = { 0x00, 0x01, 0x02 };
 static uint8_t sg_1000_memory_read (uint16_t addr)
 {
     /* Cartridge slot */
-    if (addr >= 0x0000 && addr <= 0xbfff)
+    if (addr >= 0x0000 && addr < state.rom_size)
     {
-        uint8_t slot = (addr >> 14);
-        uint32_t bank_base = mapper_bank [slot] * ((uint32_t) 16 << 10);
-        uint16_t offset    = addr & 0x3fff;
+        return state.rom [addr & (state.rom_size - 1)];
+    }
 
-        /* The first 1 KiB of slot 0 is not affected by mapping */
-        if (slot == 0 && offset < (1 << 10))
-            bank_base = 0;
-
-        if (state.rom != NULL)
-        {
-            return state.rom [(bank_base + offset) & (state.rom_size - 1)];
-        }
+    /* Up to 8 KiB of on-cartridge sram */
+    if (addr >= 0x8000 && addr <= 0xbfff)
+    {
+        return state.sram [addr & (SG_1000_SRAM_SIZE - 1)];
     }
 
     /* 1 KiB RAM (mirrored) */
@@ -66,24 +59,10 @@ static uint8_t sg_1000_memory_read (uint16_t addr)
  */
 static void sg_1000_memory_write (uint16_t addr, uint8_t data)
 {
-    /* No early breaks - Register writes also affect RAM */
-
-    /* Sega Mapper */
-    if (addr == 0xfffc)
+    /* Up to 8 KiB of on-cartridge sram */
+    if (addr >= 0x8000 && addr <= 0xbfff)
     {
-        /* fprintf (stderr, "Error: Sega Memory Mapper register 0xfffc not implemented.\n"); */
-    }
-    else if (addr == 0xfffd)
-    {
-        mapper_bank [0] = data & 0x3f;
-    }
-    else if (addr == 0xfffe)
-    {
-        mapper_bank [1] = data & 0x3f;
-    }
-    else if (addr == 0xffff)
-    {
-        mapper_bank [2] = data & 0x3f;
+        state.sram [addr & (SG_1000_SRAM_SIZE - 1)] = data;
     }
 
     /* 1 KiB RAM (mirrored) */
@@ -239,16 +218,19 @@ static void sg_1000_run (uint32_t ms)
  */
 void sg_1000_init (void)
 {
-    /* Reset the mapper */
-    mapper_bank [0] = 0;
-    mapper_bank [1] = 1;
-    mapper_bank [2] = 2;
-
     /* Create RAM */
     state.ram = calloc (SG_1000_RAM_SIZE, 1);
     if (state.ram == NULL)
     {
         snepulator_error ("Error", "Unable to allocate SG-1000 RAM.");
+        return;
+    }
+
+    /* Create Cartridge SRAM */
+    state.sram = calloc (SG_1000_SRAM_SIZE, 1);
+    if (state.sram == NULL)
+    {
+        snepulator_error ("Error", "Unable to allocate SG-1000 Cartridge RAM.");
         return;
     }
 
