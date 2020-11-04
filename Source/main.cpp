@@ -425,6 +425,20 @@ void *main_emulation_loop (void *data)
     pthread_exit (NULL);
 }
 
+
+/*
+ * Toggle between full-screen and windowed.
+ */
+void toggle_fullscreen (void)
+{
+    static bool fullscreen = false;
+
+    fullscreen = !fullscreen;
+
+    SDL_SetWindowFullscreen (window, fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+}
+
+
 /*
  * Main GUI loop.
  */
@@ -451,6 +465,15 @@ int main_gui_loop (void)
          * gamepad, but also needs to be called from the main thread. */
         while (SDL_PollEvent (&event))
         {
+
+            /* Alt+Enter or F11 shortcuts for full-screen */
+            if ((event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_F11) ||
+                (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_RETURN && (SDL_GetModState () & KMOD_ALT)))
+            {
+                toggle_fullscreen ();
+                continue;
+            }
+
             ImGui_ImplSDL2_ProcessEvent (&event);
 
             if (event.type == SDL_QUIT)
