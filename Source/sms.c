@@ -12,6 +12,7 @@
 
 #include "util.h"
 #include "snepulator.h"
+#include "database/sms_db.h"
 
 #include "gamepad.h"
 #include "cpu/z80.h"
@@ -581,6 +582,14 @@ void sms_init (void)
             return;
         }
         fprintf (stdout, "%d KiB ROM %s loaded.\n", state.rom_size >> 10, state.cart_filename);
+
+        state.rom_hints = sms_db_get_hints (state.rom_hash);
+    }
+
+    /* Automatic video format */
+    if (state.format_auto && (state.rom_hints & SMS_HINT_PAL_ONLY))
+    {
+        state.format = VIDEO_FORMAT_PAL;
     }
 
     /* Load SRAM if it exists */
