@@ -228,13 +228,20 @@ int config_import (void)
         }
     }
 
-    /* SMS Format - Defaults to NTSC */
+    /* SMS Format - Defaults to Auto */
     state.format = VIDEO_FORMAT_NTSC;
+    state.format_auto = true;
     if (config_string_get ("sms", "format", &string) == 0)
     {
         if (strcmp (string, "PAL") == 0)
         {
             state.format = VIDEO_FORMAT_PAL;
+            state.format_auto = false;
+        }
+        else if (strcmp (string, "NTSC") == 0)
+        {
+            state.format = VIDEO_FORMAT_NTSC;
+            state.format_auto = false;
         }
     }
 
@@ -293,8 +300,9 @@ void snepulator_reset (void)
     /* Clear additonal video parameters */
     state.video_extra_left_border = 0;
 
-    /* Clear hash */
+    /* Clear hash and hints */
     memset (state.rom_hash, 0, sizeof (state.rom_hash));
+    state.rom_hints = 0x00;
 
     /* Free memory */
     if (state.ram != NULL)
@@ -316,6 +324,12 @@ void snepulator_reset (void)
     {
         free (state.rom);
         state.rom = NULL;
+    }
+
+    /* Auto format default to NTSC */
+    if (state.format_auto)
+    {
+        state.format = VIDEO_FORMAT_NTSC;
     }
 }
 

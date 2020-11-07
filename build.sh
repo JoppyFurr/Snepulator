@@ -22,16 +22,17 @@ mkdir -p Work
 rm Work/*.o
 
 # Compile C11 code.
-eval $CC $CFLAGS -c Source/util.c           -o Work/util.o
-eval $CC $CFLAGS -c Source/config.c         -o Work/config.o
-eval $CC $CFLAGS -c Source/gamepad.c        -o Work/gamepad.o
-eval $CC $CFLAGS -c Source/cpu/z80.c        -o Work/z80.o
-eval $CC $CFLAGS -c Source/sound/sn76489.c  -o Work/sn76489.o
-eval $CC $CFLAGS -c Source/video/tms9928a.c -o Work/tms9928a.o
-eval $CC $CFLAGS -c Source/video/sms_vdp.c  -o Work/sms_vdp.o
-eval $CC $CFLAGS -c Source/sg-1000.c        -o Work/sg-1000.o
-eval $CC $CFLAGS -c Source/sms.c            -o Work/sms.o
-eval $CC $CFLAGS -c Source/colecovision.c   -o Work/colecovision.o
+eval $CC $CFLAGS -c Source/cpu/z80.c         -o Work/z80.o
+eval $CC $CFLAGS -c Source/database/sms_db.c -o Work/sms_db.o
+eval $CC $CFLAGS -c Source/sound/sn76489.c   -o Work/sn76489.o
+eval $CC $CFLAGS -c Source/video/tms9928a.c  -o Work/tms9928a.o
+eval $CC $CFLAGS -c Source/video/sms_vdp.c   -o Work/sms_vdp.o
+eval $CC $CFLAGS -c Source/colecovision.c    -o Work/colecovision.o
+eval $CC $CFLAGS -c Source/config.c          -o Work/config.o
+eval $CC $CFLAGS -c Source/gamepad.c         -o Work/gamepad.o
+eval $CC $CFLAGS -c Source/sg-1000.c         -o Work/sg-1000.o
+eval $CC $CFLAGS -c Source/sms.c             -o Work/sms.o
+eval $CC $CFLAGS -c Source/util.c            -o Work/util.o
 
 # C Libraries
 eval $CC $CFLAGS -c Libraries/BLAKE3/blake3.c -o Work/blake3.o

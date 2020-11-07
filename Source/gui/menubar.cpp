@@ -229,13 +229,20 @@ void snepulator_render_menubar (void)
             }
             ImGui::Separator ();
 
+            if (ImGui::MenuItem ("Auto", NULL, state.format_auto)) {
+                state.format_auto = true;
+                config_string_set ("sms", "format", "Auto");
+                config_write ();
+            }
             if (ImGui::MenuItem ("NTSC", NULL, state.format == VIDEO_FORMAT_NTSC)) {
                 state.format = VIDEO_FORMAT_NTSC;
+                state.format_auto = false;
                 config_string_set ("sms", "format", "NTSC");
                 config_write ();
             }
             if (ImGui::MenuItem ("PAL",  NULL, state.format == VIDEO_FORMAT_PAL))  {
                 state.format = VIDEO_FORMAT_PAL;
+                state.format_auto = false;
                 config_string_set ("sms", "format", "PAL");
                 config_write ();
             }

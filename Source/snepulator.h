@@ -47,6 +47,7 @@ typedef struct Snepulator_State_s {
     char *colecovision_bios_filename;
     char *cart_filename;
     uint8_t rom_hash [HASH_LENGTH];
+    uint8_t rom_hints;
 
     /* Console API */
     void (*run) (uint32_t ms);
@@ -66,7 +67,8 @@ typedef struct Snepulator_State_s {
     uint32_t bios_size;
 
     /* Console configuration */
-    Video_Format format;
+    bool           format_auto;
+    Video_Format   format;
     Console_Region region;
 
     /* Video */
