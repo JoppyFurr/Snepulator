@@ -257,13 +257,19 @@ void snepulator_render_menubar (void)
             {
                 if (ImGui::BeginMenu ("Type"))
                 {
+                    if (ImGui::MenuItem ("Auto", NULL, gamepad_1.type_auto))
+                    {
+                        gamepad_1.type_auto = true;
+                    }
                     if (ImGui::MenuItem ("SMS Gamepad", NULL, gamepad_1.type == GAMEPAD_TYPE_SMS))
                     {
                         gamepad_1.type = GAMEPAD_TYPE_SMS;
+                        gamepad_1.type_auto = false;
                     }
                     if (ImGui::MenuItem ("SMS Paddle", NULL, gamepad_1.type == GAMEPAD_TYPE_SMS_PADDLE))
                     {
                         gamepad_1.type = GAMEPAD_TYPE_SMS_PADDLE;
+                        gamepad_1.type_auto = false;
                     }
                     ImGui::EndMenu ();
                 }

@@ -592,6 +592,19 @@ void sms_init (void)
         state.format = VIDEO_FORMAT_PAL;
     }
 
+    /* Automatic controller type */
+    if (gamepad_1.type_auto)
+    {
+        if (state.rom_hints & SMS_HINT_PADDLE_ONLY)
+        {
+            gamepad_1.type = GAMEPAD_TYPE_SMS_PADDLE;
+        }
+        else
+        {
+            gamepad_1.type = GAMEPAD_TYPE_SMS;
+        }
+    }
+
     /* Load SRAM if it exists */
     char *_sram_path = sram_path ();
     FILE *sram_file = fopen (_sram_path, "rb");

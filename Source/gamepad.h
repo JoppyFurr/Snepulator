@@ -85,10 +85,11 @@ typedef struct Gamepad_Instance_s {
  */
 typedef struct Snepulator_Gamepad_t {
     Gamepad_Type type;
-    int32_t instance_id;
-    bool state [GAMEPAD_BUTTON_COUNT];
-    float paddle_velocity;
-    uint8_t paddle_position;
+    bool         type_auto;
+    int32_t      instance_id;
+    bool         state [GAMEPAD_BUTTON_COUNT];
+    float        paddle_velocity;
+    uint8_t      paddle_position;
 } Snepulator_Gamepad;
 
 #ifdef SDL_h_
