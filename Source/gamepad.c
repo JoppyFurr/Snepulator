@@ -289,6 +289,7 @@ void gamepad_init (void)
     /* Initialise both players to GAMEPAD_INDEX_NONE */
     gamepad_1.instance_id = INSTANCE_ID_NONE;
     gamepad_1.type = GAMEPAD_TYPE_SMS;
+    gamepad_1.type_auto = true;
     gamepad_1_config = &gamepad_config [GAMEPAD_INDEX_NONE];
     gamepad_1.paddle_velocity = 0;
     gamepad_1.paddle_position = 128;
