@@ -350,8 +350,6 @@ void tms9928a_render_sprites_line (const TMS9928A_Config *config, uint16_t line)
         }
         else
         {
-            /* TODO: It looks like maybe in some places, the base address is in bytes, and in other places it is in patterns...
-             *       (or is that just when it is zero?) Find out what's going on and comment. */
             pattern = (TMS9928A_Pattern *) &tms9928a_state.vram [pattern_generator_base + (pattern_index * sizeof (TMS9928A_Pattern))];
             tms9928a_render_pattern_line (config, line, pattern, sprite->colour_ec << 4, position, true, magnify);
         }
@@ -380,7 +378,6 @@ void tms9928a_render_mode0_background_line (const TMS9928A_Config *config, uint1
     {
         uint16_t tile = tms9928a_state.vram [name_table_base + ((tile_y << 5) | tile_x)];
 
-        /* TODO: Is the base-address in bytes, or in patterns? */
         TMS9928A_Pattern *pattern = (TMS9928A_Pattern *) &tms9928a_state.vram [pattern_generator_base + (tile * sizeof (TMS9928A_Pattern))];
         uint8_t colours = tms9928a_state.vram [colour_table_base + (tile >> 3)];
 
@@ -424,7 +421,6 @@ void tms9928a_render_mode2_background_line (const TMS9928A_Config *config, uint1
         uint16_t pattern_tile = tile & ((((uint16_t) tms9928a_state.regs.background_pg_base) << 8) | 0xff);
         uint16_t colour_tile  = tile & ((((uint16_t) tms9928a_state.regs.colour_table_base) << 3) | 0x07);
 
-        /* TODO: Is the base-address in bytes, or in patterns? */
         TMS9928A_Pattern *pattern = (TMS9928A_Pattern *) &tms9928a_state.vram [pattern_generator_base + (pattern_tile * sizeof (TMS9928A_Pattern))];
 
         uint8_t colours = tms9928a_state.vram [colour_table_base + colour_tile * 8 + (line & 0x07)];
