@@ -194,8 +194,13 @@ const char *button_mapping_to_string (Gamepad_Mapping b)
  */
 void snepulator_render_input_modal (void)
 {
-    int width = state.host_width - 64;
-    int height = state.host_height - 64;
+    /* Layout calculations */
+    uint32_t width = state.host_width - 64;
+    uint32_t height = state.host_height - 64;
+    uint32_t font_height = ImGui::CalcTextSize ("Text", NULL, true).y;
+    uint32_t titlebar_height = font_height + 6;
+    uint32_t above_box = font_height + 18;
+    uint32_t below_box = font_height + 16;
 
     /* Centre */
     ImGui::SetNextWindowSize (ImVec2 (width, height), ImGuiCond_Always);
@@ -228,7 +233,7 @@ void snepulator_render_input_modal (void)
         ImGui::PopItemWidth ();
 
         /* Master System gamepad */
-        ImGui::BeginChild ("SMS Gamepad", ImVec2 (width - 16, height - 16 - 64), true);
+        ImGui::BeginChild ("SMS Gamepad", ImVec2 (width - 16, height - (titlebar_height + above_box + below_box)), true);
         {
             ImVec2 origin = ImGui::GetCursorScreenPos ();
             float scale = (width - 64);
@@ -388,7 +393,7 @@ void snepulator_render_input_modal (void)
             ImGui::CloseCurrentPopup ();
         }
         ImGui::SameLine ();
-        if (ImGui::Button ("Remap Device", ImVec2 (120,0))) {
+        if (ImGui::Button ("Remap", ImVec2 (120,0))) {
             map_to_edit.mapping [GAMEPAD_DIRECTION_UP].button       = SDLK_UNKNOWN;
             map_to_edit.mapping [GAMEPAD_DIRECTION_DOWN].button     = SDLK_UNKNOWN;
             map_to_edit.mapping [GAMEPAD_DIRECTION_LEFT].button     = SDLK_UNKNOWN;

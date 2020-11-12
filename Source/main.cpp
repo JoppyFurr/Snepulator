@@ -50,6 +50,7 @@ pthread_mutex_t video_mutex = PTHREAD_MUTEX_INITIALIZER;
 bool config_capture_events = false;
 SDL_Window *window = NULL;
 SDL_GLContext glcontext = NULL;
+ImFont *font;
 
 /* Implementation in input.cpp */
 bool input_modal_consume_event (SDL_Event event);
@@ -201,8 +202,6 @@ void snepulator_load_colecovision_bios (char *path)
 
     colecovision_init ();
 }
-
-
 
 
 /*
@@ -474,6 +473,19 @@ int main_gui_loop (void)
         /* Process user-input */
         SDL_GetWindowSize (window, &state.host_width, &state.host_height);
         SDL_Event event;
+
+        if (state.host_width < 768)
+        {
+            /* Standard font */
+            ImGui::GetIO ().FontGlobalScale = 0.5;
+            font->DisplayOffset.y = 1;
+        }
+        else
+        {
+            /* Pixel-doubled font */
+            ImGui::GetIO ().FontGlobalScale = 1.0;
+            font->DisplayOffset.y = 2;
+        }
 
         /* Issue: SDL_PollEvent can take over 400 ms when attaching a
          * gamepad, but also needs to be called from the main thread. */
@@ -795,7 +807,7 @@ int main (int argc, char **argv)
     /* Twice the Master System resolution, plus enough extra for 16 px boarders */
     /* TODO: Make dialogues fit (full-screen?) */
     window = SDL_CreateWindow ("Snepulator", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-                      VIDEO_BUFFER_WIDTH * 2, VIDEO_BUFFER_LINES * 2 + 16, SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL);
+                      VIDEO_BUFFER_WIDTH * 2, VIDEO_BUFFER_LINES * 2, SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL);
     if (window == NULL)
     {
         snepulator_error ("SDL Error", SDL_GetError ());
@@ -831,6 +843,13 @@ int main (int argc, char **argv)
     ImGui::GetIO ().IniFilename = NULL;
     ImGui_ImplSDL2_InitForOpenGL (window, glcontext);
     ImGui_ImplOpenGL3_Init ();
+
+    /* Double font size to allow both 1× and 2× size to appear crisp. */
+    ImFontConfig font_config = { };
+    font_config.SizePixels = 13 * 2;
+    font = ImGui::GetIO ().Fonts->AddFontDefault (&font_config);
+    ImGui::GetIO ().FontGlobalScale = 0.5;
+    font->DisplayOffset.y = 1;
 
     /* Style */
     ImGui::PushStyleColor (ImGuiCol_MenuBarBg,      ImVec4 (0.4, 0.0, 0.0, 1.0));
