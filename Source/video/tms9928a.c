@@ -38,7 +38,8 @@ const char *tms9928a_mode_name [16] = {
     "Mode 4+3+2+1 - SMS 192 lines"
 };
 
-#define TMS9928A_NTSC_PALETTE { \
+/* "Datasheet" palette */
+#define TMS9928A_PALETTE_DATASHEET { \
     {   0 / 255.0f,   0 / 255.0f,   0 / 255.0f }, /* Transparent */ \
     {   0 / 255.0f,   0 / 255.0f,   0 / 255.0f }, /* Black */ \
     {  33 / 255.0f, 200 / 255.0f,  66 / 255.0f }, /* Medium Green */ \
@@ -57,31 +58,50 @@ const char *tms9928a_mode_name [16] = {
     { 255 / 255.0f, 255 / 255.0f, 255 / 255.0f }  /* White */ \
 }
 
+/* Gamma corrected palette (Wikipedia) */
+#define TMS9928A_PALETTE { \
+    { 0x00 / 255.0f, 0x00 / 255.0f, 0x00 / 255.0f }, /* Transparent */ \
+    { 0x00 / 255.0f, 0x00 / 255.0f, 0x00 / 255.0f }, /* Black */ \
+    { 0x0a / 255.0f, 0xad / 255.0f, 0x1e / 255.0f }, /* Medium Green */ \
+    { 0x34 / 255.0f, 0xc8 / 255.0f, 0x4c / 255.0f }, /* Light Green */ \
+    { 0x2b / 255.0f, 0x2d / 255.0f, 0xe3 / 255.0f }, /* Dark Blue */ \
+    { 0x51 / 255.0f, 0x4b / 255.0f, 0xfb / 255.0f }, /* Light blue */ \
+    { 0xbd / 255.0f, 0x29 / 255.0f, 0x25 / 255.0f }, /* Dark Red */ \
+    { 0x1e / 255.0f, 0xe2 / 255.0f, 0xef / 255.0f }, /* Cyan */ \
+    { 0xfb / 255.0f, 0x2c / 255.0f, 0x2b / 255.0f }, /* Medium Red */ \
+    { 0xff / 255.0f, 0x5f / 255.0f, 0x4c / 255.0f }, /* Light Red */ \
+    { 0xbd / 255.0f, 0xa2 / 255.0f, 0x2b / 255.0f }, /* Dark Yellow */ \
+    { 0xd7 / 255.0f, 0xb4 / 255.0f, 0x54 / 255.0f }, /* Light Yellow */ \
+    { 0x0a / 255.0f, 0x8c / 255.0f, 0x18 / 255.0f }, /* Dark Green */ \
+    { 0xaf / 255.0f, 0x32 / 255.0f, 0x9a / 255.0f }, /* Magenta */ \
+    { 0xb2 / 255.0f, 0xb2 / 255.0f, 0xb2 / 255.0f }, /* Grey */ \
+    { 0xff / 255.0f, 0xff / 255.0f, 0xff / 255.0f }  /* White */ \
+}
+
 /* Display mode details */
-/* TODO: Confirm PAL palette */
 static const TMS9928A_Config Mode0_PAL = {
     .mode = TMS9928A_MODE_0,
     .lines_active = 192,
     .lines_total = 313,
-    .palette = TMS9928A_NTSC_PALETTE
+    .palette = TMS9928A_PALETTE
 };
 static const TMS9928A_Config Mode0_NTSC = {
     .mode = TMS9928A_MODE_0,
     .lines_active = 192,
     .lines_total = 262,
-    .palette = TMS9928A_NTSC_PALETTE
+    .palette = TMS9928A_PALETTE
 };
 static const TMS9928A_Config Mode2_PAL = {
     .mode = TMS9928A_MODE_2,
     .lines_active = 192,
     .lines_total = 313,
-    .palette = TMS9928A_NTSC_PALETTE
+    .palette = TMS9928A_PALETTE
 };
 static const TMS9928A_Config Mode2_NTSC = {
     .mode = TMS9928A_MODE_2,
     .lines_active = 192,
     .lines_total = 262,
-    .palette = TMS9928A_NTSC_PALETTE
+    .palette = TMS9928A_PALETTE
 };
 
 
