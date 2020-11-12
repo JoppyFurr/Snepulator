@@ -46,8 +46,13 @@ static char path[160] = { '\0' };
  */
 void snepulator_render_open_modal (void)
 {
-    int width = state.host_width - 64;
-    int height = state.host_height - 64;
+    /* Layout calculations */
+    uint32_t width = state.host_width - 64;
+    uint32_t height = state.host_height - 64;
+    uint32_t font_height = ImGui::CalcTextSize ("Text", NULL, true).y;
+    uint32_t titlebar_height = font_height + 6;
+    uint32_t above_box = font_height + 12;
+    uint32_t below_box = font_height + 16;
 
     /* Centre */
     ImGui::SetNextWindowSize (ImVec2 (width, height), ImGuiCond_Always);
@@ -140,7 +145,7 @@ void snepulator_render_open_modal (void)
         ImGui::Text ("%s", path);
 
         /* Current directory contents */
-        ImGui::BeginChild ("Files", ImVec2 (width - 16, height - 8 - 64), true);
+        ImGui::BeginChild ("Files", ImVec2 (width - 16, height - (titlebar_height + above_box + below_box)), true);
         for (int i = 0; i < file_list.size (); i++)
         {
             /* TODO: Can we get the text height rather than hard-coding it? */
