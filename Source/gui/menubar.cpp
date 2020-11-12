@@ -246,6 +246,49 @@ void snepulator_render_menubar (void)
                 config_string_set ("sms", "format", "PAL");
                 config_write ();
             }
+            ImGui::Separator ();
+
+            if (ImGui::BeginMenu ("Info"))
+            {
+                ImGui::Text ("CPU");
+                ImGui::Text ("PC : %04x    SP : %04x", z80_regs.pc, z80_regs.sp);
+                ImGui::Text ("AF : %04x    BC : %04x", z80_regs.af, z80_regs.bc);
+                ImGui::Text ("DE : %04x    HL : %04x", z80_regs.de, z80_regs.hl);
+                ImGui::Text ("IX : %04x    IY : %04x", z80_regs.ix, z80_regs.iy);
+                ImGui::Text ("IM : %d       IFF: %d/%d", z80_regs.im, z80_regs.iff1, z80_regs.iff2);
+
+                ImGui::Separator ();
+
+                ImGui::Text ("Video");
+                ImGui::Text ("Mode : %s", tms9928a_mode_name_get (sms_vdp_mode_get ()));
+
+                ImGui::EndMenu ();
+            }
+            if (ImGui::BeginMenu ("Statistics"))
+            {
+                ImGui::Text ("Video");
+                ImGui::Text ("Host: %.2f fps", state.host_framerate);
+                ImGui::Text ("VDP:  %.2f fps", state.vdp_framerate);
+                ImGui::Separator ();
+                ImGui::Text ("Audio");
+                ImGui::Text ("Ring buffer: %.2f%% full", state.audio_ring_utilisation * 100.0);
+
+                ImGui::EndMenu ();
+            }
+            if (ImGui::MenuItem ("Time Five Minutes", NULL))
+            {
+                uint32_t start_time;
+                uint32_t end_time;
+                state.running = false;
+                start_time = SDL_GetTicks ();
+                state.run (5 * 60000); /* Simulate five minutes */
+                end_time = SDL_GetTicks ();
+                state.running = true;
+
+                fprintf (stdout, "[DEBUG] Took %d ms to emulate five minutes. (%fx speed-up)\n",
+                         end_time - start_time, (5.0 * 60000.0) / (end_time - start_time));
+            }
+
             ImGui::EndMenu ();
         }
 
@@ -302,53 +345,6 @@ void snepulator_render_menubar (void)
                 input_start ();
                 input_modal = true;
             }
-            ImGui::EndMenu ();
-        }
-
-        if (ImGui::BeginMenu ("DEBUG"))
-        {
-            ImGui::Text ("CPU");
-            ImGui::Text ("PC : %04x    SP : %04x", z80_regs.pc, z80_regs.sp);
-            ImGui::Text ("AF : %04x    BC : %04x", z80_regs.af, z80_regs.bc);
-            ImGui::Text ("DE : %04x    HL : %04x", z80_regs.de, z80_regs.hl);
-            ImGui::Text ("IX : %04x    IY : %04x", z80_regs.ix, z80_regs.iy);
-            ImGui::Text ("IM : %d       IFF: %d/%d", z80_regs.im, z80_regs.iff1, z80_regs.iff2);
-
-            ImGui::Separator ();
-
-            ImGui::Text ("Video");
-            ImGui::Text ("Mode : %s", tms9928a_mode_name_get (sms_vdp_mode_get ()));
-
-            ImGui::Separator ();
-
-            if (ImGui::BeginMenu ("Statistics"))
-            {
-                ImGui::Text ("Video");
-                ImGui::Text ("Host: %.2f fps", state.host_framerate);
-                ImGui::Text ("VDP:  %.2f fps", state.vdp_framerate);
-                ImGui::Separator ();
-                ImGui::Text ("Audio");
-                ImGui::Text ("Ring buffer: %.2f%% full", state.audio_ring_utilisation * 100.0);
-
-                ImGui::EndMenu ();
-            }
-
-            ImGui::Separator ();
-
-            if (ImGui::MenuItem ("Time Five Minutes", NULL))
-            {
-                uint32_t start_time;
-                uint32_t end_time;
-                state.running = false;
-                start_time = SDL_GetTicks ();
-                state.run (5 * 60000); /* Simulate five minutes */
-                end_time = SDL_GetTicks ();
-                state.running = true;
-
-                fprintf (stdout, "[DEBUG] Took %d ms to emulate five minutes. (%fx speed-up)\n",
-                         end_time - start_time, (5.0 * 60000.0) / (end_time - start_time));
-            }
-
             ImGui::EndMenu ();
         }
 
