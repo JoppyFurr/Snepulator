@@ -12,6 +12,8 @@
 
 #include "util.h"
 
+#define MAX_STRING_SIZE 1024
+
 typedef enum ConfigType_e
 {
     ENTRY_TYPE_NONE = 0,
@@ -404,9 +406,9 @@ static int32_t config_open (FILE **config_file, char *mode)
 int32_t config_read (void)
 {
     FILE    *config_file = NULL;
-    char     section [80];
-    char     key     [160];
-    char     buffer  [160]; /* TODO: Should be dynamic */
+    char     section [MAX_STRING_SIZE];
+    char     key     [MAX_STRING_SIZE];
+    char     buffer  [MAX_STRING_SIZE];
     uint32_t length;
 
     if (config_open (&config_file, "r") == -1)
@@ -420,7 +422,7 @@ int32_t config_read (void)
         return 0;
     }
 
-    while (fscanf (config_file, "%159s", buffer) != EOF)
+    while (fscanf (config_file, "%1023s", buffer) != EOF)
     {
         length = strlen (buffer);
 
@@ -434,7 +436,7 @@ int32_t config_read (void)
         /* Entry */
         else {
             strcpy (key, buffer);
-            if (fscanf (config_file, "%159s", buffer) == EOF)
+            if (fscanf (config_file, "%1023s", buffer) == EOF)
             {
                 fprintf (stderr, "Error: Unexpected end of file.\n");
                 return -1;
@@ -444,7 +446,7 @@ int32_t config_read (void)
                 fprintf (stderr, "Error: Expected \"=\", found \"%s\".\n", buffer);
                 return -1;
             }
-            if (fscanf (config_file, " %159[^\n]", buffer) == EOF)
+            if (fscanf (config_file, " %1023[^\n]", buffer) == EOF)
             {
                 fprintf (stderr, "Error: Unexpected end of file.\n");
                 return -1;

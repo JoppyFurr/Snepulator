@@ -29,6 +29,7 @@ extern "C" {
 
 #include "open.h"
 
+#define MAX_STRING_SIZE 1024
 
 /* Global state */
 extern Snepulator_State state;
@@ -37,8 +38,7 @@ extern Snepulator_State state;
 File_Open_State open_state = { .title = "Open" };
 
 /* Current path */
-/* TODO: Make size dynamic */
-static char path[160] = { '\0' };
+static char path [MAX_STRING_SIZE] = { '\0' };
 
 
 /*
@@ -176,7 +176,7 @@ void snepulator_render_open_modal (void)
             }
             else
             {
-                ImGui::Text ("%s", file_list[i].c_str ());
+                ImGui::Text ("%s", file_list [i].c_str ());
             }
 
         }
@@ -202,9 +202,9 @@ void snepulator_render_open_modal (void)
         if (open_action)
         {
             /* Directory */
-            if (file_list[selected_file].back () == '/')
+            if (file_list [selected_file].back () == '/')
             {
-                char new_path[160] = { '\0' };
+                char new_path [MAX_STRING_SIZE] = { '\0' };
 
                 if (strcmp (file_list [selected_file].c_str (), "../") == 0)
                 {
@@ -239,7 +239,7 @@ void snepulator_render_open_modal (void)
             /* ROM */
             else
             {
-                char new_path[160] = { '\0' };
+                char new_path [MAX_STRING_SIZE] = { '\0' };
                 sprintf (new_path, "%s%s", path, file_list [selected_file].c_str ());
 
                 open_state.callback (new_path);
