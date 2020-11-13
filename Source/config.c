@@ -258,6 +258,53 @@ int32_t config_string_set (char const *section_name, char const *key, char const
 
 
 /*
+ * Remove an entry from the configuration.
+ */
+int32_t config_entry_remove (char const *section_name, char const *key)
+{
+    ConfigSection *section = NULL;
+    ConfigEntry *entry = NULL;
+    uint32_t i;
+
+    /* First, get the section for the entry */
+    if (config_section_get (&section, section_name, 0) == -1)
+    {
+        return 0;
+    }
+
+    /* Find the entry */
+    for (i = 0; i < section->entry_count; i++)
+    {
+        if (strcmp (key, section->entry [i].key) == 0)
+        {
+            entry = &section->entry [i];
+            break;
+        }
+    }
+
+    if (entry != NULL)
+    {
+        /* If there is a string, free it. */
+        if (entry->type == ENTRY_TYPE_STRING && entry->value != NULL)
+        {
+            free (entry->value);
+        }
+        section->entry_count--;
+
+        /* Shuffle remaining entries down to fill the gap. */
+        for ( ; i < section->entry_count; i++)
+        {
+            section->entry [i] = section->entry [i + 1];
+        }
+
+        /* We don't worry about resizing the section allocation to be smaller. */
+    }
+
+    return 0;
+}
+
+
+/*
  * Get the full path to the config file.
  */
 static int32_t config_path (char **path_ptr)
