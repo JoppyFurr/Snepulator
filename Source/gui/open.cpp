@@ -148,9 +148,10 @@ void snepulator_render_open_modal (void)
         ImGui::BeginChild ("Files", ImVec2 (width - 16, height - (titlebar_height + above_box + below_box)), true);
         for (int i = 0; i < file_list.size (); i++)
         {
-            /* TODO: Can we get the text height rather than hard-coding it? */
             ImVec2 draw_cursor = ImGui::GetCursorScreenPos ();
-            bool hovering = ImGui::IsMouseHoveringRect (draw_cursor, ImVec2 (draw_cursor.x + 350, draw_cursor.y + 16));
+            ImVec2 row_size    = ImGui::CalcTextSize (file_list [i].c_str (), NULL, true);
+            bool hovering      = ImGui::IsMouseHoveringRect (ImVec2 (draw_cursor.x,              draw_cursor.y + 2),
+                                                             ImVec2 (draw_cursor.x + row_size.x, draw_cursor.y + row_size.y + 2));
 
             /* Click to select */
             if (hovering && ImGui::IsMouseClicked (0))
@@ -167,11 +168,11 @@ void snepulator_render_open_modal (void)
             /* Render the selected file in green, hovered file in yellow, and others with the text default */
             if (i == selected_file)
             {
-                ImGui::TextColored (ImVec4 (0.5f, 1.0f, 0.5f, 1.0f), "%s", file_list[i].c_str ());
+                ImGui::TextColored (ImVec4 (0.5f, 1.0f, 0.5f, 1.0f), "%s", file_list [i].c_str ());
             }
             else if (hovering)
             {
-                ImGui::TextColored (ImVec4 (1.0f, 1.0f, 0.5f, 1.0f), "%s", file_list[i].c_str ());
+                ImGui::TextColored (ImVec4 (1.0f, 1.0f, 0.5f, 1.0f), "%s", file_list [i].c_str ());
             }
             else
             {
