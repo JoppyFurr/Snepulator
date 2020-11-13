@@ -85,6 +85,30 @@ void snepulator_render_menubar (void)
                     open_state.callback = snepulator_load_colecovision_bios;
                     open_modal = true;
                 }
+                if (ImGui::BeginMenu ("Clear"))
+                {
+                    if (ImGui::MenuItem ("Master System", NULL))
+                    {
+                        config_entry_remove ("sms", "bios");
+                        config_write ();
+                        if (state.sms_bios_filename != NULL)
+                        {
+                            free (state.sms_bios_filename);
+                            state.sms_bios_filename = NULL;
+                        }
+                    }
+                    if (ImGui::MenuItem ("ColecoVision", NULL))
+                    {
+                        config_entry_remove ("colecovision", "bios");
+                        config_write ();
+                        if (state.colecovision_bios_filename != NULL)
+                        {
+                            free (state.colecovision_bios_filename);
+                            state.colecovision_bios_filename = NULL;
+                        }
+                    }
+                    ImGui::EndMenu ();
+                }
                 ImGui::EndMenu ();
             }
 
