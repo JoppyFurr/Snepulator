@@ -66,6 +66,7 @@ void snepulator_render_open_modal (void)
         /* TODO: path_cached needs to clear whenever the regex changes */
         static bool path_cached = false;
         static std::vector<std::string> file_list;
+        static std::vector<std::string> dir_list;
         static int selected_file = 0;
         bool open_action = false;
 
@@ -127,16 +128,19 @@ void snepulator_render_open_modal (void)
                     if (entry->d_type == DT_DIR)
                     {
                         entry_string += '/';
+                        dir_list.push_back (entry_string);
                     }
                     /* Only list files that have a valid ROM extension */
-                    else if (!std::regex_match (entry_string, file_regex))
+                    else if (std::regex_match (entry_string, file_regex))
                     {
-                            continue;
+                        file_list.push_back (entry_string);
                     }
-
-                    file_list.push_back (entry_string);
                 }
+
+                /* Sort directories and files separately, then combine the lists */
+                std::sort (dir_list.begin (), dir_list.end ());
                 std::sort (file_list.begin (), file_list.end ());
+                file_list.insert (file_list.begin (), dir_list.begin (), dir_list.end ());
             }
 
             path_cached = true;
@@ -247,6 +251,7 @@ void snepulator_render_open_modal (void)
                 ImGui::CloseCurrentPopup ();
             }
             path_cached = false;
+            dir_list.clear ();
             file_list.clear ();
         }
 
