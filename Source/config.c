@@ -202,6 +202,8 @@ int32_t config_uint_set (char const *section_name, char const *key, uint32_t val
 
 /*
  * Get a string from the config data structure.
+ *
+ * The pointer is only valid until the config is changed.
  */
 int32_t config_string_get (char const *section_name, char const *key, char **value)
 {
@@ -355,9 +357,9 @@ static int32_t config_open (FILE **config_file, char *mode)
 int32_t config_read (void)
 {
     FILE    *config_file = NULL;
-    char     buffer  [80];
     char     section [80];
-    char     key     [160]; /* TODO: Can these be made dynamic? */
+    char     key     [160];
+    char     buffer  [160]; /* TODO: Should be dynamic */
     uint32_t length;
 
     if (config_open (&config_file, "r") == -1)
@@ -371,7 +373,7 @@ int32_t config_read (void)
         return 0;
     }
 
-    while (fscanf (config_file, "%79s", buffer) != EOF)
+    while (fscanf (config_file, "%159s", buffer) != EOF)
     {
         length = strlen (buffer);
 
@@ -385,7 +387,7 @@ int32_t config_read (void)
         /* Entry */
         else {
             strcpy (key, buffer);
-            if (fscanf (config_file, "%79s", buffer) == EOF)
+            if (fscanf (config_file, "%159s", buffer) == EOF)
             {
                 fprintf (stderr, "Error: Unexpected end of file.\n");
                 return -1;
@@ -395,7 +397,7 @@ int32_t config_read (void)
                 fprintf (stderr, "Error: Expected \"=\", found \"%s\".\n", buffer);
                 return -1;
             }
-            if (fscanf (config_file, " %79[^\n]", buffer) == EOF)
+            if (fscanf (config_file, " %159[^\n]", buffer) == EOF)
             {
                 fprintf (stderr, "Error: Unexpected end of file.\n");
                 return -1;

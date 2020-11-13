@@ -171,9 +171,11 @@ void snepulator_load_sms_bios (char *path)
         free (state.sms_bios_filename);
     }
 
-    /* TODO: Separate BIOS file names for different consoles. */
-    state.sms_bios_filename = strdup (path);
+    /* Store and use the BIOS */
+    config_string_set ("sms", "bios", path);
+    config_write ();
 
+    state.sms_bios_filename = strdup (path);
     sms_init ();
 }
 
@@ -197,9 +199,11 @@ void snepulator_load_colecovision_bios (char *path)
         free (state.colecovision_bios_filename);
     }
 
-    /* TODO: Separate BIOS file names for different consoles. */
-    state.colecovision_bios_filename = strdup (path);
+    /* Store and use the BIOS */
+    config_string_set ("colecovision", "bios", path);
+    config_write ();
 
+    state.colecovision_bios_filename = strdup (path);
     colecovision_init ();
 }
 
@@ -254,6 +258,15 @@ int config_import (void)
         }
     }
 
+    /* BIOS Paths */
+    if (config_string_get ("sms", "bios", &string) == 0)
+    {
+        state.sms_bios_filename = strdup (string);
+    }
+    if (config_string_get ("colecovision", "bios", &string) == 0)
+    {
+        state.colecovision_bios_filename = strdup (string);
+    }
 
     return 0;
 }
