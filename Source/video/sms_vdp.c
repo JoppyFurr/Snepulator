@@ -17,7 +17,7 @@
 #include "../sms.h"
 extern Snepulator_State state;
 extern pthread_mutex_t video_mutex;
-SMS_3D_Field sms_3d_field;
+extern SMS_3D_Field sms_3d_field;
 
 #include "tms9928a.h"
 #include "sms_vdp.h"
