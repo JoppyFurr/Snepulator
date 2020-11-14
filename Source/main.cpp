@@ -837,6 +837,14 @@ int main (int argc, char **argv)
     }
     SDL_GL_SetSwapInterval (1);
 
+    /* GL Loader */
+    if (gl3wInit () != 0)
+    {
+        snepulator_error ("GL Error", "gl3wInit () fails");
+        SDL_Quit ();
+        return EXIT_FAILURE;
+    }
+
     /* Set icon */
     SDL_Surface *icon = SDL_CreateRGBSurfaceFrom ((void *) snepulator_icon.pixel_data, snepulator_icon.width, snepulator_icon.height,
                                                   snepulator_icon.bytes_per_pixel * 8, snepulator_icon.bytes_per_pixel * snepulator_icon.width,
