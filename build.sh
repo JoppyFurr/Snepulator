@@ -48,7 +48,12 @@ then
 else
     # Linux
     DATE=$(date --rfc-3339=date)
-    OSFLAGS="-lGL"
+    if pkg-config --libs glew > /dev/null 2>&1
+    then
+        OSFLAGS="$(pkg-config --libs glew)"
+    else
+        OSFLAGS="-lGL"
+    fi
 fi
 
 # Compile C++11 GUI and link to the rest of the code.
