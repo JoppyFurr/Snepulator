@@ -48,12 +48,7 @@ then
 else
     # Linux
     DATE=$(date --rfc-3339=date)
-    if pkg-config --libs glew > /dev/null 2>&1
-    then
-        OSFLAGS="$(pkg-config --libs glew)"
-    else
-        OSFLAGS="-lGL"
-    fi
+    OSFLAGS="$(pkg-config --libs gl)"
 fi
 
 # Compile C++11 GUI and link to the rest of the code.
@@ -63,6 +58,7 @@ eval $CXX \
     Source/gui/input.cpp \
     Source/gui/menubar.cpp \
     Source/gui/open.cpp \
+    -DIMGUI_IMPL_OPENGL_LOADER_GL3W \
     Libraries/imgui-1.76/*.cpp \
     Libraries/imgui-1.76/examples/libs/gl3w/GL/gl3w.c \
     Libraries/imgui-1.76/examples/imgui_impl_opengl3.cpp \
