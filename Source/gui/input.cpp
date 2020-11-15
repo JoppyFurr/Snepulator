@@ -28,7 +28,7 @@ extern bool config_capture_events;
 
 extern Snepulator_State state;
 
-extern Gamepad_Instance gamepad_list [10];
+extern Gamepad_Instance gamepad_list [128];
 extern uint32_t gamepad_list_count;
 
 extern Gamepad_Config *gamepad_3_config;
