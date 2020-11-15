@@ -30,7 +30,7 @@ extern Z80_Regs z80_regs;
 extern TMS9928A_Mode sms_vdp_mode_get (void);
 
 /* TODO: Access through a function instead of accessing the array */
-extern Gamepad_Instance gamepad_list[10];
+extern Gamepad_Instance gamepad_list[128];
 extern uint32_t gamepad_list_count;
 extern Snepulator_Gamepad gamepad_1;
 extern Snepulator_Gamepad gamepad_2;

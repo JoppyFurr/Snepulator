@@ -14,19 +14,15 @@
 #include "gamepad.h"
 
 
-/* TODO: Make array size dynamic */
-
 /* Stored gamepad configuration */
-Gamepad_Config gamepad_config [10];
+Gamepad_Config gamepad_config [128];
 uint32_t gamepad_config_count = 0;
 
 /* List of detected gamepads */
-/* TODO: Make dynamic */
-Gamepad_Instance gamepad_list [10];
+Gamepad_Instance gamepad_list [128];
 uint32_t gamepad_list_count = 0;
 
 /* Current gamepad configuration */
-/* TODO: Once the config array is dynamic, an index may be better than a pointer */
 Gamepad_Config *gamepad_1_config;
 Gamepad_Config *gamepad_2_config;
 Gamepad_Config *gamepad_3_config;
