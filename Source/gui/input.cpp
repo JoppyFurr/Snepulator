@@ -75,20 +75,30 @@ bool input_modal_consume_event (SDL_Event event)
 
     else if (event.type == SDL_JOYHATMOTION && event.jhat.which == gamepad_3.instance_id)
     {
-        switch (event.jhat.value)
+        /* If a hat is triggered, ignore all hat motion while it returns to the centre */
+        static bool waiting = false;
+        static uint8_t waiting_hat;
+
+        if (waiting)
         {
-            case SDL_HAT_UP:
-            case SDL_HAT_DOWN:
-            case SDL_HAT_LEFT:
-            case SDL_HAT_RIGHT:
-                map_to_edit.mapping [remap_button].type = SDL_JOYHATMOTION;
-                map_to_edit.mapping [remap_button].hat = event.jhat.hat;
-                map_to_edit.mapping [remap_button].direction = event.jhat.value;
-                remap_button++;
-                /* fall-through */
-            default:
-                consumed = true;
+            if (event.jhat.hat == waiting_hat && event.jhat.value == SDL_HAT_CENTERED)
+            {
+                waiting = false;
+            }
         }
+        else if (event.jhat.value == SDL_HAT_UP || event.jhat.value == SDL_HAT_DOWN ||
+                 event.jhat.value == SDL_HAT_LEFT || event.jhat.value == SDL_HAT_RIGHT)
+        {
+            waiting = true;
+            waiting_hat = event.jhat.hat;
+
+            map_to_edit.mapping [remap_button].type = SDL_JOYHATMOTION;
+            map_to_edit.mapping [remap_button].hat = event.jhat.hat;
+            map_to_edit.mapping [remap_button].direction = event.jhat.value;
+            remap_button++;
+        }
+
+        consumed = true;
     }
 
     else if (event.type == SDL_JOYAXISMOTION && event.jaxis.which == gamepad_3.instance_id)
