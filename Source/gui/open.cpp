@@ -42,6 +42,16 @@ static char path [MAX_STRING_SIZE] = { '\0' };
 
 
 /*
+ * Change the regex used to filter files to open.
+ */
+void snepulator_set_open_regex (const char *regex)
+{
+    open_state.regex = regex;
+    open_state.path_cached = false;
+}
+
+
+/*
  * Render the file-open modal.
  */
 void snepulator_render_open_modal (void)
@@ -63,8 +73,6 @@ void snepulator_render_open_modal (void)
                                                         ImGuiWindowFlags_NoScrollbar))
     {
         /* State */
-        /* TODO: path_cached needs to clear whenever the regex changes */
-        static bool path_cached = false;
         static std::vector<std::string> file_list;
         static std::vector<std::string> dir_list;
         static int selected_file = 0;
@@ -72,8 +80,11 @@ void snepulator_render_open_modal (void)
 
         std::regex file_regex (open_state.regex);
 
-        if (!path_cached)
+        if (!open_state.path_cached)
         {
+            dir_list.clear ();
+            file_list.clear ();
+
             /* Retrieve initial path from config */
             if (path [0] == '\0')
             {
@@ -143,7 +154,7 @@ void snepulator_render_open_modal (void)
                 file_list.insert (file_list.begin (), dir_list.begin (), dir_list.end ());
             }
 
-            path_cached = true;
+            open_state.path_cached = true;
         }
 
         ImGui::Text ("%s", path);
@@ -250,9 +261,7 @@ void snepulator_render_open_modal (void)
 
                 ImGui::CloseCurrentPopup ();
             }
-            path_cached = false;
-            dir_list.clear ();
-            file_list.clear ();
+            open_state.path_cached = false;
         }
 
         ImGui::EndPopup ();

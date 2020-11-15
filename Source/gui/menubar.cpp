@@ -63,7 +63,7 @@ void snepulator_render_menubar (void)
             {
                 state.running = false;
                 open_state.title = "Load ROM...";
-                open_state.regex = ".*\\.(BIN|bin|SMS|sms|sg|col)$";
+                snepulator_set_open_regex (".*\\.(BIN|bin|SMS|sms|sg|col)$");
                 open_state.callback = snepulator_load_rom;
                 open_modal = true;
             }
@@ -73,7 +73,7 @@ void snepulator_render_menubar (void)
                 {
                     state.running = false;
                     open_state.title = "Load Master System BIOS...";
-                    open_state.regex = ".*\\.(BIN|bin|SMS|sms)$";
+                    snepulator_set_open_regex (".*\\.(BIN|bin|SMS|sms)$");
                     open_state.callback = snepulator_load_sms_bios;
                     open_modal = true;
                 }
@@ -81,7 +81,7 @@ void snepulator_render_menubar (void)
                 {
                     state.running = false;
                     open_state.title = "Load ColecoVision BIOS...";
-                    open_state.regex = ".*\\.(col)$";
+                    snepulator_set_open_regex (".*\\.(col)$");
                     open_state.callback = snepulator_load_colecovision_bios;
                     open_modal = true;
                 }
