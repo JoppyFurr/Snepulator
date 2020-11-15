@@ -77,6 +77,7 @@ void snepulator_render_open_modal (void)
         static std::vector<std::string> dir_list;
         static int selected_file = 0;
         bool open_action = false;
+        DIR *dir = NULL;
 
         std::regex file_regex (open_state.regex);
 
@@ -96,8 +97,11 @@ void snepulator_render_open_modal (void)
                 }
             }
 
+            /* Attempt to open */
+            dir = opendir (path);
+
             /* Fallback to home directory */
-            if (path [0] == '\0')
+            if (dir == NULL)
             {
                 char *home_path = getenv ("HOME");
 
@@ -110,10 +114,11 @@ void snepulator_render_open_modal (void)
                     snepulator_error ("Error", "${HOME} not defined.");
                     return;
                 }
+
+                dir = opendir (path);
             }
 
             /* File listing */
-            DIR *dir = opendir (path);
             struct dirent *entry = NULL;
             std::string entry_string;
 
@@ -152,6 +157,9 @@ void snepulator_render_open_modal (void)
                 std::sort (dir_list.begin (), dir_list.end ());
                 std::sort (file_list.begin (), file_list.end ());
                 file_list.insert (file_list.begin (), dir_list.begin (), dir_list.end ());
+
+                closedir (dir);
+                dir = NULL;
             }
 
             open_state.path_cached = true;
