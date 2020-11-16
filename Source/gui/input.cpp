@@ -416,9 +416,6 @@ void snepulator_render_input_modal (void)
         ImGui::SameLine ();
         if (ImGui::Button ("OK", ImVec2 (120,0))) {
 
-            /* TODO: Save config to file */
-            /* TODO: An apply button? */
-
             if (state.ready)
             {
                 /* TODO: Rather than going to "Running", restore to what the state was previously */
@@ -429,6 +426,8 @@ void snepulator_render_input_modal (void)
             gamepad_change_device (3, GAMEPAD_INDEX_NONE);
             config_capture_events = false;
             ImGui::CloseCurrentPopup ();
+
+            gamepad_config_export ();
         }
 
         ImGui::EndPopup ();

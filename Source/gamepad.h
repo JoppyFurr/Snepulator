@@ -15,8 +15,8 @@
 #define INSTANCE_ID_NONE     -1
 #define INSTANCE_ID_KEYBOARD -2
 
-#define GUID_NONE     (SDL_JoystickGUID) { .data = { 'K', 'e', 'y', 'b', 'o', 'a', 'r', 'd' } }
-#define GUID_KEYBOARD (SDL_JoystickGUID) { .data = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } }
+#define GUID_NONE     (SDL_JoystickGUID) { .data = { 0x00 } }
+#define GUID_KEYBOARD (SDL_JoystickGUID) { .data = { 0xce, 0xee, 0xb0, 0xad } }
 
 /*
  * Common indexes, valid both in the config list and in the gamepad list.
@@ -117,4 +117,7 @@ const char *gamepad_get_name (uint32_t index);
 
 /* Change input device for a player's gamepad. */
 void gamepad_change_device (uint32_t player, int32_t index);
+
+/* Store the gamepad configuration to the configuration file. */
+void gamepad_config_export (void);
 
