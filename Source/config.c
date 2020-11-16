@@ -307,6 +307,22 @@ int32_t config_entry_remove (char const *section_name, char const *key)
 
 
 /*
+ * Given an index, get a section name.
+ */
+const char *config_get_section_name (uint32_t index)
+{
+    if (index >= config.section_count)
+    {
+        return NULL;
+    }
+    else
+    {
+        return config.section [index].name;
+    }
+}
+
+
+/*
  * Get the full path to the config file.
  */
 static int32_t config_path (char **path_ptr)

@@ -12,6 +12,11 @@
 #include <SDL2/SDL.h>
 
 #include "gamepad.h"
+#include "config.h"
+
+#define MAX_STRING_SIZE 1024
+
+const char *button_names [] = { "up", "down", "left", "right", "button_1", "button_2", "start" };
 
 
 /* Stored gamepad configuration */
@@ -268,10 +273,10 @@ void gamepad_list_update (void)
 }
 
 
+void gamepad_config_import (void);
+
 /*
  * Initialise gamepad support.
- *
- * TODO: Load saved mappings from the config file.
  */
 void gamepad_init (void)
 {
@@ -338,6 +343,8 @@ void gamepad_init (void)
     }
     gamepad_config [gamepad_config_count++] = default_keyboard;
 
+    /* Read saved config from file */
+    gamepad_config_import ();
     /* Populate the gamepad list */
     gamepad_list_update ();
 
@@ -376,8 +383,7 @@ void gamepad_update_mapping (Gamepad_Config new_config)
  */
 const char *gamepad_get_name (uint32_t index)
 {
-    /* TODO: Make this dynamic */
-    static char name_data [10] [80];
+    static char name_data [128] [MAX_STRING_SIZE];
     const char *name = NULL;
 
     /* First, check for hard-coded names */
@@ -499,5 +505,104 @@ void gamepad_change_device (uint32_t player, int32_t index)
             *config = &gamepad_config [gamepad_list [index].config_index];
             gamepad->instance_id = SDL_JoystickInstanceID (joystick);
         }
+    }
+}
+
+
+/*
+ * Store the gamepad configuration to the configuration file.
+ */
+void gamepad_config_export (void)
+{
+    char section_name [MAX_STRING_SIZE] = { '\0' };
+    char mapping_data [MAX_STRING_SIZE] = { '\0' };
+
+    for (uint32_t i = 0; i < gamepad_config_count; i++)
+    {
+        /* Section name */
+        snprintf (section_name, 1023, "gamepad-%02x%02x.%02x%02x.%02x%02x.%02x%02x.%02x%02x.%02x%02x.%02x%02x.%02x%02x",
+                gamepad_config [i].guid.data [ 0], gamepad_config [i].guid.data [ 1], gamepad_config [i].guid.data [ 2],
+                gamepad_config [i].guid.data [ 3], gamepad_config [i].guid.data [ 4], gamepad_config [i].guid.data [ 5],
+                gamepad_config [i].guid.data [ 6], gamepad_config [i].guid.data [ 7], gamepad_config [i].guid.data [ 8],
+                gamepad_config [i].guid.data [ 9], gamepad_config [i].guid.data [10], gamepad_config [i].guid.data [11],
+                gamepad_config [i].guid.data [12], gamepad_config [i].guid.data [13], gamepad_config [i].guid.data [14],
+                gamepad_config [i].guid.data [15]);
+
+        for (uint32_t button = 0; button < GAMEPAD_BUTTON_COUNT; button++)
+        {
+            snprintf (mapping_data, 1023, "%x-%x-%x",
+                      gamepad_config [i].mapping [button].type,
+                      gamepad_config [i].mapping [button].key,
+                      gamepad_config [i].mapping [button].direction);
+            config_string_set (section_name, button_names [button], mapping_data);
+        }
+    }
+
+    config_write ();
+}
+
+
+/*
+ * Retrieve the gamepad configuration from the configuration file.
+ */
+void gamepad_config_import (void)
+{
+    unsigned int guid_buffer [16] = { 0x00 };
+    Gamepad_Config new_config = { };
+
+    for (uint32_t i = 0; config_get_section_name (i) != NULL; i++)
+    {
+        const char *section_name = config_get_section_name (i);
+
+        if (strncmp (section_name, "gamepad-", 8) == 0)
+        {
+            SDL_JoystickGUID guid = { 0x00 };
+
+            sscanf (section_name, "gamepad-%02x%02x.%02x%02x.%02x%02x.%02x%02x.%02x%02x.%02x%02x.%02x%02x.%02x%02x",
+                    &guid_buffer [ 0], &guid_buffer [ 1], &guid_buffer [ 2], &guid_buffer [ 3], &guid_buffer [ 4],
+                    &guid_buffer [ 5], &guid_buffer [ 6], &guid_buffer [ 7], &guid_buffer [ 8], &guid_buffer [ 9],
+                    &guid_buffer [10], &guid_buffer [11], &guid_buffer [12], &guid_buffer [13], &guid_buffer [14],
+                    &guid_buffer [15]);
+
+            for (uint32_t j = 0; j < 16; j++)
+            {
+                guid.data [j] = guid_buffer [j];
+            }
+
+            /* Skip the 'None' device */
+            if (memcmp (&guid, &gamepad_config [GAMEPAD_INDEX_NONE].guid, sizeof (SDL_JoystickGUID)) == 0)
+            {
+                continue;
+            }
+
+            /* Read in the stored mappings */
+            for (uint32_t button = 0; button < GAMEPAD_BUTTON_COUNT; button++)
+            {
+                unsigned int type, key, direction;
+                char *mapping_string = NULL;
+
+                if (config_string_get (section_name, button_names [button], &mapping_string) == 0)
+                {
+                    sscanf (mapping_string, "%x-%x-%x", &type, &key, &direction);
+
+                    new_config.mapping [button].type = type;
+                    new_config.mapping [button].key = key;
+                    new_config.mapping [button].direction = direction;
+                }
+
+                new_config.guid = guid;
+            }
+
+            /* Keyboard has fixed index */
+            if (memcmp (&guid, &gamepad_config [GAMEPAD_INDEX_KEYBOARD].guid, sizeof (SDL_JoystickGUID)) == 0)
+            {
+                gamepad_config [GAMEPAD_INDEX_KEYBOARD] = new_config;
+            }
+            else
+            {
+                gamepad_config [gamepad_config_count++] = new_config;
+            }
+        }
+
     }
 }
