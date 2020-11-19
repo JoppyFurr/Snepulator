@@ -268,7 +268,7 @@ static void tms9928a_render_pattern_line (const TMS9928A_Config *config, uint16_
  */
 void tms9928a_render_sprites_line (const TMS9928A_Config *config, uint16_t line)
 {
-    uint16_t sprite_attribute_table_base = (((uint16_t) tms9928a_state.regs.sprite_attr_table_base) << 7) & 0x3f10;
+    uint16_t sprite_attribute_table_base = (((uint16_t) tms9928a_state.regs.sprite_attr_table_base) << 7) & 0x3f80;
     uint16_t pattern_generator_base = (((uint16_t) tms9928a_state.regs.sprite_pg_base) << 11) & 0x3800;
     uint8_t sprite_size = (tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_SPRITE_SIZE) ? 16 : 8;
     TMS9928A_Sprite *line_sprite_buffer [4];
