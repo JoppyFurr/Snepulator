@@ -533,9 +533,8 @@ void tms9928a_run_one_scanline (void)
             config = (state.format == VIDEO_FORMAT_NTSC) ? &Mode2_NTSC : &Mode2_PAL;
             break;
 
-        default: /* Unsupported */
-            snprintf (state.error_buffer, 79, "Unsupported mode: %s.", tms9928a_mode_name_get (mode));
-            snepulator_error ("tms9928a Error", state.error_buffer);
+        default:
+            /* TMS9928A_MODE_1 not implemented */
             return;
     }
 
