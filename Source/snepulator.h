@@ -64,6 +64,7 @@ typedef struct Snepulator_State_s {
     uint8_t *bios;
 
     uint32_t rom_size;
+    uint32_t rom_mask;
     uint32_t bios_size;
 
     /* Console configuration */

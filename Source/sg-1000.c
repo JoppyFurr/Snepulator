@@ -35,7 +35,7 @@ static uint8_t sg_1000_memory_read (uint16_t addr)
     /* Cartridge slot */
     if (addr >= 0x0000 && addr < state.rom_size)
     {
-        return state.rom [addr & (state.rom_size - 1)];
+        return state.rom [addr];
     }
 
     /* Up to 8 KiB of on-cartridge sram */
