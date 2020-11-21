@@ -284,7 +284,7 @@ void tms9928a_render_sprites_line (const TMS9928A_Config *config, uint16_t line)
     }
 
     /* Traverse the sprite list, filling the line sprite buffer */
-    for (int i = 0; i < 32 && line_sprite_count < 4; i++)
+    for (int i = 0; i < 32; i++)
     {
         TMS9928A_Sprite *sprite = (TMS9928A_Sprite *) &tms9928a_state.vram [sprite_attribute_table_base + i * sizeof (TMS9928A_Sprite)];
 
@@ -302,6 +302,11 @@ void tms9928a_render_sprites_line (const TMS9928A_Config *config, uint16_t line)
         /* If the sprite is on this line, add it to the buffer */
         if (line >= position.y && line < position.y + (sprite_size << magnify))
         {
+            if (line_sprite_count == 4)
+            {
+                tms9928a_state.status |= TMS9928A_SPRITE_OVERFLOW;
+                break;
+            }
             line_sprite_buffer [line_sprite_count++] = sprite;
         }
     }
