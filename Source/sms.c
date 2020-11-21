@@ -121,7 +121,9 @@ static void sms_memory_write (uint16_t addr, uint8_t data)
         {
             sms_3d_field = SMS_3D_FIELD_LEFT;
         }
-        else
+        /* Only accept a right-eye field if we have first seen a left-eye field.
+         * This avoids a false-positive if games initialise the register to zero. */
+        else if (sms_3d_field == SMS_3D_FIELD_LEFT)
         {
             sms_3d_field = SMS_3D_FIELD_RIGHT;
         }
