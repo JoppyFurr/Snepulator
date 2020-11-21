@@ -172,6 +172,7 @@ uint8_t sms_vdp_data_read ()
 void sms_vdp_data_write (uint8_t value)
 {
     tms9928a_state.first_byte_received = false;
+    tms9928a_state.read_buffer = value;
 
     switch (tms9928a_state.code)
     {
@@ -515,7 +516,7 @@ void sms_vdp_render_mode4_background_line (const TMS9928A_Config *mode, uint16_t
 }
 
 /* TODO: Set sprite-overflow flag */
-/* TODO: If we allow more than eight sprites per line, will games use it? */
+/* TODO: If we allow more than eight sprites per line, will games use it? Yes. */
 /* TODO: Pixel-doubling */
 
 /*
@@ -595,8 +596,6 @@ void sms_vdp_render_mode4_sprites_line (const TMS9928A_Config *mode, uint16_t li
     }
 }
 
-
-/* TODO: For new functions, remove unused parameters */
 
 /*
  * Render one active line of output for the SMS VDP.
