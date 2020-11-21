@@ -196,7 +196,7 @@ void tms9928a_control_write (uint8_t value)
             case TMS9928A_CODE_REG_WRITE:
                 if ((value & 0x0f) <= 10)
                 {
-                    ((uint8_t *) &tms9928a_state.regs) [value & 0x0f] = tms9928a_state.address & 0x00ff;
+                    ((uint8_t *) &tms9928a_state.reg_buffer) [value & 0x0f] = tms9928a_state.address & 0x00ff;
                 }
                 break;
             default:
@@ -570,12 +570,16 @@ void tms9928a_run_one_scanline (void)
         vdp_previous_completion_time = vdp_current_time;
     }
 
+    /* Update values for the next line */
+    line = (line + 1) % config->lines_total;
+
+    /* Propagate register writes that occurred during this line. */
+    tms9928a_state.regs = tms9928a_state.reg_buffer;
+
     /* Check for frame interrupt */
     if (line == config->lines_active + 1)
         tms9928a_state.status |= TMS9928A_STATUS_INT;
 
-    /* Update values for the next line */
-    line = (line + 1) % config->lines_total;
 }
 
 
