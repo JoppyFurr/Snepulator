@@ -63,6 +63,7 @@ typedef enum TMS9928A_Code_e {
 
 /* Bits of the status register */
 #define TMS9928A_SPRITE_COLLISION       BIT_5
+#define TMS9928A_SPRITE_OVERFLOW        BIT_6
 #define TMS9928A_STATUS_INT             BIT_7
 
 typedef struct TMS9928A_Registers_s {
