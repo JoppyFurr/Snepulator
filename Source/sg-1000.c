@@ -26,6 +26,8 @@ extern Snepulator_Gamepad gamepad_2;
 #define SG_1000_RAM_SIZE (1 << 10)
 #define SG_1000_SRAM_SIZE (8 << 10)
 
+static uint8_t mapper_bank [3] = { 0x00, 0x01, 0x02 };
+
 
 /*
  * Handle SG-1000 memory reads.
@@ -33,9 +35,13 @@ extern Snepulator_Gamepad gamepad_2;
 static uint8_t sg_1000_memory_read (uint16_t addr)
 {
     /* Cartridge slot */
-    if (addr >= 0x0000 && addr < state.rom_size)
+    if (addr >= 0x0000 && addr <= 0xbfff && addr < state.rom_size)
     {
-        return state.rom [addr];
+        uint8_t slot = (addr >> 14);
+        uint32_t bank_base = mapper_bank [slot] * ((uint32_t) 16 << 10);
+        uint16_t offset    = addr & 0x3fff;
+
+        return state.rom [(bank_base + offset) & state.rom_mask];
     }
 
     /* Up to 8 KiB of on-cartridge sram */
@@ -59,6 +65,12 @@ static uint8_t sg_1000_memory_read (uint16_t addr)
  */
 static void sg_1000_memory_write (uint16_t addr, uint8_t data)
 {
+    /* Sega Mapper */
+    if (addr == 0xffff)
+    {
+        mapper_bank [2] = data & 0x3f;
+    }
+
     /* Up to 8 KiB of on-cartridge sram */
     if (addr >= 0x8000 && addr <= 0xbfff)
     {
@@ -242,6 +254,8 @@ void sg_1000_init (void)
             return;
         }
         fprintf (stdout, "%d KiB ROM %s loaded.\n", state.rom_size >> 10, state.cart_filename);
+
+        state.rom_mask = round_up (state.rom_size) - 1;
     }
 
     /* Initialise hardware */
