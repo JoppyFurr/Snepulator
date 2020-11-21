@@ -4,6 +4,7 @@
 
 #define SMS_HINT_PAL_ONLY       0x01
 #define SMS_HINT_PADDLE_ONLY    0x02
+#define SMS_HINT_SMS1_VDP       0x04
 
 typedef struct SMS_DB_Entry_s {
     uint8_t hash [HASH_LENGTH];

@@ -15,6 +15,7 @@
 #include "../util.h"
 #include "../snepulator.h"
 #include "../sms.h"
+#include "../database/sms_db.h"
 extern Snepulator_State state;
 extern pthread_mutex_t video_mutex;
 extern SMS_3D_Field sms_3d_field;
@@ -486,6 +487,12 @@ void sms_vdp_render_mode4_background_line (const TMS9928A_Config *mode, uint16_t
         }
 
         uint16_t tile_address = name_table_base + ((((tile_y + start_row) % num_rows) << 6) | ((tile_x + start_column) % 32 << 1));
+
+        /* SMS1 VDP name-table mirroring */
+        if (state.rom_hints & SMS_HINT_SMS1_VDP && !(tms9928a_state.regs.name_table_base & 0x01))
+        {
+            tile_address &= ~0x0400;
+        }
 
         uint16_t tile = ((uint16_t)(tms9928a_state.vram [tile_address])) +
                         (((uint16_t)(tms9928a_state.vram [tile_address + 1])) << 8);
