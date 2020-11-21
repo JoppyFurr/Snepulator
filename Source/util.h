@@ -47,7 +47,7 @@ int32_t snepulator_directory (char **path_ptr);
 int32_t snepulator_sram_directory (char **path_ptr);
 
 /* Load a rom file into a buffer. The buffer should be freed when no-longer needed. */
-int32_t snepulator_load_rom (uint8_t **buffer, uint32_t *buffer_size, char *filename);
+int32_t snepulator_load_rom (uint8_t **buffer, uint32_t *rom_size, char *filename);
 
 /* Take a screenshot. */
 void snepulator_take_screenshot (void);
@@ -60,3 +60,6 @@ float_Colour colour_saturation (float_Colour c, float saturation);
 
 /* Dim the non-active part of the video_out_texture. */
 void video_dim (uint32_t x_scale, uint32_t y_scale);
+
+/* Round up to the next power-of-two */
+uint32_t round_up (uint32_t n);

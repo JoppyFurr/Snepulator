@@ -40,7 +40,7 @@ static uint8_t colecovision_memory_read (uint16_t addr)
     {
         if (state.bios != NULL)
         {
-
+            /* Assumes a power-of-two BIOS size */
             return state.bios [(addr) & (state.bios_size - 1)];
         }
     }
@@ -56,7 +56,7 @@ static uint8_t colecovision_memory_read (uint16_t addr)
     {
         if (state.rom != NULL)
         {
-            return state.rom [addr & (state.rom_size - 1)];
+            return state.rom [addr & state.rom_mask];
         }
     }
 
@@ -318,6 +318,7 @@ void colecovision_init (void)
             return;
         }
         fprintf (stdout, "%d KiB ROM %s loaded.\n", state.rom_size >> 10, state.cart_filename);
+        state.rom_mask = round_up (state.rom_size) - 1;
     }
 
     /* Initialise hardware */

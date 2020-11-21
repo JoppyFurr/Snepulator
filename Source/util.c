@@ -127,7 +127,7 @@ int32_t snepulator_sram_directory (char **path_ptr)
 /*
  * Round up to the next power-of-two
  */
-static uint32_t round_up (uint32_t n)
+uint32_t round_up (uint32_t n)
 {
     uint32_t result = 1;
 
@@ -162,11 +162,10 @@ void snepulator_hash_rom (uint8_t *buffer, uint32_t rom_size)
  * If the rom is not a power-of-two size, the buffer will be rounded up and
  * padded with zeros. The buffer should be freed when no-longer needed.
  */
-int32_t snepulator_load_rom (uint8_t **buffer, uint32_t *buffer_size, char *filename)
+int32_t snepulator_load_rom (uint8_t **buffer, uint32_t *rom_size, char *filename)
 {
     uint32_t bytes_read = 0;
     uint32_t file_size;
-    uint32_t rom_size;
     uint32_t skip;
 
     /* Open ROM file */
@@ -185,13 +184,10 @@ int32_t snepulator_load_rom (uint8_t **buffer, uint32_t *buffer_size, char *file
      * by a Super Magic Drive. Skip over this by rounding to the nearest 1 KiB. */
     skip = file_size & 0x3ff;
     fseek (rom_file, skip, SEEK_SET);
-    rom_size = file_size - skip;
+    *rom_size = file_size - skip;
 
-    /* Increase buffer size to a power-of-two */
-    *buffer_size = round_up (rom_size);
-
-    /* Allocate memory */
-    *buffer = (uint8_t *) calloc (*buffer_size, 1);
+    /* Allocate memory, rounded to a power-of-two */
+    *buffer = (uint8_t *) calloc (round_up (*rom_size), 1);
     if (!*buffer)
     {
         snepulator_error ("Load Error", strerror (errno));
@@ -199,16 +195,16 @@ int32_t snepulator_load_rom (uint8_t **buffer, uint32_t *buffer_size, char *file
     }
 
     /* Copy to memory */
-    while (bytes_read < rom_size)
+    while (bytes_read < *rom_size)
     {
-        bytes_read += fread (*buffer + bytes_read, 1, rom_size - bytes_read, rom_file);
+        bytes_read += fread (*buffer + bytes_read, 1, *rom_size - bytes_read, rom_file);
     }
 
     fclose (rom_file);
 
     /* Only the hash of the most recently loaded ROM is held on to,
      * so any BIOS should be loaded first, saving the ROM for last. */
-    snepulator_hash_rom (*buffer, rom_size);
+    snepulator_hash_rom (*buffer, *rom_size);
 
     return EXIT_SUCCESS;
 }

@@ -80,6 +80,7 @@ static uint8_t sms_memory_read (uint16_t addr)
         /* BIOS */
         if (state.bios != NULL && !(memory_control & SMS_MEMORY_CTRL_BIOS_DISABLE))
         {
+            /* Assumes a power-of-two BIOS size */
             return state.bios [(bank_base + offset) & (state.bios_size - 1)];
         }
 
@@ -92,7 +93,7 @@ static uint8_t sms_memory_read (uint16_t addr)
         /* Cartridge ROM */
         if (state.rom != NULL && !(memory_control & SMS_MEMORY_CTRL_CART_DISABLE))
         {
-            return state.rom [(bank_base + offset) & (state.rom_size - 1)];
+            return state.rom [(bank_base + offset) & state.rom_mask];
         }
     }
 
@@ -583,6 +584,7 @@ void sms_init (void)
         }
         fprintf (stdout, "%d KiB ROM %s loaded.\n", state.rom_size >> 10, state.cart_filename);
 
+        state.rom_mask = round_up (state.rom_size) - 1;
         state.rom_hints = sms_db_get_hints (state.rom_hash);
     }
 

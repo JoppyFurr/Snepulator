@@ -331,11 +331,14 @@ void snepulator_reset (void)
     {
         free (state.bios);
         state.bios = NULL;
+        state.bios_size = 0;
     }
     if (state.rom != NULL)
     {
         free (state.rom);
         state.rom = NULL;
+        state.rom_size = 0;
+        state.rom_mask = 0;
     }
 
     /* Auto format default to NTSC */
