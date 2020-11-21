@@ -83,6 +83,7 @@ typedef struct TMS9928A_Registers_s {
 } TMS9928A_Registers;
 
 typedef struct TMS9928A_State_s {
+    TMS9928A_Registers reg_buffer;
     TMS9928A_Registers regs;
     uint8_t vram [TMS9928A_VRAM_SIZE];
     bool first_byte_received;
