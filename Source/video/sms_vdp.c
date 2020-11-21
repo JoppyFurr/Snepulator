@@ -235,7 +235,7 @@ void sms_vdp_control_write (uint8_t value)
             case TMS9928A_CODE_REG_WRITE:
                 if ((value & 0x0f) <= 10)
                 {
-                    ((uint8_t *) &tms9928a_state.regs) [value & 0x0f] = tms9928a_state.address & 0x00ff;
+                    ((uint8_t *) &tms9928a_state.reg_buffer) [value & 0x0f] = tms9928a_state.address & 0x00ff;
                 }
                 break;
             case SMS_VDP_CODE_CRAM_WRITE:
@@ -764,25 +764,6 @@ void sms_vdp_run_one_scanline ()
         vdp_previous_completion_time = vdp_current_time;
     }
 
-    /* Check for frame interrupt */
-    if (line == config->lines_active + 1)
-        tms9928a_state.status |= TMS9928A_STATUS_INT;
-
-    /* Decrement the line interrupt counter during the active display period.
-     * Reset outside of the active display period (but not the first line after) */
-    if (line <= config->lines_active)
-        tms9928a_state.line_interrupt_counter--;
-    else
-        tms9928a_state.line_interrupt_counter = tms9928a_state.regs.line_counter_reset;
-
-    /* TODO: Does the line interrupt exist outside of mode 4? */
-    /* On underflow, we reset the line interrupt counter and set the pending flag */
-    if (line <= config->lines_active && tms9928a_state.line_interrupt_counter == 0xff)
-    {
-        tms9928a_state.line_interrupt_counter = tms9928a_state.regs.line_counter_reset;
-        tms9928a_state.line_interrupt = true;
-    }
-
     /* Update values for the next line */
     line = (line + 1) % config->lines_total;
 
@@ -799,4 +780,27 @@ void sms_vdp_run_one_scanline ()
             temp_line -= config->v_counter_map [range].last - config->v_counter_map [range].first + 1;
         }
     }
+
+    /* Propagate register writes that occurred during this line. */
+    tms9928a_state.regs = tms9928a_state.reg_buffer;
+
+    /* Check for frame interrupt */
+    if (line == config->lines_active + 1)
+        tms9928a_state.status |= TMS9928A_STATUS_INT;
+
+    /* Decrement the line interrupt counter during the active display period.
+     * Reset outside of the active display period (but not the first line after) */
+    if (line <= config->lines_active)
+        tms9928a_state.line_interrupt_counter--;
+    else
+        tms9928a_state.line_interrupt_counter = tms9928a_state.regs.line_counter_reset;
+
+    /* TODO: Does the line interrupt exist outside of mode 4? */
+    /* Check for line interrupt */
+    if (line <= config->lines_active && tms9928a_state.line_interrupt_counter == 0xff)
+    {
+        tms9928a_state.line_interrupt_counter = tms9928a_state.regs.line_counter_reset;
+        tms9928a_state.line_interrupt = true;
+    }
+
 }
