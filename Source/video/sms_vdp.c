@@ -719,9 +719,8 @@ void sms_vdp_run_one_scanline ()
             config = (state.format == VIDEO_FORMAT_NTSC) ? &Mode4_NTSC240 : &Mode4_PAL240;
             break;
 
-        default: /* Unsupported */
-            snprintf (state.error_buffer, 79, "Unsupported mode: %s.", tms9928a_mode_name_get (mode));
-            snepulator_error ("VDP Error", state.error_buffer);
+        default:
+            /* Other modes not implemented. */
             return;
     }
 
