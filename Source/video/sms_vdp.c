@@ -515,7 +515,6 @@ void sms_vdp_render_mode4_background_line (const TMS9928A_Config *mode, uint16_t
     }
 }
 
-/* TODO: Set sprite-overflow flag */
 /* TODO: If we allow more than eight sprites per line, will games use it? Yes. */
 /* TODO: Pixel-doubling */
 
@@ -533,7 +532,7 @@ void sms_vdp_render_mode4_sprites_line (const TMS9928A_Config *mode, uint16_t li
     int32_Point_2D position;
 
     /* Traverse the sprite list, filling the line sprite buffer */
-    for (int i = 0; i < 64 && line_sprite_count < 8; i++)
+    for (int i = 0; i < 64; i++)
     {
         uint8_t y = tms9928a_state.vram [sprite_attribute_table_base + i];
 
@@ -551,6 +550,11 @@ void sms_vdp_render_mode4_sprites_line (const TMS9928A_Config *mode, uint16_t li
         /* If the sprite is on this line, add it to the buffer */
         if (line >= position.y && line < position.y + sprite_height)
         {
+            if (line_sprite_count == 8)
+            {
+                tms9928a_state.status |= TMS9928A_SPRITE_OVERFLOW;
+                break;
+            }
             line_sprite_buffer [line_sprite_count++] = i;
         }
     }
