@@ -389,16 +389,16 @@ void sms_vdp_process_3d_field (void)
  * Render one line of an 8x8 pattern.
  */
 void sms_vdp_render_mode4_pattern_line (const TMS9928A_Config *mode, uint16_t line, SMS_VDP_Mode4_Pattern *pattern_base, SMS_VDP_Palette palette,
-                                        int32_Point_2D offset, bool h_flip, bool v_flip, bool transparency, bool collisions)
+                                        int32_Point_2D offset, bool h_flip, bool v_flip, bool transparency, bool collisions, bool magnify)
 {
     char *line_base;
 
     if (v_flip)
         line_base = (char *)(&pattern_base->data [(offset.y - line + 7) * 4]);
     else
-        line_base = (char *)(&pattern_base->data [(line - offset.y) * 4]);
+        line_base = (char *)(&pattern_base->data [((line - offset.y) >> magnify) * 4]);
 
-    for (uint32_t x = 0; x < 8; x++)
+    for (uint32_t x = 0; x < (8 << magnify); x++)
     {
         /* Don't draw texture pixels that fall outside of the screen */
         if (x + offset.x >= 256)
@@ -413,7 +413,7 @@ void sms_vdp_render_mode4_pattern_line (const TMS9928A_Config *mode, uint16_t li
         if (h_flip)
             shift = 7 - x;
         else
-            shift = x;
+            shift = x >> magnify;
 
         uint8_t colour_index = ((line_base [0] & (0x80 >> shift)) ? 0x01 : 0x00) |
                                ((line_base [1] & (0x80 >> shift)) ? 0x02 : 0x00) |
@@ -511,12 +511,11 @@ void sms_vdp_render_mode4_background_line (const TMS9928A_Config *mode, uint16_t
 
         position.x = 8 * tile_x + fine_scroll_x;
         position.y = 8 * tile_y - fine_scroll_y;
-        sms_vdp_render_mode4_pattern_line (mode, line, pattern, palette, position, h_flip, v_flip, false | priority, false);
+        sms_vdp_render_mode4_pattern_line (mode, line, pattern, palette, position, h_flip, v_flip, false | priority, false, false);
     }
 }
 
 /* TODO: If we allow more than eight sprites per line, will games use it? Yes. */
-/* TODO: Pixel-doubling */
 
 /*
  * Render one line of the sprite layer.
@@ -530,6 +529,14 @@ void sms_vdp_render_mode4_sprites_line (const TMS9928A_Config *mode, uint16_t li
     uint8_t line_sprite_count = 0;
     SMS_VDP_Mode4_Pattern *pattern;
     int32_Point_2D position;
+
+    bool magnify = false;
+
+    /* Sprite magnification */
+    if (tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_SPRITE_MAG)
+    {
+        magnify = true;
+    }
 
     /* Traverse the sprite list, filling the line sprite buffer */
     for (int i = 0; i < 64; i++)
@@ -548,7 +555,7 @@ void sms_vdp_render_mode4_sprites_line (const TMS9928A_Config *mode, uint16_t li
             position.y = y + 1;
 
         /* If the sprite is on this line, add it to the buffer */
-        if (line >= position.y && line < position.y + sprite_height)
+        if (line >= position.y && line < position.y + (sprite_height << magnify))
         {
             if (line_sprite_count == 8)
             {
@@ -589,13 +596,13 @@ void sms_vdp_render_mode4_sprites_line (const TMS9928A_Config *mode, uint16_t li
             pattern_index &= 0xfe;
 
         pattern = (SMS_VDP_Mode4_Pattern *) &tms9928a_state.vram [(sprite_pattern_offset + pattern_index) * sizeof (SMS_VDP_Mode4_Pattern)];
-        sms_vdp_render_mode4_pattern_line (mode, line, pattern, SMS_VDP_PALETTE_SPRITE, position, false, false, true, true);
+        sms_vdp_render_mode4_pattern_line (mode, line, pattern, SMS_VDP_PALETTE_SPRITE, position, false, false, true, true, magnify);
 
         if (tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_SPRITE_SIZE)
         {
-            position.y += 8;
+            position.y += (8 << magnify);
             pattern = (SMS_VDP_Mode4_Pattern *) &tms9928a_state.vram [(sprite_pattern_offset + pattern_index + 1) * sizeof (SMS_VDP_Mode4_Pattern)];
-            sms_vdp_render_mode4_pattern_line (mode, line, pattern, SMS_VDP_PALETTE_SPRITE, position, false, false, true, true);
+            sms_vdp_render_mode4_pattern_line (mode, line, pattern, SMS_VDP_PALETTE_SPRITE, position, false, false, true, true, magnify);
         }
     }
 }
