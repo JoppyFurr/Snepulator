@@ -385,20 +385,28 @@ void sms_vdp_process_3d_field (void)
 }
 
 
+#define PATTERN_FLIP_H          0x01
+#define PATTERN_FLIP_V          0x02
+#define PATTERN_TRANSPARENCY    0x04
+#define PATTERN_COLLISIONS      0x08
+#define PATTERN_MAGNIFY         0x10
+
 /*
  * Render one line of an 8x8 pattern.
  */
-void sms_vdp_render_mode4_pattern_line (const TMS9928A_Config *mode, uint16_t line, SMS_VDP_Mode4_Pattern *pattern_base, SMS_VDP_Palette palette,
-                                        int32_Point_2D offset, bool h_flip, bool v_flip, bool transparency, bool collisions, bool magnify)
+void sms_vdp_render_mode4_pattern_line (const TMS9928A_Config *mode, uint16_t line, SMS_VDP_Mode4_Pattern *pattern_base,
+                                        SMS_VDP_Palette palette, int32_Point_2D offset, uint8_t flags)
 {
     char *line_base;
 
-    if (v_flip)
+    uint8_t draw_width = (flags & PATTERN_MAGNIFY) ? 16 : 8;
+
+    if (flags & PATTERN_FLIP_V)
         line_base = (char *)(&pattern_base->data [(offset.y - line + 7) * 4]);
     else
-        line_base = (char *)(&pattern_base->data [((line - offset.y) >> magnify) * 4]);
+        line_base = (char *)(&pattern_base->data [((line - offset.y) >> !!(flags & PATTERN_MAGNIFY)) * 4]);
 
-    for (uint32_t x = 0; x < (8 << magnify); x++)
+    for (uint32_t x = 0; x < draw_width; x++)
     {
         /* Don't draw texture pixels that fall outside of the screen */
         if (x + offset.x >= 256)
@@ -410,21 +418,21 @@ void sms_vdp_render_mode4_pattern_line (const TMS9928A_Config *mode, uint16_t li
 
         int shift;
 
-        if (h_flip)
+        if (flags & PATTERN_FLIP_H)
             shift = 7 - x;
         else
-            shift = x >> magnify;
+            shift = x >> !!(flags & PATTERN_MAGNIFY);
 
         uint8_t colour_index = ((line_base [0] & (0x80 >> shift)) ? 0x01 : 0x00) |
                                ((line_base [1] & (0x80 >> shift)) ? 0x02 : 0x00) |
                                ((line_base [2] & (0x80 >> shift)) ? 0x04 : 0x00) |
                                ((line_base [3] & (0x80 >> shift)) ? 0x08 : 0x00);
 
-        if (transparency == true && colour_index == 0)
+        if ((flags & PATTERN_TRANSPARENCY) && colour_index == 0)
             continue;
 
         /* Sprite collision detection */
-        if (collisions)
+        if (flags & PATTERN_COLLISIONS)
         {
             if (tms9928a_state.collision_buffer [x + offset.x])
             {
@@ -459,6 +467,7 @@ void sms_vdp_render_mode4_background_line (const TMS9928A_Config *mode, uint16_t
     uint8_t fine_scroll_y = (tms9928a_state.regs.bg_scroll_y % (8 * num_rows)) & 0x07;
     uint32_t tile_y = (line + fine_scroll_y) / 8;
     int32_Point_2D position;
+    uint8_t pattern_flags;
 
     if (mode->lines_active == 192)
     {
@@ -479,6 +488,8 @@ void sms_vdp_render_mode4_background_line (const TMS9928A_Config *mode, uint16_t
     /* TODO: The vertical scroll value should only take affect between active frames, not mid-frame */
     for (uint32_t tile_x = 0; tile_x < 32; tile_x++)
     {
+        pattern_flags = priority ? PATTERN_TRANSPARENCY : 0;
+
         /* Bit 7 in ctrl_0 can disable vertical scrolling for the rightmost eight columns */
         if (tile_x == 24 && (tms9928a_state.regs.ctrl_0 & SMS_VDP_CTRL_0_LOCK_COL_24_31))
         {
@@ -502,8 +513,15 @@ void sms_vdp_render_mode4_background_line (const TMS9928A_Config *mode, uint16_t
         if (priority && !(tile & 0x1000))
             continue;
 
-        bool h_flip = tile & SMS_VDP_PATTERN_HORIZONTAL_FLIP;
-        bool v_flip = tile & SMS_VDP_PATTERN_VERTICAL_FLIP;
+        if (tile & SMS_VDP_PATTERN_HORIZONTAL_FLIP)
+        {
+            pattern_flags |= PATTERN_FLIP_H;
+        }
+
+        if (tile & SMS_VDP_PATTERN_VERTICAL_FLIP)
+        {
+            pattern_flags |= PATTERN_FLIP_V;
+        }
 
         SMS_VDP_Mode4_Pattern *pattern = (SMS_VDP_Mode4_Pattern *) &tms9928a_state.vram [(tile & 0x1ff) * sizeof (SMS_VDP_Mode4_Pattern)];
 
@@ -511,7 +529,7 @@ void sms_vdp_render_mode4_background_line (const TMS9928A_Config *mode, uint16_t
 
         position.x = 8 * tile_x + fine_scroll_x;
         position.y = 8 * tile_y - fine_scroll_y;
-        sms_vdp_render_mode4_pattern_line (mode, line, pattern, palette, position, h_flip, v_flip, false | priority, false, false);
+        sms_vdp_render_mode4_pattern_line (mode, line, pattern, palette, position, pattern_flags);
     }
 }
 
@@ -524,18 +542,18 @@ void sms_vdp_render_mode4_sprites_line (const TMS9928A_Config *mode, uint16_t li
 {
     uint16_t sprite_attribute_table_base = (((uint16_t) tms9928a_state.regs.sprite_attr_table_base) << 7) & 0x3f00;
     uint16_t sprite_pattern_offset = (tms9928a_state.regs.sprite_pg_base & 0x04) ? 256 : 0;
-    uint8_t sprite_height = (tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_SPRITE_SIZE) ? 16 : 8;
+    uint8_t pattern_height = (tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_SPRITE_MAG) ? 16 : 8;
+    uint8_t sprite_height = (tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_SPRITE_SIZE) ? (pattern_height << 1) : pattern_height;
     uint8_t line_sprite_buffer [8];
     uint8_t line_sprite_count = 0;
     SMS_VDP_Mode4_Pattern *pattern;
     int32_Point_2D position;
-
-    bool magnify = false;
+    uint8_t pattern_flags = PATTERN_TRANSPARENCY | PATTERN_COLLISIONS;
 
     /* Sprite magnification */
     if (tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_SPRITE_MAG)
     {
-        magnify = true;
+        pattern_flags |= PATTERN_MAGNIFY;
     }
 
     /* Traverse the sprite list, filling the line sprite buffer */
@@ -555,7 +573,7 @@ void sms_vdp_render_mode4_sprites_line (const TMS9928A_Config *mode, uint16_t li
             position.y = y + 1;
 
         /* If the sprite is on this line, add it to the buffer */
-        if (line >= position.y && line < position.y + (sprite_height << magnify))
+        if (line >= position.y && line < position.y + sprite_height)
         {
             if (line_sprite_count == 8)
             {
@@ -596,13 +614,13 @@ void sms_vdp_render_mode4_sprites_line (const TMS9928A_Config *mode, uint16_t li
             pattern_index &= 0xfe;
 
         pattern = (SMS_VDP_Mode4_Pattern *) &tms9928a_state.vram [(sprite_pattern_offset + pattern_index) * sizeof (SMS_VDP_Mode4_Pattern)];
-        sms_vdp_render_mode4_pattern_line (mode, line, pattern, SMS_VDP_PALETTE_SPRITE, position, false, false, true, true, magnify);
+        sms_vdp_render_mode4_pattern_line (mode, line, pattern, SMS_VDP_PALETTE_SPRITE, position, pattern_flags);
 
         if (tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_SPRITE_SIZE)
         {
-            position.y += (8 << magnify);
+            position.y += pattern_height;
             pattern = (SMS_VDP_Mode4_Pattern *) &tms9928a_state.vram [(sprite_pattern_offset + pattern_index + 1) * sizeof (SMS_VDP_Mode4_Pattern)];
-            sms_vdp_render_mode4_pattern_line (mode, line, pattern, SMS_VDP_PALETTE_SPRITE, position, false, false, true, true, magnify);
+            sms_vdp_render_mode4_pattern_line (mode, line, pattern, SMS_VDP_PALETTE_SPRITE, position, pattern_flags);
         }
     }
 }
