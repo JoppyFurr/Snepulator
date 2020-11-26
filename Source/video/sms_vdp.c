@@ -419,14 +419,14 @@ void sms_vdp_render_mode4_pattern_line (const TMS9928A_Config *mode, uint16_t li
         int shift;
 
         if (flags & PATTERN_FLIP_H)
-            shift = 7 - x;
+            shift = x;
         else
-            shift = x >> !!(flags & PATTERN_MAGNIFY);
+            shift = 7 - (x >> !!(flags & PATTERN_MAGNIFY));
 
-        uint8_t colour_index = ((line_base [0] & (0x80 >> shift)) ? 0x01 : 0x00) |
-                               ((line_base [1] & (0x80 >> shift)) ? 0x02 : 0x00) |
-                               ((line_base [2] & (0x80 >> shift)) ? 0x04 : 0x00) |
-                               ((line_base [3] & (0x80 >> shift)) ? 0x08 : 0x00);
+        uint8_t colour_index = (((line_base [0] >> shift) & 0x01)     ) |
+                               (((line_base [1] >> shift) & 0x01) << 1) |
+                               (((line_base [2] >> shift) & 0x01) << 2) |
+                               (((line_base [3] >> shift) & 0x01) << 3);
 
         if ((flags & PATTERN_TRANSPARENCY) && colour_index == 0)
             continue;
