@@ -80,8 +80,11 @@ typedef struct Snepulator_State_s {
     uint32_t     video_extra_left_border;
     uint32_t     video_height;
     uint32_t     video_width;
+    int16_t      video_scale;
     int          host_width;
     int          host_height;
+    int16_t      phaser_x;
+    int16_t      phaser_y;
 
     /* 3D */
     Video_3D_Mode video_3d_mode;

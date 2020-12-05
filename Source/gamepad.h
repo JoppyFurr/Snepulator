@@ -29,6 +29,7 @@ typedef enum Gamepad_Index_e {
 
 typedef enum Gamepad_Type_e {
     GAMEPAD_TYPE_SMS = 0,
+    GAMEPAD_TYPE_SMS_PHASER,
     GAMEPAD_TYPE_SMS_PADDLE
 } Gamepad_Type;
 

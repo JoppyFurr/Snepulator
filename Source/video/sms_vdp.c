@@ -2,6 +2,7 @@
  * Implementation for the Sega Master System VDP chip.
  */
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -15,10 +16,14 @@
 #include "../util.h"
 #include "../snepulator.h"
 #include "../sms.h"
+#include "../gamepad.h"
 #include "../database/sms_db.h"
+
 extern Snepulator_State state;
+extern Snepulator_Gamepad gamepad_1;
 extern pthread_mutex_t video_mutex;
 extern SMS_3D_Field sms_3d_field;
+extern uint64_t z80_cycle;
 
 #include "tms9928a.h"
 #include "sms_vdp.h"
@@ -258,6 +263,64 @@ uint8_t sms_vdp_mode_get (void)
            ((tms9928a_state.regs.ctrl_0 & TMS9928A_CTRL_0_MODE_2) ? BIT_1 : 0) +
            ((tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_MODE_3) ? BIT_2 : 0) +
            ((tms9928a_state.regs.ctrl_0 & SMS_VDP_CTRL_0_MODE_4)  ? BIT_3 : 0);
+}
+
+
+/*
+ * Check if the light phaser is receiving light
+ */
+bool sms_vdp_get_phaser_th (void)
+{
+    int32_t scan_x = ((z80_cycle % 228) * 342) / 228;
+    int32_t scan_y = tms9928a_state.line;
+
+    int32_t delta_x = scan_x - state.phaser_x;
+    int32_t delta_y = scan_y - state.phaser_y;
+
+    if ((delta_x * delta_x + delta_y * delta_y) < (SMS_PHASER_RADIUS * SMS_PHASER_RADIUS))
+    {
+        return true;
+    }
+
+    return false;
+}
+
+
+/*
+ * Read the 8-bit h-counter.
+ *
+ * 342 'pixels' per scanline:
+ *
+ *  - 256 pixels of active display:    (  0 - 127)
+ *  -  15 pixels of right border:      (128 - 135)
+ *  -  58 pixels of blanking and sync: (136 - 248)
+ *  -  13 pixels of left border:       (249 - 255)
+ */
+uint8_t sms_vdp_get_h_counter (void)
+{
+    if (gamepad_1.type == GAMEPAD_TYPE_SMS_PHASER &&
+        tms9928a_state.line >= (state.phaser_y - SMS_PHASER_RADIUS) &&
+        tms9928a_state.line <= (state.phaser_y + SMS_PHASER_RADIUS))
+    {
+        int32_t y_offset = state.phaser_y - tms9928a_state.line;
+        int32_t x_offset = sqrt (SMS_PHASER_RADIUS * SMS_PHASER_RADIUS + y_offset * y_offset);
+
+        tms9928a_state.h_counter = (state.phaser_x - x_offset) / 2;
+
+        if (tms9928a_state.h_counter < 0)
+        {
+            tms9928a_state.h_counter = 0;
+        }
+        if (tms9928a_state.h_counter > 0x7f)
+        {
+            tms9928a_state.h_counter = 0x7f;
+        }
+
+        /* Games seem to add their own left-offset */
+        tms9928a_state.h_counter += 24;
+    }
+
+    return tms9928a_state.h_counter;
 }
 
 
@@ -717,8 +780,6 @@ void sms_vdp_render_line (const TMS9928A_Config *config, uint16_t line)
  */
 void sms_vdp_run_one_scanline ()
 {
-    static uint16_t line = 0;
-
     const TMS9928A_Config *config;
     TMS9928A_Mode mode = sms_vdp_mode_get ();
 
@@ -753,14 +814,14 @@ void sms_vdp_run_one_scanline ()
     }
 
     /* If this is an active line, render it */
-    if (line < config->lines_active)
+    if (tms9928a_state.line < config->lines_active)
     {
-        sms_vdp_render_line (config, line);
+        sms_vdp_render_line (config, tms9928a_state.line);
     }
 
     /* If this the final active line, copy the frame for output to the user */
     /* TODO: This is okay for single-threaded code, but locking may be needed if multi-threading is added */
-    if (line == config->lines_active - 1)
+    if (tms9928a_state.line == config->lines_active - 1)
     {
         pthread_mutex_lock (&video_mutex);
         state.video_width = 256;
@@ -790,9 +851,9 @@ void sms_vdp_run_one_scanline ()
     }
 
     /* Update values for the next line */
-    line = (line + 1) % config->lines_total;
+    tms9928a_state.line = (tms9928a_state.line + 1) % config->lines_total;
 
-    uint16_t temp_line = line;
+    uint16_t temp_line = tms9928a_state.line;
     for (int range = 0; range < 3; range++)
     {
         if (temp_line < config->v_counter_map [range].last - config->v_counter_map [range].first + 1)
@@ -810,22 +871,21 @@ void sms_vdp_run_one_scanline ()
     tms9928a_state.regs = tms9928a_state.reg_buffer;
 
     /* Check for frame interrupt */
-    if (line == config->lines_active + 1)
+    if (tms9928a_state.line == config->lines_active + 1)
         tms9928a_state.status |= TMS9928A_STATUS_INT;
 
     /* Decrement the line interrupt counter during the active display period.
      * Reset outside of the active display period (but not the first line after) */
-    if (line <= config->lines_active)
+    if (tms9928a_state.line <= config->lines_active)
         tms9928a_state.line_interrupt_counter--;
     else
         tms9928a_state.line_interrupt_counter = tms9928a_state.regs.line_counter_reset;
 
     /* TODO: Does the line interrupt exist outside of mode 4? */
     /* Check for line interrupt */
-    if (line <= config->lines_active && tms9928a_state.line_interrupt_counter == 0xff)
+    if (tms9928a_state.line <= config->lines_active && tms9928a_state.line_interrupt_counter == 0xff)
     {
         tms9928a_state.line_interrupt_counter = tms9928a_state.regs.line_counter_reset;
         tms9928a_state.line_interrupt = true;
     }
-
 }

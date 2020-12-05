@@ -305,6 +305,7 @@ void tms9928a_render_sprites_line (const TMS9928A_Config *config, uint16_t line)
             if (line_sprite_count == 4)
             {
                 tms9928a_state.status |= TMS9928A_SPRITE_OVERFLOW;
+                /* TODO: Fifth sprite field in status byte */
                 break;
             }
             line_sprite_buffer [line_sprite_count++] = sprite;

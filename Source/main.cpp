@@ -309,7 +309,7 @@ void snepulator_reset (void)
     state.get_nmi = NULL;
     state.sync = NULL;
 
-    /* Clear additonal video parameters */
+    /* Clear additional video parameters */
     state.video_extra_left_border = 0;
 
     /* Clear hash and hints */
@@ -541,12 +541,24 @@ int main_gui_loop (void)
                 }
             }
 
-            /* Mouse */
+            /* Use mouse motion to show / hide the menubar */
             if (event.type == SDL_MOUSEMOTION)
             {
                 state.mouse_time = SDL_GetTicks ();
                 state.show_gui = true;
                 SDL_ShowCursor (SDL_ENABLE);
+            }
+
+            /* Use the mouse coordinates for the light phaser target */
+            if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT)
+            {
+                int32_t phaser_x = (event.button.x - (state.host_width  / 2 - (VIDEO_BUFFER_WIDTH * state.video_scale) / 2))
+                                   / state.video_scale - VIDEO_SIDE_BORDER;
+                int32_t phaser_y = (event.button.y - (state.host_height / 2 - (VIDEO_BUFFER_LINES * state.video_scale) / 2))
+                                   / state.video_scale - state.video_out_first_active_line;
+
+                state.phaser_x = phaser_x;
+                state.phaser_y = phaser_y;
             }
 
             /* Device change */
@@ -666,10 +678,14 @@ int main_gui_loop (void)
         /* Window Contents */
         {
             /* Scale the image to a multiple of SMS resolution */
-            uint8_t scale = (state.host_width / state.video_width) > (state.host_height / state.video_height) ? (state.host_height / state.video_height)
-                                                                                                              : (state.host_width  / state.video_width);
-            if (scale < 1)
-                scale = 1;
+            state.video_scale = (state.host_width / state.video_width) > (state.host_height / state.video_height) ?
+                                (state.host_height / state.video_height) : (state.host_width  / state.video_width);
+
+            if (state.video_scale < 1)
+            {
+                state.video_scale = 1;
+            }
+
             ImGui::PushStyleColor (ImGuiCol_WindowBg, ImVec4 (0.0f, 0.0f, 0.0f, 0.0f));
             ImGui::SetNextWindowPos (ImVec2 (0, 0));
             ImGui::SetNextWindowSize (ImVec2 (state.host_width, state.host_height));
@@ -683,23 +699,25 @@ int main_gui_loop (void)
 
             /* First, draw the background, taken from the leftmost slice of the actual image */
             ImGui::SetCursorPosX (0);
-            ImGui::SetCursorPosY (state.host_height / 2 - (VIDEO_BUFFER_LINES * scale) / 2);
+            ImGui::SetCursorPosY (state.host_height / 2 - (VIDEO_BUFFER_LINES * state.video_scale) / 2);
 
-            ImGui::Image ((void *) (uintptr_t) video_out_texture, ImVec2 (state.host_width, VIDEO_BUFFER_LINES * scale),
-                          /* uv0 */  ImVec2 (0.00, 0.0),
-                          /* uv1 */  ImVec2 (0.01, 1.0),
-                          /* tint */ ImColor (255, 255, 255, 255),
-                          /* border */ ImColor (0, 0, 0, 0));
+            ImGui::Image ((void *) (uintptr_t) video_out_texture,
+                          /* Size   */ ImVec2 (state.host_width, VIDEO_BUFFER_LINES * state.video_scale),
+                          /* uv0    */ ImVec2 (0.00, 0.0),
+                          /* uv1    */ ImVec2 (0.01, 1.0),
+                          /* Tint   */ ImColor (255, 255, 255, 255),
+                          /* Border */ ImColor (0, 0, 0, 0));
 
             /* Now, draw the actual image */
-            ImGui::SetCursorPosX (state.host_width  / 2 - (VIDEO_BUFFER_WIDTH * scale) / 2);
-            ImGui::SetCursorPosY (state.host_height / 2 - (VIDEO_BUFFER_LINES * scale) / 2);
+            ImGui::SetCursorPosX (state.host_width  / 2 - (VIDEO_BUFFER_WIDTH * state.video_scale) / 2);
+            ImGui::SetCursorPosY (state.host_height / 2 - (VIDEO_BUFFER_LINES * state.video_scale) / 2);
 
-            ImGui::Image ((void *) (uintptr_t) video_out_texture, ImVec2 (VIDEO_BUFFER_WIDTH * scale, VIDEO_BUFFER_LINES * scale),
-                          /* uv0 */  ImVec2 (0.0, 0.0),
-                          /* uv1 */  ImVec2 (1.0, 1.0),
-                          /* tint */ ImColor (255, 255, 255, 255),
-                          /* border */ ImColor (0, 0, 0, 0));
+            ImGui::Image ((void *) (uintptr_t) video_out_texture,
+                          /* Size   */ ImVec2 (VIDEO_BUFFER_WIDTH * state.video_scale, VIDEO_BUFFER_LINES * state.video_scale),
+                          /* uv0    */ ImVec2 (0.0, 0.0),
+                          /* uv1    */ ImVec2 (1.0, 1.0),
+                          /* Tint   */ ImColor (255, 255, 255, 255),
+                          /* Border */ ImColor (0, 0, 0, 0));
             ImGui::End ();
             ImGui::PopStyleColor (1);
         }

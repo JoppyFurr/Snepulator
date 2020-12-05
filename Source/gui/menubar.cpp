@@ -316,7 +316,6 @@ void snepulator_render_menubar (void)
             ImGui::EndMenu ();
         }
 
-        /* TODO: Deal with joysticks being removed from the system mid-game. Maybe auto-pause? */
         if (ImGui::BeginMenu ("Input"))
         {
 
@@ -331,6 +330,11 @@ void snepulator_render_menubar (void)
                     if (ImGui::MenuItem ("SMS Gamepad", NULL, gamepad_1.type == GAMEPAD_TYPE_SMS))
                     {
                         gamepad_1.type = GAMEPAD_TYPE_SMS;
+                        gamepad_1.type_auto = false;
+                    }
+                    if (ImGui::MenuItem ("SMS Light Phaser", NULL, gamepad_1.type == GAMEPAD_TYPE_SMS_PHASER))
+                    {
+                        gamepad_1.type = GAMEPAD_TYPE_SMS_PHASER;
                         gamepad_1.type_auto = false;
                     }
                     if (ImGui::MenuItem ("SMS Paddle", NULL, gamepad_1.type == GAMEPAD_TYPE_SMS_PADDLE))

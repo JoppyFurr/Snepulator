@@ -96,6 +96,8 @@ typedef struct TMS9928A_State_s {
     /* SMS VDP extensions */
     uint8_t  line_interrupt_counter;    /* Line interrupt counter current value */
     bool     line_interrupt;            /* Line interrupt pending */
+    uint16_t line;                      /* Line number currently being drawn */
+    uint8_t  h_counter;                 /* 8-bit horizontal counter */
     uint8_t  v_counter;                 /* 8-bit line counter */
 
     /* Frame buffer */
