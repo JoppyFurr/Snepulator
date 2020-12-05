@@ -117,6 +117,19 @@ void gamepad_process_event (SDL_Event *event)
             }
         }
     }
+
+    /* Special case for Light Phaser (mouse) */
+    if (gamepad_1.type == GAMEPAD_TYPE_SMS_PHASER)
+    {
+        if (event->type == SDL_MOUSEBUTTONDOWN && event->button.button == SDL_BUTTON_LEFT)
+        {
+            gamepad_1.state [GAMEPAD_BUTTON_1] = true;
+        }
+        else if (event->type == SDL_MOUSEBUTTONUP && event->button.button == SDL_BUTTON_LEFT)
+        {
+            gamepad_1.state [GAMEPAD_BUTTON_1] = false;
+        }
+    }
 }
 
 

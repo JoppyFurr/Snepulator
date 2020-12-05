@@ -30,9 +30,9 @@ extern Z80_Regs z80_regs;
 #define SMS_SRAM_SIZE (8 << 10)
 
 /* Console state */
-uint8_t memory_control = 0x00;
-uint8_t io_control = 0x00;
-bool export_paddle = false;
+static uint8_t memory_control = 0x00;
+static uint8_t io_control = 0x00;
+static bool export_paddle = false;
 SMS_3D_Field sms_3d_field = SMS_3D_FIELD_NONE;
 
 /* Cartridge Mapper */
@@ -250,7 +250,7 @@ static uint8_t sms_io_read (uint8_t addr)
         else
         {
             /* H Counter */
-            fprintf (stderr, "Warning: H Counter not implemented.\n");
+            return sms_vdp_get_h_counter ();
         }
     }
 
@@ -333,7 +333,7 @@ static uint8_t sms_io_read (uint8_t addr)
             {
                 if ((io_control & SMS_IO_TH_A_DIRECTION) == 0)
                 {
-                    port_1_th = io_control & SMS_IO_TH_A_LEVEL;
+                    port_1_th = !(io_control & SMS_IO_TH_A_LEVEL);
 
                     if (gamepad_1.type == GAMEPAD_TYPE_SMS_PADDLE)
                     {
@@ -344,8 +344,13 @@ static uint8_t sms_io_read (uint8_t addr)
 
                 if ((io_control & SMS_IO_TH_B_DIRECTION) == 0)
                 {
-                    port_2_th = io_control & SMS_IO_TH_B_LEVEL;
+                    port_2_th = !(io_control & SMS_IO_TH_B_LEVEL);
                 }
+            }
+
+            if (gamepad_1.type == GAMEPAD_TYPE_SMS_PHASER)
+            {
+                port_1_th |= sms_vdp_get_phaser_th ();
             }
 
             /* I/O Port B/misc */
@@ -354,8 +359,8 @@ static uint8_t sms_io_read (uint8_t addr)
                    (gamepad_2.state [GAMEPAD_BUTTON_1]          ? 0 : BIT_2) |
                    (gamepad_2.state [GAMEPAD_BUTTON_2]          ? 0 : BIT_3) |
                    (/* TODO: RESET */                         0 ? 0 : BIT_4) |
-                   (port_1_th                                   ? BIT_6 : 0) |
-                   (port_2_th                                   ? BIT_7 : 0);
+                   (port_1_th                                   ? 0 : BIT_6) |
+                   (port_2_th                                   ? 0 : BIT_7);
         }
     }
 
