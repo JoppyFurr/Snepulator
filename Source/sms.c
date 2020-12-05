@@ -608,6 +608,10 @@ void sms_init (void)
         {
             gamepad_1.type = GAMEPAD_TYPE_SMS_PADDLE;
         }
+        else if (state.rom_hints & SMS_HINT_LIGHT_PHASER)
+        {
+            gamepad_1.type = GAMEPAD_TYPE_SMS_PHASER;
+        }
         else
         {
             gamepad_1.type = GAMEPAD_TYPE_SMS;
