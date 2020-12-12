@@ -63,7 +63,7 @@ void snepulator_render_menubar (void)
             {
                 state.running = false;
                 open_state.title = "Load ROM...";
-                snepulator_set_open_regex (".*\\.(BIN|bin|SMS|sms|sg|col)$");
+                snepulator_set_open_regex (".*\\.(bin|col|gg|sg|sms)$");
                 open_state.callback = snepulator_load_rom;
                 open_modal = true;
             }
@@ -73,7 +73,7 @@ void snepulator_render_menubar (void)
                 {
                     state.running = false;
                     open_state.title = "Load Master System BIOS...";
-                    snepulator_set_open_regex (".*\\.(BIN|bin|SMS|sms)$");
+                    snepulator_set_open_regex (".*\\.(bin|sms)$");
                     open_state.callback = snepulator_load_sms_bios;
                     open_modal = true;
                 }

@@ -79,7 +79,7 @@ void snepulator_render_open_modal (void)
         bool open_action = false;
         DIR *dir = NULL;
 
-        std::regex file_regex (open_state.regex);
+        std::regex file_regex (open_state.regex, std::regex_constants::icase);
 
         if (!open_state.path_cached)
         {

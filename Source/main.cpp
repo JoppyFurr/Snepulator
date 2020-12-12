@@ -372,17 +372,25 @@ void system_init ()
         }
     }
 
-    if (strcmp (extension, ".sg") == 0)
+    if (strcmp (extension, ".col") == 0)
     {
-        sg_1000_init ();
-    }
-    else if (strcmp (extension, ".col") == 0)
-    {
+        state.console = CONSOLE_COLECOVISION;
         colecovision_init ();
+    }
+    if (strcmp (extension, ".gg") == 0)
+    {
+        state.console = CONSOLE_GAME_GEAR;
+        sms_init ();
+    }
+    else if (strcmp (extension, ".sg") == 0)
+    {
+        state.console = CONSOLE_SG_1000;
+        sg_1000_init ();
     }
     else
     {
         /* Default to Master System */
+        state.console = CONSOLE_MASTER_SYSTEM;
         sms_init ();
     }
 }
