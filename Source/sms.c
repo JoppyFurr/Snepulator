@@ -228,18 +228,33 @@ static void sms_memory_write (uint16_t addr, uint8_t data)
  */
 static uint8_t sms_io_read (uint8_t addr)
 {
-    if ((memory_control & 0x04) && addr >= 0xC0 && addr <= 0xff)
+    /* Game Gear specific registers */
+    if (addr == 0x00 && state.console == CONSOLE_GAME_GEAR)
     {
-        /* SMS2/GG return 0xff */
-        return 0xff;
+        uint8_t value = 0;
+
+        /* STT */
+        if (!gamepad_1.state [GAMEPAD_BUTTON_START])
+        {
+            value |= BIT_7;
+        }
+
+        /* NJAP */
+        if (state.region == REGION_WORLD)
+        {
+            value |= BIT_6;
+        }
+
+        /* NNTS */
+        if (state.format == VIDEO_FORMAT_PAL)
+        {
+            value |= BIT_5;
+        }
+
+        return value;
     }
 
-    if (addr >= 0x00 && addr <= 0x3f)
-    {
-        /* SMS2/GG return 0xff */
-        return 0xff;
-    }
-
+    /* VDP Counters */
     else if (addr >= 0x40 && addr <= 0x7f)
     {
         if ((addr & 0x01) == 0x00)
@@ -253,7 +268,6 @@ static uint8_t sms_io_read (uint8_t addr)
             return sms_vdp_get_h_counter ();
         }
     }
-
 
     /* VDP */
     else if (addr >= 0x80 && addr <= 0xbf)
@@ -270,7 +284,7 @@ static uint8_t sms_io_read (uint8_t addr)
         }
     }
 
-    /* A pressed button returns zero */
+    /* Controller inputs */
     else if (addr >= 0xc0 && addr <= 0xff)
     {
         if ((addr & 0x01) == 0x00)
@@ -374,7 +388,12 @@ static uint8_t sms_io_read (uint8_t addr)
  */
 static void sms_io_write (uint8_t addr, uint8_t data)
 {
-    if (addr >= 0x00 && addr <= 0x3f)
+    if (addr <= 0x06 && state.console == CONSOLE_GAME_GEAR)
+    {
+        /* 0x06 - Stereo sound support */
+    }
+
+    else if (addr >= 0x00 && addr <= 0x3f)
     {
         if ((addr & 0x01) == 0x00)
         {
@@ -425,7 +444,12 @@ static void sms_io_write (uint8_t addr, uint8_t data)
  */
 static bool sms_get_nmi ()
 {
-    return !! gamepad_1.state [GAMEPAD_BUTTON_START];
+    if (state.console == CONSOLE_MASTER_SYSTEM)
+    {
+        return !! gamepad_1.state [GAMEPAD_BUTTON_START];
+    }
+
+    return false;
 }
 
 
