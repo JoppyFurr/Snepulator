@@ -573,7 +573,7 @@ void sms_init (void)
     }
 
     /* Load BIOS */
-    if (state.sms_bios_filename)
+    if (state.console == CONSOLE_MASTER_SYSTEM && state.sms_bios_filename)
     {
         if (snepulator_load_rom (&state.bios, &state.bios_size, state.sms_bios_filename) == -1)
         {

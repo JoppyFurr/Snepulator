@@ -8,6 +8,14 @@
 
 #define HASH_LENGTH 12
 
+typedef enum Console_e {
+    CONSOLE_NONE = 0,
+    CONSOLE_COLECOVISION,
+    CONSOLE_GAME_GEAR,
+    CONSOLE_MASTER_SYSTEM,
+    CONSOLE_SG_1000
+} Console;
+
 typedef enum Video_Filter_e {
     VIDEO_FILTER_NEAREST,
     VIDEO_FILTER_LINEAR,
@@ -50,6 +58,7 @@ typedef struct Snepulator_State_s {
     uint8_t rom_hints;
 
     /* Console API */
+    Console console;
     void (*run) (uint32_t ms);
     void (*audio_callback) (void *userdata, uint8_t *stream, int len);
     uint32_t (*get_clock_rate) (void);
