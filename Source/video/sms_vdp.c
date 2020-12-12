@@ -32,27 +32,31 @@ extern uint64_t z80_cycle;
 #define SMS_VDP_CRAM_SIZE (32)
 
 /* Macros */
-#define VDP_TO_FLOAT(C) { .r = ((0xff / 3) * (((C) & 0x03) >> 0)) / 255.0f, \
-                          .g = ((0xff / 3) * (((C) & 0x0c) >> 2)) / 255.0f, \
-                          .b = ((0xff / 3) * (((C) & 0x30) >> 4)) / 255.0f }
+#define SMS_VDP_TO_FLOAT(C) { .r = ((0xff / 3) * (((C) & 0x03) >> 0)) / 255.0f, \
+                              .g = ((0xff / 3) * (((C) & 0x0c) >> 2)) / 255.0f, \
+                              .b = ((0xff / 3) * (((C) & 0x30) >> 4)) / 255.0f }
+
+#define GG_VDP_TO_FLOAT(C) { .r = ((0xff / 15) * (((C) & 0x000f) >> 0)) / 255.0f, \
+                             .g = ((0xff / 15) * (((C) & 0x00f0) >> 4)) / 255.0f, \
+                             .b = ((0xff / 15) * (((C) & 0x0f00) >> 8)) / 255.0f }
 
 #define SMS_VDP_LEGACY_PALETTE { \
-    VDP_TO_FLOAT (0x00), /* Transparent */ \
-    VDP_TO_FLOAT (0x00), /* Black */ \
-    VDP_TO_FLOAT (0x08), /* Medium Green */ \
-    VDP_TO_FLOAT (0x0c), /* Light Green */ \
-    VDP_TO_FLOAT (0x10), /* Dark Blue */ \
-    VDP_TO_FLOAT (0x30), /* Light blue */ \
-    VDP_TO_FLOAT (0x01), /* Dark Red */ \
-    VDP_TO_FLOAT (0x3c), /* Cyan */ \
-    VDP_TO_FLOAT (0x02), /* Medium Red */ \
-    VDP_TO_FLOAT (0x03), /* Light Red */ \
-    VDP_TO_FLOAT (0x05), /* Dark Yellow */ \
-    VDP_TO_FLOAT (0x0f), /* Light Yellow */ \
-    VDP_TO_FLOAT (0x04), /* Dark Green */ \
-    VDP_TO_FLOAT (0x33), /* Magenta */ \
-    VDP_TO_FLOAT (0x15), /* Grey */ \
-    VDP_TO_FLOAT (0x3f)  /* White */ \
+    SMS_VDP_TO_FLOAT (0x00), /* Transparent */ \
+    SMS_VDP_TO_FLOAT (0x00), /* Black */ \
+    SMS_VDP_TO_FLOAT (0x08), /* Medium Green */ \
+    SMS_VDP_TO_FLOAT (0x0c), /* Light Green */ \
+    SMS_VDP_TO_FLOAT (0x10), /* Dark Blue */ \
+    SMS_VDP_TO_FLOAT (0x30), /* Light blue */ \
+    SMS_VDP_TO_FLOAT (0x01), /* Dark Red */ \
+    SMS_VDP_TO_FLOAT (0x3c), /* Cyan */ \
+    SMS_VDP_TO_FLOAT (0x02), /* Medium Red */ \
+    SMS_VDP_TO_FLOAT (0x03), /* Light Red */ \
+    SMS_VDP_TO_FLOAT (0x05), /* Dark Yellow */ \
+    SMS_VDP_TO_FLOAT (0x0f), /* Light Yellow */ \
+    SMS_VDP_TO_FLOAT (0x04), /* Dark Green */ \
+    SMS_VDP_TO_FLOAT (0x33), /* Magenta */ \
+    SMS_VDP_TO_FLOAT (0x15), /* Grey */ \
+    SMS_VDP_TO_FLOAT (0x3f)  /* White */ \
 }
 
 /* TODO: Does the v_counter exist outside of Mode4? */
@@ -127,12 +131,13 @@ static const TMS9928A_Config Mode4_NTSC240 = {
                        { .first = 0x00, .last = 0x06 } }
 };
 
-float_Colour vdp_to_float [64] = { };
+float_Colour vdp_to_float [4096] = { };
 
 
 /* SMS VDP State */
 extern TMS9928A_State tms9928a_state;
-static uint8_t cram [SMS_VDP_CRAM_SIZE];
+static uint16_t cram [SMS_VDP_CRAM_SIZE];
+uint16_t colour_mask;
 
 /*
  * Reset the VDP registers and memory to power-on defaults.
@@ -140,9 +145,21 @@ static uint8_t cram [SMS_VDP_CRAM_SIZE];
 void sms_vdp_init (void)
 {
     /* Populate vdp_to_float colour table */
-    for (uint32_t i = 0; i < 64; i++)
+    if (state.console == CONSOLE_GAME_GEAR)
     {
-        vdp_to_float [i] = (float_Colour) VDP_TO_FLOAT (i);
+        for (uint32_t i = 0; i < 4096; i++)
+        {
+            vdp_to_float [i] = (float_Colour) GG_VDP_TO_FLOAT (i);
+        }
+        colour_mask = 0x0fff;
+    }
+    else
+    {
+        for (uint32_t i = 0; i < 64; i++)
+        {
+            vdp_to_float [i] = (float_Colour) SMS_VDP_TO_FLOAT (i);
+        }
+        colour_mask = 0x3f;
     }
 
     /* TODO: Are there any nonzero default values? */
@@ -188,7 +205,22 @@ void sms_vdp_data_write (uint8_t value)
             break;
 
         case SMS_VDP_CODE_CRAM_WRITE:
-            cram [tms9928a_state.address & 0x1f] = value;
+            if (state.console == CONSOLE_GAME_GEAR)
+            {
+                static uint8_t latch;
+                if ((tms9928a_state.address & 0x01) == 0x00)
+                {
+                    latch = value;
+                }
+                else
+                {
+                    cram [(tms9928a_state.address >> 1) & 0x1f] = (((uint16_t) value) << 8) | latch;
+                }
+            }
+            else
+            {
+                cram [tms9928a_state.address & 0x1f] = value;
+            }
             break;
 
         default:
@@ -505,10 +537,10 @@ void sms_vdp_render_mode4_pattern_line (const TMS9928A_Config *mode, uint16_t li
             tms9928a_state.collision_buffer [x + offset.x] = true;
         }
 
-        uint8_t pixel = cram [palette + colour_index];
+        uint16_t pixel = cram [palette + colour_index];
 
         tms9928a_state.frame_current [(offset.x + x + VIDEO_SIDE_BORDER) +
-                                      (state.video_out_first_active_line + line) * VIDEO_BUFFER_WIDTH] = vdp_to_float [pixel & 0x3f];
+                                      (state.video_out_first_active_line + line) * VIDEO_BUFFER_WIDTH] = vdp_to_float [pixel & colour_mask];
     }
 }
 
@@ -707,7 +739,7 @@ void sms_vdp_render_line (const TMS9928A_Config *config, uint16_t line)
     {
         uint8_t bg_colour;
         bg_colour = cram [16 + (tms9928a_state.regs.background_colour & 0x0f)];
-        video_background = vdp_to_float [bg_colour & 0x3f];
+        video_background = vdp_to_float [bg_colour & colour_mask];
     }
     else
     {
