@@ -540,7 +540,7 @@ void sms_vdp_render_mode4_pattern_line (const TMS9928A_Config *mode, uint16_t li
         uint16_t pixel = cram [palette + colour_index];
 
         tms9928a_state.frame_current [(offset.x + x + VIDEO_SIDE_BORDER) +
-                                      (state.video_out_first_active_line + line) * VIDEO_BUFFER_WIDTH] = vdp_to_float [pixel & colour_mask];
+                                      (state.video_start_y + line) * VIDEO_BUFFER_WIDTH] = vdp_to_float [pixel & colour_mask];
     }
 }
 
@@ -728,7 +728,8 @@ void sms_vdp_render_line (const TMS9928A_Config *config, uint16_t line)
 {
     float_Colour video_background =     { .r = 0.0f, .g = 0.0f, .b = 0.0f };
 
-    state.video_out_first_active_line = (VIDEO_BUFFER_LINES - config->lines_active) / 2;
+    state.video_start_y = (VIDEO_BUFFER_LINES - config->lines_active) / 2;
+    state.video_start_x = VIDEO_SIDE_BORDER;
 
     /* Background */
     if (!(tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_BLANK))
@@ -751,7 +752,7 @@ void sms_vdp_render_line (const TMS9928A_Config *config, uint16_t line)
     /* Top border */
     if (line == 0)
     {
-        for (uint32_t top_line = 0; top_line < state.video_out_first_active_line; top_line++)
+        for (uint32_t top_line = 0; top_line < state.video_start_y; top_line++)
         {
             for (uint32_t x = 0; x < VIDEO_BUFFER_WIDTH; x++)
             {
@@ -763,22 +764,22 @@ void sms_vdp_render_line (const TMS9928A_Config *config, uint16_t line)
     /* Side borders */
     for (int x = 0; x < VIDEO_BUFFER_WIDTH; x++)
     {
-        tms9928a_state.frame_current [x + (state.video_out_first_active_line + line) * VIDEO_BUFFER_WIDTH] = video_background;
+        tms9928a_state.frame_current [x + (state.video_start_y + line) * VIDEO_BUFFER_WIDTH] = video_background;
     }
 
     if (tms9928a_state.regs.ctrl_0 & SMS_VDP_CTRL_0_MASK_COL_1)
     {
-        state.video_extra_left_border = 8;
+        state.video_border_left_extend = 8;
     }
     else
     {
-        state.video_extra_left_border = 0;
+        state.video_border_left_extend = 0;
     }
 
     /* Bottom border */
     if (line == config->lines_active - 1)
     {
-        for (uint32_t bottom_line = state.video_out_first_active_line + config->lines_active; bottom_line < VIDEO_BUFFER_LINES; bottom_line++)
+        for (uint32_t bottom_line = state.video_start_y + config->lines_active; bottom_line < VIDEO_BUFFER_LINES; bottom_line++)
         {
             for (uint32_t x = 0; x < VIDEO_BUFFER_WIDTH; x++)
             {
@@ -856,16 +857,42 @@ void sms_vdp_run_one_scanline ()
     if (tms9928a_state.line == config->lines_active - 1)
     {
         pthread_mutex_lock (&video_mutex);
-        state.video_width = 256;
-        state.video_height = config->lines_active;
 
-        if (sms_3d_field == SMS_3D_FIELD_NONE)
+        if (state.console == CONSOLE_GAME_GEAR)
         {
-            memcpy (state.video_out_data, tms9928a_state.frame_current, sizeof (tms9928a_state.frame_current));
+            state.video_width = 160;
+            state.video_height = 144;
         }
         else
         {
+            state.video_width = 256;
+            state.video_height = config->lines_active;
+        }
+
+        if (sms_3d_field != SMS_3D_FIELD_NONE)
+        {
             sms_vdp_process_3d_field ();
+        }
+        else
+        {
+            if (state.console == CONSOLE_GAME_GEAR)
+            {
+                /* Only keep the LCD area */
+                for (uint32_t y = 0; y < VIDEO_BUFFER_LINES; y++)
+                {
+                    for (uint32_t x = 0; x < VIDEO_BUFFER_WIDTH; x++)
+                    {
+                        if ((x >= state.video_start_x + 48) && (x < state.video_start_x + 48 + state.video_width) &&
+                            (y >= state.video_start_y + 24) && (y < state.video_start_y + 24 + state.video_height))
+                        {
+                            continue;
+                        }
+                        tms9928a_state.frame_current [x + y * VIDEO_BUFFER_WIDTH] = (float_Colour) { .r = 0.0, .g = 0.0, .b = 0.0 };
+                    }
+                }
+            }
+
+            memcpy (state.video_out_data, tms9928a_state.frame_current, sizeof (tms9928a_state.frame_current));
         }
 
         pthread_mutex_unlock (&video_mutex);

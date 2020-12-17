@@ -236,9 +236,9 @@ void snepulator_take_screenshot (void)
     {
         for (uint32_t x = 0; x < width; x++)
         {
-            buffer [(x + y * width) * 3 + 0] = state.video_out_data [x + VIDEO_SIDE_BORDER + (y + state.video_out_first_active_line) * stride].r * 255.0;
-            buffer [(x + y * width) * 3 + 1] = state.video_out_data [x + VIDEO_SIDE_BORDER + (y + state.video_out_first_active_line) * stride].g * 255.0;
-            buffer [(x + y * width) * 3 + 2] = state.video_out_data [x + VIDEO_SIDE_BORDER + (y + state.video_out_first_active_line) * stride].b * 255.0;
+            buffer [(x + y * width) * 3 + 0] = state.video_out_data [state.video_start_x + x + (state.video_start_y + y) * stride].r * 255.0;
+            buffer [(x + y * width) * 3 + 1] = state.video_out_data [state.video_start_x + x + (state.video_start_y + y) * stride].g * 255.0;
+            buffer [(x + y * width) * 3 + 2] = state.video_out_data [state.video_start_x + x + (state.video_start_y + y) * stride].b * 255.0;
         }
     }
 
@@ -322,10 +322,10 @@ void video_dim (uint32_t x_scale, uint32_t y_scale)
     {
         for (uint32_t x = 0; x < stride; x++)
         {
-            if ( ( (y / y_scale) < state.video_out_first_active_line) ||                        /* Top border */
-                 ( (y / y_scale) >= state.video_out_first_active_line + state.video_height) ||  /* Bottom border */
-                 ( (x / x_scale) < VIDEO_SIDE_BORDER + state.video_extra_left_border ) ||       /* Left border */
-                 ( (x / x_scale) >= VIDEO_SIDE_BORDER + state.video_width ))                    /* Right border */
+            if ( ( (y / y_scale) <  state.video_start_y) ||                                   /* Top border */
+                 ( (y / y_scale) >= state.video_start_y + state.video_height) ||              /* Bottom border */
+                 ( (x / x_scale) <  state.video_start_x + state.video_border_left_extend ) || /* Left border */
+                 ( (x / x_scale) >= state.video_start_x + state.video_width ))                /* Right border */
             {
                 state.video_out_texture_data [x + y * stride].r *= 0.5;
                 state.video_out_texture_data [x + y * stride].g *= 0.5;

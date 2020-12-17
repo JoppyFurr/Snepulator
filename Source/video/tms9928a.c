@@ -257,7 +257,7 @@ static void tms9928a_render_pattern_line (const TMS9928A_Config *config, uint16_
         }
 
         float_Colour pixel = config->palette [colour_index];
-        tms9928a_state.frame_current [(offset.x + x + VIDEO_SIDE_BORDER) + (state.video_out_first_active_line + line) * VIDEO_BUFFER_WIDTH] = pixel;
+        tms9928a_state.frame_current [(offset.x + x + VIDEO_SIDE_BORDER) + (state.video_start_y + line) * VIDEO_BUFFER_WIDTH] = pixel;
     }
 }
 
@@ -456,7 +456,7 @@ void tms9928a_render_line (const TMS9928A_Config *config, uint16_t line)
 {
     float_Colour video_background =     { .r = 0.0f, .g = 0.0f, .b = 0.0f };
 
-    state.video_out_first_active_line = (VIDEO_BUFFER_LINES - config->lines_active) / 2;
+    state.video_start_y = (VIDEO_BUFFER_LINES - config->lines_active) / 2;
 
     /* Background */
     if (!(tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_BLANK))
@@ -473,7 +473,7 @@ void tms9928a_render_line (const TMS9928A_Config *config, uint16_t line)
     /* Top border */
     if (line == 0)
     {
-        for (uint32_t top_line = 0; top_line < state.video_out_first_active_line; top_line++)
+        for (uint32_t top_line = 0; top_line < state.video_start_y; top_line++)
         {
             for (uint32_t x = 0; x < VIDEO_BUFFER_WIDTH; x++)
             {
@@ -485,13 +485,13 @@ void tms9928a_render_line (const TMS9928A_Config *config, uint16_t line)
     /* Side borders */
     for (int x = 0; x < VIDEO_BUFFER_WIDTH; x++)
     {
-        tms9928a_state.frame_current [x + (state.video_out_first_active_line + line) * VIDEO_BUFFER_WIDTH] = video_background;
+        tms9928a_state.frame_current [x + (state.video_start_y + line) * VIDEO_BUFFER_WIDTH] = video_background;
     }
 
     /* Bottom border */
     if (line == config->lines_active - 1)
     {
-        for (uint32_t bottom_line = state.video_out_first_active_line + config->lines_active; bottom_line < VIDEO_BUFFER_LINES; bottom_line++)
+        for (uint32_t bottom_line = state.video_start_y + config->lines_active; bottom_line < VIDEO_BUFFER_LINES; bottom_line++)
         {
             for (uint32_t x = 0; x < VIDEO_BUFFER_WIDTH; x++)
             {
