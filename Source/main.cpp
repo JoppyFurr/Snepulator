@@ -310,7 +310,8 @@ void snepulator_reset (void)
     state.sync = NULL;
 
     /* Clear additional video parameters */
-    state.video_extra_left_border = 0;
+    state.video_border = true;
+    state.video_border_left_extend = 0;
 
     /* Clear hash and hints */
     memset (state.rom_hash, 0, sizeof (state.rom_hash));
@@ -380,6 +381,7 @@ void system_init ()
     if (strcmp (extension, ".gg") == 0)
     {
         state.console = CONSOLE_GAME_GEAR;
+        state.video_border = false;
         sms_init ();
     }
     else if (strcmp (extension, ".sg") == 0)
@@ -563,7 +565,7 @@ int main_gui_loop (void)
                 int32_t phaser_x = (event.button.x - (state.host_width  / 2 - (VIDEO_BUFFER_WIDTH * state.video_scale) / 2))
                                    / state.video_scale - VIDEO_SIDE_BORDER;
                 int32_t phaser_y = (event.button.y - (state.host_height / 2 - (VIDEO_BUFFER_LINES * state.video_scale) / 2))
-                                   / state.video_scale - state.video_out_first_active_line;
+                                   / state.video_scale - state.video_start_y;
 
                 state.phaser_x = phaser_x;
                 state.phaser_y = phaser_y;
@@ -595,7 +597,10 @@ int main_gui_loop (void)
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
                 memcpy (state.video_out_texture_data, state.video_out_data, sizeof (state.video_out_data));
-                video_dim (1, 1);
+                if (state.video_border)
+                {
+                    video_dim (1, 1);
+                }
 
                 glTexImage2D    (GL_TEXTURE_2D, 0, GL_RGB, VIDEO_BUFFER_WIDTH, VIDEO_BUFFER_LINES, 0, GL_RGB, GL_FLOAT,
                                  state.video_out_texture_data);
@@ -605,7 +610,10 @@ int main_gui_loop (void)
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
                 memcpy (state.video_out_texture_data, state.video_out_data, sizeof (state.video_out_data));
-                video_dim (1, 1);
+                if (state.video_border)
+                {
+                    video_dim (1, 1);
+                }
 
                 glTexImage2D    (GL_TEXTURE_2D, 0, GL_RGB, VIDEO_BUFFER_WIDTH, VIDEO_BUFFER_LINES, 0, GL_RGB, GL_FLOAT,
                                  state.video_out_texture_data);
@@ -650,7 +658,11 @@ int main_gui_loop (void)
                         }
                     }
                 }
-                video_dim (2, 3);
+
+                if (state.video_border)
+                {
+                    video_dim (2, 3);
+                }
                 glTexImage2D    (GL_TEXTURE_2D, 0, GL_RGB, VIDEO_BUFFER_WIDTH * 2, VIDEO_BUFFER_LINES * 3, 0, GL_RGB, GL_FLOAT,
                                  state.video_out_texture_data);
                 break;
@@ -706,15 +718,18 @@ int main_gui_loop (void)
                                               ImGuiWindowFlags_NoBringToFrontOnFocus);
 
             /* First, draw the background, taken from the leftmost slice of the actual image */
-            ImGui::SetCursorPosX (0);
-            ImGui::SetCursorPosY (state.host_height / 2 - (VIDEO_BUFFER_LINES * state.video_scale) / 2);
+            if (state.video_border)
+            {
+                ImGui::SetCursorPosX (0);
+                ImGui::SetCursorPosY (state.host_height / 2 - (VIDEO_BUFFER_LINES * state.video_scale) / 2);
 
-            ImGui::Image ((void *) (uintptr_t) video_out_texture,
-                          /* Size   */ ImVec2 (state.host_width, VIDEO_BUFFER_LINES * state.video_scale),
-                          /* uv0    */ ImVec2 (0.00, 0.0),
-                          /* uv1    */ ImVec2 (0.01, 1.0),
-                          /* Tint   */ ImColor (255, 255, 255, 255),
-                          /* Border */ ImColor (0, 0, 0, 0));
+                ImGui::Image ((void *) (uintptr_t) video_out_texture,
+                              /* Size   */ ImVec2 (state.host_width, VIDEO_BUFFER_LINES * state.video_scale),
+                              /* uv0    */ ImVec2 (0.00, 0.0),
+                              /* uv1    */ ImVec2 (0.01, 1.0),
+                              /* Tint   */ ImColor (255, 255, 255, 255),
+                              /* Border */ ImColor (0, 0, 0, 0));
+            }
 
             /* Now, draw the actual image */
             ImGui::SetCursorPosX (state.host_width  / 2 - (VIDEO_BUFFER_WIDTH * state.video_scale) / 2);
