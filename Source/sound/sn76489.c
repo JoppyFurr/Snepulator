@@ -14,13 +14,24 @@ extern Snepulator_State state;
 /* State */
 SN76489_Regs psg_regs;
 pthread_mutex_t psg_mutex = PTHREAD_MUTEX_INITIALIZER;
+uint8_t psg_gg_stereo;
+
+#define GG_CH0_RIGHT    BIT_0
+#define GG_CH1_RIGHT    BIT_1
+#define GG_CH2_RIGHT    BIT_2
+#define GG_CH3_RIGHT    BIT_3
+#define GG_CH0_LEFT     BIT_4
+#define GG_CH1_LEFT     BIT_5
+#define GG_CH2_LEFT     BIT_6
+#define GG_CH3_LEFT     BIT_7
 
 /*
  * PSG output ring buffer.
  * Stores samples at the PSG internal clock rate (~334 kHz).
  * As the read/write index are 64-bit, they should never overflow.
  */
-static int16_t psg_sample_ring [PSG_RING_SIZE];
+static int16_t sample_ring_left [PSG_RING_SIZE];
+static int16_t sample_ring_right [PSG_RING_SIZE];
 static uint64_t read_index = 0;
 static uint64_t write_index = 0;
 
@@ -134,6 +145,7 @@ void sn76489_init (void)
     psg_regs.output_2 =  1;
     psg_regs.output_3 = -1;
 
+    psg_gg_stereo = 0xff;
 }
 
 
@@ -238,10 +250,26 @@ void _psg_run_cycles (uint64_t cycles)
         }
 
         /* Store this sample in the ring */
-        psg_sample_ring [write_index++ % PSG_RING_SIZE] = psg_regs.output_0    * (0x0f - psg_regs.vol_0) * BASE_VOLUME
-                                                        + psg_regs.output_1    * (0x0f - psg_regs.vol_1) * BASE_VOLUME
-                                                        + psg_regs.output_2    * (0x0f - psg_regs.vol_2) * BASE_VOLUME
-                                                        + psg_regs.output_lfsr * (0x0f - psg_regs.vol_3) * BASE_VOLUME;
+        if (state.console == CONSOLE_GAME_GEAR)
+        {
+            sample_ring_left  [write_index % PSG_RING_SIZE] = (psg_gg_stereo & GG_CH0_LEFT  ? psg_regs.output_0    * (0x0f - psg_regs.vol_0) * BASE_VOLUME : 0)
+                                                            + (psg_gg_stereo & GG_CH1_LEFT  ? psg_regs.output_1    * (0x0f - psg_regs.vol_1) * BASE_VOLUME : 0)
+                                                            + (psg_gg_stereo & GG_CH2_LEFT  ? psg_regs.output_2    * (0x0f - psg_regs.vol_2) * BASE_VOLUME : 0)
+                                                            + (psg_gg_stereo & GG_CH3_LEFT  ? psg_regs.output_lfsr * (0x0f - psg_regs.vol_3) * BASE_VOLUME : 0);
+
+            sample_ring_right [write_index % PSG_RING_SIZE] = (psg_gg_stereo & GG_CH0_RIGHT ? psg_regs.output_0    * (0x0f - psg_regs.vol_0) * BASE_VOLUME : 0)
+                                                            + (psg_gg_stereo & GG_CH1_RIGHT ? psg_regs.output_1    * (0x0f - psg_regs.vol_1) * BASE_VOLUME : 0)
+                                                            + (psg_gg_stereo & GG_CH2_RIGHT ? psg_regs.output_2    * (0x0f - psg_regs.vol_2) * BASE_VOLUME : 0)
+                                                            + (psg_gg_stereo & GG_CH3_RIGHT ? psg_regs.output_lfsr * (0x0f - psg_regs.vol_3) * BASE_VOLUME : 0);
+        }
+        else
+        {
+            sample_ring_left [write_index % PSG_RING_SIZE] = psg_regs.output_0    * (0x0f - psg_regs.vol_0) * BASE_VOLUME
+                                                           + psg_regs.output_1    * (0x0f - psg_regs.vol_1) * BASE_VOLUME
+                                                           + psg_regs.output_2    * (0x0f - psg_regs.vol_2) * BASE_VOLUME
+                                                           + psg_regs.output_lfsr * (0x0f - psg_regs.vol_3) * BASE_VOLUME;
+        }
+        write_index++;
 
     }
 
@@ -287,7 +315,7 @@ void sn76489_get_samples (int16_t *stream, int count)
     }
 
     /* Take samples from the PSG ring to pass to the sound card */
-    for (int i = 0; i < count; i++)
+    for (int i = 0; i < count; i+= 2)
     {
         read_index = (soundcard_sample_count * (clock_rate >> 4)) / 48000;
 
@@ -297,7 +325,17 @@ void sn76489_get_samples (int16_t *stream, int count)
             psg_run_cycles (0);
         }
 
-        stream [i] = psg_sample_ring [read_index % PSG_RING_SIZE];
+        /* Left, Right */
+        if (state.console == CONSOLE_GAME_GEAR)
+        {
+            stream [i    ] = sample_ring_left  [read_index % PSG_RING_SIZE];
+            stream [i + 1] = sample_ring_right [read_index % PSG_RING_SIZE];
+        }
+        else
+        {
+            stream [i    ] = sample_ring_left [read_index % PSG_RING_SIZE];
+            stream [i + 1] = sample_ring_left [read_index % PSG_RING_SIZE];
+        }
 
         soundcard_sample_count++;
     }

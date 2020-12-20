@@ -805,7 +805,7 @@ int main (int argc, char **argv)
     memset (&desired_audiospec, 0, sizeof (desired_audiospec));
     desired_audiospec.freq = 48000;
     desired_audiospec.format = AUDIO_S16LSB;
-    desired_audiospec.channels = 1;
+    desired_audiospec.channels = 2;
     desired_audiospec.samples = 1024;
     desired_audiospec.callback = snepulator_audio_callback;
 
