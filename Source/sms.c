@@ -34,6 +34,7 @@ static uint8_t memory_control = 0x00;
 static uint8_t io_control = 0x00;
 static bool export_paddle = false;
 SMS_3D_Field sms_3d_field = SMS_3D_FIELD_NONE;
+extern uint8_t psg_gg_stereo;
 
 /* Cartridge Mapper */
 static SMS_Mapper mapper = SMS_MAPPER_UNKNOWN;
@@ -390,7 +391,11 @@ static void sms_io_write (uint8_t addr, uint8_t data)
 {
     if (addr <= 0x06 && state.console == CONSOLE_GAME_GEAR)
     {
-        /* 0x06 - Stereo sound support */
+        if (addr == 0x06)
+        {
+            /* Stereo sound register */
+            psg_gg_stereo = data;
+        }
     }
 
     else if (addr >= 0x00 && addr <= 0x3f)
