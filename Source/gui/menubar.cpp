@@ -274,6 +274,14 @@ void snepulator_render_menubar (void)
 
             if (ImGui::BeginMenu ("Info"))
             {
+                ImGui::Text ("%s", state.console == CONSOLE_MASTER_SYSTEM ? "Master System" :
+                                   state.console == CONSOLE_GAME_GEAR     ? "Game Gear" :
+                                   state.console == CONSOLE_SG_1000       ? "SG-1000" :
+                                   state.console == CONSOLE_COLECOVISION  ? "ColecoVision" :
+                                   "N/A");
+
+                ImGui::Separator ();
+
                 ImGui::Text ("CPU");
                 ImGui::Text ("PC : %04x    SP : %04x", z80_regs.pc, z80_regs.sp);
                 ImGui::Text ("AF : %04x    BC : %04x", z80_regs.af, z80_regs.bc);
