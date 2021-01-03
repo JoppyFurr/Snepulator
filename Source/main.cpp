@@ -378,7 +378,7 @@ void system_init ()
         state.console = CONSOLE_COLECOVISION;
         colecovision_init ();
     }
-    if (strcmp (extension, ".gg") == 0)
+    else if (strcmp (extension, ".gg") == 0)
     {
         state.console = CONSOLE_GAME_GEAR;
         state.video_border = false;
@@ -841,7 +841,7 @@ int main (int argc, char **argv)
         return -1;
     }
 
-    /* Initialize SDL */
+    /* Initialise SDL */
     if (SDL_Init (SDL_INIT_EVERYTHING) == -1)
     {
         snepulator_error ("SDL Error", SDL_GetError ());
