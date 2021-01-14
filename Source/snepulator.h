@@ -118,14 +118,17 @@ typedef struct Snepulator_State_s {
 void snepulator_update_input_device (Gamepad_Mapping device);
 #endif
 
-/* Clean up after the previously running system */
-void snepulator_reset (void);
-
-/* Call the appropriate initialisation for the chosen ROM */
-void system_init (void);
+/* Draw the logo to the output texture. */
+void snepulator_draw_logo (void);
 
 /* Display an error message */
 void snepulator_error (const char *title, const char *message);
 
 /* Pause emulation and show the pause screen. */
 void snepulator_pause (void);
+
+/* Clean up after the previously running system */
+void snepulator_reset (void);
+
+/* Call the appropriate initialisation for the chosen ROM */
+void snepulator_system_init (void);

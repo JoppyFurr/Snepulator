@@ -237,7 +237,7 @@ void snepulator_render_menubar (void)
         {
             if (ImGui::MenuItem ("Hard Reset"))
             {
-                system_init ();
+                snepulator_system_init ();
             }
             ImGui::Separator ();
 

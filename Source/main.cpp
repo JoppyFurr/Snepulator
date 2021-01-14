@@ -13,17 +13,11 @@
 #include "examples/imgui_impl_sdl.h"
 #include "examples/imgui_impl_opengl3.h"
 
-#include <vector>
-
 extern "C" {
 
 #include "util.h"
 #include "snepulator.h"
 #include "config.h"
-
-#include "video/tms9928a.h"
-#include "video/sms_vdp.h"
-#include "cpu/z80.h"
 
 #include "gamepad.h"
 #include "sg-1000.h"
@@ -58,9 +52,30 @@ void snepulator_render_input_modal (void);
 
 
 /*
+ * Display an error message.
+ */
+void snepulator_error (const char *title, const char *message)
+{
+    state.running = false;
+    state.ready = false;
+    state.show_gui = true;
+
+    /* All errors get printed to console */
+    fprintf (stderr, "%s: %s\n", title, message);
+
+    /* The first reported error gets shown as a pop-up */
+    if (state.error_title == NULL)
+    {
+        state.error_title = strdup (title);
+        state.error_message = strdup (message);
+    }
+}
+
+
+/*
  * Draw the logo to the output texture.
  */
-void draw_logo (void)
+void snepulator_draw_logo (void)
 {
     memset (state.video_out_data, 0, sizeof (state.video_out_data));
 
@@ -82,26 +97,6 @@ void draw_logo (void)
 }
 
 
-/*
- * Display an error message.
- */
-void snepulator_error (const char *title, const char *message)
-{
-    state.running = false;
-    state.ready = false;
-    state.show_gui = true;
-
-    /* All errors get printed to console */
-    fprintf (stderr, "%s: %s\n", title, message);
-
-    /* The first reported error gets shown as a pop-up */
-    if (state.error_title == NULL)
-    {
-        state.error_title = strdup (title);
-        state.error_message = strdup (message);
-    }
-}
-
 void snepulator_render_error ()
 {
     static bool first = true;
@@ -121,7 +116,7 @@ void snepulator_render_error ()
         ImGui::Spacing ();
         ImGui::SameLine (ImGui::GetContentRegionAvail().x + 16 - 128);
         if (ImGui::Button ("Close", ImVec2 (120,0))) {
-            draw_logo ();
+            snepulator_draw_logo ();
             ImGui::CloseCurrentPopup ();
 
             /* Reset the error popup */
@@ -148,7 +143,7 @@ void snepulator_load_rom (char *path)
 
     state.cart_filename = strdup (path);
 
-    system_init ();
+    snepulator_system_init ();
 }
 
 
@@ -353,7 +348,7 @@ void snepulator_reset (void)
 /*
  * Call the appropriate initialisation for the chosen ROM
  */
-void system_init ()
+void snepulator_system_init (void)
 {
     char extension[16] = { '\0' };
     char *extension_ptr = NULL;
@@ -491,7 +486,7 @@ int main_gui_loop (void)
     glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameterfv (GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, Float4_Black);
-    draw_logo ();
+    snepulator_draw_logo ();
 
     /* Main loop */
     while (!state.abort)
@@ -796,8 +791,6 @@ static void about (void)
  */
 int main (int argc, char **argv)
 {
-    int ret;
-
     /* Audio */
     SDL_AudioDeviceID audio_device_id;
     SDL_AudioSpec desired_audiospec;
@@ -811,7 +804,7 @@ int main (int argc, char **argv)
 
     about ();
 
-    /* Initialize Snepulator state */
+    /* Initialise Snepulator state */
     memset (&state, 0, sizeof (state));
     state.show_gui = true;
     state.video_width = 256;
@@ -838,7 +831,7 @@ int main (int argc, char **argv)
     /* Import configuration */
     if (config_import () == -1)
     {
-        return -1;
+        return EXIT_FAILURE;
     }
 
     /* Initialise SDL */
@@ -936,8 +929,7 @@ int main (int argc, char **argv)
 
     /* Open the default audio device */
     audio_device_id = SDL_OpenAudioDevice (NULL, 0, &desired_audiospec, &obtained_audiospec,
-            SDL_AUDIO_ALLOW_FREQUENCY_CHANGE | SDL_AUDIO_ALLOW_FORMAT_CHANGE | SDL_AUDIO_ALLOW_CHANNELS_CHANGE );
-
+                                           SDL_AUDIO_ALLOW_FREQUENCY_CHANGE | SDL_AUDIO_ALLOW_FORMAT_CHANGE | SDL_AUDIO_ALLOW_CHANNELS_CHANGE);
     SDL_PauseAudioDevice (audio_device_id, 0);
 
     /* Initialise gamepad support */
@@ -946,14 +938,12 @@ int main (int argc, char **argv)
     /* If we have a valid ROM to run, start emulation */
     if (state.cart_filename)
     {
-        system_init ();
+        snepulator_system_init ();
     }
 
-    pthread_t emulation_thread;
-
     /* Create the emulation thread */
-    ret = pthread_create (&emulation_thread, NULL, main_emulation_loop, NULL);
-    if (ret != 0)
+    pthread_t emulation_thread;
+    if (pthread_create (&emulation_thread, NULL, main_emulation_loop, NULL) != 0)
     {
         snepulator_error ("pThread Error", "Unable to create emulation_thread.");
     }
