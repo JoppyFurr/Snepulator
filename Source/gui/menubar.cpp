@@ -59,28 +59,29 @@ void snepulator_render_menubar (void)
     {
         if (ImGui::BeginMenu ("File"))
         {
-            if (ImGui::MenuItem ("Load ROM...", NULL))
+            if (ImGui::MenuItem ("Open ROM...", NULL))
             {
                 state.running = false;
-                open_state.title = "Load ROM...";
+                open_state.title = "Open ROM...";
                 snepulator_set_open_regex (".*\\.(bin|col|gg|sg|sms)$");
                 open_state.callback = snepulator_load_rom;
                 open_modal = true;
             }
-            if (ImGui::BeginMenu ("Load BIOS..."))
+
+            if (ImGui::BeginMenu ("Open BIOS"))
             {
-                if (ImGui::MenuItem ("Master System", NULL))
+                if (ImGui::MenuItem ("Master System...", NULL))
                 {
                     state.running = false;
-                    open_state.title = "Load Master System BIOS...";
+                    open_state.title = "Open Master System BIOS...";
                     snepulator_set_open_regex (".*\\.(bin|sms)$");
                     open_state.callback = snepulator_load_sms_bios;
                     open_modal = true;
                 }
-                if (ImGui::MenuItem ("ColecoVision", NULL))
+                if (ImGui::MenuItem ("ColecoVision...", NULL))
                 {
                     state.running = false;
-                    open_state.title = "Load ColecoVision BIOS...";
+                    open_state.title = "Open ColecoVision BIOS...";
                     snepulator_set_open_regex (".*\\.(col)$");
                     open_state.callback = snepulator_load_colecovision_bios;
                     open_modal = true;
@@ -110,6 +111,12 @@ void snepulator_render_menubar (void)
                     ImGui::EndMenu ();
                 }
                 ImGui::EndMenu ();
+            }
+
+            if (ImGui::MenuItem ("Close ROM", NULL))
+            {
+                snepulator_reset ();
+                snepulator_draw_logo ();
             }
 
             if (ImGui::MenuItem ("Pause", NULL, !state.running)) {
