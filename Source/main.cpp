@@ -217,13 +217,17 @@ int config_import (void)
     state.video_filter = VIDEO_FILTER_SCANLINES;
     if (config_string_get ("video", "filter", &string) == 0)
     {
-        if (strcmp (string, "GL_NEAREST") == 0)
+        if (strcmp (string, "Dot Matrix") == 0)
         {
-            state.video_filter = VIDEO_FILTER_NEAREST;
+            state.video_filter = VIDEO_FILTER_DOT_MATRIX;
         }
-        else if (strcmp (string, "GL_LINEAR") == 0)
+        else if (strcmp (string, "Linear") == 0)
         {
             state.video_filter = VIDEO_FILTER_LINEAR;
+        }
+        else if (strcmp (string, "Nearest") == 0)
+        {
+            state.video_filter = VIDEO_FILTER_NEAREST;
         }
     }
 
@@ -588,16 +592,10 @@ int main_gui_loop (void)
 
         switch (state.video_filter)
         {
-            case VIDEO_FILTER_NEAREST:
-                glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-                glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-                memcpy (state.video_out_texture_data, state.video_out_data, sizeof (state.video_out_data));
-                if (state.video_has_border) /* TODO: Reduce duplication */
-                {
-                    video_filter_dim_border ();
-                }
-                state.video_out_texture_width = VIDEO_BUFFER_WIDTH;
-                state.video_out_texture_height = VIDEO_BUFFER_LINES;
+            case VIDEO_FILTER_DOT_MATRIX:
+                glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+                glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                video_filter_dot_matrix ();
                 break;
 
             case VIDEO_FILTER_LINEAR:
@@ -607,6 +605,20 @@ int main_gui_loop (void)
                 if (state.video_has_border)
                 {
                     video_filter_dim_border ();
+                    state.video_show_border = true;
+                }
+                state.video_out_texture_width = VIDEO_BUFFER_WIDTH;
+                state.video_out_texture_height = VIDEO_BUFFER_LINES;
+                break;
+
+            case VIDEO_FILTER_NEAREST:
+                glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+                glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+                memcpy (state.video_out_texture_data, state.video_out_data, sizeof (state.video_out_data));
+                if (state.video_has_border) /* TODO: Reduce duplication */
+                {
+                    video_filter_dim_border ();
+                    state.video_show_border = true;
                 }
                 state.video_out_texture_width = VIDEO_BUFFER_WIDTH;
                 state.video_out_texture_height = VIDEO_BUFFER_LINES;
@@ -672,7 +684,7 @@ int main_gui_loop (void)
                                               ImGuiWindowFlags_NoBringToFrontOnFocus);
 
             /* First, draw the background, taken from the leftmost slice of the actual image */
-            if (state.video_has_border)
+            if (state.video_show_border)
             {
                 ImGui::SetCursorPosX (0);
                 ImGui::SetCursorPosY (state.host_height / 2 - (VIDEO_BUFFER_LINES * state.video_scale) / 2);

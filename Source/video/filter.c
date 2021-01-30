@@ -45,6 +45,51 @@ void video_filter_dim_border (void)
 
 
 /*
+ * Dot Matrix effect.
+ *
+ * Scales texture by 4×4 and clears the border between pixels.
+ */
+void video_filter_dot_matrix (void)
+{
+    float_Colour *source = state.video_out_data;
+    float_Colour *dest   = state.video_out_texture_data;
+
+    /* Prescale by 2x3, then add scanlines */
+    state.video_out_texture_width = VIDEO_BUFFER_WIDTH * 4;
+    state.video_out_texture_height = VIDEO_BUFFER_LINES * 4;
+    uint32_t stride = state.video_out_texture_width;
+
+    for (int y = 0; y < state.video_out_texture_height; y++)
+    {
+        for (int x = 0; x < state.video_out_texture_width; x++)
+        {
+            /* Black out any border */
+            if ( (y / 4 <  state.video_start_y) ||                                   /* Top border */
+                 (y / 4 >= state.video_start_y + state.video_height) ||              /* Bottom border */
+                 (x / 4 <  state.video_start_x + state.video_border_left_extend ) || /* Left border */
+                 (x / 4 >= state.video_start_x + state.video_width ))                /* Right border */
+            {
+                dest [x + y * stride] = (float_Colour) { .r = 0.0, .g = 0.0, .b = 0.0 };
+            }
+            /* Every third line is darkened, taking colour from
+             * both the line above and the line below. */
+            else if (x % 4 == 3 || y % 4 == 3)
+            {
+                dest [x + y * stride] = (float_Colour) { .r = 0.0, .g = 0.0, .b = 0.0 };
+            }
+            else
+            {
+                /* 1:1 copy of the original data */
+                dest [x + y * stride] = source [x / 4 + y / 4 * VIDEO_BUFFER_WIDTH];
+            }
+        }
+    }
+
+    state.video_show_border = false;
+}
+
+
+/*
  * Scanline effect.
  *
  * Scales texture by 2×3 and reduces brightness on every third line.
