@@ -158,16 +158,22 @@ void snepulator_render_menubar (void)
         {
             if (ImGui::BeginMenu ("Filter"))
             {
-                if (ImGui::MenuItem ("GL_NEAREST", NULL, state.video_filter == VIDEO_FILTER_NEAREST))
+                if (ImGui::MenuItem ("Dot Matrix",  NULL, state.video_filter == VIDEO_FILTER_DOT_MATRIX))
                 {
-                    state.video_filter = VIDEO_FILTER_NEAREST;
-                    config_string_set ("video", "filter", "GL_NEAREST");
+                    state.video_filter = VIDEO_FILTER_DOT_MATRIX;
+                    config_string_set ("video", "filter", "Dot Matrix");
                     config_write ();
                 }
-                if (ImGui::MenuItem ("GL_LINEAR",  NULL, state.video_filter == VIDEO_FILTER_LINEAR))
+                if (ImGui::MenuItem ("Linear Interpolation",  NULL, state.video_filter == VIDEO_FILTER_LINEAR))
                 {
                     state.video_filter = VIDEO_FILTER_LINEAR;
-                    config_string_set ("video", "filter", "GL_LINEAR");
+                    config_string_set ("video", "filter", "Linear");
+                    config_write ();
+                }
+                if (ImGui::MenuItem ("Nearest Neighbour", NULL, state.video_filter == VIDEO_FILTER_NEAREST))
+                {
+                    state.video_filter = VIDEO_FILTER_NEAREST;
+                    config_string_set ("video", "filter", "Nearest");
                     config_write ();
                 }
                 if (ImGui::MenuItem ("Scanlines",  NULL, state.video_filter == VIDEO_FILTER_SCANLINES))

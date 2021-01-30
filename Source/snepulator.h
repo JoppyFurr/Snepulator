@@ -17,8 +17,9 @@ typedef enum Console_e {
 } Console;
 
 typedef enum Video_Filter_e {
-    VIDEO_FILTER_NEAREST,
+    VIDEO_FILTER_DOT_MATRIX,
     VIDEO_FILTER_LINEAR,
+    VIDEO_FILTER_NEAREST,
     VIDEO_FILTER_SCANLINES
 } Video_Filter;
 
@@ -100,6 +101,7 @@ typedef struct Snepulator_State_s {
     int          host_height;
     Video_Filter video_filter;
     int16_t      video_scale;
+    bool         video_show_border;
 
     /* 3D */
     Video_3D_Mode video_3d_mode;
