@@ -2,7 +2,6 @@
  * Common utilities.
  */
 
-
 /* Bits */
 #define BIT_0       (1 <<  0)
 #define BIT_1       (1 <<  1)
@@ -57,9 +56,6 @@ float_Colour to_greyscale (float_Colour c);
 
 /* Reduce saturation of a float_Colour. */
 float_Colour colour_saturation (float_Colour c, float saturation);
-
-/* Dim the non-active part of the video_out_texture. */
-void video_dim (uint32_t x_scale, uint32_t y_scale);
 
 /* Round up to the next power-of-two */
 uint32_t round_up (uint32_t n);

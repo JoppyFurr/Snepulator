@@ -81,21 +81,25 @@ typedef struct Snepulator_State_s {
     Video_Format   format;
     Console_Region region;
 
-    /* Video */
-    Video_Filter video_filter;
+    /* Console video output */
     float_Colour video_out_data [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
-    float_Colour video_out_texture_data [VIDEO_BUFFER_WIDTH * 2 * VIDEO_BUFFER_LINES * 3];
-    uint32_t     video_start_x;
+    uint32_t     video_start_x; /* TODO: SDL_Rect? */
     uint32_t     video_start_y;
     uint32_t     video_width;
     uint32_t     video_height;
-    int16_t      video_scale;
-    bool         video_border;
+    bool         video_has_border;
     uint32_t     video_border_left_extend;
-    int          host_width;
-    int          host_height;
     int16_t      phaser_x;
     int16_t      phaser_y;
+
+    /* Host video output */
+    float_Colour video_out_texture_data [VIDEO_BUFFER_WIDTH * 4 * VIDEO_BUFFER_LINES * 4];
+    uint32_t     video_out_texture_width;
+    uint32_t     video_out_texture_height;
+    int          host_width;
+    int          host_height;
+    Video_Filter video_filter;
+    int16_t      video_scale;
 
     /* 3D */
     Video_3D_Mode video_3d_mode;
@@ -112,11 +116,6 @@ typedef struct Snepulator_State_s {
     char *error_message;
 
 } Snepulator_State;
-
-#if 0
-/* Update the in-memory button mapping for an input device. */
-void snepulator_update_input_device (Gamepad_Mapping device);
-#endif
 
 /* Draw the logo to the output texture. */
 void snepulator_draw_logo (void);

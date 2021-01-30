@@ -23,6 +23,7 @@ extern "C" {
 #include "sg-1000.h"
 #include "sms.h"
 #include "colecovision.h"
+#include "video/filter.h"
 
 }
 
@@ -305,7 +306,7 @@ void snepulator_reset (void)
     state.sync = NULL;
 
     /* Clear additional video parameters */
-    state.video_border = true;
+    state.video_has_border = true;
     state.video_border_left_extend = 0;
 
     /* Clear hash and hints */
@@ -376,7 +377,7 @@ void snepulator_system_init (void)
     else if (strcmp (extension, ".gg") == 0)
     {
         state.console = CONSOLE_GAME_GEAR;
-        state.video_border = false;
+        state.video_has_border = false;
         sms_init ();
     }
     else if (strcmp (extension, ".sg") == 0)
@@ -590,78 +591,36 @@ int main_gui_loop (void)
             case VIDEO_FILTER_NEAREST:
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
                 memcpy (state.video_out_texture_data, state.video_out_data, sizeof (state.video_out_data));
-                if (state.video_border)
+                if (state.video_has_border) /* TODO: Reduce duplication */
                 {
-                    video_dim (1, 1);
+                    video_filter_dim_border ();
                 }
-
-                glTexImage2D    (GL_TEXTURE_2D, 0, GL_RGB, VIDEO_BUFFER_WIDTH, VIDEO_BUFFER_LINES, 0, GL_RGB, GL_FLOAT,
-                                 state.video_out_texture_data);
+                state.video_out_texture_width = VIDEO_BUFFER_WIDTH;
+                state.video_out_texture_height = VIDEO_BUFFER_LINES;
                 break;
+
             case VIDEO_FILTER_LINEAR:
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
                 memcpy (state.video_out_texture_data, state.video_out_data, sizeof (state.video_out_data));
-                if (state.video_border)
+                if (state.video_has_border)
                 {
-                    video_dim (1, 1);
+                    video_filter_dim_border ();
                 }
-
-                glTexImage2D    (GL_TEXTURE_2D, 0, GL_RGB, VIDEO_BUFFER_WIDTH, VIDEO_BUFFER_LINES, 0, GL_RGB, GL_FLOAT,
-                                 state.video_out_texture_data);
+                state.video_out_texture_width = VIDEO_BUFFER_WIDTH;
+                state.video_out_texture_height = VIDEO_BUFFER_LINES;
                 break;
+
             case VIDEO_FILTER_SCANLINES:
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-                float_Colour *source = state.video_out_data;
-                float_Colour *dest   = state.video_out_texture_data;
-
-                /* Prescale by 2x3, then add scanlines */
-                uint32_t output_width  = VIDEO_BUFFER_WIDTH * 2;
-                uint32_t output_height = VIDEO_BUFFER_LINES * 3;
-                for (int y = 0; y < output_height; y++)
-                {
-                    for (int x = 0; x < output_width; x++)
-                    {
-                        /* Prescale 2×3 */
-                        dest [x + y * output_width] = source [x / 2 + y / 3 * VIDEO_BUFFER_WIDTH];
-
-                        /* Two solid lines are followed by one darkened line */
-                        if (y % 3 == 2)
-                        {
-                            /* The darkened line between scanlines takes its colour as the average of the two scanlines */
-                            /* TODO: Better math for blending colours? This can make things darker than they should be. */
-                            /* TODO: Operations to work with float_Colour? */
-                            if (y != output_height - 1)
-                            {
-                                dest [x + y * output_width].r = dest [x + (y + 0) * output_width].r * 0.5 +
-                                                                dest [x + (y + 1) * output_width].r * 0.5;
-                                dest [x + y * output_width].g = dest [x + (y + 0) * output_width].g * 0.5 +
-                                                                dest [x + (y + 1) * output_width].g * 0.5;
-                                dest [x + y * output_width].b = dest [x + (y + 0) * output_width].b * 0.5 +
-                                                                dest [x + (y + 1) * output_width].b * 0.5;
-                            }
-
-                            /* To darken the lines, remove 40% of their value */
-                            dest [x + y * VIDEO_BUFFER_WIDTH * 2].r *= (1.0 - 0.4);
-                            dest [x + y * VIDEO_BUFFER_WIDTH * 2].g *= (1.0 - 0.4);
-                            dest [x + y * VIDEO_BUFFER_WIDTH * 2].b *= (1.0 - 0.4);
-                        }
-                    }
-                }
-
-                if (state.video_border)
-                {
-                    video_dim (2, 3);
-                }
-                glTexImage2D    (GL_TEXTURE_2D, 0, GL_RGB, VIDEO_BUFFER_WIDTH * 2, VIDEO_BUFFER_LINES * 3, 0, GL_RGB, GL_FLOAT,
-                                 state.video_out_texture_data);
+                video_filter_scanlines ();
                 break;
         }
+
+        glTexImage2D (GL_TEXTURE_2D, 0, GL_RGB, state.video_out_texture_width, state.video_out_texture_height,
+                      0, GL_RGB, GL_FLOAT, state.video_out_texture_data);
 
         pthread_mutex_unlock (&video_mutex);
 
@@ -713,7 +672,7 @@ int main_gui_loop (void)
                                               ImGuiWindowFlags_NoBringToFrontOnFocus);
 
             /* First, draw the background, taken from the leftmost slice of the actual image */
-            if (state.video_border)
+            if (state.video_has_border)
             {
                 ImGui::SetCursorPosX (0);
                 ImGui::SetCursorPosY (state.host_height / 2 - (VIDEO_BUFFER_LINES * state.video_scale) / 2);

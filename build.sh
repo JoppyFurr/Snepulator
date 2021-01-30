@@ -25,6 +25,7 @@ rm Work/*.o
 eval $CC $CFLAGS -c Source/cpu/z80.c         -o Work/z80.o
 eval $CC $CFLAGS -c Source/database/sms_db.c -o Work/sms_db.o
 eval $CC $CFLAGS -c Source/sound/sn76489.c   -o Work/sn76489.o
+eval $CC $CFLAGS -c Source/video/filter.c    -o Work/filter.o
 eval $CC $CFLAGS -c Source/video/tms9928a.c  -o Work/tms9928a.o
 eval $CC $CFLAGS -c Source/video/sms_vdp.c   -o Work/sms_vdp.o
 eval $CC $CFLAGS -c Source/colecovision.c    -o Work/colecovision.o

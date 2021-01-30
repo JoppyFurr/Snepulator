@@ -309,28 +309,3 @@ float_Colour colour_saturation (float_Colour c, float saturation)
 
     return c;
 }
-
-
-/*
- * Dim the non-active part of the video_out_texture.
- */
-void video_dim (uint32_t x_scale, uint32_t y_scale)
-{
-    uint32_t stride = VIDEO_BUFFER_WIDTH * x_scale;
-
-    for (uint32_t y = 0; y < VIDEO_BUFFER_LINES * y_scale; y++)
-    {
-        for (uint32_t x = 0; x < stride; x++)
-        {
-            if ( ( (y / y_scale) <  state.video_start_y) ||                                   /* Top border */
-                 ( (y / y_scale) >= state.video_start_y + state.video_height) ||              /* Bottom border */
-                 ( (x / x_scale) <  state.video_start_x + state.video_border_left_extend ) || /* Left border */
-                 ( (x / x_scale) >= state.video_start_x + state.video_width ))                /* Right border */
-            {
-                state.video_out_texture_data [x + y * stride].r *= 0.5;
-                state.video_out_texture_data [x + y * stride].g *= 0.5;
-                state.video_out_texture_data [x + y * stride].b *= 0.5;
-            }
-        }
-    }
-}
