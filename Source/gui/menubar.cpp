@@ -16,6 +16,7 @@ extern "C" {
 #include "util.h"
 #include "snepulator.h"
 #include "config.h"
+#include "database/sms_db.h"
 
 #include "gamepad.h"
 #include "video/tms9928a.h"
@@ -270,6 +271,18 @@ void snepulator_render_menubar (void)
                 state.format_auto = true;
                 config_string_set ("sms", "format", "Auto");
                 config_write ();
+
+                if (state.ready == true)
+                {
+                    if (state.rom_hints & SMS_HINT_PAL_ONLY)
+                    {
+                        state.format = VIDEO_FORMAT_PAL;
+                    }
+                    else
+                    {
+                        state.format = VIDEO_FORMAT_NTSC;
+                    }
+                }
             }
             if (ImGui::MenuItem ("NTSC", NULL, state.format == VIDEO_FORMAT_NTSC)) {
                 state.format = VIDEO_FORMAT_NTSC;
