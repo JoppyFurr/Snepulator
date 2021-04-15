@@ -16,29 +16,29 @@ fi
 CFLAGS="-std=c11 -O1 -Wall -Werror"
 
 # Create a build directory if it does not already exist.
-mkdir -p Work
+mkdir -p work
 
 # Remove any artefacts.
-rm Work/*.o
+rm work/*.o
 
 # Compile C11 code.
-eval $CC $CFLAGS -c Source/cpu/z80.c         -o Work/z80.o
-eval $CC $CFLAGS -c Source/database/sms_db.c -o Work/sms_db.o
-eval $CC $CFLAGS -c Source/sound/sn76489.c   -o Work/sn76489.o
-eval $CC $CFLAGS -c Source/video/filter.c    -o Work/filter.o
-eval $CC $CFLAGS -c Source/video/tms9928a.c  -o Work/tms9928a.o
-eval $CC $CFLAGS -c Source/video/sms_vdp.c   -o Work/sms_vdp.o
-eval $CC $CFLAGS -c Source/colecovision.c    -o Work/colecovision.o
-eval $CC $CFLAGS -c Source/config.c          -o Work/config.o
-eval $CC $CFLAGS -c Source/gamepad.c         -o Work/gamepad.o
-eval $CC $CFLAGS -c Source/sg-1000.c         -o Work/sg-1000.o
-eval $CC $CFLAGS -c Source/sms.c             -o Work/sms.o
-eval $CC $CFLAGS -c Source/util.c            -o Work/util.o
+eval $CC $CFLAGS -c source/cpu/z80.c         -o work/z80.o
+eval $CC $CFLAGS -c source/database/sms_db.c -o work/sms_db.o
+eval $CC $CFLAGS -c source/sound/sn76489.c   -o work/sn76489.o
+eval $CC $CFLAGS -c source/video/filter.c    -o work/filter.o
+eval $CC $CFLAGS -c source/video/tms9928a.c  -o work/tms9928a.o
+eval $CC $CFLAGS -c source/video/sms_vdp.c   -o work/sms_vdp.o
+eval $CC $CFLAGS -c source/colecovision.c    -o work/colecovision.o
+eval $CC $CFLAGS -c source/config.c          -o work/config.o
+eval $CC $CFLAGS -c source/gamepad.c         -o work/gamepad.o
+eval $CC $CFLAGS -c source/sg-1000.c         -o work/sg-1000.o
+eval $CC $CFLAGS -c source/sms.c             -o work/sms.o
+eval $CC $CFLAGS -c source/util.c            -o work/util.o
 
 # C Libraries
-eval $CC $CFLAGS -c Libraries/BLAKE3/blake3.c -o Work/blake3.o
-eval $CC $CFLAGS -c Libraries/BLAKE3/blake3_portable.c -o Work/blake3_portable.o
-eval $CC $CFLAGS -c Libraries/SDL_SavePNG/savepng.c -o Work/SDL_SavePNG.o
+eval $CC $CFLAGS -c libraries/BLAKE3/blake3.c -o work/blake3.o
+eval $CC $CFLAGS -c libraries/BLAKE3/blake3_portable.c -o work/blake3_portable.o
+eval $CC $CFLAGS -c libraries/SDL_SavePNG/savepng.c -o work/SDL_SavePNG.o
 
 # OS-specific compiler options
 if [ $(uname) = "Darwin" ]
@@ -54,20 +54,20 @@ fi
 
 # Compile C++11 GUI and link to the rest of the code.
 eval $CXX \
-    Work/*.o \
-    Source/main.cpp \
-    Source/gui/input.cpp \
-    Source/gui/menubar.cpp \
-    Source/gui/open.cpp \
+    work/*.o \
+    source/main.cpp \
+    source/gui/input.cpp \
+    source/gui/menubar.cpp \
+    source/gui/open.cpp \
     -DIMGUI_IMPL_OPENGL_LOADER_GL3W \
-    Libraries/imgui-1.76/*.cpp \
-    Libraries/imgui-1.76/examples/libs/gl3w/GL/gl3w.c \
-    Libraries/imgui-1.76/examples/imgui_impl_opengl3.cpp \
-    Libraries/imgui-1.76/examples/imgui_impl_sdl.cpp \
+    libraries/imgui-1.76/*.cpp \
+    libraries/imgui-1.76/examples/libs/gl3w/GL/gl3w.c \
+    libraries/imgui-1.76/examples/imgui_impl_opengl3.cpp \
+    libraries/imgui-1.76/examples/imgui_impl_sdl.cpp \
     `sdl2-config --cflags` \
-    -I Source/ \
-    -I Libraries/imgui-1.76/ \
-    -I Libraries/imgui-1.76/examples/libs/gl3w/ \
+    -I source/ \
+    -I libraries/imgui-1.76/ \
+    -I libraries/imgui-1.76/examples/libs/gl3w/ \
     `sdl2-config --libs` \
     -ldl -lpng -lm -DBUILD_DATE=\\\"$DATE\\\" \
     -lpthread \

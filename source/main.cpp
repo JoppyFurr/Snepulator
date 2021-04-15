@@ -32,9 +32,9 @@ extern "C" {
 #include "gui/open.h"
 
 /* Images */
-#include "../Images/snepulator_icon.c"
-#include "../Images/snepulator_logo.c"
-#include "../Images/snepulator_paused.c"
+#include "../images/snepulator_icon.c"
+#include "../images/snepulator_logo.c"
+#include "../images/snepulator_paused.c"
 
 /* Constants */
 const float Float4_Black[4] = { 0.0, 0.0, 0.0, 0.0 };
