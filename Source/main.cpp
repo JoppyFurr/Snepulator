@@ -867,7 +867,6 @@ int main (int argc, char **argv)
     SDL_FreeSurface (icon);
 
     /* Setup ImGui binding */
-    gl3wInit ();
     ImGui::CreateContext ();
     ImGui::GetIO ().IniFilename = NULL;
     ImGui_ImplSDL2_InitForOpenGL (window, glcontext);
