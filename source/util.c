@@ -18,8 +18,8 @@
 #include "util.h"
 #include "snepulator.h"
 
-#include "../Libraries/BLAKE3/blake3.h"
-#include "../Libraries/SDL_SavePNG/savepng.h"
+#include "../libraries/BLAKE3/blake3.h"
+#include "../libraries/SDL_SavePNG/savepng.h"
 
 /* Global state */
 extern Snepulator_State state;
