@@ -79,7 +79,7 @@ void sn76489_data_write (uint8_t data)
             /* Channel 3 (noise) */
             case 0x60:
                 psg_regs.noise = data_low;
-                psg_regs.lfsr  = 0x0001;
+                psg_regs.lfsr  = 0x8000;
                 break;
             case 0x70:
                 psg_regs.vol_3 = data_low;
@@ -118,7 +118,7 @@ void sn76489_data_write (uint8_t data)
             /* Channel 3 (noise) */
             case 0x60:
                 psg_regs.noise = data_low;
-                psg_regs.lfsr  = 0x0001;
+                psg_regs.lfsr  = 0x8000;
                 break;
             case 0x70:
                 psg_regs.vol_3 = data_low;
@@ -212,9 +212,9 @@ void _psg_run_cycles (uint64_t cycles)
         }
 
         /* Tone channels output +1 if their tone register is zero */
-        if (psg_regs.tone_0 == 0) { psg_regs.output_0 = 1; }
-        if (psg_regs.tone_1 == 0) { psg_regs.output_1 = 1; }
-        if (psg_regs.tone_2 == 0) { psg_regs.output_2 = 1; }
+        if (psg_regs.tone_0 <= 1) { psg_regs.output_0 = 1; }
+        if (psg_regs.tone_1 <= 1) { psg_regs.output_1 = 1; }
+        if (psg_regs.tone_2 <= 1) { psg_regs.output_2 = 1; }
 
         if (psg_regs.counter_3 == 0)
         {
