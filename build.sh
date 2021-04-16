@@ -22,6 +22,7 @@ mkdir -p work
 rm work/*.o
 
 # Compile C11 code.
+echo "Compiling emulator..."
 eval $CC $CFLAGS -c source/cpu/z80.c         -o work/z80.o
 eval $CC $CFLAGS -c source/database/sms_db.c -o work/sms_db.o
 eval $CC $CFLAGS -c source/sound/sn76489.c   -o work/sn76489.o
@@ -36,6 +37,7 @@ eval $CC $CFLAGS -c source/sms.c             -o work/sms.o
 eval $CC $CFLAGS -c source/util.c            -o work/util.o
 
 # C Libraries
+echo "Compiling libraries..."
 eval $CC $CFLAGS -c libraries/BLAKE3/blake3.c -o work/blake3.o
 eval $CC $CFLAGS -c libraries/BLAKE3/blake3_portable.c -o work/blake3_portable.o
 eval $CC $CFLAGS -c libraries/SDL_SavePNG/savepng.c -o work/SDL_SavePNG.o
@@ -53,6 +55,7 @@ else
 fi
 
 # Compile C++11 GUI and link to the rest of the code.
+echo "Compiling GUI and linking..."
 eval $CXX \
     work/*.o \
     source/main.cpp \
@@ -73,3 +76,5 @@ eval $CXX \
     -lpthread \
     $OSFLAGS \
     -o Snepulator -std=c++11
+
+echo "Done."
