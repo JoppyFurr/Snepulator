@@ -165,8 +165,8 @@ void snepulator_hash_rom (uint8_t *buffer, uint32_t rom_size)
 int32_t snepulator_load_rom (uint8_t **buffer, uint32_t *rom_size, char *filename)
 {
     uint32_t bytes_read = 0;
+    uint32_t skip = 0;
     uint32_t file_size;
-    uint32_t skip;
 
     /* Open ROM file */
     FILE *rom_file = fopen (filename, "rb");
@@ -180,9 +180,22 @@ int32_t snepulator_load_rom (uint8_t **buffer, uint32_t *rom_size, char *filenam
     fseek (rom_file, 0, SEEK_END);
     file_size = ftell (rom_file);
 
-    /* Some ROM files begin with a 512 byte header, possibly added when dumped
-     * by a Super Magic Drive. Skip over this by rounding to the nearest 1 KiB. */
-    skip = file_size & 0x3ff;
+    /* Some ROM files begin with a 512 byte header, possibly added when dumped by
+     * a Super Magic Drive. Only the first two bytes of this header are nonzero. */
+    if ((file_size & 0x3ff) == 512)
+    {
+        uint8_t zeros [512] = { 0 };
+        uint8_t header [512] = { 0 };
+
+        rewind (rom_file);
+        (void) (fread (header, 1, 512, rom_file) == 0);
+
+        if (memcmp (&header [2], zeros, 510) == 0)
+        {
+            skip = 512;
+        }
+    }
+
     fseek (rom_file, skip, SEEK_SET);
     *rom_size = file_size - skip;
 
