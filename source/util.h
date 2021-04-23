@@ -20,6 +20,14 @@
 #define BIT_14      (1 << 14)
 #define BIT_15      (1 << 15)
 
+/* Sizes */
+#define SIZE_1K     ( 1 << 10)
+#define SIZE_2K     ( 2 << 10)
+#define SIZE_4K     ( 4 << 10)
+#define SIZE_8K     ( 8 << 10)
+#define SIZE_16K    (16 << 10)
+#define SIZE_32K    (32 << 10)
+
 typedef union uint16_t_Split_u {
     uint16_t w;
     struct {
