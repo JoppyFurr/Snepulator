@@ -21,35 +21,16 @@
 #include "sound/sn76489.h"
 #include "sms.h"
 
-extern Snepulator_State state;
-extern Snepulator_Gamepad gamepad_1;
-extern Snepulator_Gamepad gamepad_2;
-extern Z80_Regs z80_regs;
+#define SMS_RAM_SIZE SIZE_8K
+#define SMS_SRAM_SIZE SIZE_8K
 
-#define SMS_RAM_SIZE (8 << 10)
-#define SMS_SRAM_SIZE (8 << 10)
-
-/* Console state */
-static uint8_t memory_control = 0x00;
-static uint8_t io_control = 0x00;
-static bool export_paddle = false;
-SMS_3D_Field sms_3d_field = SMS_3D_FIELD_NONE;
-extern uint8_t psg_gg_stereo;
-
-/* Cartridge Mapper */
-static SMS_Mapper mapper = SMS_MAPPER_UNKNOWN;
-static uint8_t mapper_bank [3] = { 0x00, 0x01, 0x02 };
-static bool sram_enable = false;
-static bool sram_modified = false;
-
-/* 0: Output
- * 1: Input */
+/* 0: Output, 1: Input */
 #define SMS_IO_TR_A_DIRECTION (1 << 0)
 #define SMS_IO_TH_A_DIRECTION (1 << 1)
 #define SMS_IO_TR_B_DIRECTION (1 << 2)
 #define SMS_IO_TH_B_DIRECTION (1 << 3)
-/* 0: Low
- * 1: High */
+
+/* 0: Low, 1: High */
 #define SMS_IO_TR_A_LEVEL (1 << 4)
 #define SMS_IO_TH_A_LEVEL (1 << 5)
 #define SMS_IO_TR_B_LEVEL (1 << 6)
@@ -58,6 +39,34 @@ static bool sram_modified = false;
 #define SMS_MEMORY_CTRL_BIOS_DISABLE 0x08
 #define SMS_MEMORY_CTRL_CART_DISABLE 0x40
 #define SMS_MEMORY_CTRL_IO_DISABLE   0x04
+
+extern Snepulator_State state;
+extern Snepulator_Gamepad gamepad_1;
+extern Snepulator_Gamepad gamepad_2;
+extern Z80_Regs z80_regs;
+extern uint8_t psg_gg_stereo;
+
+
+/* Console hardware state */
+typedef struct SMS_HW_State_s {
+    uint8_t memory_control;
+    uint8_t io_control;
+    uint8_t mapper;
+    uint8_t mapper_bank [3];
+    bool sram_enable;
+} SMS_HW_State;
+
+static SMS_HW_State hw_state = {
+    .memory_control = 0x00,
+    .io_control = 0x00,
+    .mapper = SMS_MAPPER_UNKNOWN,
+    .mapper_bank = { 0x00, 0x01, 0x02 },
+    .sram_enable = false
+};
+
+static bool export_paddle = false;
+SMS_3D_Field sms_3d_field = SMS_3D_FIELD_NONE;
+static bool sram_used = false;
 
 
 /*
@@ -69,7 +78,7 @@ static uint8_t sms_memory_read (uint16_t addr)
     if (addr >= 0x0000 && addr <= 0xbfff)
     {
         uint8_t slot = (addr >> 14);
-        uint32_t bank_base = mapper_bank [slot] * ((uint32_t) 16 << 10);
+        uint32_t bank_base = hw_state.mapper_bank [slot] * ((uint32_t) 16 << 10);
         uint16_t offset    = addr & 0x3fff;
 
         /* The first 1 KiB of slot 0 is not affected by mapping */
@@ -79,20 +88,20 @@ static uint8_t sms_memory_read (uint16_t addr)
         }
 
         /* BIOS */
-        if (state.bios != NULL && !(memory_control & SMS_MEMORY_CTRL_BIOS_DISABLE))
+        if (state.bios != NULL && !(hw_state.memory_control & SMS_MEMORY_CTRL_BIOS_DISABLE))
         {
             /* Assumes a power-of-two BIOS size */
             return state.bios [(bank_base + offset) & (state.bios_size - 1)];
         }
 
         /* On-cartridge SRAM */
-        if (sram_enable && slot == 2)
+        if (hw_state.sram_enable && slot == 2)
         {
             return state.sram [offset & (SMS_SRAM_SIZE - 1)];
         }
 
         /* Cartridge ROM */
-        if (state.rom != NULL && !(memory_control & SMS_MEMORY_CTRL_CART_DISABLE))
+        if (state.rom != NULL && !(hw_state.memory_control & SMS_MEMORY_CTRL_CART_DISABLE))
         {
             return state.rom [(bank_base + offset) & state.rom_mask];
         }
@@ -130,28 +139,28 @@ static void sms_memory_write (uint16_t addr, uint8_t data)
         }
     }
 
-    if (mapper == SMS_MAPPER_UNKNOWN)
+    if (hw_state.mapper == SMS_MAPPER_UNKNOWN)
     {
         if (addr == 0xfffc || addr == 0xfffd ||
             addr == 0xfffe || addr == 0xffff)
         {
-            mapper = SMS_MAPPER_SEGA;
+            hw_state.mapper = SMS_MAPPER_SEGA;
         }
         else if (addr == 0x4000 || addr == 0x8000)
         {
-            mapper = SMS_MAPPER_CODEMASTERS;
+            hw_state.mapper = SMS_MAPPER_CODEMASTERS;
         }
         else if (addr == 0xa000)
         {
-            mapper = SMS_MAPPER_KOREAN;
+            hw_state.mapper = SMS_MAPPER_KOREAN;
         }
     }
 
-    if (mapper == SMS_MAPPER_SEGA)
+    if (hw_state.mapper == SMS_MAPPER_SEGA)
     {
         if (addr == 0xfffc)
         {
-            sram_enable = (data & BIT_3) ? true : false;
+            hw_state.sram_enable = (data & BIT_3) ? true : false;
 
             if (data & (BIT_0 | BIT_1))
             {
@@ -164,19 +173,19 @@ static void sms_memory_write (uint16_t addr, uint8_t data)
         }
         else if (addr == 0xfffd)
         {
-            mapper_bank [0] = data & 0x3f;
+            hw_state.mapper_bank [0] = data & 0x3f;
         }
         else if (addr == 0xfffe)
         {
-            mapper_bank [1] = data & 0x3f;
+            hw_state.mapper_bank [1] = data & 0x3f;
         }
         else if (addr == 0xffff)
         {
-            mapper_bank [2] = data & 0x3f;
+            hw_state.mapper_bank [2] = data & 0x3f;
         }
     }
 
-    if (mapper == SMS_MAPPER_CODEMASTERS)
+    if (hw_state.mapper == SMS_MAPPER_CODEMASTERS)
     {
         /* TODO: There are differences from the Sega mapper. Do any games rely on them?
          *  1. Initial banks are different (0, 1, 0) instead of (0, 1, 2).
@@ -184,15 +193,15 @@ static void sms_memory_write (uint16_t addr, uint8_t data)
          */
         if (addr == 0x0000)
         {
-            mapper_bank [0] = data & 0x3f;
+            hw_state.mapper_bank [0] = data & 0x3f;
         }
         else if (addr == 0x4000)
         {
-            mapper_bank [1] = data & 0x3f;
+            hw_state.mapper_bank [1] = data & 0x3f;
         }
         else if (addr == 0x8000)
         {
-            mapper_bank [2] = data & 0x3f;
+            hw_state.mapper_bank [2] = data & 0x3f;
 
             if (data & BIT_7)
             {
@@ -201,19 +210,19 @@ static void sms_memory_write (uint16_t addr, uint8_t data)
         }
     }
 
-    if (mapper == SMS_MAPPER_KOREAN)
+    if (hw_state.mapper == SMS_MAPPER_KOREAN)
     {
         if (addr == 0xa000)
         {
-            mapper_bank [2] = data & 0x3f;
+            hw_state.mapper_bank [2] = data & 0x3f;
         }
     }
 
     /* On-cartridge SRAM */
-    if (sram_enable && addr >= 0x8000 && addr <= 0xbfff)
+    if (hw_state.sram_enable && addr >= 0x8000 && addr <= 0xbfff)
     {
         state.sram [addr & (SMS_SRAM_SIZE - 1)] = data;
-        sram_modified = true;
+        sram_used = true;
     }
 
     /* RAM + mirror */
@@ -300,7 +309,7 @@ static uint8_t sms_io_read (uint8_t addr)
                 /* The "export paddle" uses the TH pin for a clock signal */
                 if (export_paddle)
                 {
-                    if ((io_control & SMS_IO_TH_A_DIRECTION) == 0 && (io_control & SMS_IO_TH_A_LEVEL))
+                    if ((hw_state.io_control & SMS_IO_TH_A_DIRECTION) == 0 && (hw_state.io_control & SMS_IO_TH_A_LEVEL))
                     {
                         paddle_clock = 1;
                     }
@@ -346,9 +355,9 @@ static uint8_t sms_io_read (uint8_t addr)
 
             if (state.region == REGION_WORLD)
             {
-                if ((io_control & SMS_IO_TH_A_DIRECTION) == 0)
+                if ((hw_state.io_control & SMS_IO_TH_A_DIRECTION) == 0)
                 {
-                    port_1_th = !(io_control & SMS_IO_TH_A_LEVEL);
+                    port_1_th = !(hw_state.io_control & SMS_IO_TH_A_LEVEL);
 
                     if (gamepad_1.type == GAMEPAD_TYPE_SMS_PADDLE)
                     {
@@ -357,9 +366,9 @@ static uint8_t sms_io_read (uint8_t addr)
 
                 }
 
-                if ((io_control & SMS_IO_TH_B_DIRECTION) == 0)
+                if ((hw_state.io_control & SMS_IO_TH_B_DIRECTION) == 0)
                 {
-                    port_2_th = !(io_control & SMS_IO_TH_B_LEVEL);
+                    port_2_th = !(hw_state.io_control & SMS_IO_TH_B_LEVEL);
                 }
             }
 
@@ -403,12 +412,12 @@ static void sms_io_write (uint8_t addr, uint8_t data)
         if ((addr & 0x01) == 0x00)
         {
             /* Memory Control Register */
-            memory_control = data;
+            hw_state.memory_control = data;
         }
         else
         {
             /* I/O Control Register */
-            io_control = data;
+            hw_state.io_control = data;
         }
 
     }
@@ -418,7 +427,6 @@ static void sms_io_write (uint8_t addr, uint8_t data)
     {
         sn76489_data_write (data);
     }
-
 
     /* VDP */
     else if (addr >= 0x80 && addr <= 0xbf)
@@ -436,7 +444,7 @@ static void sms_io_write (uint8_t addr, uint8_t data)
     }
 
     /* Minimal SDSC Debug Console */
-    if (addr == 0xfd && (memory_control & 0x04))
+    if (addr == 0xfd && (hw_state.memory_control & 0x04))
     {
         fprintf (stdout, "%c", data);
         fflush (stdout);
@@ -551,7 +559,7 @@ static char *sram_path (void)
  */
 static void sms_sync (void)
 {
-    if (sram_modified)
+    if (sram_used)
     {
         uint32_t bytes_written = 0;
         char *path = sram_path ();
@@ -578,12 +586,12 @@ static void sms_sync (void)
 void sms_init (void)
 {
     /* Reset the mapper */
-    mapper = SMS_MAPPER_UNKNOWN;
-    mapper_bank [0] = 0;
-    mapper_bank [1] = 1;
-    mapper_bank [2] = 2;
-    sram_enable = false;
-    sram_modified = false;
+    hw_state.mapper = SMS_MAPPER_UNKNOWN;
+    hw_state.mapper_bank [0] = 0;
+    hw_state.mapper_bank [1] = 1;
+    hw_state.mapper_bank [2] = 2;
+    hw_state.sram_enable = false;
+    sram_used = false;
 
     /* Create RAM */
     state.ram = calloc (SMS_RAM_SIZE, 1);
@@ -690,7 +698,7 @@ void sms_init (void)
         z80_regs.im = 1;
         z80_regs.sp = 0xdff0;
 
-        memory_control |= SMS_MEMORY_CTRL_BIOS_DISABLE;
+        hw_state.memory_control |= SMS_MEMORY_CTRL_BIOS_DISABLE;
 
         /* Leave the VDP in Mode4 */
         sms_vdp_control_write (SMS_VDP_CTRL_0_MODE_4);
