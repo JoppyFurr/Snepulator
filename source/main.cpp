@@ -308,6 +308,8 @@ void snepulator_reset (void)
     state.get_int = NULL;
     state.get_nmi = NULL;
     state.sync = NULL;
+    state.state_save = NULL;
+    state.state_load = NULL;
 
     /* Clear additional video parameters */
     state.video_has_border = true;

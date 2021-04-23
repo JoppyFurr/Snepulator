@@ -66,6 +66,8 @@ typedef struct Snepulator_State_s {
     bool (*get_int) (void);
     bool (*get_nmi) (void);
     void (*sync) (void);
+    void (*state_save) (const char *filename);
+    void (*state_load) (const char *filename);
 
     /* Console memory */
     uint8_t *ram;

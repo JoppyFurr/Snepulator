@@ -525,36 +525,6 @@ static void sms_run (uint32_t ms)
 
 
 /*
- * Generate the SRAM backup path.
- *
- * This string needs to be freed.
- */
-static char *sram_path (void)
-{
-    static char *path;
-    char *dir;
-    int len;
-
-    if (snepulator_sram_directory (&dir) == -1)
-    {
-        return NULL;
-    }
-
-    /* Get the path length */
-    len = snprintf (NULL, 0, "%s/000000000000000000000000.sram", dir) + 1;
-
-    /* Create the string */
-    path = calloc (len, 1);
-    snprintf (path, len, "%s/%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x.sram", dir,
-            state.rom_hash [ 0], state.rom_hash [ 1], state.rom_hash [ 2], state.rom_hash [ 3],
-            state.rom_hash [ 4], state.rom_hash [ 5], state.rom_hash [ 6], state.rom_hash [ 7],
-            state.rom_hash [ 8], state.rom_hash [ 9], state.rom_hash [10], state.rom_hash [11]);
-
-    return path;
-}
-
-
-/*
  * Backup the on-cartridge SRAM.
  */
 static void sms_sync (void)

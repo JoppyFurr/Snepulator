@@ -53,6 +53,12 @@ int32_t snepulator_directory (char **path_ptr);
 /* Get the directory that the SRAM files reside in. */
 int32_t snepulator_sram_directory (char **path_ptr);
 
+/* Generate the SRAM backup path for the current rom. Needs to be freed. */
+char *sram_path (void);
+
+/* Generate the quick-save path for the current rom. Needs to be freed. */
+char *quicksave_path (void);
+
 /* Load a rom file into a buffer. The buffer should be freed when no-longer needed. */
 int32_t snepulator_load_rom (uint8_t **buffer, uint32_t *rom_size, char *filename);
 

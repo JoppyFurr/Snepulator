@@ -125,6 +125,116 @@ int32_t snepulator_sram_directory (char **path_ptr)
 
 
 /*
+ * Generate the SRAM backup path.
+ *
+ * This string needs to be freed.
+ */
+char *sram_path (void)
+{
+    static char *path;
+    char *dir;
+    int len;
+
+    if (snepulator_sram_directory (&dir) == -1)
+    {
+        return NULL;
+    }
+
+    /* Get the path length */
+    len = snprintf (NULL, 0, "%s/000000000000000000000000.sram", dir) + 1;
+
+    /* Create the string */
+    path = calloc (len, 1);
+    snprintf (path, len, "%s/%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x.sram", dir,
+            state.rom_hash [ 0], state.rom_hash [ 1], state.rom_hash [ 2], state.rom_hash [ 3],
+            state.rom_hash [ 4], state.rom_hash [ 5], state.rom_hash [ 6], state.rom_hash [ 7],
+            state.rom_hash [ 8], state.rom_hash [ 9], state.rom_hash [10], state.rom_hash [11]);
+
+    return path;
+}
+
+
+/*
+ * Get the directory that the save state files reside in.
+ * TODO: Refactor to combine sram and state directory lookup functions.
+ */
+int32_t snepulator_state_directory (char **path_ptr)
+{
+    static char *path = NULL;
+
+    if (path == NULL)
+    {
+        struct stat  stat_buf;
+        char *base;
+        int len;
+
+        if (snepulator_directory (&base) == -1)
+        {
+            return -1;
+        }
+
+        /* Get the path length */
+        len = snprintf (NULL, 0, "%s/state", base) + 1;
+
+        /* Create the string */
+        path = calloc (len, 1);
+        snprintf (path, len, "%s/state", base);
+
+        /* Create the directory if it doesn't exist */
+        if (stat (path, &stat_buf) == -1)
+        {
+            if (errno == ENOENT)
+            {
+                if (mkdir (path, S_IRWXU) == -1)
+                {
+                    snepulator_error ("Filesystem Error", "Unable to create save-state directory.");
+                }
+            }
+            else
+            {
+                snepulator_error ("Filesystem Error", "Unable to stat save-state directory.");
+                return -1;
+            }
+        }
+    }
+
+    *path_ptr = path;
+
+    return 0;
+}
+
+
+/*
+ * Generate the quick-save path.
+ *
+ * This string needs to be freed.
+ */
+char *quicksave_path (void)
+{
+    static char *path;
+    char *dir;
+    int len;
+
+    if (snepulator_state_directory (&dir) == -1)
+    {
+        return NULL;
+    }
+
+    /* Get the path length */
+    len = snprintf (NULL, 0, "%s/000000000000000000000000.quicksave", dir) + 1;
+
+    /* Create the string */
+    path = calloc (len, 1);
+    snprintf (path, len, "%s/%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x.quicksave", dir,
+            state.rom_hash [ 0], state.rom_hash [ 1], state.rom_hash [ 2], state.rom_hash [ 3],
+            state.rom_hash [ 4], state.rom_hash [ 5], state.rom_hash [ 6], state.rom_hash [ 7],
+            state.rom_hash [ 8], state.rom_hash [ 9], state.rom_hash [10], state.rom_hash [11]);
+
+    return path;
+}
+
+
+/*
  * Round up to the next power-of-two
  */
 uint32_t round_up (uint32_t n)
