@@ -18,6 +18,7 @@
 extern Snepulator_State state;
 extern pthread_mutex_t video_mutex;
 TMS9928A_State tms9928a_state;
+float_Colour frame_buffer [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
 
 const char *tms9928a_mode_name [16] = {
     "Mode 0 - Graphics I Mode",
@@ -196,7 +197,7 @@ void tms9928a_control_write (uint8_t value)
             case TMS9928A_CODE_REG_WRITE:
                 if ((value & 0x0f) <= 10)
                 {
-                    ((uint8_t *) &tms9928a_state.reg_buffer) [value & 0x0f] = tms9928a_state.address & 0x00ff;
+                    ((uint8_t *) &tms9928a_state.regs_buffer) [value & 0x0f] = tms9928a_state.address & 0x00ff;
                 }
                 break;
             default:
@@ -257,7 +258,7 @@ static void tms9928a_render_pattern_line (const TMS9928A_Config *config, uint16_
         }
 
         float_Colour pixel = config->palette [colour_index];
-        tms9928a_state.frame_current [(offset.x + x + VIDEO_SIDE_BORDER) + (state.video_start_y + line) * VIDEO_BUFFER_WIDTH] = pixel;
+        frame_buffer [(offset.x + x + VIDEO_SIDE_BORDER) + (state.video_start_y + line) * VIDEO_BUFFER_WIDTH] = pixel;
     }
 }
 
@@ -477,7 +478,7 @@ void tms9928a_render_line (const TMS9928A_Config *config, uint16_t line)
         {
             for (uint32_t x = 0; x < VIDEO_BUFFER_WIDTH; x++)
             {
-                tms9928a_state.frame_current [x + top_line * VIDEO_BUFFER_WIDTH] = video_background;
+                frame_buffer [x + top_line * VIDEO_BUFFER_WIDTH] = video_background;
             }
         }
     }
@@ -485,7 +486,7 @@ void tms9928a_render_line (const TMS9928A_Config *config, uint16_t line)
     /* Side borders */
     for (int x = 0; x < VIDEO_BUFFER_WIDTH; x++)
     {
-        tms9928a_state.frame_current [x + (state.video_start_y + line) * VIDEO_BUFFER_WIDTH] = video_background;
+        frame_buffer [x + (state.video_start_y + line) * VIDEO_BUFFER_WIDTH] = video_background;
     }
 
     /* Bottom border */
@@ -495,7 +496,7 @@ void tms9928a_render_line (const TMS9928A_Config *config, uint16_t line)
         {
             for (uint32_t x = 0; x < VIDEO_BUFFER_WIDTH; x++)
             {
-                tms9928a_state.frame_current [x + bottom_line * VIDEO_BUFFER_WIDTH] = video_background;
+                frame_buffer [x + bottom_line * VIDEO_BUFFER_WIDTH] = video_background;
             }
         }
     }
@@ -524,8 +525,6 @@ void tms9928a_render_line (const TMS9928A_Config *config, uint16_t line)
  */
 void tms9928a_run_one_scanline (void)
 {
-    static uint16_t line = 0;
-
     const TMS9928A_Config *config;
     TMS9928A_Mode mode = tms9928a_mode_get ();
 
@@ -545,18 +544,18 @@ void tms9928a_run_one_scanline (void)
     }
 
     /* If this is an active line, render it */
-    if (line < config->lines_active)
+    if (tms9928a_state.line < config->lines_active)
     {
-        tms9928a_render_line (config, line);
+        tms9928a_render_line (config, tms9928a_state.line);
     }
 
     /* If this the final active line, copy to the frame buffer */
-    if (line == config->lines_active - 1)
+    if (tms9928a_state.line == config->lines_active - 1)
     {
         pthread_mutex_lock (&video_mutex);
         state.video_width = 256;
         state.video_height = 192;
-        memcpy (state.video_out_data, tms9928a_state.frame_current, sizeof (tms9928a_state.frame_current));
+        memcpy (state.video_out_data, frame_buffer, sizeof (frame_buffer));
         pthread_mutex_unlock (&video_mutex);
 
         /* Update statistics (rolling average) */
@@ -572,13 +571,13 @@ void tms9928a_run_one_scanline (void)
     }
 
     /* Update values for the next line */
-    line = (line + 1) % config->lines_total;
+    tms9928a_state.line = (tms9928a_state.line + 1) % config->lines_total;
 
     /* Propagate register writes that occurred during this line. */
-    tms9928a_state.regs = tms9928a_state.reg_buffer;
+    tms9928a_state.regs = tms9928a_state.regs_buffer;
 
     /* Check for frame interrupt */
-    if (line == config->lines_active + 1)
+    if (tms9928a_state.line == config->lines_active + 1)
         tms9928a_state.status |= TMS9928A_STATUS_INT;
 
 }
@@ -590,4 +589,5 @@ void tms9928a_run_one_scanline (void)
 void tms9928a_init (void)
 {
     memset (&tms9928a_state.regs, 0, sizeof (tms9928a_state.regs));
+    memset (frame_buffer, 0, sizeof (frame_buffer));
 }
