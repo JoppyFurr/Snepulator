@@ -15,32 +15,32 @@ extern Snepulator_State state;
 
 
 /* State */
-Z80_Regs z80_regs;
+Z80_State z80_state;
 
 /* 8-bit register access */
-#define I z80_regs.i
-#define R z80_regs.r
-#define A z80_regs.a
-#define F z80_regs.f
-#define B z80_regs.b
-#define C z80_regs.c
-#define D z80_regs.d
-#define E z80_regs.e
-#define H z80_regs.h
-#define L z80_regs.l
+#define I z80_state.i
+#define R z80_state.r
+#define A z80_state.a
+#define F z80_state.f
+#define B z80_state.b
+#define C z80_state.c
+#define D z80_state.d
+#define E z80_state.e
+#define H z80_state.h
+#define L z80_state.l
 
 /* 16-bit register access */
-#define AF z80_regs.af
-#define BC z80_regs.bc
-#define DE z80_regs.de
-#define HL z80_regs.hl
-#define IX z80_regs.ix
-#define IY z80_regs.iy
-#define SP z80_regs.sp
-#define PC z80_regs.pc
+#define AF z80_state.af
+#define BC z80_state.bc
+#define DE z80_state.de
+#define HL z80_state.hl
+#define IX z80_state.ix
+#define IY z80_state.iy
+#define SP z80_state.sp
+#define PC z80_state.pc
 
-#define IFF1 z80_regs.iff1
-#define IFF2 z80_regs.iff2
+#define IFF1 z80_state.iff1
+#define IFF2 z80_state.iff2
 
 /* Immediate values */
 #define N  param.l
@@ -123,7 +123,7 @@ void z80_init (uint8_t (* _memory_read) (uint16_t),
     io_write     = _io_write;
 
     /* Reset values */
-    memset (&z80_regs, 0, sizeof (Z80_Regs));
+    memset (&z80_state, 0, sizeof (z80_state));
     AF = 0xffff;
     SP = 0xffff;
     z80_cycle = 0;
@@ -131,14 +131,14 @@ void z80_init (uint8_t (* _memory_read) (uint16_t),
 }
 
 
-#define SET_FLAGS_AND { F = (uint8_even_parity [z80_regs.a] ? Z80_FLAG_PARITY : 0) | \
-                            (                                 Z80_FLAG_HALF      ) | \
-                            (A == 0x00                      ? Z80_FLAG_ZERO   : 0) | \
-                            ((A & 0x80)                     ? Z80_FLAG_SIGN   : 0); }
+#define SET_FLAGS_AND { F = (uint8_even_parity [z80_state.a] ? Z80_FLAG_PARITY : 0) | \
+                            (                                  Z80_FLAG_HALF      ) | \
+                            (A == 0x00                       ? Z80_FLAG_ZERO   : 0) | \
+                            ((A & 0x80)                      ? Z80_FLAG_SIGN   : 0); }
 
-#define SET_FLAGS_OR_XOR { F = (uint8_even_parity [z80_regs.a] ? Z80_FLAG_PARITY : 0) | \
-                               (A == 0x00                      ? Z80_FLAG_ZERO   : 0) | \
-                               ((A & 0x80)                     ? Z80_FLAG_SIGN   : 0); }
+#define SET_FLAGS_OR_XOR { F = (uint8_even_parity [z80_state.a] ? Z80_FLAG_PARITY : 0) | \
+                               (A == 0x00                       ? Z80_FLAG_ZERO   : 0) | \
+                               ((A & 0x80)                      ? Z80_FLAG_SIGN   : 0); }
 
 #define SET_FLAGS_ADD(X,Y) { F = (((uint16_t)X + (uint16_t)Y) & 0x100                    ? Z80_FLAG_CARRY    : 0) | \
                                  (((((int16_t)(int8_t)X) + ((int16_t)(int8_t)Y)) >  127 ||                          \
@@ -158,16 +158,16 @@ void z80_init (uint8_t (* _memory_read) (uint16_t),
 #define CARRY_BIT (F & Z80_FLAG_CARRY)
 
 #define SET_FLAGS_ADC(X) { F = (((uint16_t)A + (uint16_t)X + CARRY_BIT) & 0x100  ? Z80_FLAG_CARRY    : 0) | \
-                               (((((int16_t)(int8_t)z80_regs.a) + ((int16_t)(int8_t)X) + CARRY_BIT) >  127 || \
-                                 (((int16_t)(int8_t)z80_regs.a) + ((int16_t)(int8_t)X) + CARRY_BIT) < -128) ? Z80_FLAG_OVERFLOW : 0) | \
+                               (((((int16_t)(int8_t)z80_state.a) + ((int16_t)(int8_t)X) + CARRY_BIT) >  127 || \
+                                 (((int16_t)(int8_t)z80_state.a) + ((int16_t)(int8_t)X) + CARRY_BIT) < -128) ? Z80_FLAG_OVERFLOW : 0) | \
                                (((A & 0x0f) + (X & 0x0f) + CARRY_BIT) & 0x10     ? Z80_FLAG_HALF     : 0) | \
                                (((A + X + CARRY_BIT) & 0xff) == 0x00             ? Z80_FLAG_ZERO     : 0) | \
                                ((A + X + CARRY_BIT) & 0x80                       ? Z80_FLAG_SIGN     : 0); }
 
 #define SET_FLAGS_SBC(X) { F = (((uint16_t)A - (uint16_t)X - CARRY_BIT) & 0x100  ? Z80_FLAG_CARRY    : 0) | \
                                (                                                            Z80_FLAG_SUB         ) | \
-                               (((((int16_t)(int8_t)z80_regs.a) - ((int16_t)(int8_t)X) - CARRY_BIT) >  127 || \
-                                 (((int16_t)(int8_t)z80_regs.a) - ((int16_t)(int8_t)X) - CARRY_BIT) < -128) ? Z80_FLAG_OVERFLOW : 0) | \
+                               (((((int16_t)(int8_t)z80_state.a) - ((int16_t)(int8_t)X) - CARRY_BIT) >  127 || \
+                                 (((int16_t)(int8_t)z80_state.a) - ((int16_t)(int8_t)X) - CARRY_BIT) < -128) ? Z80_FLAG_OVERFLOW : 0) | \
                                (((A & 0x0f) - (X & 0x0f) - CARRY_BIT) & 0x10     ? Z80_FLAG_HALF     : 0) | \
                                (((A - X - CARRY_BIT) & 0xff) == 0x00             ? Z80_FLAG_ZERO     : 0) | \
                                ((A - X - CARRY_BIT) & 0x80                       ? Z80_FLAG_SIGN     : 0); }
@@ -238,7 +238,7 @@ void z80_init (uint8_t (* _memory_read) (uint16_t),
                               ((X & 0x80)                              ? Z80_FLAG_SIGN   : 0); }
 
 #define SET_FLAGS_RRD_RLD { F = (F                                & Z80_FLAG_CARRY)      | \
-                                (uint8_even_parity [z80_regs.a]   ? Z80_FLAG_PARITY : 0) | \
+                                (uint8_even_parity [z80_state.a]  ? Z80_FLAG_PARITY : 0) | \
                                 (A == 0x00                        ? Z80_FLAG_ZERO   : 0) | \
                                 (A & 0x80                         ? Z80_FLAG_SIGN   : 0); }
 
@@ -645,9 +645,9 @@ static uint8_t z80_cb_08_rrc (uint8_t value)
 static uint8_t z80_cb_10_rl (uint8_t value)
 {
     uint8_t result;
-    result = (value << 1) | ((z80_regs.f & Z80_FLAG_CARRY) ? 0x01 : 0x00);
+    result = (value << 1) | ((z80_state.f & Z80_FLAG_CARRY) ? 0x01 : 0x00);
     SET_FLAGS_RL (result);
-    z80_regs.f |= (value & 0x80) ? Z80_FLAG_CARRY : 0;
+    z80_state.f |= (value & 0x80) ? Z80_FLAG_CARRY : 0;
     return result;
 }
 
@@ -656,9 +656,9 @@ static uint8_t z80_cb_10_rl (uint8_t value)
 static uint8_t z80_cb_18_rr (uint8_t value)
 {
     uint8_t result;
-    result = (value >> 1) | ((z80_regs.f & Z80_FLAG_CARRY) ? 0x80 : 0x00);
+    result = (value >> 1) | ((z80_state.f & Z80_FLAG_CARRY) ? 0x80 : 0x00);
     SET_FLAGS_RR (result);
-    z80_regs.f |= (value & 0x01) ? Z80_FLAG_CARRY : 0;
+    z80_state.f |= (value & 0x01) ? Z80_FLAG_CARRY : 0;
     return result;
 }
 
@@ -669,7 +669,7 @@ static uint8_t z80_cb_20_sla (uint8_t value)
     uint8_t result;
     result = (value << 1);
     SET_FLAGS_RL (result);
-    z80_regs.f |= (value & 0x80) ? Z80_FLAG_CARRY : 0;
+    z80_state.f |= (value & 0x80) ? Z80_FLAG_CARRY : 0;
     return result;
 }
 
@@ -680,7 +680,7 @@ static uint8_t z80_cb_28_sra (uint8_t value)
     uint8_t result;
     result = (value >> 1) | (value & 0x80);
     SET_FLAGS_RR (result);
-    z80_regs.f |= (value & 0x01) ? Z80_FLAG_CARRY : 0;
+    z80_state.f |= (value & 0x01) ? Z80_FLAG_CARRY : 0;
     return result;
 }
 
@@ -690,7 +690,7 @@ static uint8_t z80_cb_30_sll (uint8_t value)
     uint8_t result;
     result = (value << 1) | 0x01;
     SET_FLAGS_RL (result);
-    z80_regs.f |= (value & 0x80) ? Z80_FLAG_CARRY : 0;
+    z80_state.f |= (value & 0x80) ? Z80_FLAG_CARRY : 0;
     return result;
 }
 
@@ -701,7 +701,7 @@ static uint8_t z80_cb_38_srl (uint8_t value)
     uint8_t result;
     result = (value >> 1);
     SET_FLAGS_RR (result);
-    z80_regs.f |= (value & 0x01) ? Z80_FLAG_CARRY : 0;
+    z80_state.f |= (value & 0x01) ? Z80_FLAG_CARRY : 0;
     return result;
 }
 
@@ -709,8 +709,8 @@ static uint8_t z80_cb_38_srl (uint8_t value)
 /* BIT 0 */
 static uint8_t z80_cb_40_bit_0 (uint8_t value)
 {
-    z80_regs.f = (z80_regs.f & Z80_FLAG_CARRY) | (Z80_FLAG_HALF) |
-                 ((value & 0x01) ? 0 : Z80_FLAG_PARITY | Z80_FLAG_ZERO);
+    z80_state.f = (z80_state.f & Z80_FLAG_CARRY) | (Z80_FLAG_HALF) |
+                  ((value & 0x01) ? 0 : Z80_FLAG_PARITY | Z80_FLAG_ZERO);
     return value;
 }
 
@@ -718,8 +718,8 @@ static uint8_t z80_cb_40_bit_0 (uint8_t value)
 /* BIT 1 */
 static uint8_t z80_cb_48_bit_1 (uint8_t value)
 {
-    z80_regs.f = (z80_regs.f & Z80_FLAG_CARRY) | (Z80_FLAG_HALF) |
-                 ((value & 0x02) ? 0 : Z80_FLAG_PARITY | Z80_FLAG_ZERO);
+    z80_state.f = (z80_state.f & Z80_FLAG_CARRY) | (Z80_FLAG_HALF) |
+                  ((value & 0x02) ? 0 : Z80_FLAG_PARITY | Z80_FLAG_ZERO);
     return value;
 }
 
@@ -727,8 +727,8 @@ static uint8_t z80_cb_48_bit_1 (uint8_t value)
 /* BIT 2 */
 static uint8_t z80_cb_50_bit_2 (uint8_t value)
 {
-    z80_regs.f = (z80_regs.f & Z80_FLAG_CARRY) | (Z80_FLAG_HALF) |
-                 ((value & 0x04) ? 0 : Z80_FLAG_PARITY | Z80_FLAG_ZERO);
+    z80_state.f = (z80_state.f & Z80_FLAG_CARRY) | (Z80_FLAG_HALF) |
+                  ((value & 0x04) ? 0 : Z80_FLAG_PARITY | Z80_FLAG_ZERO);
     return value;
 }
 
@@ -736,8 +736,8 @@ static uint8_t z80_cb_50_bit_2 (uint8_t value)
 /* BIT 3 */
 static uint8_t z80_cb_58_bit_3 (uint8_t value)
 {
-    z80_regs.f = (z80_regs.f & Z80_FLAG_CARRY) | (Z80_FLAG_HALF) |
-                 ((value & 0x08) ? 0 : Z80_FLAG_PARITY | Z80_FLAG_ZERO);
+    z80_state.f = (z80_state.f & Z80_FLAG_CARRY) | (Z80_FLAG_HALF) |
+                  ((value & 0x08) ? 0 : Z80_FLAG_PARITY | Z80_FLAG_ZERO);
     return value;
 }
 
@@ -745,8 +745,8 @@ static uint8_t z80_cb_58_bit_3 (uint8_t value)
 /* BIT 4 */
 static uint8_t z80_cb_60_bit_4 (uint8_t value)
 {
-    z80_regs.f = (z80_regs.f & Z80_FLAG_CARRY) | (Z80_FLAG_HALF) |
-                 ((value & 0x10) ? 0 : Z80_FLAG_PARITY | Z80_FLAG_ZERO);
+    z80_state.f = (z80_state.f & Z80_FLAG_CARRY) | (Z80_FLAG_HALF) |
+                  ((value & 0x10) ? 0 : Z80_FLAG_PARITY | Z80_FLAG_ZERO);
     return value;
 }
 
@@ -754,8 +754,8 @@ static uint8_t z80_cb_60_bit_4 (uint8_t value)
 /* BIT 5 */
 static uint8_t z80_cb_68_bit_5 (uint8_t value)
 {
-    z80_regs.f = (z80_regs.f & Z80_FLAG_CARRY) | (Z80_FLAG_HALF) |
-                 ((value & 0x20) ? 0 : Z80_FLAG_PARITY | Z80_FLAG_ZERO);
+    z80_state.f = (z80_state.f & Z80_FLAG_CARRY) | (Z80_FLAG_HALF) |
+                  ((value & 0x20) ? 0 : Z80_FLAG_PARITY | Z80_FLAG_ZERO);
     return value;
 }
 
@@ -763,8 +763,8 @@ static uint8_t z80_cb_68_bit_5 (uint8_t value)
 /* BIT 6 */
 static uint8_t z80_cb_70_bit_6 (uint8_t value)
 {
-    z80_regs.f = (z80_regs.f & Z80_FLAG_CARRY) | (Z80_FLAG_HALF) |
-                 ((value & 0x40) ? 0 : Z80_FLAG_PARITY | Z80_FLAG_ZERO);
+    z80_state.f = (z80_state.f & Z80_FLAG_CARRY) | (Z80_FLAG_HALF) |
+                  ((value & 0x40) ? 0 : Z80_FLAG_PARITY | Z80_FLAG_ZERO);
     return value;
 }
 
@@ -772,8 +772,8 @@ static uint8_t z80_cb_70_bit_6 (uint8_t value)
 /* BIT 7 */
 static uint8_t z80_cb_78_bit_7 (uint8_t value)
 {
-    z80_regs.f = (z80_regs.f & Z80_FLAG_CARRY) | (Z80_FLAG_HALF) |
-                 ((value & 0x80) ? Z80_FLAG_SIGN : Z80_FLAG_PARITY | Z80_FLAG_ZERO);
+    z80_state.f = (z80_state.f & Z80_FLAG_CARRY) | (Z80_FLAG_HALF) |
+                  ((value & 0x80) ? Z80_FLAG_SIGN : Z80_FLAG_PARITY | Z80_FLAG_ZERO);
     return value;
 }
 
@@ -909,8 +909,8 @@ uint8_t (*z80_cb_instruction [32]) (uint8_t) = {
 /* IN B, (C) */
 static void z80_ed_40_in_b_c (void)
 {
-    z80_regs.b = io_read (z80_regs.c);
-    SET_FLAGS_ED_IN (z80_regs.b);
+    z80_state.b = io_read (z80_state.c);
+    SET_FLAGS_ED_IN (z80_state.b);
     used_cycles += 12;
 }
 
@@ -918,7 +918,7 @@ static void z80_ed_40_in_b_c (void)
 /* OUT (C), B */
 static void z80_ed_41_out_c_b (void)
 {
-    io_write (z80_regs.c, z80_regs.b);
+    io_write (z80_state.c, z80_state.b);
     used_cycles += 12;
 }
 
@@ -927,9 +927,9 @@ static void z80_ed_41_out_c_b (void)
 static void z80_ed_42_sbc_hl_bc (void)
 {
     uint16_t temp;
-    temp = z80_regs.bc + CARRY_BIT;
-    SET_FLAGS_SBC_16 (z80_regs.bc);
-    z80_regs.hl -= temp;
+    temp = z80_state.bc + CARRY_BIT;
+    SET_FLAGS_SBC_16 (z80_state.bc);
+    z80_state.hl -= temp;
     used_cycles += 15;
 }
 
@@ -938,11 +938,11 @@ static void z80_ed_42_sbc_hl_bc (void)
 static void z80_ed_43_ld_xx_bc (void)
 {
     uint16_t_Split addr;
-    addr.l = memory_read (z80_regs.pc++);
-    addr.h = memory_read (z80_regs.pc++);
+    addr.l = memory_read (z80_state.pc++);
+    addr.h = memory_read (z80_state.pc++);
 
-    memory_write (addr.w,     z80_regs.c);
-    memory_write (addr.w + 1, z80_regs.b);
+    memory_write (addr.w,     z80_state.c);
+    memory_write (addr.w + 1, z80_state.b);
     used_cycles += 20;
 }
 
@@ -951,14 +951,14 @@ static void z80_ed_43_ld_xx_bc (void)
 static void z80_ed_44_neg (void)
 {
     uint8_t temp;
-    temp = z80_regs.a;
-    z80_regs.a = 0 - (int8_t) z80_regs.a;
-    z80_regs.f = (temp != 0                  ? Z80_FLAG_CARRY    : 0) |
-                 (                             Z80_FLAG_SUB         ) |
-                 (temp == 0x80               ? Z80_FLAG_OVERFLOW : 0) |
-                 ((0 - (temp & 0x0f)) & 0x10 ? Z80_FLAG_HALF     : 0) |
-                 (z80_regs.a == 0            ? Z80_FLAG_ZERO     : 0) |
-                 (z80_regs.a & 0x80          ? Z80_FLAG_SIGN     : 0);
+    temp = z80_state.a;
+    z80_state.a = 0 - (int8_t) z80_state.a;
+    z80_state.f = (temp != 0                  ? Z80_FLAG_CARRY    : 0) |
+                  (                             Z80_FLAG_SUB         ) |
+                  (temp == 0x80               ? Z80_FLAG_OVERFLOW : 0) |
+                  ((0 - (temp & 0x0f)) & 0x10 ? Z80_FLAG_HALF     : 0) |
+                  (z80_state.a == 0           ? Z80_FLAG_ZERO     : 0) |
+                  (z80_state.a & 0x80         ? Z80_FLAG_SIGN     : 0);
     used_cycles += 8;
 }
 
@@ -966,8 +966,8 @@ static void z80_ed_44_neg (void)
 /* RETN */
 static void z80_ed_45_retn (void)
 {
-    z80_regs.pc_l = memory_read (z80_regs.sp++);
-    z80_regs.pc_h = memory_read (z80_regs.sp++);
+    z80_state.pc_l = memory_read (z80_state.sp++);
+    z80_state.pc_h = memory_read (z80_state.sp++);
     IFF1 = IFF2;
     used_cycles += 14;
 }
@@ -976,7 +976,7 @@ static void z80_ed_45_retn (void)
 /* IM 0 */
 static void z80_ed_46_im_0 (void)
 {
-    z80_regs.im = 0;
+    z80_state.im = 0;
     used_cycles += 8;
 }
 
@@ -984,7 +984,7 @@ static void z80_ed_46_im_0 (void)
 /* LD I, A */
 static void z80_ed_47_ld_i_a (void)
 {
-    z80_regs.i = z80_regs.a;
+    z80_state.i = z80_state.a;
     used_cycles += 9;
 }
 
@@ -992,8 +992,8 @@ static void z80_ed_47_ld_i_a (void)
 /* IN C, (C) */
 static void z80_ed_48_in_c_c (void)
 {
-    z80_regs.c = io_read (z80_regs.c);
-    SET_FLAGS_ED_IN (z80_regs.c);
+    z80_state.c = io_read (z80_state.c);
+    SET_FLAGS_ED_IN (z80_state.c);
     used_cycles += 12;
 }
 
@@ -1001,7 +1001,7 @@ static void z80_ed_48_in_c_c (void)
 /* OUT (C), C */
 static void z80_ed_49_out_c_c (void)
 {
-    io_write (z80_regs.c, z80_regs.c);
+    io_write (z80_state.c, z80_state.c);
     used_cycles += 12;
 }
 
@@ -1010,9 +1010,9 @@ static void z80_ed_49_out_c_c (void)
 static void z80_ed_4a_adc_hl_bc (void)
 {
     uint16_t temp;
-    temp = z80_regs.bc + CARRY_BIT;
-    SET_FLAGS_ADC_16 (z80_regs.bc);
-    z80_regs.hl += temp;
+    temp = z80_state.bc + CARRY_BIT;
+    SET_FLAGS_ADC_16 (z80_state.bc);
+    z80_state.hl += temp;
     used_cycles += 15;
 }
 
@@ -1021,11 +1021,11 @@ static void z80_ed_4a_adc_hl_bc (void)
 static void z80_ed_4b_ld_bc_xx (void)
 {
     uint16_t_Split addr;
-    addr.l = memory_read (z80_regs.pc++);
-    addr.h = memory_read (z80_regs.pc++);
+    addr.l = memory_read (z80_state.pc++);
+    addr.h = memory_read (z80_state.pc++);
 
-    z80_regs.c = memory_read (addr.w);
-    z80_regs.b = memory_read (addr.w + 1);
+    z80_state.c = memory_read (addr.w);
+    z80_state.b = memory_read (addr.w + 1);
     used_cycles += 20;
 }
 
@@ -1040,8 +1040,8 @@ static void z80_ed_4c_neg (void)
 /* RETI */
 static void z80_ed_4d_reti (void)
 {
-    z80_regs.pc_l = memory_read (z80_regs.sp++);
-    z80_regs.pc_h = memory_read (z80_regs.sp++);
+    z80_state.pc_l = memory_read (z80_state.sp++);
+    z80_state.pc_h = memory_read (z80_state.sp++);
     used_cycles += 14;
 }
 
@@ -1056,7 +1056,7 @@ static void z80_ed_4e_im_0 (void)
 /* LD R, A */
 static void z80_ed_4f_ld_r_a (void)
 {
-    z80_regs.r = z80_regs.a;
+    z80_state.r = z80_state.a;
     used_cycles += 9;
 }
 
@@ -1064,8 +1064,8 @@ static void z80_ed_4f_ld_r_a (void)
 /* IN D, (C) */
 static void z80_ed_50_in_d_c (void)
 {
-    z80_regs.d = io_read (z80_regs.c);
-    SET_FLAGS_ED_IN (z80_regs.d);
+    z80_state.d = io_read (z80_state.c);
+    SET_FLAGS_ED_IN (z80_state.d);
     used_cycles += 12;
 }
 
@@ -1073,7 +1073,7 @@ static void z80_ed_50_in_d_c (void)
 /* OUT (C), D */
 static void z80_ed_51_out_c_d (void)
 {
-    io_write (z80_regs.c, z80_regs.d);
+    io_write (z80_state.c, z80_state.d);
     used_cycles += 12;
 }
 
@@ -1082,9 +1082,9 @@ static void z80_ed_51_out_c_d (void)
 static void z80_ed_52_sbc_hl_de (void)
 {
     uint16_t temp;
-    temp = z80_regs.de + CARRY_BIT;
-    SET_FLAGS_SBC_16 (z80_regs.de);
-    z80_regs.hl -= temp;
+    temp = z80_state.de + CARRY_BIT;
+    SET_FLAGS_SBC_16 (z80_state.de);
+    z80_state.hl -= temp;
     used_cycles += 15;
 }
 
@@ -1093,11 +1093,11 @@ static void z80_ed_52_sbc_hl_de (void)
 static void z80_ed_53_ld_xx_de (void)
 {
     uint16_t_Split addr;
-    addr.l = memory_read (z80_regs.pc++);
-    addr.h = memory_read (z80_regs.pc++);
+    addr.l = memory_read (z80_state.pc++);
+    addr.h = memory_read (z80_state.pc++);
 
-    memory_write (addr.w,     z80_regs.e);
-    memory_write (addr.w + 1, z80_regs.d);
+    memory_write (addr.w,     z80_state.e);
+    memory_write (addr.w + 1, z80_state.d);
     used_cycles += 20;
 }
 
@@ -1119,7 +1119,7 @@ static void z80_ed_55_retn (void)
 /* IM 1 */
 static void z80_ed_56_im_1 (void)
 {
-    z80_regs.im = 1;
+    z80_state.im = 1;
     used_cycles += 8;
 }
 
@@ -1127,11 +1127,11 @@ static void z80_ed_56_im_1 (void)
 /* LD A, I */
 static void z80_ed_57_ld_a_i (void)
 {
-    z80_regs.a = z80_regs.i;
-    z80_regs.f = (z80_regs.f        & Z80_FLAG_CARRY       ) |
-                 (z80_regs.i & 0x80 ? Z80_FLAG_SIGN     : 0) |
-                 (z80_regs.i == 0   ? Z80_FLAG_ZERO     : 0) |
-                 (z80_regs.iff2     ? Z80_FLAG_OVERFLOW : 0);
+    z80_state.a = z80_state.i;
+    z80_state.f = (z80_state.f        & Z80_FLAG_CARRY       ) |
+                  (z80_state.i & 0x80 ? Z80_FLAG_SIGN     : 0) |
+                  (z80_state.i == 0   ? Z80_FLAG_ZERO     : 0) |
+                  (z80_state.iff2     ? Z80_FLAG_OVERFLOW : 0);
     used_cycles += 9;
 }
 
@@ -1139,8 +1139,8 @@ static void z80_ed_57_ld_a_i (void)
 /* IN E, (C) */
 static void z80_ed_58_in_e_c (void)
 {
-    z80_regs.e = io_read (z80_regs.c);
-    SET_FLAGS_ED_IN (z80_regs.e);
+    z80_state.e = io_read (z80_state.c);
+    SET_FLAGS_ED_IN (z80_state.e);
     used_cycles += 12;
 }
 
@@ -1148,7 +1148,7 @@ static void z80_ed_58_in_e_c (void)
 /* OUT (C), E */
 static void z80_ed_59_out_c_e (void)
 {
-    io_write (z80_regs.c, z80_regs.e);
+    io_write (z80_state.c, z80_state.e);
     used_cycles += 12;
 }
 
@@ -1156,9 +1156,9 @@ static void z80_ed_59_out_c_e (void)
 /* ADC HL, DE */
 static void z80_ed_5a_adc_hl_de (void)
 {
-    uint16_t temp = z80_regs.de + CARRY_BIT;
-    SET_FLAGS_ADC_16 (z80_regs.de);
-    z80_regs.hl += temp;
+    uint16_t temp = z80_state.de + CARRY_BIT;
+    SET_FLAGS_ADC_16 (z80_state.de);
+    z80_state.hl += temp;
     used_cycles += 15;
 }
 
@@ -1167,8 +1167,8 @@ static void z80_ed_5a_adc_hl_de (void)
 static void z80_ed_5b_ld_de_xx (void)
 {
     uint16_t_Split addr;
-    addr.l = memory_read (z80_regs.pc++);
-    addr.h = memory_read (z80_regs.pc++);
+    addr.l = memory_read (z80_state.pc++);
+    addr.h = memory_read (z80_state.pc++);
 
     E = memory_read (addr.w);
     D = memory_read (addr.w + 1);
@@ -1193,7 +1193,7 @@ static void z80_ed_5d_retn (void)
 /* IM 2 */
 static void z80_ed_5e_im_2 (void)
 {
-    z80_regs.im = 2;
+    z80_state.im = 2;
     used_cycles += 8;
 }
 
@@ -1201,11 +1201,11 @@ static void z80_ed_5e_im_2 (void)
 /* LD A, R */
 static void z80_ed_5f_ld_a_r (void)
 {
-    z80_regs.a = z80_regs.r;
-    z80_regs.f = (z80_regs.f        & Z80_FLAG_CARRY       ) |
-                 (z80_regs.r & 0x80 ? Z80_FLAG_SIGN     : 0) |
-                 (z80_regs.r == 0   ? Z80_FLAG_ZERO     : 0) |
-                 (z80_regs.iff2     ? Z80_FLAG_OVERFLOW : 0);
+    z80_state.a = z80_state.r;
+    z80_state.f = (z80_state.f        & Z80_FLAG_CARRY       ) |
+                  (z80_state.r & 0x80 ? Z80_FLAG_SIGN     : 0) |
+                  (z80_state.r == 0   ? Z80_FLAG_ZERO     : 0) |
+                  (z80_state.iff2     ? Z80_FLAG_OVERFLOW : 0);
     used_cycles += 9;
 }
 
@@ -1213,8 +1213,8 @@ static void z80_ed_5f_ld_a_r (void)
 /* IN H, (C) */
 static void z80_ed_60_in_h_c (void)
 {
-    z80_regs.h = io_read (z80_regs.c);
-    SET_FLAGS_ED_IN (z80_regs.h);
+    z80_state.h = io_read (z80_state.c);
+    SET_FLAGS_ED_IN (z80_state.h);
     used_cycles += 12;
 }
 
@@ -1222,7 +1222,7 @@ static void z80_ed_60_in_h_c (void)
 /* OUT (C), H */
 static void z80_ed_61_out_c_h (void)
 {
-    io_write (z80_regs.c, z80_regs.h);
+    io_write (z80_state.c, z80_state.h);
     used_cycles += 12;
 }
 
@@ -1230,9 +1230,9 @@ static void z80_ed_61_out_c_h (void)
 /* SBC HL, HL */
 static void z80_ed_62_sbc_hl_hl (void)
 {
-    uint16_t temp = z80_regs.hl + CARRY_BIT;
-    SET_FLAGS_SBC_16 (z80_regs.hl);
-    z80_regs.hl -= temp;
+    uint16_t temp = z80_state.hl + CARRY_BIT;
+    SET_FLAGS_SBC_16 (z80_state.hl);
+    z80_state.hl -= temp;
     used_cycles += 15;
 }
 
@@ -1241,11 +1241,11 @@ static void z80_ed_62_sbc_hl_hl (void)
 static void z80_ed_63_ld_xx_hl (void)
 {
     uint16_t_Split addr;
-    addr.l = memory_read (z80_regs.pc++);
-    addr.h = memory_read (z80_regs.pc++);
+    addr.l = memory_read (z80_state.pc++);
+    addr.h = memory_read (z80_state.pc++);
 
-    memory_write (addr.w,     z80_regs.l);
-    memory_write (addr.w + 1, z80_regs.h);
+    memory_write (addr.w,     z80_state.l);
+    memory_write (addr.w + 1, z80_state.h);
     used_cycles += 20;
 }
 
@@ -1277,15 +1277,15 @@ static void z80_ed_67_rrd (void)
     uint16_t_Split shifted;
 
     /* Calculate 12-bit value */
-    shifted.l = memory_read (z80_regs.hl);
-    shifted.h = z80_regs.a & 0x0f;
+    shifted.l = memory_read (z80_state.hl);
+    shifted.h = z80_state.a & 0x0f;
     shifted.w = (shifted.w >> 4) | ((shifted.w & 0x000f) << 8);
 
     /* Lower 8 bits go to memory */
-    memory_write (z80_regs.hl, shifted.l);
+    memory_write (z80_state.hl, shifted.l);
 
     /* Upper 4 bits go to A */
-    z80_regs.a = (z80_regs.a & 0xf0) | shifted.h;
+    z80_state.a = (z80_state.a & 0xf0) | shifted.h;
 
     SET_FLAGS_RRD_RLD;
     used_cycles += 18;
@@ -1295,8 +1295,8 @@ static void z80_ed_67_rrd (void)
 /* IN L, (C) */
 static void z80_ed_68_in_l_c (void)
 {
-    z80_regs.l = io_read (z80_regs.c);
-    SET_FLAGS_ED_IN (z80_regs.l);
+    z80_state.l = io_read (z80_state.c);
+    SET_FLAGS_ED_IN (z80_state.l);
     used_cycles += 12;
 }
 
@@ -1304,7 +1304,7 @@ static void z80_ed_68_in_l_c (void)
 /* OUT (C), L */
 static void z80_ed_69_out_c_l (void)
 {
-    io_write (z80_regs.c, z80_regs.l);
+    io_write (z80_state.c, z80_state.l);
     used_cycles += 12;
 }
 
@@ -1312,9 +1312,9 @@ static void z80_ed_69_out_c_l (void)
 /* ADC HL, HL */
 static void z80_ed_6a_adc_hl_hl (void)
 {
-    uint16_t temp = z80_regs.hl + CARRY_BIT;
-    SET_FLAGS_ADC_16 (z80_regs.hl);
-    z80_regs.hl += temp;
+    uint16_t temp = z80_state.hl + CARRY_BIT;
+    SET_FLAGS_ADC_16 (z80_state.hl);
+    z80_state.hl += temp;
     used_cycles += 15;
 }
 
@@ -1323,8 +1323,8 @@ static void z80_ed_6a_adc_hl_hl (void)
 static void z80_ed_6b_ld_hl_xx (void)
 {
     uint16_t_Split addr;
-    addr.l = memory_read (z80_regs.pc++);
-    addr.h = memory_read (z80_regs.pc++);
+    addr.l = memory_read (z80_state.pc++);
+    addr.h = memory_read (z80_state.pc++);
 
     L = memory_read (addr.w);
     H = memory_read (addr.w + 1);
@@ -1359,13 +1359,13 @@ static void z80_ed_6f_rld (void)
     uint16_t_Split shifted;
 
     /* Calculate 12-bit value */
-    shifted.w = ((uint16_t) memory_read (z80_regs.hl) << 4) | (z80_regs.a & 0x0f);
+    shifted.w = ((uint16_t) memory_read (z80_state.hl) << 4) | (z80_state.a & 0x0f);
 
     /* Lower 8 bits go to memory */
-    memory_write (z80_regs.hl, shifted.l);
+    memory_write (z80_state.hl, shifted.l);
 
     /* Upper 4 bits go to A */
-    z80_regs.a = (z80_regs.a & 0xf0) | shifted.h;
+    z80_state.a = (z80_state.a & 0xf0) | shifted.h;
 
     SET_FLAGS_RRD_RLD;
     used_cycles += 18;
@@ -1376,7 +1376,7 @@ static void z80_ed_6f_rld (void)
 static void z80_ed_70_in_c (void)
 {
     uint8_t throwaway;
-    throwaway = io_read (z80_regs.c);
+    throwaway = io_read (z80_state.c);
     SET_FLAGS_ED_IN (throwaway);
     used_cycles += 12;
 }
@@ -1385,7 +1385,7 @@ static void z80_ed_70_in_c (void)
 /* OUT (C), 0 (undocumented) */
 static void z80_ed_71_out_c_0 (void)
 {
-    io_write (z80_regs.c, 0);
+    io_write (z80_state.c, 0);
     used_cycles += 12;
 }
 
@@ -1393,9 +1393,9 @@ static void z80_ed_71_out_c_0 (void)
 /* SBC HL, SP */
 static void z80_ed_72_sbc_hl_sp (void)
 {
-    uint16_t temp = z80_regs.sp + CARRY_BIT;
-    SET_FLAGS_SBC_16 (z80_regs.sp);
-    z80_regs.hl -= temp;
+    uint16_t temp = z80_state.sp + CARRY_BIT;
+    SET_FLAGS_SBC_16 (z80_state.sp);
+    z80_state.hl -= temp;
     used_cycles += 15;
 }
 
@@ -1404,11 +1404,11 @@ static void z80_ed_72_sbc_hl_sp (void)
 static void z80_ed_73_ld_xx_sp (void)
 {
     uint16_t_Split addr;
-    addr.l = memory_read (z80_regs.pc++);
-    addr.h = memory_read (z80_regs.pc++);
+    addr.l = memory_read (z80_state.pc++);
+    addr.h = memory_read (z80_state.pc++);
 
-    memory_write (addr.w,     z80_regs.sp_l);
-    memory_write (addr.w + 1, z80_regs.sp_h);
+    memory_write (addr.w,     z80_state.sp_l);
+    memory_write (addr.w + 1, z80_state.sp_h);
     used_cycles += 20;
 }
 
@@ -1437,8 +1437,8 @@ static void z80_ed_76_im_1 (void)
 /* IN A, (C) */
 static void z80_ed_78_in_a_c (void)
 {
-    z80_regs.a = io_read (z80_regs.c);
-    SET_FLAGS_ED_IN (z80_regs.a);
+    z80_state.a = io_read (z80_state.c);
+    SET_FLAGS_ED_IN (z80_state.a);
     used_cycles += 12;
 }
 
@@ -1446,7 +1446,7 @@ static void z80_ed_78_in_a_c (void)
 /* OUT (C), A */
 static void z80_ed_79_out_c_a (void)
 {
-    io_write (z80_regs.c, z80_regs.a);
+    io_write (z80_state.c, z80_state.a);
     used_cycles += 12;
 }
 
@@ -1454,9 +1454,9 @@ static void z80_ed_79_out_c_a (void)
 /* ADC HL, SP */
 static void z80_ed_7a_adc_hl_sp (void)
 {
-    uint16_t temp = z80_regs.sp + CARRY_BIT;
-    SET_FLAGS_ADC_16 (z80_regs.sp);
-    z80_regs.hl += temp;
+    uint16_t temp = z80_state.sp + CARRY_BIT;
+    SET_FLAGS_ADC_16 (z80_state.sp);
+    z80_state.hl += temp;
     used_cycles += 15;
 }
 
@@ -1465,11 +1465,11 @@ static void z80_ed_7a_adc_hl_sp (void)
 static void z80_ed_7b_ld_sp_xx (void)
 {
     uint16_t_Split addr;
-    addr.l = memory_read (z80_regs.pc++);
-    addr.h = memory_read (z80_regs.pc++);
+    addr.l = memory_read (z80_state.pc++);
+    addr.h = memory_read (z80_state.pc++);
 
-    z80_regs.sp_l = memory_read (addr.w);
-    z80_regs.sp_h = memory_read (addr.w + 1);
+    z80_state.sp_l = memory_read (addr.w);
+    z80_state.sp_h = memory_read (addr.w + 1);
     used_cycles += 20;
 }
 
@@ -1498,12 +1498,12 @@ static void z80_ed_7e_im_2 (void)
 /* LDI */
 static void z80_ed_a0_ldi (void)
 {
-    memory_write (z80_regs.de, memory_read (z80_regs.hl));
-    z80_regs.hl++;
-    z80_regs.de++;
-    z80_regs.bc--;
-    z80_regs.f &= (Z80_FLAG_CARRY | Z80_FLAG_ZERO | Z80_FLAG_SIGN);
-    z80_regs.f |= (z80_regs.bc ? Z80_FLAG_OVERFLOW : 0);
+    memory_write (z80_state.de, memory_read (z80_state.hl));
+    z80_state.hl++;
+    z80_state.de++;
+    z80_state.bc--;
+    z80_state.f &= (Z80_FLAG_CARRY | Z80_FLAG_ZERO | Z80_FLAG_SIGN);
+    z80_state.f |= (z80_state.bc ? Z80_FLAG_OVERFLOW : 0);
     used_cycles += 16;
 }
 
@@ -1511,9 +1511,9 @@ static void z80_ed_a0_ldi (void)
 /* CPI */
 static void z80_ed_a1_cpi (void)
 {
-    uint8_t temp = memory_read (z80_regs.hl);
-    z80_regs.hl++;
-    z80_regs.bc--;
+    uint8_t temp = memory_read (z80_state.hl);
+    z80_state.hl++;
+    z80_state.bc--;
     SET_FLAGS_CPD_CPI (temp);
     used_cycles += 16;
 }
@@ -1522,12 +1522,12 @@ static void z80_ed_a1_cpi (void)
 /* INI */
 static void z80_ed_a2_ini (void)
 {
-    memory_write (z80_regs.hl, io_read (z80_regs.c));
-    z80_regs.hl++;
-    z80_regs.b--;
-    z80_regs.f = (z80_regs.f      & Z80_FLAG_CARRY) |
+    memory_write (z80_state.hl, io_read (z80_state.c));
+    z80_state.hl++;
+    z80_state.b--;
+    z80_state.f = (z80_state.f      & Z80_FLAG_CARRY) |
                  (                  Z80_FLAG_SUB  ) |
-                 (z80_regs.b == 0 ? Z80_FLAG_ZERO : 0);
+                 (z80_state.b == 0 ? Z80_FLAG_ZERO : 0);
     used_cycles += 16;
 }
 
@@ -1535,12 +1535,12 @@ static void z80_ed_a2_ini (void)
 /* OUTI */
 static void z80_ed_a3_outi (void)
 {
-    io_write (z80_regs.c, memory_read (z80_regs.hl));
-    z80_regs.hl++;
-    z80_regs.b--;
-    z80_regs.f = (z80_regs.f      & Z80_FLAG_CARRY) |
-                 (                  Z80_FLAG_SUB  ) |
-                 (z80_regs.b == 0 ? Z80_FLAG_ZERO : 0);
+    io_write (z80_state.c, memory_read (z80_state.hl));
+    z80_state.hl++;
+    z80_state.b--;
+    z80_state.f = (z80_state.f      & Z80_FLAG_CARRY) |
+                  (                   Z80_FLAG_SUB  ) |
+                  (z80_state.b == 0 ? Z80_FLAG_ZERO : 0);
     used_cycles += 16;
 }
 
@@ -1548,12 +1548,12 @@ static void z80_ed_a3_outi (void)
 /* LDD */
 static void z80_ed_a8_ldd (void)
 {
-    memory_write (z80_regs.de, memory_read (z80_regs.hl));
-    z80_regs.hl--;
-    z80_regs.de--;
-    z80_regs.bc--;
-    z80_regs.f &= (Z80_FLAG_CARRY | Z80_FLAG_ZERO | Z80_FLAG_SIGN);
-    z80_regs.f |= (z80_regs.bc ? Z80_FLAG_OVERFLOW : 0);
+    memory_write (z80_state.de, memory_read (z80_state.hl));
+    z80_state.hl--;
+    z80_state.de--;
+    z80_state.bc--;
+    z80_state.f &= (Z80_FLAG_CARRY | Z80_FLAG_ZERO | Z80_FLAG_SIGN);
+    z80_state.f |= (z80_state.bc ? Z80_FLAG_OVERFLOW : 0);
     used_cycles += 16;
 }
 
@@ -1561,9 +1561,9 @@ static void z80_ed_a8_ldd (void)
 /* CPD */
 static void z80_ed_a9_cpd (void)
 {
-    uint8_t temp = memory_read (z80_regs.hl);
-    z80_regs.hl--;
-    z80_regs.bc--;
+    uint8_t temp = memory_read (z80_state.hl);
+    z80_state.hl--;
+    z80_state.bc--;
     SET_FLAGS_CPD_CPI (temp);
     used_cycles += 16;
 }
@@ -1572,12 +1572,12 @@ static void z80_ed_a9_cpd (void)
 /* IND */
 static void z80_ed_aa_ind (void)
 {
-    memory_write (z80_regs.hl, io_read (z80_regs.c));
-    z80_regs.hl--;
-    z80_regs.b--;
-    z80_regs.f = (z80_regs.f      & Z80_FLAG_CARRY) |
-                 (                  Z80_FLAG_SUB  ) |
-                 (z80_regs.b == 0 ? Z80_FLAG_ZERO : 0);
+    memory_write (z80_state.hl, io_read (z80_state.c));
+    z80_state.hl--;
+    z80_state.b--;
+    z80_state.f = (z80_state.f      & Z80_FLAG_CARRY) |
+                  (                   Z80_FLAG_SUB  ) |
+                  (z80_state.b == 0 ? Z80_FLAG_ZERO : 0);
     used_cycles += 16;
 }
 
@@ -1587,12 +1587,12 @@ static void z80_ed_ab_outd (void)
 {
     /* TODO: Implement 'unknown' flag behaviour.
      *       Described in 'The Undocumented Z80 Documented'. */
-    uint8_t temp = memory_read (z80_regs.hl);
-    z80_regs.b--;
-    io_write (z80_regs.c, temp);
-    z80_regs.hl--;
-    z80_regs.f |= Z80_FLAG_SUB;
-    z80_regs.f = (z80_regs.f & ~Z80_FLAG_ZERO) | (z80_regs.b == 0 ? Z80_FLAG_ZERO : 0);
+    uint8_t temp = memory_read (z80_state.hl);
+    z80_state.b--;
+    io_write (z80_state.c, temp);
+    z80_state.hl--;
+    z80_state.f |= Z80_FLAG_SUB;
+    z80_state.f = (z80_state.f & ~Z80_FLAG_ZERO) | (z80_state.b == 0 ? Z80_FLAG_ZERO : 0);
     used_cycles += 16;
 }
 
@@ -1600,14 +1600,14 @@ static void z80_ed_ab_outd (void)
 /* LDIR */
 static void z80_ed_b0_ldir (void)
 {
-    memory_write (z80_regs.de, memory_read (z80_regs.hl));
-    z80_regs.hl++;
-    z80_regs.de++;
-    z80_regs.bc--;
-    z80_regs.f = (z80_regs.f & (Z80_FLAG_CARRY | Z80_FLAG_ZERO | Z80_FLAG_SIGN)) | (z80_regs.bc ? Z80_FLAG_OVERFLOW : 0);
-    if (z80_regs.bc)
+    memory_write (z80_state.de, memory_read (z80_state.hl));
+    z80_state.hl++;
+    z80_state.de++;
+    z80_state.bc--;
+    z80_state.f = (z80_state.f & (Z80_FLAG_CARRY | Z80_FLAG_ZERO | Z80_FLAG_SIGN)) | (z80_state.bc ? Z80_FLAG_OVERFLOW : 0);
+    if (z80_state.bc)
     {
-        z80_regs.pc -= 2;
+        z80_state.pc -= 2;
         used_cycles += 21;
     }
     else
@@ -1620,12 +1620,12 @@ static void z80_ed_b0_ldir (void)
 /* CPIR */
 static void z80_ed_b1_cpir (void)
 {
-    uint8_t temp = memory_read (z80_regs.hl);
-    z80_regs.hl++;
-    z80_regs.bc--;
-    if (z80_regs.bc != 0 && z80_regs.a != temp)
+    uint8_t temp = memory_read (z80_state.hl);
+    z80_state.hl++;
+    z80_state.bc--;
+    if (z80_state.bc != 0 && z80_state.a != temp)
     {
-        z80_regs.pc -= 2;
+        z80_state.pc -= 2;
         used_cycles += 21;
     }
     else
@@ -1639,17 +1639,17 @@ static void z80_ed_b1_cpir (void)
 /* INIR */
 static void z80_ed_b2_inir (void)
 {
-    memory_write (z80_regs.hl, io_read (z80_regs.c));
-    z80_regs.hl++;
-    z80_regs.b--;
-    z80_regs.f = (z80_regs.f & Z80_FLAG_CARRY) | (Z80_FLAG_SUB | Z80_FLAG_ZERO );
-    if (z80_regs.b == 0)
+    memory_write (z80_state.hl, io_read (z80_state.c));
+    z80_state.hl++;
+    z80_state.b--;
+    z80_state.f = (z80_state.f & Z80_FLAG_CARRY) | (Z80_FLAG_SUB | Z80_FLAG_ZERO );
+    if (z80_state.b == 0)
     {
         used_cycles += 16;
     }
     else
     {
-        z80_regs.pc -= 2;
+        z80_state.pc -= 2;
         used_cycles += 21;
     }
 }
@@ -1658,13 +1658,13 @@ static void z80_ed_b2_inir (void)
 /* OTIR */
 static void z80_ed_b3_otir (void)
 {
-    io_write (z80_regs.c, memory_read (z80_regs.hl));
-    z80_regs.hl++;
-    z80_regs.b--;
-    z80_regs.f = (z80_regs.f & Z80_FLAG_CARRY) | (Z80_FLAG_SUB | Z80_FLAG_ZERO);
-    if (z80_regs.b)
+    io_write (z80_state.c, memory_read (z80_state.hl));
+    z80_state.hl++;
+    z80_state.b--;
+    z80_state.f = (z80_state.f & Z80_FLAG_CARRY) | (Z80_FLAG_SUB | Z80_FLAG_ZERO);
+    if (z80_state.b)
     {
-        z80_regs.pc -= 2;
+        z80_state.pc -= 2;
         used_cycles += 21;
     }
     else
@@ -1677,14 +1677,14 @@ static void z80_ed_b3_otir (void)
 /* LDDR */
 static void z80_ed_b8_lddr (void)
 {
-    memory_write (z80_regs.de, memory_read (z80_regs.hl));
-    z80_regs.hl--;
-    z80_regs.de--;
-    z80_regs.bc--;
-    z80_regs.f = (z80_regs.f & (Z80_FLAG_CARRY | Z80_FLAG_ZERO | Z80_FLAG_SIGN)) | (z80_regs.bc ? Z80_FLAG_OVERFLOW : 0);
-    if (z80_regs.bc)
+    memory_write (z80_state.de, memory_read (z80_state.hl));
+    z80_state.hl--;
+    z80_state.de--;
+    z80_state.bc--;
+    z80_state.f = (z80_state.f & (Z80_FLAG_CARRY | Z80_FLAG_ZERO | Z80_FLAG_SIGN)) | (z80_state.bc ? Z80_FLAG_OVERFLOW : 0);
+    if (z80_state.bc)
     {
-        z80_regs.pc -= 2;
+        z80_state.pc -= 2;
         used_cycles += 21;
     }
     else
@@ -1697,13 +1697,13 @@ static void z80_ed_b8_lddr (void)
 /* CPDR */
 static void z80_ed_b9_cpdr (void)
 {
-    uint8_t temp = memory_read (z80_regs.hl);
-    z80_regs.hl--;
-    z80_regs.bc--;
+    uint8_t temp = memory_read (z80_state.hl);
+    z80_state.hl--;
+    z80_state.bc--;
     SET_FLAGS_CPD_CPI (temp);
-    if (z80_regs.bc != 0 && z80_regs.a != temp)
+    if (z80_state.bc != 0 && z80_state.a != temp)
     {
-        z80_regs.pc -= 2;
+        z80_state.pc -= 2;
         used_cycles += 21;
     }
     else
@@ -1716,17 +1716,17 @@ static void z80_ed_b9_cpdr (void)
 /* INDR */
 static void z80_ed_ba_indr (void)
 {
-    memory_write (z80_regs.hl, io_read (z80_regs.c));
-    z80_regs.hl--;
-    z80_regs.b--;
-    z80_regs.f = (z80_regs.f & Z80_FLAG_CARRY) | (Z80_FLAG_SUB | Z80_FLAG_ZERO );
-    if (z80_regs.b == 0)
+    memory_write (z80_state.hl, io_read (z80_state.c));
+    z80_state.hl--;
+    z80_state.b--;
+    z80_state.f = (z80_state.f & Z80_FLAG_CARRY) | (Z80_FLAG_SUB | Z80_FLAG_ZERO );
+    if (z80_state.b == 0)
     {
         used_cycles += 16;
     }
     else
     {
-        z80_regs.pc -= 2;
+        z80_state.pc -= 2;
         used_cycles += 21;
     }
 }
@@ -1735,13 +1735,13 @@ static void z80_ed_ba_indr (void)
 /* OTDR */
 static void z80_ed_bb_otdr (void)
 {
-    io_write (z80_regs.c, memory_read (z80_regs.hl));
-    z80_regs.hl--;
-    z80_regs.b--;
-    z80_regs.f = (z80_regs.f & Z80_FLAG_CARRY) | (Z80_FLAG_SUB | Z80_FLAG_ZERO);
-    if (z80_regs.b)
+    io_write (z80_state.c, memory_read (z80_state.hl));
+    z80_state.hl--;
+    z80_state.b--;
+    z80_state.f = (z80_state.f & Z80_FLAG_CARRY) | (Z80_FLAG_SUB | Z80_FLAG_ZERO);
+    if (z80_state.b)
     {
-        z80_regs.pc -= 2;
+        z80_state.pc -= 2;
         used_cycles += 21;
     }
     else
@@ -1839,8 +1839,8 @@ static void z80_00_nop (void)
 /* LD BC, ** */
 static void z80_01_ld_bc_xx (void)
 {
-    z80_regs.c = memory_read (z80_regs.pc++);
-    z80_regs.b = memory_read (z80_regs.pc++);
+    z80_state.c = memory_read (z80_state.pc++);
+    z80_state.b = memory_read (z80_state.pc++);
     used_cycles += 10;
 }
 
@@ -1848,7 +1848,7 @@ static void z80_01_ld_bc_xx (void)
 /* LD (BC), A */
 static void z80_02_ld_bc_a (void)
 {
-    memory_write (z80_regs.bc, z80_regs.a);
+    memory_write (z80_state.bc, z80_state.a);
     used_cycles += 7;
 }
 
@@ -1856,7 +1856,7 @@ static void z80_02_ld_bc_a (void)
 /* INC BC */
 static void z80_03_inc_bc (void)
 {
-    z80_regs.bc++;
+    z80_state.bc++;
     used_cycles += 6;
 }
 
@@ -1864,8 +1864,8 @@ static void z80_03_inc_bc (void)
 /* INC B */
 static void z80_04_inc_b (void)
 {
-    z80_regs.b++;
-    SET_FLAGS_INC (z80_regs.b);
+    z80_state.b++;
+    SET_FLAGS_INC (z80_state.b);
     used_cycles += 4;
 }
 
@@ -1873,8 +1873,8 @@ static void z80_04_inc_b (void)
 /* DEC B */
 static void z80_05_dec_b (void)
 {
-    z80_regs.b--;
-    SET_FLAGS_DEC (z80_regs.b);
+    z80_state.b--;
+    SET_FLAGS_DEC (z80_state.b);
     used_cycles += 4;
 }
 
@@ -1882,7 +1882,7 @@ static void z80_05_dec_b (void)
 /* LD B, * */
 static void z80_06_ld_b_x (void)
 {
-    z80_regs.b = memory_read (z80_regs.pc++);
+    z80_state.b = memory_read (z80_state.pc++);
     used_cycles += 7;
 }
 
@@ -1890,8 +1890,8 @@ static void z80_06_ld_b_x (void)
 /* RLCA */
 static void z80_07_rlca (void)
 {
-    z80_regs.a = (z80_regs.a << 1) | (z80_regs.a >> 7);
-    SET_FLAGS_RLCA (z80_regs.a);
+    z80_state.a = (z80_state.a << 1) | (z80_state.a >> 7);
+    SET_FLAGS_RLCA (z80_state.a);
     used_cycles += 4;
 }
 
@@ -1899,7 +1899,7 @@ static void z80_07_rlca (void)
 /* EX AF AF' */
 static void z80_08_ex_af_af (void)
 {
-    SWAP (uint16_t, z80_regs.af, z80_regs.alt_af);
+    SWAP (uint16_t, z80_state.af, z80_state.af_alt);
     used_cycles += 4;
 }
 
@@ -1907,8 +1907,8 @@ static void z80_08_ex_af_af (void)
 /* ADD HL, BC */
 static void z80_09_add_hl_bc (void)
 {
-    SET_FLAGS_ADD_16 (z80_regs.hl, z80_regs.bc);
-    z80_regs.hl += z80_regs.bc;
+    SET_FLAGS_ADD_16 (z80_state.hl, z80_state.bc);
+    z80_state.hl += z80_state.bc;
     used_cycles += 11;
 }
 
@@ -1916,7 +1916,7 @@ static void z80_09_add_hl_bc (void)
 /* LD A, (BC) */
 static void z80_0a_ld_a_bc (void)
 {
-    z80_regs.a = memory_read (z80_regs.bc);
+    z80_state.a = memory_read (z80_state.bc);
     used_cycles += 7;
 }
 
@@ -1924,7 +1924,7 @@ static void z80_0a_ld_a_bc (void)
 /* DEC BC */
 static void z80_0b_dec_bc (void)
 {
-    z80_regs.bc--;
+    z80_state.bc--;
     used_cycles += 6;
 }
 
@@ -1932,8 +1932,8 @@ static void z80_0b_dec_bc (void)
 /* INC C */
 static void z80_0c_inc_c (void)
 {
-    z80_regs.c++;
-    SET_FLAGS_INC (z80_regs.c);
+    z80_state.c++;
+    SET_FLAGS_INC (z80_state.c);
     used_cycles += 4;
 }
 
@@ -1941,8 +1941,8 @@ static void z80_0c_inc_c (void)
 /* DEC C */
 static void z80_0d_dec_c (void)
 {
-    z80_regs.c--;
-    SET_FLAGS_DEC (z80_regs.c);
+    z80_state.c--;
+    SET_FLAGS_DEC (z80_state.c);
     used_cycles += 4;
 }
 
@@ -1950,7 +1950,7 @@ static void z80_0d_dec_c (void)
 /* LD C, * */
 static void z80_0e_ld_c_x (void)
 {
-    z80_regs.c = memory_read (z80_regs.pc++);
+    z80_state.c = memory_read (z80_state.pc++);
     used_cycles += 7;
 }
 
@@ -1959,7 +1959,7 @@ static void z80_0e_ld_c_x (void)
 static void z80_0f_rrca (void)
 {
     A = (A >> 1) | (A << 7);
-    z80_regs.f = (z80_regs.f & (Z80_FLAG_PARITY | Z80_FLAG_ZERO | Z80_FLAG_SIGN)) | ((A & 0x80) ? Z80_FLAG_CARRY : 0);
+    z80_state.f = (z80_state.f & (Z80_FLAG_PARITY | Z80_FLAG_ZERO | Z80_FLAG_SIGN)) | ((A & 0x80) ? Z80_FLAG_CARRY : 0);
     used_cycles += 4;
 }
 
@@ -1967,11 +1967,11 @@ static void z80_0f_rrca (void)
 /* DJNZ */
 static void z80_10_djnz (void)
 {
-    uint8_t imm = memory_read (z80_regs.pc++);
+    uint8_t imm = memory_read (z80_state.pc++);
 
-    if (--z80_regs.b)
+    if (--z80_state.b)
     {
-        z80_regs.pc += (int8_t) imm;
+        z80_state.pc += (int8_t) imm;
         used_cycles += 13;
     }
     else
@@ -1984,8 +1984,8 @@ static void z80_10_djnz (void)
 /* LD DE, ** */
 static void z80_11_ld_de_xx (void)
 {
-    z80_regs.e = memory_read (z80_regs.pc++);
-    z80_regs.d = memory_read (z80_regs.pc++);
+    z80_state.e = memory_read (z80_state.pc++);
+    z80_state.d = memory_read (z80_state.pc++);
     used_cycles += 10;
 }
 
@@ -1993,7 +1993,7 @@ static void z80_11_ld_de_xx (void)
 /* LD (DE), A */
 static void z80_12_ld_de_a (void)
 {
-    memory_write (z80_regs.de, z80_regs.a);
+    memory_write (z80_state.de, z80_state.a);
     used_cycles += 7;
 }
 
@@ -2001,7 +2001,7 @@ static void z80_12_ld_de_a (void)
 /* INC DE */
 static void z80_13_inc_de (void)
 {
-    z80_regs.de++;
+    z80_state.de++;
     used_cycles += 6;
 }
 
@@ -2009,8 +2009,8 @@ static void z80_13_inc_de (void)
 /* INC D */
 static void z80_14_inc_d (void)
 {
-    z80_regs.d++;
-    SET_FLAGS_INC (z80_regs.d);
+    z80_state.d++;
+    SET_FLAGS_INC (z80_state.d);
     used_cycles += 4;
 }
 
@@ -2018,8 +2018,8 @@ static void z80_14_inc_d (void)
 /* DEC D */
 static void z80_15_dec_d (void)
 {
-    z80_regs.d--;
-    SET_FLAGS_DEC (z80_regs.d);
+    z80_state.d--;
+    SET_FLAGS_DEC (z80_state.d);
     used_cycles += 4;
 }
 
@@ -2027,7 +2027,7 @@ static void z80_15_dec_d (void)
 /* LD D, * */
 static void z80_16_ld_d_x (void)
 {
-    z80_regs.d = memory_read (z80_regs.pc++);
+    z80_state.d = memory_read (z80_state.pc++);
     used_cycles += 7;
 }
 
@@ -2035,9 +2035,9 @@ static void z80_16_ld_d_x (void)
 /* RLA */
 static void z80_17_rla (void)
 {
-    uint8_t temp = z80_regs.a;
-    z80_regs.a = (z80_regs.a << 1) + CARRY_BIT;
-    z80_regs.f = (z80_regs.f & (Z80_FLAG_PARITY | Z80_FLAG_ZERO | Z80_FLAG_SIGN)) | ((temp & 0x80) ? Z80_FLAG_CARRY : 0);
+    uint8_t temp = z80_state.a;
+    z80_state.a = (z80_state.a << 1) + CARRY_BIT;
+    z80_state.f = (z80_state.f & (Z80_FLAG_PARITY | Z80_FLAG_ZERO | Z80_FLAG_SIGN)) | ((temp & 0x80) ? Z80_FLAG_CARRY : 0);
     used_cycles += 4;
 }
 
@@ -2045,8 +2045,8 @@ static void z80_17_rla (void)
 /* JR */
 static void z80_18_jr (void)
 {
-    uint8_t imm = memory_read (z80_regs.pc++);
-    z80_regs.pc += (int8_t) imm;
+    uint8_t imm = memory_read (z80_state.pc++);
+    z80_state.pc += (int8_t) imm;
     used_cycles += 12;
 }
 
@@ -2054,8 +2054,8 @@ static void z80_18_jr (void)
 /* ADD HL, DE */
 static void z80_19_add_hl_de (void)
 {
-    SET_FLAGS_ADD_16 (z80_regs.hl, z80_regs.de);
-    z80_regs.hl += z80_regs.de;
+    SET_FLAGS_ADD_16 (z80_state.hl, z80_state.de);
+    z80_state.hl += z80_state.de;
     used_cycles += 11;
 }
 
@@ -2063,7 +2063,7 @@ static void z80_19_add_hl_de (void)
 /* LD A, (DE) */
 static void z80_1a_ld_a_de (void)
 {
-    z80_regs.a = memory_read (z80_regs.de);
+    z80_state.a = memory_read (z80_state.de);
     used_cycles += 7;
 }
 
@@ -2071,7 +2071,7 @@ static void z80_1a_ld_a_de (void)
 /* DEC DE */
 static void z80_1b_dec_de (void)
 {
-    z80_regs.de--;
+    z80_state.de--;
     used_cycles += 6;
 }
 
@@ -2079,8 +2079,8 @@ static void z80_1b_dec_de (void)
 /* INC E */
 static void z80_1c_inc_e (void)
 {
-    z80_regs.e++;
-    SET_FLAGS_INC (z80_regs.e);
+    z80_state.e++;
+    SET_FLAGS_INC (z80_state.e);
     used_cycles += 4;
 }
 
@@ -2088,8 +2088,8 @@ static void z80_1c_inc_e (void)
 /* DEC E */
 static void z80_1d_dec_e (void)
 {
-    z80_regs.e--;
-    SET_FLAGS_DEC (z80_regs.e);
+    z80_state.e--;
+    SET_FLAGS_DEC (z80_state.e);
     used_cycles += 4;
 }
 
@@ -2097,7 +2097,7 @@ static void z80_1d_dec_e (void)
 /* LD E, * */
 static void z80_1e_ld_e_x (void)
 {
-    z80_regs.e = memory_read (z80_regs.pc++);
+    z80_state.e = memory_read (z80_state.pc++);
     used_cycles += 7;
 }
 
@@ -2105,9 +2105,9 @@ static void z80_1e_ld_e_x (void)
 /* RRA */
 static void z80_1f_rra (void)
 {
-    uint8_t temp = z80_regs.a;
-    z80_regs.a = (z80_regs.a >> 1) + ((z80_regs.f & Z80_FLAG_CARRY) ? 0x80 : 0);
-    z80_regs.f = (z80_regs.f & (Z80_FLAG_PARITY | Z80_FLAG_ZERO | Z80_FLAG_SIGN)) | ((temp & 0x01) ? Z80_FLAG_CARRY : 0);
+    uint8_t temp = z80_state.a;
+    z80_state.a = (z80_state.a >> 1) + ((z80_state.f & Z80_FLAG_CARRY) ? 0x80 : 0);
+    z80_state.f = (z80_state.f & (Z80_FLAG_PARITY | Z80_FLAG_ZERO | Z80_FLAG_SIGN)) | ((temp & 0x01) ? Z80_FLAG_CARRY : 0);
     used_cycles += 4;
 }
 
@@ -2115,11 +2115,11 @@ static void z80_1f_rra (void)
 /* JR NZ */
 static void z80_20_jr_nz (void)
 {
-    uint8_t imm = memory_read (z80_regs.pc++);
+    uint8_t imm = memory_read (z80_state.pc++);
 
-    if (!(z80_regs.f & Z80_FLAG_ZERO))
+    if (!(z80_state.f & Z80_FLAG_ZERO))
     {
-        z80_regs.pc += (int8_t) imm;
+        z80_state.pc += (int8_t) imm;
         used_cycles += 12;
     }
     else
@@ -2132,8 +2132,8 @@ static void z80_20_jr_nz (void)
 /* LD HL, ** */
 static void z80_21_ld_hl_xx (void)
 {
-    z80_regs.l = memory_read (z80_regs.pc++);
-    z80_regs.h = memory_read (z80_regs.pc++);
+    z80_state.l = memory_read (z80_state.pc++);
+    z80_state.h = memory_read (z80_state.pc++);
     used_cycles += 10;
 }
 
@@ -2142,10 +2142,10 @@ static void z80_21_ld_hl_xx (void)
 static void z80_22_ld_xx_hl (void)
 {
     uint16_t_Split addr;
-    addr.l = memory_read (z80_regs.pc++);
-    addr.h = memory_read (z80_regs.pc++);
-    memory_write (addr.w,     z80_regs.l);
-    memory_write (addr.w + 1, z80_regs.h);
+    addr.l = memory_read (z80_state.pc++);
+    addr.h = memory_read (z80_state.pc++);
+    memory_write (addr.w,     z80_state.l);
+    memory_write (addr.w + 1, z80_state.h);
     used_cycles += 16;
 }
 
@@ -2153,7 +2153,7 @@ static void z80_22_ld_xx_hl (void)
 /* INC HL */
 static void z80_23_inc_hl (void)
 {
-    z80_regs.hl++;
+    z80_state.hl++;
     used_cycles += 6;
 }
 
@@ -2161,8 +2161,8 @@ static void z80_23_inc_hl (void)
 /* INC H */
 static void z80_24_inc_h (void)
 {
-    z80_regs.h++;
-    SET_FLAGS_INC (z80_regs.h);
+    z80_state.h++;
+    SET_FLAGS_INC (z80_state.h);
     used_cycles += 4;
 }
 
@@ -2170,8 +2170,8 @@ static void z80_24_inc_h (void)
 /* DEC H */
 static void z80_25_dec_h (void)
 {
-    z80_regs.h--;
-    SET_FLAGS_DEC (z80_regs.h);
+    z80_state.h--;
+    SET_FLAGS_DEC (z80_state.h);
     used_cycles += 4;
 }
 
@@ -2179,7 +2179,7 @@ static void z80_25_dec_h (void)
 /* LD H, * */
 static void z80_26_ld_h_x (void)
 {
-    z80_regs.h = memory_read (z80_regs.pc++);
+    z80_state.h = memory_read (z80_state.pc++);
     used_cycles += 7;
 }
 
@@ -2192,56 +2192,56 @@ static void z80_27_daa (void)
     uint8_t diff = 0x00;
 
     /* Calculate diff to apply */
-    switch (z80_regs.f & (Z80_FLAG_CARRY | Z80_FLAG_HALF))
+    switch (z80_state.f & (Z80_FLAG_CARRY | Z80_FLAG_HALF))
     {
         case Z80_FLAG_NONE:
-                 if ((z80_regs.a & 0xf0) < 0xa0 && (z80_regs.a & 0x0f) < 0x0a)    diff = 0x00;
-            else if ((z80_regs.a & 0xf0) < 0x90 && (z80_regs.a & 0x0f) > 0x09)    diff = 0x06;
-            else if ((z80_regs.a & 0xf0) > 0x90 && (z80_regs.a & 0x0f) < 0x0a)    diff = 0x60;
-            else if ((z80_regs.a & 0xf0) > 0x80 && (z80_regs.a & 0x0f) > 0x09)    diff = 0x66;
+                 if ((z80_state.a & 0xf0) < 0xa0 && (z80_state.a & 0x0f) < 0x0a)    diff = 0x00;
+            else if ((z80_state.a & 0xf0) < 0x90 && (z80_state.a & 0x0f) > 0x09)    diff = 0x06;
+            else if ((z80_state.a & 0xf0) > 0x90 && (z80_state.a & 0x0f) < 0x0a)    diff = 0x60;
+            else if ((z80_state.a & 0xf0) > 0x80 && (z80_state.a & 0x0f) > 0x09)    diff = 0x66;
             break;
         case Z80_FLAG_HALF:
-                 if ((z80_regs.a & 0xf0) < 0xa0 && (z80_regs.a & 0x0f) < 0x0a)    diff = 0x06;
-            else if ((z80_regs.a & 0xf0) < 0x90 && (z80_regs.a & 0x0f) > 0x09)    diff = 0x06;
-            else if ((z80_regs.a & 0xf0) > 0x80 && (z80_regs.a & 0x0f) > 0x09)    diff = 0x66;
-            else if ((z80_regs.a & 0xf0) > 0x90 && (z80_regs.a & 0x0f) < 0x0a)    diff = 0x66;
+                 if ((z80_state.a & 0xf0) < 0xa0 && (z80_state.a & 0x0f) < 0x0a)    diff = 0x06;
+            else if ((z80_state.a & 0xf0) < 0x90 && (z80_state.a & 0x0f) > 0x09)    diff = 0x06;
+            else if ((z80_state.a & 0xf0) > 0x80 && (z80_state.a & 0x0f) > 0x09)    diff = 0x66;
+            else if ((z80_state.a & 0xf0) > 0x90 && (z80_state.a & 0x0f) < 0x0a)    diff = 0x66;
             break;
         case Z80_FLAG_CARRY:
-                 if (                              (z80_regs.a & 0x0f) < 0x0a)    diff = 0x60;
-            else if (                              (z80_regs.a & 0x0f) > 0x09)    diff = 0x66;
+                 if (                              (z80_state.a & 0x0f) < 0x0a)     diff = 0x60;
+            else if (                              (z80_state.a & 0x0f) > 0x09)     diff = 0x66;
             break;
         case Z80_FLAG_CARRY | Z80_FLAG_HALF:
-                                                                                  diff = 0x66;
+                                                                                    diff = 0x66;
             break;
     }
 
     /* Calculate carry out */
-    if (((z80_regs.a & 0xf0) > 0x80 && (z80_regs.a & 0x0f) > 0x09) ||
-        ((z80_regs.a & 0xf0) > 0x90 && (z80_regs.a & 0x0f) < 0x0a) ||
-        (z80_regs.f & Z80_FLAG_CARRY))
+    if (((z80_state.a & 0xf0) > 0x80 && (z80_state.a & 0x0f) > 0x09) ||
+        ((z80_state.a & 0xf0) > 0x90 && (z80_state.a & 0x0f) < 0x0a) ||
+        (z80_state.f & Z80_FLAG_CARRY))
     {
         set_carry = true;
     }
 
     /* Calculate half-carry out */
-    if ( (!(z80_regs.f & Z80_FLAG_SUB) && (z80_regs.a & 0x0f) > 0x09) ||
-         ( (z80_regs.f & Z80_FLAG_SUB) && (z80_regs.f & Z80_FLAG_HALF) && (z80_regs.a & 0x0f) < 0x06))
+    if ( (!(z80_state.f & Z80_FLAG_SUB) && (z80_state.a & 0x0f) > 0x09) ||
+         ( (z80_state.f & Z80_FLAG_SUB) && (z80_state.f & Z80_FLAG_HALF) && (z80_state.a & 0x0f) < 0x06))
     {
         set_half = true;
     }
 
     /* Apply diff */
-    if (z80_regs.f & Z80_FLAG_SUB)
-        z80_regs.a -= diff;
+    if (z80_state.f & Z80_FLAG_SUB)
+        z80_state.a -= diff;
     else
-        z80_regs.a += diff;
+        z80_state.a += diff;
 
-    z80_regs.f = (z80_regs.f            & Z80_FLAG_SUB       ) |
-                 (uint8_even_parity [A] ? Z80_FLAG_PARITY : 0) |
-                 (set_carry             ? Z80_FLAG_CARRY  : 0) |
-                 (set_half              ? Z80_FLAG_HALF   : 0) |
-                 (z80_regs.a == 0x00    ? Z80_FLAG_ZERO   : 0) |
-                 (z80_regs.a & 0x80     ? Z80_FLAG_SIGN   : 0);
+    z80_state.f = (z80_state.f            & Z80_FLAG_SUB       ) |
+                  (uint8_even_parity [A]  ? Z80_FLAG_PARITY : 0) |
+                  (set_carry              ? Z80_FLAG_CARRY  : 0) |
+                  (set_half               ? Z80_FLAG_HALF   : 0) |
+                  (z80_state.a == 0x00    ? Z80_FLAG_ZERO   : 0) |
+                  (z80_state.a & 0x80     ? Z80_FLAG_SIGN   : 0);
 
     used_cycles += 4;
 }
@@ -2250,11 +2250,11 @@ static void z80_27_daa (void)
 /* JR Z */
 static void z80_28_jr_z (void)
 {
-    uint8_t imm = memory_read (z80_regs.pc++);
+    uint8_t imm = memory_read (z80_state.pc++);
 
-    if (z80_regs.f & Z80_FLAG_ZERO)
+    if (z80_state.f & Z80_FLAG_ZERO)
     {
-        z80_regs.pc += (int8_t) imm;
+        z80_state.pc += (int8_t) imm;
         used_cycles += 12;
     }
     else
@@ -2267,8 +2267,8 @@ static void z80_28_jr_z (void)
 /* ADD HL, HL */
 static void z80_29_add_hl_hl (void)
 {
-    SET_FLAGS_ADD_16 (z80_regs.hl, z80_regs.hl);
-    z80_regs.hl += z80_regs.hl;
+    SET_FLAGS_ADD_16 (z80_state.hl, z80_state.hl);
+    z80_state.hl += z80_state.hl;
     used_cycles += 11;
 }
 
@@ -2277,10 +2277,10 @@ static void z80_29_add_hl_hl (void)
 static void z80_2a_ld_hl_xx (void)
 {
     uint16_t_Split addr;
-    addr.l = memory_read (z80_regs.pc++);
-    addr.h = memory_read (z80_regs.pc++);
-    z80_regs.l = memory_read (addr.w);
-    z80_regs.h = memory_read (addr.w + 1);
+    addr.l = memory_read (z80_state.pc++);
+    addr.h = memory_read (z80_state.pc++);
+    z80_state.l = memory_read (addr.w);
+    z80_state.h = memory_read (addr.w + 1);
     used_cycles += 16;
 }
 
@@ -2288,7 +2288,7 @@ static void z80_2a_ld_hl_xx (void)
 /* DEC HL */
 static void z80_2b_dec_hl (void)
 {
-    z80_regs.hl--;
+    z80_state.hl--;
     used_cycles += 6;
 }
 
@@ -2296,8 +2296,8 @@ static void z80_2b_dec_hl (void)
 /* INC L */
 static void z80_2c_inc_l (void)
 {
-    z80_regs.l++;
-    SET_FLAGS_INC (z80_regs.l);
+    z80_state.l++;
+    SET_FLAGS_INC (z80_state.l);
     used_cycles += 4;
 }
 
@@ -2305,8 +2305,8 @@ static void z80_2c_inc_l (void)
 /* DEC L */
 static void z80_2d_dec_l (void)
 {
-    z80_regs.l--;
-    SET_FLAGS_DEC (z80_regs.l);
+    z80_state.l--;
+    SET_FLAGS_DEC (z80_state.l);
     used_cycles += 4;
 }
 
@@ -2314,7 +2314,7 @@ static void z80_2d_dec_l (void)
 /* LD L, * */
 static void z80_2e_ld_l_x (void)
 {
-    z80_regs.l = memory_read (z80_regs.pc++);
+    z80_state.l = memory_read (z80_state.pc++);
     used_cycles += 7;
 }
 
@@ -2322,8 +2322,8 @@ static void z80_2e_ld_l_x (void)
 /* CPL */
 static void z80_2f_cpl (void)
 {
-    z80_regs.a = ~z80_regs.a;
-    z80_regs.f |= Z80_FLAG_HALF | Z80_FLAG_SUB;
+    z80_state.a = ~z80_state.a;
+    z80_state.f |= Z80_FLAG_HALF | Z80_FLAG_SUB;
     used_cycles += 4;
 }
 
@@ -2331,15 +2331,15 @@ static void z80_2f_cpl (void)
 /* JR NC */
 static void z80_30_jr_nc (void)
 {
-    uint8_t imm = memory_read (z80_regs.pc++);
+    uint8_t imm = memory_read (z80_state.pc++);
 
-    if (z80_regs.f & Z80_FLAG_CARRY)
+    if (z80_state.f & Z80_FLAG_CARRY)
     {
         used_cycles += 7;
     }
     else
     {
-        z80_regs.pc += (int8_t) imm;
+        z80_state.pc += (int8_t) imm;
         used_cycles += 12;
     }
 }
@@ -2348,8 +2348,8 @@ static void z80_30_jr_nc (void)
 /* LD SP, ** */
 static void z80_31_ld_sp_xx (void)
 {
-    z80_regs.sp_l = memory_read (z80_regs.pc++);
-    z80_regs.sp_h = memory_read (z80_regs.pc++);
+    z80_state.sp_l = memory_read (z80_state.pc++);
+    z80_state.sp_h = memory_read (z80_state.pc++);
     used_cycles += 10;
 }
 
@@ -2358,9 +2358,9 @@ static void z80_31_ld_sp_xx (void)
 static void z80_32_ld_xx_a (void)
 {
     uint16_t_Split addr;
-    addr.l = memory_read (z80_regs.pc++);
-    addr.h = memory_read (z80_regs.pc++);
-    memory_write (addr.w, z80_regs.a);
+    addr.l = memory_read (z80_state.pc++);
+    addr.h = memory_read (z80_state.pc++);
+    memory_write (addr.w, z80_state.a);
     used_cycles += 13;
 }
 
@@ -2368,7 +2368,7 @@ static void z80_32_ld_xx_a (void)
 /* INC SP */
 static void z80_33_inc_sp (void)
 {
-    z80_regs.sp++;
+    z80_state.sp++;
     used_cycles += 6;
 }
 
@@ -2376,9 +2376,9 @@ static void z80_33_inc_sp (void)
 /* INC (HL) */
 static void z80_34_inc_hl (void)
 {
-    uint8_t value = memory_read (z80_regs.hl);
+    uint8_t value = memory_read (z80_state.hl);
     value++;
-    memory_write (z80_regs.hl, value);
+    memory_write (z80_state.hl, value);
     SET_FLAGS_INC (value);
     used_cycles += 11;
 }
@@ -2387,9 +2387,9 @@ static void z80_34_inc_hl (void)
 /* DEC (HL) */
 static void z80_35_dec_hl (void)
 {
-    uint8_t value = memory_read (z80_regs.hl);
+    uint8_t value = memory_read (z80_state.hl);
     value--;
-    memory_write (z80_regs.hl, value);
+    memory_write (z80_state.hl, value);
     SET_FLAGS_DEC (value);
     used_cycles += 11;
 }
@@ -2398,7 +2398,7 @@ static void z80_35_dec_hl (void)
 /* LD (HL), * */
 static void z80_36_ld_hl_x (void)
 {
-    memory_write (z80_regs.hl, memory_read (z80_regs.pc++));
+    memory_write (z80_state.hl, memory_read (z80_state.pc++));
     used_cycles += 10;
 }
 
@@ -2406,7 +2406,7 @@ static void z80_36_ld_hl_x (void)
 /* SCF */
 static void z80_37_scf (void)
 {
-    z80_regs.f = (z80_regs.f & (Z80_FLAG_SIGN | Z80_FLAG_ZERO | Z80_FLAG_OVERFLOW)) | Z80_FLAG_CARRY;
+    z80_state.f = (z80_state.f & (Z80_FLAG_SIGN | Z80_FLAG_ZERO | Z80_FLAG_OVERFLOW)) | Z80_FLAG_CARRY;
     used_cycles += 4;
 }
 
@@ -2414,11 +2414,11 @@ static void z80_37_scf (void)
 /* JR C, * */
 static void z80_38_jr_c_x (void)
 {
-    uint8_t imm = memory_read (z80_regs.pc++);
+    uint8_t imm = memory_read (z80_state.pc++);
 
-    if (z80_regs.f & Z80_FLAG_CARRY)
+    if (z80_state.f & Z80_FLAG_CARRY)
     {
-        z80_regs.pc += (int8_t) imm;
+        z80_state.pc += (int8_t) imm;
         used_cycles += 12;
     }
     else
@@ -2431,8 +2431,8 @@ static void z80_38_jr_c_x (void)
 /* ADD HL, SP */
 static void z80_39_add_hl_sp (void)
 {
-    SET_FLAGS_ADD_16 (z80_regs.hl, z80_regs.sp);
-    z80_regs.hl += z80_regs.sp;
+    SET_FLAGS_ADD_16 (z80_state.hl, z80_state.sp);
+    z80_state.hl += z80_state.sp;
     used_cycles += 11;
 }
 
@@ -2441,9 +2441,9 @@ static void z80_39_add_hl_sp (void)
 static void z80_3a_ld_a_xx (void)
 {
     uint16_t_Split addr;
-    addr.l = memory_read (z80_regs.pc++);
-    addr.h = memory_read (z80_regs.pc++);
-    z80_regs.a = memory_read (addr.w);
+    addr.l = memory_read (z80_state.pc++);
+    addr.h = memory_read (z80_state.pc++);
+    z80_state.a = memory_read (addr.w);
     used_cycles += 13;
 }
 
@@ -2451,7 +2451,7 @@ static void z80_3a_ld_a_xx (void)
 /* DEC SP */
 static void z80_3b_dec_sp (void)
 {
-    z80_regs.sp--;
+    z80_state.sp--;
     used_cycles += 6;
 }
 
@@ -2459,16 +2459,16 @@ static void z80_3b_dec_sp (void)
 /* INC A */
 static void z80_3c_inc_a (void)
 {
-    z80_regs.a++;
-    SET_FLAGS_INC (z80_regs.a);
+    z80_state.a++;
+    SET_FLAGS_INC (z80_state.a);
     used_cycles += 4;
 }
 
 /* DEC A */
 static void z80_3d_dec_a (void)
 {
-    z80_regs.a--;
-    SET_FLAGS_DEC (z80_regs.a);
+    z80_state.a--;
+    SET_FLAGS_DEC (z80_state.a);
     used_cycles += 4;
 }
 
@@ -2476,7 +2476,7 @@ static void z80_3d_dec_a (void)
 /* LD A, * */
 static void z80_3e_ld_a_x (void)
 {
-    z80_regs.a = memory_read (z80_regs.pc++);
+    z80_state.a = memory_read (z80_state.pc++);
     used_cycles += 7;
 }
 
@@ -2484,7 +2484,7 @@ static void z80_3e_ld_a_x (void)
 /* CCF */
 static void z80_3f_ccf (void)
 {
-    z80_regs.f = (z80_regs.f & (Z80_FLAG_SIGN | Z80_FLAG_ZERO | Z80_FLAG_OVERFLOW)) | (CARRY_BIT ? Z80_FLAG_HALF : Z80_FLAG_CARRY);
+    z80_state.f = (z80_state.f & (Z80_FLAG_SIGN | Z80_FLAG_ZERO | Z80_FLAG_OVERFLOW)) | (CARRY_BIT ? Z80_FLAG_HALF : Z80_FLAG_CARRY);
     used_cycles += 4;
 }
 
@@ -2499,7 +2499,7 @@ static void z80_40_ld_b_b (void)
 /* LD B, C */
 static void z80_41_ld_b_c (void)
 {
-    z80_regs.b = z80_regs.c;
+    z80_state.b = z80_state.c;
     used_cycles += 4;
 }
 
@@ -2507,7 +2507,7 @@ static void z80_41_ld_b_c (void)
 /* LD B, D */
 static void z80_42_ld_b_d (void)
 {
-    z80_regs.b = z80_regs.d;
+    z80_state.b = z80_state.d;
     used_cycles += 4;
 }
 
@@ -2515,7 +2515,7 @@ static void z80_42_ld_b_d (void)
 /* LD B, E */
 static void z80_43_ld_b_e (void)
 {
-    z80_regs.b = z80_regs.e;
+    z80_state.b = z80_state.e;
     used_cycles += 4;
 }
 
@@ -2523,7 +2523,7 @@ static void z80_43_ld_b_e (void)
 /* LD B, H */
 static void z80_44_ld_b_h (void)
 {
-    z80_regs.b = z80_regs.h;
+    z80_state.b = z80_state.h;
     used_cycles += 4;
 }
 
@@ -2531,7 +2531,7 @@ static void z80_44_ld_b_h (void)
 /* LD B, L */
 static void z80_45_ld_b_l (void)
 {
-    z80_regs.b = z80_regs.l;
+    z80_state.b = z80_state.l;
     used_cycles += 4;
 }
 
@@ -2539,7 +2539,7 @@ static void z80_45_ld_b_l (void)
 /* LD B, (HL) */
 static void z80_46_ld_b_hl (void)
 {
-    z80_regs.b = memory_read (z80_regs.hl);
+    z80_state.b = memory_read (z80_state.hl);
     used_cycles += 7;
 }
 
@@ -2547,7 +2547,7 @@ static void z80_46_ld_b_hl (void)
 /* LD B, A */
 static void z80_47_ld_b_a (void)
 {
-    z80_regs.b = z80_regs.a;
+    z80_state.b = z80_state.a;
     used_cycles += 4;
 }
 
@@ -2555,7 +2555,7 @@ static void z80_47_ld_b_a (void)
 /* LD C, B */
 static void z80_48_ld_c_b (void)
 {
-    z80_regs.c = z80_regs.b;
+    z80_state.c = z80_state.b;
     used_cycles += 4;
 }
 
@@ -2570,7 +2570,7 @@ static void z80_49_ld_c_c (void)
 /* LD C, D */
 static void z80_4a_ld_c_d (void)
 {
-    z80_regs.c = z80_regs.d;
+    z80_state.c = z80_state.d;
     used_cycles += 4;
 }
 
@@ -2578,7 +2578,7 @@ static void z80_4a_ld_c_d (void)
 /* LD C, E */
 static void z80_4b_ld_c_e (void)
 {
-    z80_regs.c = z80_regs.e;
+    z80_state.c = z80_state.e;
     used_cycles += 4;
 }
 
@@ -2586,7 +2586,7 @@ static void z80_4b_ld_c_e (void)
 /* LD C, H */
 static void z80_4c_ld_c_h (void)
 {
-    z80_regs.c = z80_regs.h;
+    z80_state.c = z80_state.h;
     used_cycles += 4;
 }
 
@@ -2594,7 +2594,7 @@ static void z80_4c_ld_c_h (void)
 /* LD C, L */
 static void z80_4d_ld_c_l (void)
 {
-    z80_regs.c = z80_regs.l;
+    z80_state.c = z80_state.l;
     used_cycles += 4;
 }
 
@@ -2602,7 +2602,7 @@ static void z80_4d_ld_c_l (void)
 /* LD C, (HL) */
 static void z80_4e_ld_c_hl (void)
 {
-    z80_regs.c = memory_read (z80_regs.hl);
+    z80_state.c = memory_read (z80_state.hl);
     used_cycles += 7;
 }
 
@@ -2610,7 +2610,7 @@ static void z80_4e_ld_c_hl (void)
 /* LD C, A */
 static void z80_4f_ld_c_a (void)
 {
-    z80_regs.c = z80_regs.a;
+    z80_state.c = z80_state.a;
     used_cycles += 4;
 }
 
@@ -2618,7 +2618,7 @@ static void z80_4f_ld_c_a (void)
 /* LD D, B */
 static void z80_50_ld_d_b (void)
 {
-    z80_regs.d = z80_regs.b;
+    z80_state.d = z80_state.b;
     used_cycles += 4;
 }
 
@@ -2626,7 +2626,7 @@ static void z80_50_ld_d_b (void)
 /* LD D, C */
 static void z80_51_ld_d_c (void)
 {
-    z80_regs.d = z80_regs.c;
+    z80_state.d = z80_state.c;
     used_cycles += 4;
 }
 
@@ -2641,7 +2641,7 @@ static void z80_52_ld_d_d (void)
 /* LD D, E */
 static void z80_53_ld_d_e (void)
 {
-    z80_regs.d = z80_regs.e;
+    z80_state.d = z80_state.e;
     used_cycles += 4;
 }
 
@@ -2649,7 +2649,7 @@ static void z80_53_ld_d_e (void)
 /* LD D, H */
 static void z80_54_ld_d_h (void)
 {
-    z80_regs.d = z80_regs.h;
+    z80_state.d = z80_state.h;
     used_cycles += 4;
 }
 
@@ -2657,7 +2657,7 @@ static void z80_54_ld_d_h (void)
 /* LD D, L */
 static void z80_55_ld_d_l (void)
 {
-    z80_regs.d = z80_regs.l;
+    z80_state.d = z80_state.l;
     used_cycles += 4;
 }
 
@@ -2665,7 +2665,7 @@ static void z80_55_ld_d_l (void)
 /* LD D, (HL) */
 static void z80_56_ld_d_hl (void)
 {
-    z80_regs.d = memory_read (z80_regs.hl);
+    z80_state.d = memory_read (z80_state.hl);
     used_cycles += 7;
 }
 
@@ -2673,7 +2673,7 @@ static void z80_56_ld_d_hl (void)
 /* LD D, A */
 static void z80_57_ld_d_a (void)
 {
-    z80_regs.d = z80_regs.a;
+    z80_state.d = z80_state.a;
     used_cycles += 4;
 }
 
@@ -2681,7 +2681,7 @@ static void z80_57_ld_d_a (void)
 /* LD E, B */
 static void z80_58_ld_e_b (void)
 {
-    z80_regs.e = z80_regs.b;
+    z80_state.e = z80_state.b;
     used_cycles += 4;
 }
 
@@ -2689,7 +2689,7 @@ static void z80_58_ld_e_b (void)
 /* LD E, C */
 static void z80_59_ld_e_c (void)
 {
-    z80_regs.e = z80_regs.c;
+    z80_state.e = z80_state.c;
     used_cycles += 4;
 }
 
@@ -2697,7 +2697,7 @@ static void z80_59_ld_e_c (void)
 /* LD E, D */
 static void z80_5a_ld_e_d (void)
 {
-    z80_regs.e = z80_regs.d;
+    z80_state.e = z80_state.d;
     used_cycles += 4;
 }
 
@@ -2712,7 +2712,7 @@ static void z80_5b_ld_e_e (void)
 /* LD E, H */
 static void z80_5c_ld_e_h (void)
 {
-    z80_regs.e = z80_regs.h;
+    z80_state.e = z80_state.h;
     used_cycles += 4;
 }
 
@@ -2720,7 +2720,7 @@ static void z80_5c_ld_e_h (void)
 /* LD E, L */
 static void z80_5d_ld_e_l (void)
 {
-    z80_regs.e = z80_regs.l;
+    z80_state.e = z80_state.l;
     used_cycles += 4;
 }
 
@@ -2728,7 +2728,7 @@ static void z80_5d_ld_e_l (void)
 /* LD E, (HL) */
 static void z80_5e_ld_e_hl (void)
 {
-    z80_regs.e = memory_read (z80_regs.hl);
+    z80_state.e = memory_read (z80_state.hl);
     used_cycles += 7;
 }
 
@@ -2736,7 +2736,7 @@ static void z80_5e_ld_e_hl (void)
 /* LD E, A */
 static void z80_5f_ld_e_a (void)
 {
-    z80_regs.e = z80_regs.a;
+    z80_state.e = z80_state.a;
     used_cycles += 4;
 }
 
@@ -2744,7 +2744,7 @@ static void z80_5f_ld_e_a (void)
 /* LD H, B */
 static void z80_60_ld_h_b (void)
 {
-    z80_regs.h = z80_regs.b;
+    z80_state.h = z80_state.b;
     used_cycles += 4;
 }
 
@@ -2752,7 +2752,7 @@ static void z80_60_ld_h_b (void)
 /* LD H, C */
 static void z80_61_ld_h_c (void)
 {
-    z80_regs.h = z80_regs.c;
+    z80_state.h = z80_state.c;
     used_cycles += 4;
 }
 
@@ -2760,7 +2760,7 @@ static void z80_61_ld_h_c (void)
 /* LD H, D */
 static void z80_62_ld_h_d (void)
 {
-    z80_regs.h = z80_regs.d;
+    z80_state.h = z80_state.d;
     used_cycles += 4;
 }
 
@@ -2768,7 +2768,7 @@ static void z80_62_ld_h_d (void)
 /* LD H, E */
 static void z80_63_ld_h_e (void)
 {
-    z80_regs.h = z80_regs.e;
+    z80_state.h = z80_state.e;
     used_cycles += 4;
 }
 
@@ -2783,7 +2783,7 @@ static void z80_64_ld_h_h (void)
 /* LD H, L  */
 static void z80_65_ld_h_l (void)
 {
-    z80_regs.h = z80_regs.l;
+    z80_state.h = z80_state.l;
     used_cycles += 4;
 }
 
@@ -2791,7 +2791,7 @@ static void z80_65_ld_h_l (void)
 /* LD H, (HL) */
 static void z80_66_ld_h_hl (void)
 {
-    z80_regs.h = memory_read (z80_regs.hl);
+    z80_state.h = memory_read (z80_state.hl);
     used_cycles += 7;
 }
 
@@ -2799,7 +2799,7 @@ static void z80_66_ld_h_hl (void)
 /* LD H, A */
 static void z80_67_ld_h_a (void)
 {
-    z80_regs.h = z80_regs.a;
+    z80_state.h = z80_state.a;
     used_cycles += 4;
 }
 
@@ -2807,7 +2807,7 @@ static void z80_67_ld_h_a (void)
 /* LD L, B */
 static void z80_68_ld_l_b (void)
 {
-    z80_regs.l = z80_regs.b;
+    z80_state.l = z80_state.b;
     used_cycles += 4;
 }
 
@@ -2815,7 +2815,7 @@ static void z80_68_ld_l_b (void)
 /* LD L, C */
 static void z80_69_ld_l_c (void)
 {
-    z80_regs.l = z80_regs.c;
+    z80_state.l = z80_state.c;
     used_cycles += 4;
 }
 
@@ -2823,7 +2823,7 @@ static void z80_69_ld_l_c (void)
 /* LD L, D */
 static void z80_6a_ld_l_d (void)
 {
-    z80_regs.l = z80_regs.d;
+    z80_state.l = z80_state.d;
     used_cycles += 4;
 }
 
@@ -2831,7 +2831,7 @@ static void z80_6a_ld_l_d (void)
 /* LD L, E */
 static void z80_6b_ld_l_e (void)
 {
-    z80_regs.l = z80_regs.e;
+    z80_state.l = z80_state.e;
     used_cycles += 4;
 }
 
@@ -2839,7 +2839,7 @@ static void z80_6b_ld_l_e (void)
 /* LD L, H */
 static void z80_6c_ld_l_h (void)
 {
-    z80_regs.l = z80_regs.h;
+    z80_state.l = z80_state.h;
     used_cycles += 4;
 }
 
@@ -2854,7 +2854,7 @@ static void z80_6d_ld_l_l (void)
 /* LD L, (HL) */
 static void z80_6e_ld_l_hl (void)
 {
-    z80_regs.l = memory_read (z80_regs.hl);
+    z80_state.l = memory_read (z80_state.hl);
     used_cycles += 7;
 }
 
@@ -2862,7 +2862,7 @@ static void z80_6e_ld_l_hl (void)
 /* LD L, A */
 static void z80_6f_ld_l_a (void)
 {
-    z80_regs.l = z80_regs.a;
+    z80_state.l = z80_state.a;
     used_cycles += 4;
 }
 
@@ -2870,7 +2870,7 @@ static void z80_6f_ld_l_a (void)
 /* LD (HL), B */
 static void z80_70_ld_hl_b (void)
 {
-    memory_write (z80_regs.hl, z80_regs.b);
+    memory_write (z80_state.hl, z80_state.b);
     used_cycles += 7;
 }
 
@@ -2878,7 +2878,7 @@ static void z80_70_ld_hl_b (void)
 /* LD (HL), C */
 static void z80_71_ld_hl_c (void)
 {
-    memory_write (z80_regs.hl, z80_regs.c);
+    memory_write (z80_state.hl, z80_state.c);
     used_cycles += 7;
 }
 
@@ -2886,7 +2886,7 @@ static void z80_71_ld_hl_c (void)
 /* LD (HL), D */
 static void z80_72_ld_hl_d (void)
 {
-    memory_write (z80_regs.hl, z80_regs.d);
+    memory_write (z80_state.hl, z80_state.d);
     used_cycles += 7;
 }
 
@@ -2894,7 +2894,7 @@ static void z80_72_ld_hl_d (void)
 /* LD (HL), E */
 static void z80_73_ld_hl_e (void)
 {
-    memory_write (z80_regs.hl, z80_regs.e);
+    memory_write (z80_state.hl, z80_state.e);
     used_cycles += 7;
 }
 
@@ -2902,7 +2902,7 @@ static void z80_73_ld_hl_e (void)
 /* LD (HL), H */
 static void z80_74_ld_hl_h (void)
 {
-    memory_write (z80_regs.hl, z80_regs.h);
+    memory_write (z80_state.hl, z80_state.h);
     used_cycles += 7;
 }
 
@@ -2910,7 +2910,7 @@ static void z80_74_ld_hl_h (void)
 /* LD (HL), L */
 static void z80_75_ld_hl_l (void)
 {
-    memory_write (z80_regs.hl, z80_regs.l);
+    memory_write (z80_state.hl, z80_state.l);
     used_cycles += 7;
 }
 
@@ -2918,8 +2918,8 @@ static void z80_75_ld_hl_l (void)
 /* HALT */
 static void z80_76_halt (void)
 {
-    z80_regs.pc--;
-    z80_regs.halt = true;
+    z80_state.pc--;
+    z80_state.halt = true;
     used_cycles += 4;
 }
 
@@ -2927,7 +2927,7 @@ static void z80_76_halt (void)
 /* LD (HL), A */
 static void z80_77_ld_hl_a (void)
 {
-    memory_write (z80_regs.hl, z80_regs.a);
+    memory_write (z80_state.hl, z80_state.a);
     used_cycles += 7;
 }
 
@@ -2935,7 +2935,7 @@ static void z80_77_ld_hl_a (void)
 /* LD A, B */
 static void z80_78_ld_a_b (void)
 {
-    z80_regs.a = z80_regs.b;
+    z80_state.a = z80_state.b;
     used_cycles += 4;
 }
 
@@ -2943,7 +2943,7 @@ static void z80_78_ld_a_b (void)
 /* LD A, C */
 static void z80_79_ld_a_c (void)
 {
-    z80_regs.a = z80_regs.c;
+    z80_state.a = z80_state.c;
     used_cycles += 4;
 }
 
@@ -2951,7 +2951,7 @@ static void z80_79_ld_a_c (void)
 /* LD A, D */
 static void z80_7a_ld_a_d (void)
 {
-    z80_regs.a = z80_regs.d;
+    z80_state.a = z80_state.d;
     used_cycles += 4;
 }
 
@@ -2959,7 +2959,7 @@ static void z80_7a_ld_a_d (void)
 /* LD A, E */
 static void z80_7b_ld_a_e (void)
 {
-    z80_regs.a = z80_regs.e;
+    z80_state.a = z80_state.e;
     used_cycles += 4;
 }
 
@@ -2967,7 +2967,7 @@ static void z80_7b_ld_a_e (void)
 /* LD A, H */
 static void z80_7c_ld_a_h (void)
 {
-    z80_regs.a = z80_regs.h;
+    z80_state.a = z80_state.h;
     used_cycles += 4;
 }
 
@@ -2975,7 +2975,7 @@ static void z80_7c_ld_a_h (void)
 /* LD A, L */
 static void z80_7d_ld_a_l (void)
 {
-    z80_regs.a = z80_regs.l;
+    z80_state.a = z80_state.l;
     used_cycles += 4;
 }
 
@@ -2983,7 +2983,7 @@ static void z80_7d_ld_a_l (void)
 /* LD A, (HL) */
 static void z80_7e_ld_a_hl (void)
 {
-    z80_regs.a = memory_read (z80_regs.hl);
+    z80_state.a = memory_read (z80_state.hl);
     used_cycles += 7;
 }
 
@@ -2998,16 +2998,16 @@ static void z80_7f_ld_a_a (void)
 /* ADD A, B */
 static void z80_80_add_a_b (void)
 {
-    SET_FLAGS_ADD (z80_regs.a, z80_regs.b);
-    z80_regs.a += z80_regs.b;
+    SET_FLAGS_ADD (z80_state.a, z80_state.b);
+    z80_state.a += z80_state.b;
     used_cycles += 4;
 }
 
 /* ADD A, C */
 static void z80_81_add_a_c (void)
 {
-    SET_FLAGS_ADD (z80_regs.a, z80_regs.c);
-    z80_regs.a += z80_regs.c;
+    SET_FLAGS_ADD (z80_state.a, z80_state.c);
+    z80_state.a += z80_state.c;
     used_cycles += 4;
 }
 
@@ -3015,8 +3015,8 @@ static void z80_81_add_a_c (void)
 /* ADD A, D */
 static void z80_82_add_a_d (void)
 {
-    SET_FLAGS_ADD (z80_regs.a, z80_regs.d);
-    z80_regs.a += z80_regs.d;
+    SET_FLAGS_ADD (z80_state.a, z80_state.d);
+    z80_state.a += z80_state.d;
     used_cycles += 4;
 }
 
@@ -3024,16 +3024,16 @@ static void z80_82_add_a_d (void)
 /* ADD A, E */
 static void z80_83_add_a_e (void)
 {
-    SET_FLAGS_ADD (z80_regs.a, z80_regs.e);
-    z80_regs.a += z80_regs.e;
+    SET_FLAGS_ADD (z80_state.a, z80_state.e);
+    z80_state.a += z80_state.e;
     used_cycles += 4;
 }
 
 /* ADD A, H */
 static void z80_84_add_a_h (void)
 {
-    SET_FLAGS_ADD (z80_regs.a, z80_regs.h);
-    z80_regs.a += z80_regs.h;
+    SET_FLAGS_ADD (z80_state.a, z80_state.h);
+    z80_state.a += z80_state.h;
     used_cycles += 4;
 }
 
@@ -3041,8 +3041,8 @@ static void z80_84_add_a_h (void)
 /* ADD A, L */
 static void z80_85_add_a_l (void)
 {
-    SET_FLAGS_ADD (z80_regs.a, z80_regs.l);
-    z80_regs.a += z80_regs.l;
+    SET_FLAGS_ADD (z80_state.a, z80_state.l);
+    z80_state.a += z80_state.l;
     used_cycles += 4;
 }
 
@@ -3050,9 +3050,9 @@ static void z80_85_add_a_l (void)
 /* ADD A, (HL) */
 static void z80_86_add_a_hl (void)
 {
-    uint8_t value = memory_read (z80_regs.hl);
-    SET_FLAGS_ADD (z80_regs.a, value);
-    z80_regs.a += value;
+    uint8_t value = memory_read (z80_state.hl);
+    SET_FLAGS_ADD (z80_state.a, value);
+    z80_state.a += value;
     used_cycles += 7;
 }
 
@@ -3060,8 +3060,8 @@ static void z80_86_add_a_hl (void)
 /* ADD A, A */
 static void z80_87_add_a_a (void)
 {
-    SET_FLAGS_ADD (z80_regs.a, z80_regs.a);
-    z80_regs.a += z80_regs.a;
+    SET_FLAGS_ADD (z80_state.a, z80_state.a);
+    z80_state.a += z80_state.a;
     used_cycles += 4;
 }
 
@@ -3069,9 +3069,9 @@ static void z80_87_add_a_a (void)
 /* ADC A, B */
 static void z80_88_adc_a_b (void)
 {
-    uint8_t temp = z80_regs.b + CARRY_BIT;
-    SET_FLAGS_ADC (z80_regs.b);
-    z80_regs.a += temp;
+    uint8_t temp = z80_state.b + CARRY_BIT;
+    SET_FLAGS_ADC (z80_state.b);
+    z80_state.a += temp;
     used_cycles += 4;
 }
 
@@ -3079,9 +3079,9 @@ static void z80_88_adc_a_b (void)
 /* ADC A, C */
 static void z80_89_adc_a_c (void)
 {
-    uint8_t temp = z80_regs.c + CARRY_BIT;
-    SET_FLAGS_ADC (z80_regs.c);
-    z80_regs.a += temp;
+    uint8_t temp = z80_state.c + CARRY_BIT;
+    SET_FLAGS_ADC (z80_state.c);
+    z80_state.a += temp;
     used_cycles += 4;
 }
 
@@ -3089,9 +3089,9 @@ static void z80_89_adc_a_c (void)
 /* ADC A, D */
 static void z80_8a_adc_a_d (void)
 {
-    uint8_t temp = z80_regs.d + CARRY_BIT;
-    SET_FLAGS_ADC (z80_regs.d);
-    z80_regs.a += temp;
+    uint8_t temp = z80_state.d + CARRY_BIT;
+    SET_FLAGS_ADC (z80_state.d);
+    z80_state.a += temp;
     used_cycles += 4;
 }
 
@@ -3099,9 +3099,9 @@ static void z80_8a_adc_a_d (void)
 /* ADC A, E */
 static void z80_8b_adc_a_e (void)
 {
-    uint8_t temp = z80_regs.e + CARRY_BIT;
-    SET_FLAGS_ADC (z80_regs.e);
-    z80_regs.a += temp;
+    uint8_t temp = z80_state.e + CARRY_BIT;
+    SET_FLAGS_ADC (z80_state.e);
+    z80_state.a += temp;
     used_cycles += 4;
 }
 
@@ -3109,9 +3109,9 @@ static void z80_8b_adc_a_e (void)
 /* ADC A, H */
 static void z80_8c_adc_a_h (void)
 {
-    uint8_t temp = z80_regs.h + CARRY_BIT;
-    SET_FLAGS_ADC (z80_regs.h);
-    z80_regs.a += temp;
+    uint8_t temp = z80_state.h + CARRY_BIT;
+    SET_FLAGS_ADC (z80_state.h);
+    z80_state.a += temp;
     used_cycles += 4;
 }
 
@@ -3119,9 +3119,9 @@ static void z80_8c_adc_a_h (void)
 /* ADC A, L */
 static void z80_8d_adc_a_l (void)
 {
-    uint8_t temp = z80_regs.l + CARRY_BIT;
-    SET_FLAGS_ADC (z80_regs.l);
-    z80_regs.a += temp;
+    uint8_t temp = z80_state.l + CARRY_BIT;
+    SET_FLAGS_ADC (z80_state.l);
+    z80_state.a += temp;
     used_cycles += 4;
 }
 
@@ -3129,10 +3129,10 @@ static void z80_8d_adc_a_l (void)
 /* ADC A, (HL) */
 static void z80_8e_adc_a_hl (void)
 {
-    uint8_t value = memory_read (z80_regs.hl);
+    uint8_t value = memory_read (z80_state.hl);
     uint8_t temp = value + CARRY_BIT;
     SET_FLAGS_ADC (value);
-    z80_regs.a += temp;
+    z80_state.a += temp;
     used_cycles += 7;
 }
 
@@ -3140,9 +3140,9 @@ static void z80_8e_adc_a_hl (void)
 /* ADC A, A */
 static void z80_8f_adc_a_a (void)
 {
-    uint8_t temp = z80_regs.a + CARRY_BIT;
-    SET_FLAGS_ADC (z80_regs.a);
-    z80_regs.a += temp;
+    uint8_t temp = z80_state.a + CARRY_BIT;
+    SET_FLAGS_ADC (z80_state.a);
+    z80_state.a += temp;
     used_cycles += 4;
 }
 
@@ -3150,8 +3150,8 @@ static void z80_8f_adc_a_a (void)
 /* SUB A, B */
 static void z80_90_sub_a_b (void)
 {
-    SET_FLAGS_SUB (z80_regs.a, z80_regs.b);
-    z80_regs.a -= z80_regs.b;
+    SET_FLAGS_SUB (z80_state.a, z80_state.b);
+    z80_state.a -= z80_state.b;
     used_cycles += 4;
 }
 
@@ -3159,8 +3159,8 @@ static void z80_90_sub_a_b (void)
 /* SUB A, C */
 static void z80_91_sub_a_c (void)
 {
-    SET_FLAGS_SUB (z80_regs.a, z80_regs.c);
-    z80_regs.a -= z80_regs.c;
+    SET_FLAGS_SUB (z80_state.a, z80_state.c);
+    z80_state.a -= z80_state.c;
     used_cycles += 4;
 }
 
@@ -3168,8 +3168,8 @@ static void z80_91_sub_a_c (void)
 /* SUB A, D */
 static void z80_92_sub_a_d (void)
 {
-    SET_FLAGS_SUB (z80_regs.a, z80_regs.d);
-    z80_regs.a -= z80_regs.d;
+    SET_FLAGS_SUB (z80_state.a, z80_state.d);
+    z80_state.a -= z80_state.d;
     used_cycles += 4;
 }
 
@@ -3177,8 +3177,8 @@ static void z80_92_sub_a_d (void)
 /* SUB A, E */
 static void z80_93_sub_a_e (void)
 {
-    SET_FLAGS_SUB (z80_regs.a, z80_regs.e);
-    z80_regs.a -= z80_regs.e;
+    SET_FLAGS_SUB (z80_state.a, z80_state.e);
+    z80_state.a -= z80_state.e;
     used_cycles += 4;
 }
 
@@ -3186,8 +3186,8 @@ static void z80_93_sub_a_e (void)
 /* SUB A, H */
 static void z80_94_sub_a_h (void)
 {
-    SET_FLAGS_SUB (z80_regs.a, z80_regs.h);
-    z80_regs.a -= z80_regs.h;
+    SET_FLAGS_SUB (z80_state.a, z80_state.h);
+    z80_state.a -= z80_state.h;
     used_cycles += 4;
 }
 
@@ -3195,8 +3195,8 @@ static void z80_94_sub_a_h (void)
 /* SUB A, L */
 static void z80_95_sub_a_l (void)
 {
-    SET_FLAGS_SUB (z80_regs.a, z80_regs.l);
-    z80_regs.a -= z80_regs.l;
+    SET_FLAGS_SUB (z80_state.a, z80_state.l);
+    z80_state.a -= z80_state.l;
     used_cycles += 4;
 }
 
@@ -3204,9 +3204,9 @@ static void z80_95_sub_a_l (void)
 /* SUB A, (HL) */
 static void z80_96_sub_a_hl (void)
 {
-    uint8_t temp = memory_read (z80_regs.hl);
-    SET_FLAGS_SUB (z80_regs.a, temp);
-    z80_regs.a -= temp;
+    uint8_t temp = memory_read (z80_state.hl);
+    SET_FLAGS_SUB (z80_state.a, temp);
+    z80_state.a -= temp;
     used_cycles += 7;
 }
 
@@ -3214,8 +3214,8 @@ static void z80_96_sub_a_hl (void)
 /* SUB A, A */
 static void z80_97_sub_a_a (void)
 {
-    SET_FLAGS_SUB (z80_regs.a, z80_regs.a);
-    z80_regs.a -= z80_regs.a;
+    SET_FLAGS_SUB (z80_state.a, z80_state.a);
+    z80_state.a -= z80_state.a;
     used_cycles += 4;
 }
 
@@ -3223,9 +3223,9 @@ static void z80_97_sub_a_a (void)
 /* SBC A, B */
 static void z80_98_sbc_a_b (void)
 {
-    uint8_t temp = z80_regs.b + CARRY_BIT;
-    SET_FLAGS_SBC (z80_regs.b);
-    z80_regs.a -= temp;
+    uint8_t temp = z80_state.b + CARRY_BIT;
+    SET_FLAGS_SBC (z80_state.b);
+    z80_state.a -= temp;
     used_cycles += 4;
 }
 
@@ -3233,9 +3233,9 @@ static void z80_98_sbc_a_b (void)
 /* SBC A, C */
 static void z80_99_sbc_a_c (void)
 {
-    uint8_t temp = z80_regs.c + CARRY_BIT;
-    SET_FLAGS_SBC (z80_regs.c);
-    z80_regs.a -= temp;
+    uint8_t temp = z80_state.c + CARRY_BIT;
+    SET_FLAGS_SBC (z80_state.c);
+    z80_state.a -= temp;
     used_cycles += 4;
 }
 
@@ -3243,9 +3243,9 @@ static void z80_99_sbc_a_c (void)
 /* SBC A, D */
 static void z80_9a_sbc_a_d (void)
 {
-    uint8_t temp = z80_regs.d + CARRY_BIT;
-    SET_FLAGS_SBC (z80_regs.d);
-    z80_regs.a -= temp;
+    uint8_t temp = z80_state.d + CARRY_BIT;
+    SET_FLAGS_SBC (z80_state.d);
+    z80_state.a -= temp;
     used_cycles += 4;
 }
 
@@ -3253,9 +3253,9 @@ static void z80_9a_sbc_a_d (void)
 /* SBC A, E */
 static void z80_9b_sbc_a_e (void)
 {
-    uint8_t temp = z80_regs.e + CARRY_BIT;
-    SET_FLAGS_SBC (z80_regs.e);
-    z80_regs.a -= temp;
+    uint8_t temp = z80_state.e + CARRY_BIT;
+    SET_FLAGS_SBC (z80_state.e);
+    z80_state.a -= temp;
     used_cycles += 4;
 }
 
@@ -3263,9 +3263,9 @@ static void z80_9b_sbc_a_e (void)
 /* SBC A, H */
 static void z80_9c_sbc_a_h (void)
 {
-    uint8_t temp = z80_regs.h + CARRY_BIT;
-    SET_FLAGS_SBC (z80_regs.h);
-    z80_regs.a -= temp;
+    uint8_t temp = z80_state.h + CARRY_BIT;
+    SET_FLAGS_SBC (z80_state.h);
+    z80_state.a -= temp;
     used_cycles += 4;
 }
 
@@ -3273,9 +3273,9 @@ static void z80_9c_sbc_a_h (void)
 /* SBC A, L */
 static void z80_9d_sbc_a_l (void)
 {
-    uint8_t temp = z80_regs.l + CARRY_BIT;
-    SET_FLAGS_SBC (z80_regs.l);
-    z80_regs.a -= temp;
+    uint8_t temp = z80_state.l + CARRY_BIT;
+    SET_FLAGS_SBC (z80_state.l);
+    z80_state.a -= temp;
     used_cycles += 4;
 }
 
@@ -3283,10 +3283,10 @@ static void z80_9d_sbc_a_l (void)
 /* SBC A, (HL) */
 static void z80_9e_sbc_a_hl (void)
 {
-    uint8_t value = memory_read (z80_regs.hl);
+    uint8_t value = memory_read (z80_state.hl);
     uint8_t temp = value + CARRY_BIT;
     SET_FLAGS_SBC (value);
-    z80_regs.a -= temp;
+    z80_state.a -= temp;
     used_cycles += 7;
 }
 
@@ -3294,16 +3294,16 @@ static void z80_9e_sbc_a_hl (void)
 /* SBC A, A */
 static void z80_9f_sbc_a_a (void)
 {
-    uint8_t temp = z80_regs.a + CARRY_BIT;
-    SET_FLAGS_SBC (z80_regs.a);
-    z80_regs.a -= temp;
+    uint8_t temp = z80_state.a + CARRY_BIT;
+    SET_FLAGS_SBC (z80_state.a);
+    z80_state.a -= temp;
     used_cycles += 4;
 }
 
 /* AND A, B */
 static void z80_a0_and_a_b (void)
 {
-    z80_regs.a &= z80_regs.b;
+    z80_state.a &= z80_state.b;
     SET_FLAGS_AND;
     used_cycles += 4;
 }
@@ -3312,7 +3312,7 @@ static void z80_a0_and_a_b (void)
 /* AND A, C */
 static void z80_a1_and_a_c (void)
 {
-    z80_regs.a &= z80_regs.c;
+    z80_state.a &= z80_state.c;
     SET_FLAGS_AND;
     used_cycles += 4;
 }
@@ -3321,7 +3321,7 @@ static void z80_a1_and_a_c (void)
 /* AND A, D */
 static void z80_a2_and_a_d (void)
 {
-    z80_regs.a &= z80_regs.d;
+    z80_state.a &= z80_state.d;
     SET_FLAGS_AND;
     used_cycles += 4;
 }
@@ -3330,7 +3330,7 @@ static void z80_a2_and_a_d (void)
 /* AND A, E */
 static void z80_a3_and_a_e (void)
 {
-    z80_regs.a &= z80_regs.e;
+    z80_state.a &= z80_state.e;
     SET_FLAGS_AND;
     used_cycles += 4;
 }
@@ -3339,7 +3339,7 @@ static void z80_a3_and_a_e (void)
 /* AND A, H */
 static void z80_a4_and_a_h (void)
 {
-    z80_regs.a &= z80_regs.h;
+    z80_state.a &= z80_state.h;
     SET_FLAGS_AND;
     used_cycles += 4;
 }
@@ -3348,7 +3348,7 @@ static void z80_a4_and_a_h (void)
 /* AND A, L */
 static void z80_a5_and_a_l (void)
 {
-    z80_regs.a &= z80_regs.l;
+    z80_state.a &= z80_state.l;
     SET_FLAGS_AND;
     used_cycles += 4;
 }
@@ -3357,7 +3357,7 @@ static void z80_a5_and_a_l (void)
 /* AND A, (HL) */
 static void z80_a6_and_a_hl (void)
 {
-    z80_regs.a &= memory_read (z80_regs.hl);
+    z80_state.a &= memory_read (z80_state.hl);
     SET_FLAGS_AND;
     used_cycles += 7;
 }
@@ -3374,7 +3374,7 @@ static void z80_a7_and_a_a (void)
 /* XOR A, B */
 static void z80_a8_xor_a_b (void)
 {
-    z80_regs.a ^= z80_regs.b;
+    z80_state.a ^= z80_state.b;
     SET_FLAGS_OR_XOR;
     used_cycles += 4;
 }
@@ -3383,7 +3383,7 @@ static void z80_a8_xor_a_b (void)
 /* XOR A, C */
 static void z80_a9_xor_a_c (void)
 {
-    z80_regs.a ^= z80_regs.c;
+    z80_state.a ^= z80_state.c;
     SET_FLAGS_OR_XOR;
     used_cycles += 4;
 }
@@ -3392,7 +3392,7 @@ static void z80_a9_xor_a_c (void)
 /* XOR A, D */
 static void z80_aa_xor_a_d (void)
 {
-    z80_regs.a ^= z80_regs.d;
+    z80_state.a ^= z80_state.d;
     SET_FLAGS_OR_XOR;
     used_cycles += 4;
 }
@@ -3401,7 +3401,7 @@ static void z80_aa_xor_a_d (void)
 /* XOR A, E */
 static void z80_ab_xor_a_e (void)
 {
-    z80_regs.a ^= z80_regs.e;
+    z80_state.a ^= z80_state.e;
     SET_FLAGS_OR_XOR;
     used_cycles += 4;
 }
@@ -3410,7 +3410,7 @@ static void z80_ab_xor_a_e (void)
 /* XOR A, H */
 static void z80_ac_xor_a_h (void)
 {
-    z80_regs.a ^= z80_regs.h;
+    z80_state.a ^= z80_state.h;
     SET_FLAGS_OR_XOR;
     used_cycles += 4;
 }
@@ -3419,7 +3419,7 @@ static void z80_ac_xor_a_h (void)
 /* XOR A, L */
 static void z80_ad_xor_a_l (void)
 {
-    z80_regs.a ^= z80_regs.l;
+    z80_state.a ^= z80_state.l;
     SET_FLAGS_OR_XOR;
     used_cycles += 4;
 }
@@ -3428,7 +3428,7 @@ static void z80_ad_xor_a_l (void)
 /* XOR A, (HL) */
 static void z80_ae_xor_a_hl (void)
 {
-    z80_regs.a ^= memory_read (z80_regs.hl);
+    z80_state.a ^= memory_read (z80_state.hl);
     SET_FLAGS_OR_XOR;
     used_cycles += 7;
 }
@@ -3437,7 +3437,7 @@ static void z80_ae_xor_a_hl (void)
 /* XOR A, A */
 static void z80_af_xor_a_a (void)
 {
-    z80_regs.a ^= z80_regs.a;
+    z80_state.a ^= z80_state.a;
     SET_FLAGS_OR_XOR;
     used_cycles += 4;
 }
@@ -3446,7 +3446,7 @@ static void z80_af_xor_a_a (void)
 /* OR A, B */
 static void z80_b0_or_a_b (void)
 {
-    z80_regs.a |= z80_regs.b;
+    z80_state.a |= z80_state.b;
     SET_FLAGS_OR_XOR;
     used_cycles += 4;
 }
@@ -3455,7 +3455,7 @@ static void z80_b0_or_a_b (void)
 /* OR A, C */
 static void z80_b1_or_a_c (void)
 {
-    z80_regs.a |= z80_regs.c;
+    z80_state.a |= z80_state.c;
     SET_FLAGS_OR_XOR;
     used_cycles += 4;
 }
@@ -3464,7 +3464,7 @@ static void z80_b1_or_a_c (void)
 /* OR A, D */
 static void z80_b2_or_a_d (void)
 {
-    z80_regs.a |= z80_regs.d;
+    z80_state.a |= z80_state.d;
     SET_FLAGS_OR_XOR;
     used_cycles += 4;
 }
@@ -3473,7 +3473,7 @@ static void z80_b2_or_a_d (void)
 /* OR A, E */
 static void z80_b3_or_a_e (void)
 {
-    z80_regs.a |= z80_regs.e;
+    z80_state.a |= z80_state.e;
     SET_FLAGS_OR_XOR;
     used_cycles += 4;
 }
@@ -3482,7 +3482,7 @@ static void z80_b3_or_a_e (void)
 /* OR A, H */
 static void z80_b4_or_a_h (void)
 {
-    z80_regs.a |= z80_regs.h;
+    z80_state.a |= z80_state.h;
     SET_FLAGS_OR_XOR;
     used_cycles += 4;
 }
@@ -3491,7 +3491,7 @@ static void z80_b4_or_a_h (void)
 /* OR A, L */
 static void z80_b5_or_a_l (void)
 {
-    z80_regs.a |= z80_regs.l;
+    z80_state.a |= z80_state.l;
     SET_FLAGS_OR_XOR;
     used_cycles += 4;
 }
@@ -3500,7 +3500,7 @@ static void z80_b5_or_a_l (void)
 /* OR A, (HL) */
 static void z80_b6_or_a_hl (void)
 {
-    z80_regs.a |= memory_read (z80_regs.hl);
+    z80_state.a |= memory_read (z80_state.hl);
     SET_FLAGS_OR_XOR;
     used_cycles += 7;
 }
@@ -3517,7 +3517,7 @@ static void z80_b7_or_a_a (void)
 /* CP A, B */
 static void z80_b8_cp_a_b (void)
 {
-    SET_FLAGS_SUB (z80_regs.a, z80_regs.b);
+    SET_FLAGS_SUB (z80_state.a, z80_state.b);
     used_cycles += 4;
 }
 
@@ -3525,7 +3525,7 @@ static void z80_b8_cp_a_b (void)
 /* CP A, C */
 static void z80_b9_cp_a_c (void)
 {
-    SET_FLAGS_SUB (z80_regs.a, z80_regs.c);
+    SET_FLAGS_SUB (z80_state.a, z80_state.c);
     used_cycles += 4;
 }
 
@@ -3533,7 +3533,7 @@ static void z80_b9_cp_a_c (void)
 /* CP A, D */
 static void z80_ba_cp_a_d (void)
 {
-    SET_FLAGS_SUB (z80_regs.a, z80_regs.d);
+    SET_FLAGS_SUB (z80_state.a, z80_state.d);
     used_cycles += 4;
 }
 
@@ -3541,7 +3541,7 @@ static void z80_ba_cp_a_d (void)
 /* CP A, E */
 static void z80_bb_cp_a_e (void)
 {
-    SET_FLAGS_SUB (z80_regs.a, z80_regs.e);
+    SET_FLAGS_SUB (z80_state.a, z80_state.e);
     used_cycles += 4;
 }
 
@@ -3549,7 +3549,7 @@ static void z80_bb_cp_a_e (void)
 /* CP A, H */
 static void z80_bc_cp_a_h (void)
 {
-    SET_FLAGS_SUB (z80_regs.a, z80_regs.h);
+    SET_FLAGS_SUB (z80_state.a, z80_state.h);
     used_cycles += 4;
 }
 
@@ -3557,22 +3557,22 @@ static void z80_bc_cp_a_h (void)
 /* CP A, L */
 static void z80_bd_cp_a_l (void)
 {
-    SET_FLAGS_SUB (z80_regs.a, z80_regs.l);
+    SET_FLAGS_SUB (z80_state.a, z80_state.l);
     used_cycles += 4;
 }
 
 /* CP A, (HL) */
 static void z80_be_cp_a_hl (void)
 {
-    uint8_t value = memory_read (z80_regs.hl);
-    SET_FLAGS_SUB (z80_regs.a, value);
+    uint8_t value = memory_read (z80_state.hl);
+    SET_FLAGS_SUB (z80_state.a, value);
     used_cycles += 7;
 }
 
 /* CP A, A */
 static void z80_bf_cp_a_a (void)
 {
-    SET_FLAGS_SUB (z80_regs.a, z80_regs.a);
+    SET_FLAGS_SUB (z80_state.a, z80_state.a);
     used_cycles += 4;
 }
 
@@ -3580,13 +3580,13 @@ static void z80_bf_cp_a_a (void)
 /* RET NZ */
 static void z80_c0_ret_nz (void)
 {
-    if (z80_regs.f & Z80_FLAG_ZERO) {
+    if (z80_state.f & Z80_FLAG_ZERO) {
         used_cycles += 5;
     }
     else
     {
-        z80_regs.pc_l = memory_read (z80_regs.sp++);
-        z80_regs.pc_h = memory_read (z80_regs.sp++);
+        z80_state.pc_l = memory_read (z80_state.sp++);
+        z80_state.pc_h = memory_read (z80_state.sp++);
         used_cycles += 11;
     }
 }
@@ -3595,8 +3595,8 @@ static void z80_c0_ret_nz (void)
 /* POP BC */
 static void z80_c1_pop_bc (void)
 {
-    z80_regs.c = memory_read (z80_regs.sp++);
-    z80_regs.b = memory_read (z80_regs.sp++);
+    z80_state.c = memory_read (z80_state.sp++);
+    z80_state.b = memory_read (z80_state.sp++);
     used_cycles += 10;
 }
 
@@ -3605,12 +3605,12 @@ static void z80_c1_pop_bc (void)
 static void z80_c2_jp_nz_xx (void)
 {
     uint16_t_Split addr;
-    addr.l = memory_read (z80_regs.pc++);
-    addr.h = memory_read (z80_regs.pc++);
+    addr.l = memory_read (z80_state.pc++);
+    addr.h = memory_read (z80_state.pc++);
 
-    if (!(z80_regs.f & Z80_FLAG_ZERO))
+    if (!(z80_state.f & Z80_FLAG_ZERO))
     {
-        z80_regs.pc = addr.w;
+        z80_state.pc = addr.w;
     }
 
     used_cycles += 10;
@@ -3621,9 +3621,9 @@ static void z80_c2_jp_nz_xx (void)
 static void z80_c3_jp_xx (void)
 {
     uint16_t_Split addr;
-    addr.l = memory_read (z80_regs.pc++);
-    addr.h = memory_read (z80_regs.pc++);
-    z80_regs.pc = addr.w;
+    addr.l = memory_read (z80_state.pc++);
+    addr.h = memory_read (z80_state.pc++);
+    z80_state.pc = addr.w;
     used_cycles += 10;
 }
 
@@ -3632,18 +3632,18 @@ static void z80_c3_jp_xx (void)
 static void z80_c4_call_nz_xx (void)
 {
     uint16_t_Split addr;
-    addr.l = memory_read (z80_regs.pc++);
-    addr.h = memory_read (z80_regs.pc++);
+    addr.l = memory_read (z80_state.pc++);
+    addr.h = memory_read (z80_state.pc++);
 
-    if (z80_regs.f & Z80_FLAG_ZERO)
+    if (z80_state.f & Z80_FLAG_ZERO)
     {
         used_cycles += 10;
     }
     else
     {
-        memory_write (--z80_regs.sp, z80_regs.pc_h);
-        memory_write (--z80_regs.sp, z80_regs.pc_l);
-        z80_regs.pc = addr.w;
+        memory_write (--z80_state.sp, z80_state.pc_h);
+        memory_write (--z80_state.sp, z80_state.pc_l);
+        z80_state.pc = addr.w;
         used_cycles += 17;
     }
 }
@@ -3652,8 +3652,8 @@ static void z80_c4_call_nz_xx (void)
 /* PUSH BC */
 static void z80_c5_push_bc (void)
 {
-    memory_write (--z80_regs.sp, z80_regs.b);
-    memory_write (--z80_regs.sp, z80_regs.c);
+    memory_write (--z80_state.sp, z80_state.b);
+    memory_write (--z80_state.sp, z80_state.c);
     used_cycles += 11;
 }
 
@@ -3661,10 +3661,10 @@ static void z80_c5_push_bc (void)
 /* ADD A, * */
 static void z80_c6_add_a_x (void)
 {
-    uint8_t imm = memory_read (z80_regs.pc++);
+    uint8_t imm = memory_read (z80_state.pc++);
     /* ADD A,*    */
-    SET_FLAGS_ADD (z80_regs.a, imm);
-    z80_regs.a += imm;
+    SET_FLAGS_ADD (z80_state.a, imm);
+    z80_state.a += imm;
     used_cycles += 7;
 }
 
@@ -3673,9 +3673,9 @@ static void z80_c6_add_a_x (void)
 static void z80_c7_rst_00 (void)
 {
     /* RST 00h    */
-    memory_write (--z80_regs.sp, z80_regs.pc_h);
-    memory_write (--z80_regs.sp, z80_regs.pc_l);
-    z80_regs.pc = 0x0000;
+    memory_write (--z80_state.sp, z80_state.pc_h);
+    memory_write (--z80_state.sp, z80_state.pc_l);
+    z80_state.pc = 0x0000;
     used_cycles += 11;
 }
 
@@ -3684,10 +3684,10 @@ static void z80_c7_rst_00 (void)
 static void z80_c8_ret_z (void)
 {
     /* RET Z      */
-    if (z80_regs.f & Z80_FLAG_ZERO)
+    if (z80_state.f & Z80_FLAG_ZERO)
     {
-        z80_regs.pc_l = memory_read (z80_regs.sp++);
-        z80_regs.pc_h = memory_read (z80_regs.sp++);
+        z80_state.pc_l = memory_read (z80_state.sp++);
+        z80_state.pc_h = memory_read (z80_state.sp++);
         used_cycles += 11;
     }
     else
@@ -3700,8 +3700,8 @@ static void z80_c8_ret_z (void)
 /* RET */
 static void z80_c9_ret (void)
 {
-    z80_regs.pc_l = memory_read (z80_regs.sp++);
-    z80_regs.pc_h = memory_read (z80_regs.sp++);
+    z80_state.pc_l = memory_read (z80_state.sp++);
+    z80_state.pc_h = memory_read (z80_state.sp++);
     used_cycles += 10;
 }
 
@@ -3710,12 +3710,12 @@ static void z80_c9_ret (void)
 static void z80_ca_jp_z_xx (void)
 {
     uint16_t_Split addr;
-    addr.l = memory_read (z80_regs.pc++);
-    addr.h = memory_read (z80_regs.pc++);
+    addr.l = memory_read (z80_state.pc++);
+    addr.h = memory_read (z80_state.pc++);
 
-    if (z80_regs.f & Z80_FLAG_ZERO)
+    if (z80_state.f & Z80_FLAG_ZERO)
     {
-        z80_regs.pc = addr.w;
+        z80_state.pc = addr.w;
     }
     used_cycles += 10;
 }
@@ -3729,32 +3729,32 @@ static void z80_cb_prefix (void)
     switch (instruction & 0x07)
     {
         case 0x00:
-            z80_regs.b = z80_cb_instruction [instruction >> 3] (z80_regs.b);
+            z80_state.b = z80_cb_instruction [instruction >> 3] (z80_state.b);
             used_cycles += 8;
             break;
 
         case 0x01:
-            z80_regs.c = z80_cb_instruction [instruction >> 3] (z80_regs.c);
+            z80_state.c = z80_cb_instruction [instruction >> 3] (z80_state.c);
             used_cycles += 8;
             break;
 
         case 0x02:
-            z80_regs.d = z80_cb_instruction [instruction >> 3] (z80_regs.d);
+            z80_state.d = z80_cb_instruction [instruction >> 3] (z80_state.d);
             used_cycles += 8;
             break;
 
         case 0x03:
-            z80_regs.e = z80_cb_instruction [instruction >> 3] (z80_regs.e);
+            z80_state.e = z80_cb_instruction [instruction >> 3] (z80_state.e);
             used_cycles += 8;
             break;
 
         case 0x04:
-            z80_regs.h = z80_cb_instruction [instruction >> 3] (z80_regs.h);
+            z80_state.h = z80_cb_instruction [instruction >> 3] (z80_state.h);
             used_cycles += 8;
             break;
 
         case 0x05:
-            z80_regs.l = z80_cb_instruction [instruction >> 3] (z80_regs.l);
+            z80_state.l = z80_cb_instruction [instruction >> 3] (z80_state.l);
             used_cycles += 8;
             break;
 
@@ -3773,7 +3773,7 @@ static void z80_cb_prefix (void)
             break;
 
         case 0x07:
-            z80_regs.a = z80_cb_instruction [instruction >> 3] (z80_regs.a);
+            z80_state.a = z80_cb_instruction [instruction >> 3] (z80_state.a);
             used_cycles += 8;
             break;
     }
@@ -3784,14 +3784,14 @@ static void z80_cb_prefix (void)
 static void z80_cc_call_z_xx (void)
 {
     uint16_t_Split addr;
-    addr.l = memory_read (z80_regs.pc++);
-    addr.h = memory_read (z80_regs.pc++);
+    addr.l = memory_read (z80_state.pc++);
+    addr.h = memory_read (z80_state.pc++);
 
-    if (z80_regs.f & Z80_FLAG_ZERO)
+    if (z80_state.f & Z80_FLAG_ZERO)
     {
-        memory_write (--z80_regs.sp, z80_regs.pc_h);
-        memory_write (--z80_regs.sp, z80_regs.pc_l);
-        z80_regs.pc = addr.w;
+        memory_write (--z80_state.sp, z80_state.pc_h);
+        memory_write (--z80_state.sp, z80_state.pc_l);
+        z80_state.pc = addr.w;
         used_cycles += 17;
     }
     else
@@ -3805,11 +3805,11 @@ static void z80_cc_call_z_xx (void)
 static void z80_cd_call_xx (void)
 {
     uint16_t_Split addr;
-    addr.l = memory_read (z80_regs.pc++);
-    addr.h = memory_read (z80_regs.pc++);
-    memory_write (--z80_regs.sp, z80_regs.pc_h);
-    memory_write (--z80_regs.sp, z80_regs.pc_l);
-    z80_regs.pc = addr.w;
+    addr.l = memory_read (z80_state.pc++);
+    addr.h = memory_read (z80_state.pc++);
+    memory_write (--z80_state.sp, z80_state.pc_h);
+    memory_write (--z80_state.sp, z80_state.pc_l);
+    z80_state.pc = addr.w;
     used_cycles += 17;
 }
 
@@ -3817,10 +3817,10 @@ static void z80_cd_call_xx (void)
 /* ADC A, * */
 static void z80_ce_adc_a_x (void)
 {
-    uint8_t imm = memory_read (z80_regs.pc++);
+    uint8_t imm = memory_read (z80_state.pc++);
     uint8_t temp = imm + CARRY_BIT;
     SET_FLAGS_ADC (imm);
-    z80_regs.a += temp;
+    z80_state.a += temp;
     used_cycles += 7;
 }
 
@@ -3828,9 +3828,9 @@ static void z80_ce_adc_a_x (void)
 /* RST 08h */
 static void z80_cf_rst_08 (void)
 {
-    memory_write (--z80_regs.sp, z80_regs.pc_h);
-    memory_write (--z80_regs.sp, z80_regs.pc_l);
-    z80_regs.pc = 0x0008;
+    memory_write (--z80_state.sp, z80_state.pc_h);
+    memory_write (--z80_state.sp, z80_state.pc_l);
+    z80_state.pc = 0x0008;
     used_cycles += 11;
 }
 
@@ -3838,14 +3838,14 @@ static void z80_cf_rst_08 (void)
 /* RET NC */
 static void z80_d0_ret_nc (void)
 {
-    if (z80_regs.f & Z80_FLAG_CARRY)
+    if (z80_state.f & Z80_FLAG_CARRY)
     {
         used_cycles += 5;
     }
     else
     {
-        z80_regs.pc_l = memory_read (z80_regs.sp++);
-        z80_regs.pc_h = memory_read (z80_regs.sp++);
+        z80_state.pc_l = memory_read (z80_state.sp++);
+        z80_state.pc_h = memory_read (z80_state.sp++);
         used_cycles += 11;
     }
 }
@@ -3854,8 +3854,8 @@ static void z80_d0_ret_nc (void)
 /* POP DE */
 static void z80_d1_pop_de (void)
 {
-    z80_regs.e = memory_read (z80_regs.sp++);
-    z80_regs.d = memory_read (z80_regs.sp++);
+    z80_state.e = memory_read (z80_state.sp++);
+    z80_state.d = memory_read (z80_state.sp++);
     used_cycles += 10;
 }
 
@@ -3864,12 +3864,12 @@ static void z80_d1_pop_de (void)
 static void z80_d2_jp_nc_xx (void)
 {
     uint16_t_Split addr;
-    addr.l = memory_read (z80_regs.pc++);
-    addr.h = memory_read (z80_regs.pc++);
+    addr.l = memory_read (z80_state.pc++);
+    addr.h = memory_read (z80_state.pc++);
 
-    if (!(z80_regs.f & Z80_FLAG_CARRY))
+    if (!(z80_state.f & Z80_FLAG_CARRY))
     {
-        z80_regs.pc = addr.w;
+        z80_state.pc = addr.w;
     }
     used_cycles += 10;
 }
@@ -3878,7 +3878,7 @@ static void z80_d2_jp_nc_xx (void)
 /* OUT (*), A */
 static void z80_d3_out_x_a (void)
 {
-    io_write (memory_read (z80_regs.pc++), z80_regs.a);
+    io_write (memory_read (z80_state.pc++), z80_state.a);
     used_cycles += 11;
 }
 
@@ -3887,19 +3887,19 @@ static void z80_d3_out_x_a (void)
 static void z80_d4_call_nc_xx (void)
 {
     uint16_t_Split addr;
-    addr.l = memory_read (z80_regs.pc++);
-    addr.h = memory_read (z80_regs.pc++);
+    addr.l = memory_read (z80_state.pc++);
+    addr.h = memory_read (z80_state.pc++);
 
     /* CALL NC,** */
-    if (z80_regs.f & Z80_FLAG_CARRY)
+    if (z80_state.f & Z80_FLAG_CARRY)
     {
         used_cycles += 10;
     }
     else
     {
-        memory_write (--z80_regs.sp, z80_regs.pc_h);
-        memory_write (--z80_regs.sp, z80_regs.pc_l);
-        z80_regs.pc = addr.w;
+        memory_write (--z80_state.sp, z80_state.pc_h);
+        memory_write (--z80_state.sp, z80_state.pc_l);
+        z80_state.pc = addr.w;
         used_cycles += 17;
     }
 }
@@ -3908,8 +3908,8 @@ static void z80_d4_call_nc_xx (void)
 /* PUSH DE */
 static void z80_d5_push_de (void)
 {
-    memory_write (--z80_regs.sp, z80_regs.d);
-    memory_write (--z80_regs.sp, z80_regs.e);
+    memory_write (--z80_state.sp, z80_state.d);
+    memory_write (--z80_state.sp, z80_state.e);
     used_cycles += 11;
 }
 
@@ -3917,9 +3917,9 @@ static void z80_d5_push_de (void)
 /* SUB A, * */
 static void z80_d6_sub_a_x (void)
 {
-    uint8_t imm = memory_read (z80_regs.pc++);
-    SET_FLAGS_SUB (z80_regs.a, imm);
-    z80_regs.a -= imm;
+    uint8_t imm = memory_read (z80_state.pc++);
+    SET_FLAGS_SUB (z80_state.a, imm);
+    z80_state.a -= imm;
     used_cycles += 7;
 }
 
@@ -3927,9 +3927,9 @@ static void z80_d6_sub_a_x (void)
 /* RST 10h */
 static void z80_d7_rst_10 (void)
 {
-    memory_write (--z80_regs.sp, z80_regs.pc_h);
-    memory_write (--z80_regs.sp, z80_regs.pc_l);
-    z80_regs.pc = 0x10;
+    memory_write (--z80_state.sp, z80_state.pc_h);
+    memory_write (--z80_state.sp, z80_state.pc_l);
+    z80_state.pc = 0x10;
     used_cycles += 11;
 }
 
@@ -3937,10 +3937,10 @@ static void z80_d7_rst_10 (void)
 /* RET C */
 static void z80_d8_ret_c (void)
 {
-    if (z80_regs.f & Z80_FLAG_CARRY)
+    if (z80_state.f & Z80_FLAG_CARRY)
     {
-        z80_regs.pc_l = memory_read (z80_regs.sp++);
-        z80_regs.pc_h = memory_read (z80_regs.sp++);
+        z80_state.pc_l = memory_read (z80_state.sp++);
+        z80_state.pc_h = memory_read (z80_state.sp++);
         used_cycles += 11;
     }
     else
@@ -3953,9 +3953,9 @@ static void z80_d8_ret_c (void)
 /* EXX */
 static void z80_d9_exx (void)
 {
-    SWAP (uint16_t, z80_regs.bc, z80_regs.alt_bc);
-    SWAP (uint16_t, z80_regs.de, z80_regs.alt_de);
-    SWAP (uint16_t, z80_regs.hl, z80_regs.alt_hl);
+    SWAP (uint16_t, z80_state.bc, z80_state.bc_alt);
+    SWAP (uint16_t, z80_state.de, z80_state.de_alt);
+    SWAP (uint16_t, z80_state.hl, z80_state.hl_alt);
     used_cycles += 4;
 }
 
@@ -3964,12 +3964,12 @@ static void z80_d9_exx (void)
 static void z80_da_jp_c_xx (void)
 {
     uint16_t_Split addr;
-    addr.l = memory_read (z80_regs.pc++);
-    addr.h = memory_read (z80_regs.pc++);
+    addr.l = memory_read (z80_state.pc++);
+    addr.h = memory_read (z80_state.pc++);
 
-    if (z80_regs.f & Z80_FLAG_CARRY)
+    if (z80_state.f & Z80_FLAG_CARRY)
     {
-        z80_regs.pc = addr.w;
+        z80_state.pc = addr.w;
     }
     used_cycles += 10;
 }
@@ -3978,7 +3978,7 @@ static void z80_da_jp_c_xx (void)
 /* IN A, (*) */
 static void z80_db_in_a_x (void)
 {
-    z80_regs.a = io_read (memory_read (z80_regs.pc++));
+    z80_state.a = io_read (memory_read (z80_state.pc++));
     used_cycles += 11;
 }
 
@@ -3987,14 +3987,14 @@ static void z80_db_in_a_x (void)
 static void z80_dc_call_c_xx (void)
 {
     uint16_t_Split addr;
-    addr.l = memory_read (z80_regs.pc++);
-    addr.h = memory_read (z80_regs.pc++);
+    addr.l = memory_read (z80_state.pc++);
+    addr.h = memory_read (z80_state.pc++);
 
-    if (z80_regs.f & Z80_FLAG_CARRY)
+    if (z80_state.f & Z80_FLAG_CARRY)
     {
-        memory_write (--z80_regs.sp, z80_regs.pc_h);
-        memory_write (--z80_regs.sp, z80_regs.pc_l);
-        z80_regs.pc = addr.w;
+        memory_write (--z80_state.sp, z80_state.pc_h);
+        memory_write (--z80_state.sp, z80_state.pc_l);
+        z80_state.pc = addr.w;
         used_cycles += 17;
     }
     else
@@ -4007,17 +4007,17 @@ static void z80_dc_call_c_xx (void)
 /* IX PREFIX */
 static void z80_dd_ix (void)
 {
-    z80_regs.ix = z80_ix_iy_instruction (z80_regs.ix);
+    z80_state.ix = z80_ix_iy_instruction (z80_state.ix);
 }
 
 
 /* SBC A, * */
 static void z80_de_sbc_a_x (void)
 {
-    uint8_t imm = memory_read (z80_regs.pc++);
+    uint8_t imm = memory_read (z80_state.pc++);
     uint8_t temp = imm + CARRY_BIT;
     SET_FLAGS_SBC (imm);
-    z80_regs.a -= temp;
+    z80_state.a -= temp;
     used_cycles += 7;
 }
 
@@ -4025,9 +4025,9 @@ static void z80_de_sbc_a_x (void)
 /* RST 18h */
 static void z80_df_rst_18 (void)
 {
-    memory_write (--z80_regs.sp, z80_regs.pc_h);
-    memory_write (--z80_regs.sp, z80_regs.pc_l);
-    z80_regs.pc = 0x0018;
+    memory_write (--z80_state.sp, z80_state.pc_h);
+    memory_write (--z80_state.sp, z80_state.pc_l);
+    z80_state.pc = 0x0018;
     used_cycles += 11;
 }
 
@@ -4035,14 +4035,14 @@ static void z80_df_rst_18 (void)
 /* RET PO */
 static void z80_e0_ret_po (void)
 {
-    if (z80_regs.f & Z80_FLAG_PARITY)
+    if (z80_state.f & Z80_FLAG_PARITY)
     {
         used_cycles += 5;
     }
     else
     {
-        z80_regs.pc_l = memory_read (z80_regs.sp++);
-        z80_regs.pc_h = memory_read (z80_regs.sp++);
+        z80_state.pc_l = memory_read (z80_state.sp++);
+        z80_state.pc_h = memory_read (z80_state.sp++);
         used_cycles += 11;
     }
 }
@@ -4051,8 +4051,8 @@ static void z80_e0_ret_po (void)
 /* POP HL */
 static void z80_e1_pop_hl (void)
 {
-    z80_regs.l = memory_read (z80_regs.sp++);
-    z80_regs.h = memory_read (z80_regs.sp++);
+    z80_state.l = memory_read (z80_state.sp++);
+    z80_state.h = memory_read (z80_state.sp++);
     used_cycles += 10;
 }
 
@@ -4061,12 +4061,12 @@ static void z80_e1_pop_hl (void)
 static void z80_e2_jp_po_xx (void)
 {
     uint16_t_Split addr;
-    addr.l = memory_read (z80_regs.pc++);
-    addr.h = memory_read (z80_regs.pc++);
+    addr.l = memory_read (z80_state.pc++);
+    addr.h = memory_read (z80_state.pc++);
 
-    if (!(z80_regs.f & Z80_FLAG_PARITY))
+    if (!(z80_state.f & Z80_FLAG_PARITY))
     {
-        z80_regs.pc = addr.w;
+        z80_state.pc = addr.w;
     }
     used_cycles += 10;
 }
@@ -4075,12 +4075,12 @@ static void z80_e2_jp_po_xx (void)
 /* EX (SP), HL */
 static void z80_e3_ex_sp_hl (void)
 {
-    uint8_t temp = z80_regs.l;
-    z80_regs.l = memory_read (z80_regs.sp);
-    memory_write (z80_regs.sp, temp);
-    temp = z80_regs.h;
-    z80_regs.h = memory_read (z80_regs.sp + 1);
-    memory_write (z80_regs.sp + 1, temp);
+    uint8_t temp = z80_state.l;
+    z80_state.l = memory_read (z80_state.sp);
+    memory_write (z80_state.sp, temp);
+    temp = z80_state.h;
+    z80_state.h = memory_read (z80_state.sp + 1);
+    memory_write (z80_state.sp + 1, temp);
     used_cycles += 19;
 }
 
@@ -4089,18 +4089,18 @@ static void z80_e3_ex_sp_hl (void)
 static void z80_e4_call_po_xx (void)
 {
     uint16_t_Split addr;
-    addr.l = memory_read (z80_regs.pc++);
-    addr.h = memory_read (z80_regs.pc++);
+    addr.l = memory_read (z80_state.pc++);
+    addr.h = memory_read (z80_state.pc++);
 
-    if (z80_regs.f & Z80_FLAG_PARITY)
+    if (z80_state.f & Z80_FLAG_PARITY)
     {
         used_cycles += 10;
     }
     else
     {
-        memory_write (--z80_regs.sp, z80_regs.pc_h);
-        memory_write (--z80_regs.sp, z80_regs.pc_l);
-        z80_regs.pc = addr.w;
+        memory_write (--z80_state.sp, z80_state.pc_h);
+        memory_write (--z80_state.sp, z80_state.pc_l);
+        z80_state.pc = addr.w;
         used_cycles += 17;
     }
 }
@@ -4109,8 +4109,8 @@ static void z80_e4_call_po_xx (void)
 /* PUSH HL */
 static void z80_e5_push_hl (void)
 {
-    memory_write (--z80_regs.sp, z80_regs.h);
-    memory_write (--z80_regs.sp, z80_regs.l);
+    memory_write (--z80_state.sp, z80_state.h);
+    memory_write (--z80_state.sp, z80_state.l);
     used_cycles += 11;
 }
 
@@ -4118,7 +4118,7 @@ static void z80_e5_push_hl (void)
 /* AND A, * */
 static void z80_e6_and_a_x (void)
 {
-    z80_regs.a &= memory_read (z80_regs.pc++);
+    z80_state.a &= memory_read (z80_state.pc++);
     SET_FLAGS_AND;
     used_cycles += 7;
 }
@@ -4127,9 +4127,9 @@ static void z80_e6_and_a_x (void)
 /* RST 20h */
 static void z80_e7_rst_20 (void)
 {
-    memory_write (--z80_regs.sp, z80_regs.pc_h);
-    memory_write (--z80_regs.sp, z80_regs.pc_l);
-    z80_regs.pc = 0x0020;
+    memory_write (--z80_state.sp, z80_state.pc_h);
+    memory_write (--z80_state.sp, z80_state.pc_l);
+    z80_state.pc = 0x0020;
     used_cycles += 11;
 }
 
@@ -4137,10 +4137,10 @@ static void z80_e7_rst_20 (void)
 /* RET PE */
 static void z80_e8_ret_pe (void)
 {
-    if (z80_regs.f & Z80_FLAG_PARITY)
+    if (z80_state.f & Z80_FLAG_PARITY)
     {
-        z80_regs.pc_l = memory_read (z80_regs.sp++);
-        z80_regs.pc_h = memory_read (z80_regs.sp++);
+        z80_state.pc_l = memory_read (z80_state.sp++);
+        z80_state.pc_h = memory_read (z80_state.sp++);
         used_cycles += 11;
     }
     else
@@ -4153,7 +4153,7 @@ static void z80_e8_ret_pe (void)
 /* JP (HL) */
 static void z80_e9_jp_hl (void)
 {
-    z80_regs.pc = z80_regs.hl;
+    z80_state.pc = z80_state.hl;
     used_cycles += 4;
 }
 
@@ -4162,12 +4162,12 @@ static void z80_e9_jp_hl (void)
 static void z80_ea_jp_pe_xx (void)
 {
     uint16_t_Split addr;
-    addr.l = memory_read (z80_regs.pc++);
-    addr.h = memory_read (z80_regs.pc++);
+    addr.l = memory_read (z80_state.pc++);
+    addr.h = memory_read (z80_state.pc++);
 
-    if (z80_regs.f & Z80_FLAG_PARITY)
+    if (z80_state.f & Z80_FLAG_PARITY)
     {
-        z80_regs.pc = addr.w;
+        z80_state.pc = addr.w;
     }
     used_cycles += 10;
 }
@@ -4176,7 +4176,7 @@ static void z80_ea_jp_pe_xx (void)
 /* EX DE, HL */
 static void z80_eb_ex_de_hl (void)
 {
-    SWAP (uint16_t, z80_regs.de, z80_regs.hl);
+    SWAP (uint16_t, z80_state.de, z80_state.hl);
     used_cycles += 4;
 }
 
@@ -4185,14 +4185,14 @@ static void z80_eb_ex_de_hl (void)
 static void z80_ec_call_pe_xx (void)
 {
     uint16_t_Split addr;
-    addr.l = memory_read (z80_regs.pc++);
-    addr.h = memory_read (z80_regs.pc++);
+    addr.l = memory_read (z80_state.pc++);
+    addr.h = memory_read (z80_state.pc++);
 
-    if (z80_regs.f & Z80_FLAG_PARITY)
+    if (z80_state.f & Z80_FLAG_PARITY)
     {
-        memory_write (--z80_regs.sp, z80_regs.pc_h);
-        memory_write (--z80_regs.sp, z80_regs.pc_l);
-        z80_regs.pc = addr.w;
+        memory_write (--z80_state.sp, z80_state.pc_h);
+        memory_write (--z80_state.sp, z80_state.pc_l);
+        z80_state.pc = addr.w;
         used_cycles += 17;
     }
     else
@@ -4216,7 +4216,7 @@ static void z80_ed_prefix (void)
 /* XOR A, * */
 static void z80_ee_xor_a_x (void)
 {
-    z80_regs.a ^= memory_read (z80_regs.pc++);
+    z80_state.a ^= memory_read (z80_state.pc++);
     SET_FLAGS_OR_XOR;
     used_cycles += 7;
 }
@@ -4225,9 +4225,9 @@ static void z80_ee_xor_a_x (void)
 /* RST 28h */
 static void z80_ef_rst_28 (void)
 {
-    memory_write (--z80_regs.sp, z80_regs.pc_h);
-    memory_write (--z80_regs.sp, z80_regs.pc_l);
-    z80_regs.pc = 0x0028;
+    memory_write (--z80_state.sp, z80_state.pc_h);
+    memory_write (--z80_state.sp, z80_state.pc_l);
+    z80_state.pc = 0x0028;
     used_cycles += 11;
 }
 
@@ -4235,14 +4235,14 @@ static void z80_ef_rst_28 (void)
 /* RET P */
 static void z80_f0_ret_p (void)
 {
-    if (z80_regs.f & Z80_FLAG_SIGN)
+    if (z80_state.f & Z80_FLAG_SIGN)
     {
         used_cycles += 5;
     }
     else
     {
-        z80_regs.pc_l = memory_read (z80_regs.sp++);
-        z80_regs.pc_h = memory_read (z80_regs.sp++);
+        z80_state.pc_l = memory_read (z80_state.sp++);
+        z80_state.pc_h = memory_read (z80_state.sp++);
         used_cycles += 11;
     }
 }
@@ -4251,8 +4251,8 @@ static void z80_f0_ret_p (void)
 /* POP AF */
 static void z80_f1_pop_af (void)
 {
-    z80_regs.f = memory_read (z80_regs.sp++);
-    z80_regs.a = memory_read (z80_regs.sp++);
+    z80_state.f = memory_read (z80_state.sp++);
+    z80_state.a = memory_read (z80_state.sp++);
     used_cycles += 10;
 }
 
@@ -4261,12 +4261,12 @@ static void z80_f1_pop_af (void)
 static void z80_f2_jp_p_xx (void)
 {
     uint16_t_Split addr;
-    addr.l = memory_read (z80_regs.pc++);
-    addr.h = memory_read (z80_regs.pc++);
+    addr.l = memory_read (z80_state.pc++);
+    addr.h = memory_read (z80_state.pc++);
 
-    if (!(z80_regs.f & Z80_FLAG_SIGN))
+    if (!(z80_state.f & Z80_FLAG_SIGN))
     {
-        z80_regs.pc = addr.w;
+        z80_state.pc = addr.w;
     }
     used_cycles += 10;
 }
@@ -4285,18 +4285,18 @@ static void z80_f3_di (void)
 static void z80_f4_call_p_xx (void)
 {
     uint16_t_Split addr;
-    addr.l = memory_read (z80_regs.pc++);
-    addr.h = memory_read (z80_regs.pc++);
+    addr.l = memory_read (z80_state.pc++);
+    addr.h = memory_read (z80_state.pc++);
 
-    if (z80_regs.f & Z80_FLAG_SIGN)
+    if (z80_state.f & Z80_FLAG_SIGN)
     {
         used_cycles += 10;
     }
     else
     {
-        memory_write (--z80_regs.sp, z80_regs.pc_h);
-        memory_write (--z80_regs.sp, z80_regs.pc_l);
-        z80_regs.pc = addr.w;
+        memory_write (--z80_state.sp, z80_state.pc_h);
+        memory_write (--z80_state.sp, z80_state.pc_l);
+        z80_state.pc = addr.w;
         used_cycles += 17;
     }
 }
@@ -4305,8 +4305,8 @@ static void z80_f4_call_p_xx (void)
 /* PUSH AF */
 static void z80_f5_push_af (void)
 {
-    memory_write (--z80_regs.sp, z80_regs.a);
-    memory_write (--z80_regs.sp, z80_regs.f);
+    memory_write (--z80_state.sp, z80_state.a);
+    memory_write (--z80_state.sp, z80_state.f);
     used_cycles += 11;
 }
 
@@ -4314,7 +4314,7 @@ static void z80_f5_push_af (void)
 /* OR A, * */
 static void z80_f6_or_a_x (void)
 {
-    z80_regs.a |= memory_read (z80_regs.pc++);
+    z80_state.a |= memory_read (z80_state.pc++);
     SET_FLAGS_OR_XOR;
     used_cycles += 7;
 }
@@ -4323,9 +4323,9 @@ static void z80_f6_or_a_x (void)
 /* RST 30h */
 static void z80_f7_rst_30 (void)
 {
-    memory_write (--z80_regs.sp, z80_regs.pc_h);
-    memory_write (--z80_regs.sp, z80_regs.pc_l);
-    z80_regs.pc = 0x0030;
+    memory_write (--z80_state.sp, z80_state.pc_h);
+    memory_write (--z80_state.sp, z80_state.pc_l);
+    z80_state.pc = 0x0030;
     used_cycles += 11;
 }
 
@@ -4333,10 +4333,10 @@ static void z80_f7_rst_30 (void)
 /* RET M */
 static void z80_f8_ret_m (void)
 {
-    if (z80_regs.f & Z80_FLAG_SIGN)
+    if (z80_state.f & Z80_FLAG_SIGN)
     {
-        z80_regs.pc_l = memory_read (z80_regs.sp++);
-        z80_regs.pc_h = memory_read (z80_regs.sp++);
+        z80_state.pc_l = memory_read (z80_state.sp++);
+        z80_state.pc_h = memory_read (z80_state.sp++);
         used_cycles += 11;
     }
     else
@@ -4349,7 +4349,7 @@ static void z80_f8_ret_m (void)
 /* LD SP, HL */
 static void z80_f9_ld_sp_hl (void)
 {
-    z80_regs.sp = z80_regs.hl;
+    z80_state.sp = z80_state.hl;
     used_cycles += 6;
 }
 
@@ -4358,12 +4358,12 @@ static void z80_f9_ld_sp_hl (void)
 static void z80_fa_jp_m_xx (void)
 {
     uint16_t_Split addr;
-    addr.l = memory_read (z80_regs.pc++);
-    addr.h = memory_read (z80_regs.pc++);
+    addr.l = memory_read (z80_state.pc++);
+    addr.h = memory_read (z80_state.pc++);
 
-    if (z80_regs.f & Z80_FLAG_SIGN)
+    if (z80_state.f & Z80_FLAG_SIGN)
     {
-        z80_regs.pc = addr.w;
+        z80_state.pc = addr.w;
     }
     used_cycles += 10;
 }
@@ -4383,14 +4383,14 @@ static void z80_fb_ei (void)
 static void z80_fc_call_m_xx (void)
 {
     uint16_t_Split addr;
-    addr.l = memory_read (z80_regs.pc++);
-    addr.h = memory_read (z80_regs.pc++);
+    addr.l = memory_read (z80_state.pc++);
+    addr.h = memory_read (z80_state.pc++);
 
-    if (z80_regs.f & Z80_FLAG_SIGN)
+    if (z80_state.f & Z80_FLAG_SIGN)
     {
-        memory_write (--z80_regs.sp, z80_regs.pc_h);
-        memory_write (--z80_regs.sp, z80_regs.pc_l);
-        z80_regs.pc = addr.w;
+        memory_write (--z80_state.sp, z80_state.pc_h);
+        memory_write (--z80_state.sp, z80_state.pc_l);
+        z80_state.pc = addr.w;
         used_cycles += 17;
     }
     else
@@ -4403,15 +4403,15 @@ static void z80_fc_call_m_xx (void)
 /* IY PREFIX */
 static void z80_fd_prefix (void)
 {
-    z80_regs.iy = z80_ix_iy_instruction (z80_regs.iy);
+    z80_state.iy = z80_ix_iy_instruction (z80_state.iy);
 }
 
 
 /* CP A, * */
 static void z80_fe_cp_a_x (void)
 {
-    uint8_t imm = memory_read (z80_regs.pc++);
-    SET_FLAGS_SUB (z80_regs.a, imm);
+    uint8_t imm = memory_read (z80_state.pc++);
+    SET_FLAGS_SUB (z80_state.a, imm);
     used_cycles += 7;
 }
 
@@ -4419,9 +4419,9 @@ static void z80_fe_cp_a_x (void)
 /* RST 38h */
 static void z80_ff_rst_38 (void)
 {
-    memory_write (--z80_regs.sp, z80_regs.pc_h);
-    memory_write (--z80_regs.sp, z80_regs.pc_l);
-    z80_regs.pc = 0x0038;
+    memory_write (--z80_state.sp, z80_state.pc_h);
+    memory_write (--z80_state.sp, z80_state.pc_l);
+    z80_state.pc = 0x0038;
     used_cycles += 11;
 }
 
@@ -4532,7 +4532,7 @@ void z80_run_cycles (uint64_t cycles)
         debug_instruction [2] = memory_read (PC + 2);
         debug_instruction [3] = memory_read (PC + 3);
 
-        if (z80_regs.halt)
+        if (z80_state.halt)
         {
             /* NOP */ CYCLES (4);
         }
@@ -4561,14 +4561,14 @@ void z80_run_cycles (uint64_t cycles)
             bool nmi = state.get_nmi ();
             if (nmi && nmi_previous == 0)
             {
-                if (z80_regs.halt)
+                if (z80_state.halt)
                 {
-                    z80_regs.halt = false;
+                    z80_state.halt = false;
                     PC += 1;
                 }
                 IFF1 = false;
-                memory_write (--z80_regs.sp, z80_regs.pc_h);
-                memory_write (--z80_regs.sp, z80_regs.pc_l);
+                memory_write (--z80_state.sp, z80_state.pc_h);
+                memory_write (--z80_state.sp, z80_state.pc_l);
                 PC = 0x66;
                 CYCLES (11);
             }
@@ -4577,26 +4577,26 @@ void z80_run_cycles (uint64_t cycles)
             /* Then check for maskable interrupts */
             if (IFF1 && state.get_int ())
             {
-                if (z80_regs.halt)
+                if (z80_state.halt)
                 {
-                    z80_regs.halt = false;
+                    z80_state.halt = false;
                     PC += 1;
                 }
 
                 IFF1 = false;
                 IFF2 = false;
 
-                switch (z80_regs.im)
+                switch (z80_state.im)
                 {
                     /* TODO: Cycle count? */
                     case 1:
-                        memory_write (--z80_regs.sp, z80_regs.pc_h);
-                        memory_write (--z80_regs.sp, z80_regs.pc_l);
+                        memory_write (--z80_state.sp, z80_state.pc_h);
+                        memory_write (--z80_state.sp, z80_state.pc_l);
                         PC = 0x38;
                         CYCLES (11);
                         break;
                     default:
-                        snprintf (state.error_buffer, 79, "Unsupported interrupt mode %d.", z80_regs.im);
+                        snprintf (state.error_buffer, 79, "Unsupported interrupt mode %d.", z80_state.im);
                         snepulator_error ("Z80 Error", state.error_buffer);
                         return;
                 }

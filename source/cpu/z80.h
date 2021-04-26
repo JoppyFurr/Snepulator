@@ -3,9 +3,9 @@
  */
 
 /* Structs */
-/* TODO: Do we need to do anything extra to tell the compiler to pack the structs? */
-/* Note: Assuming little endian for now */
-typedef struct Z80_Regs_t {
+/* TODO: Big-endian support */
+typedef struct Z80_State_s {
+
     /* Main Register Set */
     union {
         struct {
@@ -25,37 +25,39 @@ typedef struct Z80_Regs_t {
             uint8_t h;
         };
     };
+
     /* Alternate Register Set */
     union {
         struct {
-            uint16_t alt_af;
-            uint16_t alt_bc;
-            uint16_t alt_de;
-            uint16_t alt_hl;
+            uint16_t af_alt;
+            uint16_t bc_alt;
+            uint16_t de_alt;
+            uint16_t hl_alt;
         };
         struct {
-            uint8_t alt_f;
-            uint8_t alt_a;
-            uint8_t alt_c;
-            uint8_t alt_b;
-            uint8_t alt_e;
-            uint8_t alt_d;
-            uint8_t alt_l;
-            uint8_t alt_h;
+            uint8_t f_alt;
+            uint8_t a_alt;
+            uint8_t c_alt;
+            uint8_t b_alt;
+            uint8_t e_alt;
+            uint8_t d_alt;
+            uint8_t l_alt;
+            uint8_t h_alt;
         };
     };
+
     /* Special Purpose Registers */
     union {
         struct {
             uint16_t ir;
-            uint16_t ix;    /* Index registers */
+            uint16_t ix;
             uint16_t iy;
-            uint16_t sp;    /* Stack Pointer */
-            uint16_t pc;    /* Program Counter */
+            uint16_t sp;
+            uint16_t pc;
         };
         struct {
-            uint8_t i;      /* Interrupt Vector */
-            uint8_t r;      /* Memory Refresh */
+            uint8_t i;
+            uint8_t r;
             uint8_t ix_l;
             uint8_t ix_h;
             uint8_t iy_l;
@@ -66,20 +68,14 @@ typedef struct Z80_Regs_t {
             uint8_t pc_h;
         };
     };
-    uint8_t im;
-    bool iff1;
-    bool iff2;
-    bool halt;
-} Z80_Regs;
 
-#define BIT_0               (1 << 0)
-#define BIT_1               (1 << 1)
-#define BIT_2               (1 << 2)
-#define BIT_3               (1 << 3)
-#define BIT_4               (1 << 4)
-#define BIT_5               (1 << 5)
-#define BIT_6               (1 << 6)
-#define BIT_7               (1 << 7)
+    /* Interrupts */
+    uint8_t im;
+    uint8_t iff1;
+    uint8_t iff2;
+    uint8_t halt;
+
+} Z80_State;
 
 /* Z80 FLAGS */
 #define Z80_FLAG_CARRY      BIT_0

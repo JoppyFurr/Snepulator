@@ -27,7 +27,7 @@ extern "C" {
 #include "sms.h"
 #include "colecovision.h"
 
-extern Z80_Regs z80_regs;
+extern Z80_State z80_state;
 extern TMS9928A_Mode sms_vdp_mode_get (void);
 
 /* TODO: Access through a function instead of accessing the array */
@@ -199,11 +199,11 @@ void snepulator_render_menubar (void)
                 ImGui::Separator ();
 
                 ImGui::Text ("CPU");
-                ImGui::Text ("PC : %04x    SP : %04x", z80_regs.pc, z80_regs.sp);
-                ImGui::Text ("AF : %04x    BC : %04x", z80_regs.af, z80_regs.bc);
-                ImGui::Text ("DE : %04x    HL : %04x", z80_regs.de, z80_regs.hl);
-                ImGui::Text ("IX : %04x    IY : %04x", z80_regs.ix, z80_regs.iy);
-                ImGui::Text ("IM : %d       IFF: %d/%d", z80_regs.im, z80_regs.iff1, z80_regs.iff2);
+                ImGui::Text ("PC : %04x    SP : %04x", z80_state.pc, z80_state.sp);
+                ImGui::Text ("AF : %04x    BC : %04x", z80_state.af, z80_state.bc);
+                ImGui::Text ("DE : %04x    HL : %04x", z80_state.de, z80_state.hl);
+                ImGui::Text ("IX : %04x    IY : %04x", z80_state.ix, z80_state.iy);
+                ImGui::Text ("IM : %d       IFF: %d/%d", z80_state.im, z80_state.iff1, z80_state.iff2);
 
                 ImGui::Separator ();
 
