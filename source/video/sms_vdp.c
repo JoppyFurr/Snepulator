@@ -164,7 +164,6 @@ void sms_vdp_init (void)
 
     /* TODO: Are there any nonzero default values? */
     memset (&tms9928a_state.regs, 0, sizeof (tms9928a_state.regs));
-    memset (&tms9928a_state.vram, 0, sizeof (tms9928a_state.vram));
     memset (cram,                 0, sizeof (cram));
 }
 
@@ -179,7 +178,7 @@ uint8_t sms_vdp_data_read ()
 
     tms9928a_state.first_byte_received = false;
 
-    tms9928a_state.read_buffer = tms9928a_state.vram [tms9928a_state.address];
+    tms9928a_state.read_buffer = state.vram [tms9928a_state.address];
 
     tms9928a_state.address = (tms9928a_state.address + 1) & 0x3fff;
 
@@ -201,7 +200,7 @@ void sms_vdp_data_write (uint8_t value)
         case TMS9928A_CODE_VRAM_READ:
         case TMS9928A_CODE_VRAM_WRITE:
         case TMS9928A_CODE_REG_WRITE:
-            tms9928a_state.vram [tms9928a_state.address] = value;
+            state.vram [tms9928a_state.address] = value;
             break;
 
         case SMS_VDP_CODE_CRAM_WRITE:
@@ -265,7 +264,7 @@ void sms_vdp_control_write (uint8_t value)
         switch (tms9928a_state.code)
         {
             case TMS9928A_CODE_VRAM_READ:
-                tms9928a_state.read_buffer = tms9928a_state.vram [tms9928a_state.address++];
+                tms9928a_state.read_buffer = state.vram [tms9928a_state.address++];
                 break;
             case TMS9928A_CODE_VRAM_WRITE:
                 break;
@@ -601,8 +600,8 @@ void sms_vdp_render_mode4_background_line (const TMS9928A_Config *mode, uint16_t
             tile_address &= ~0x0400;
         }
 
-        uint16_t tile = ((uint16_t)(tms9928a_state.vram [tile_address])) +
-                        (((uint16_t)(tms9928a_state.vram [tile_address + 1])) << 8);
+        uint16_t tile = ((uint16_t)(state.vram [tile_address])) +
+                        (((uint16_t)(state.vram [tile_address + 1])) << 8);
 
         /* If we are rendering the "priority" layer, skip any non-priority tiles */
         if (priority && !(tile & 0x1000))
@@ -618,7 +617,7 @@ void sms_vdp_render_mode4_background_line (const TMS9928A_Config *mode, uint16_t
             pattern_flags |= PATTERN_FLIP_V;
         }
 
-        SMS_VDP_Mode4_Pattern *pattern = (SMS_VDP_Mode4_Pattern *) &tms9928a_state.vram [(tile & 0x1ff) * sizeof (SMS_VDP_Mode4_Pattern)];
+        SMS_VDP_Mode4_Pattern *pattern = (SMS_VDP_Mode4_Pattern *) &state.vram [(tile & 0x1ff) * sizeof (SMS_VDP_Mode4_Pattern)];
 
         SMS_VDP_Palette palette = (tile & (1 << 11)) ? SMS_VDP_PALETTE_SPRITE : SMS_VDP_PALETTE_BACKGROUND;
 
@@ -654,7 +653,7 @@ void sms_vdp_render_mode4_sprites_line (const TMS9928A_Config *mode, uint16_t li
     /* Traverse the sprite list, filling the line sprite buffer */
     for (int i = 0; i < 64; i++)
     {
-        uint8_t y = tms9928a_state.vram [sprite_attribute_table_base + i];
+        uint8_t y = state.vram [sprite_attribute_table_base + i];
 
         /* Break if there are no more sprites */
         if (mode->lines_active == 192 && y == 0xd0)
@@ -687,9 +686,9 @@ void sms_vdp_render_mode4_sprites_line (const TMS9928A_Config *mode, uint16_t li
     while (line_sprite_count--)
     {
         uint16_t i = line_sprite_buffer [line_sprite_count];
-        uint8_t y = tms9928a_state.vram [sprite_attribute_table_base + i];
-        uint8_t x = tms9928a_state.vram [sprite_attribute_table_base + 0x80 + i * 2];
-        uint8_t pattern_index = tms9928a_state.vram [sprite_attribute_table_base + 0x80 + i * 2 + 1];
+        uint8_t y = state.vram [sprite_attribute_table_base + i];
+        uint8_t x = state.vram [sprite_attribute_table_base + 0x80 + i * 2];
+        uint8_t pattern_index = state.vram [sprite_attribute_table_base + 0x80 + i * 2 + 1];
 
         position.x = x;
 
@@ -708,13 +707,13 @@ void sms_vdp_render_mode4_sprites_line (const TMS9928A_Config *mode, uint16_t li
         if (tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_SPRITE_SIZE)
             pattern_index &= 0xfe;
 
-        pattern = (SMS_VDP_Mode4_Pattern *) &tms9928a_state.vram [(sprite_pattern_offset + pattern_index) * sizeof (SMS_VDP_Mode4_Pattern)];
+        pattern = (SMS_VDP_Mode4_Pattern *) &state.vram [(sprite_pattern_offset + pattern_index) * sizeof (SMS_VDP_Mode4_Pattern)];
         sms_vdp_render_mode4_pattern_line (mode, line, pattern, SMS_VDP_PALETTE_SPRITE, position, pattern_flags);
 
         if (tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_SPRITE_SIZE)
         {
             position.y += pattern_height;
-            pattern = (SMS_VDP_Mode4_Pattern *) &tms9928a_state.vram [(sprite_pattern_offset + pattern_index + 1) * sizeof (SMS_VDP_Mode4_Pattern)];
+            pattern = (SMS_VDP_Mode4_Pattern *) &state.vram [(sprite_pattern_offset + pattern_index + 1) * sizeof (SMS_VDP_Mode4_Pattern)];
             sms_vdp_render_mode4_pattern_line (mode, line, pattern, SMS_VDP_PALETTE_SPRITE, position, pattern_flags);
         }
     }
