@@ -3,16 +3,18 @@
  */
 
 #include <assert.h>
+#include <errno.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
-#include <errno.h>
 
 #include "util.h"
 #include "snepulator.h"
 #include "database/sms_db.h"
+#include "save_state.h"
 
 #include "gamepad.h"
 #include "cpu/z80.h"
@@ -45,6 +47,7 @@ extern Snepulator_Gamepad gamepad_1;
 extern Snepulator_Gamepad gamepad_2;
 extern Z80_State z80_state;
 extern SN76489_State sn76489_state;
+pthread_mutex_t state_mutex;
 
 
 /* Console hardware state */
@@ -503,6 +506,8 @@ static void sms_run (uint32_t ms)
     static uint64_t millicycles = 0;
     uint64_t lines;
 
+    pthread_mutex_lock (&state_mutex);
+
     if (gamepad_1.type == GAMEPAD_TYPE_SMS_PADDLE)
     {
         gamepad_paddle_tick (ms);
@@ -521,6 +526,8 @@ static void sms_run (uint32_t ms)
         psg_run_cycles (228);
         sms_vdp_run_one_scanline ();
     }
+
+    pthread_mutex_unlock (&state_mutex);
 }
 
 
@@ -547,6 +554,150 @@ static void sms_sync (void)
 
         free (path);
     }
+}
+
+
+/*
+ * Export SMS state to a file.
+ */
+static void sms_state_save (const char *filename)
+{
+    pthread_mutex_lock (&state_mutex);
+
+    /* Begin creating a new save state. */
+    if (state.console == CONSOLE_GAME_GEAR)
+    {
+        save_state_begin (CONSOLE_ID_GAME_GEAR);
+    }
+    else
+    {
+        save_state_begin (CONSOLE_ID_SMS);
+    }
+
+    save_state_section_add (SECTION_ID_SMS_HW, 1, sizeof (hw_state), &hw_state);
+
+    z80_state_save ();
+    save_state_section_add (SECTION_ID_RAM, 1, SMS_RAM_SIZE, state.ram);
+    if (sram_used)
+    {
+        save_state_section_add (SECTION_ID_SRAM, 1, SMS_SRAM_SIZE, state.sram);
+    }
+
+    tms9928a_state_save ();
+    save_state_section_add (SECTION_ID_VRAM, 1, TMS9928A_VRAM_SIZE, state.vram);
+
+    sn76489_state_save ();
+
+    pthread_mutex_unlock (&state_mutex);
+
+    save_state_write (filename);
+}
+
+
+/*
+ * Import SMS state from a file.
+ */
+static void sms_state_load (const char *filename)
+{
+    const char *console_id;
+    uint32_t sections_loaded;
+
+    if (load_state_begin (filename, &console_id, &sections_loaded) == -1)
+    {
+        return;
+    }
+
+    pthread_mutex_lock (&state_mutex);
+
+    if (!strncmp (console_id, CONSOLE_ID_SMS, 4))
+    {
+        state.console = CONSOLE_MASTER_SYSTEM;
+    }
+    else if (!strncmp (console_id, CONSOLE_ID_GAME_GEAR, 4))
+    {
+        state.console = CONSOLE_GAME_GEAR;
+    }
+    else
+    {
+        return;
+    }
+
+    sram_used = false;
+
+    for (uint32_t i = 0; i < sections_loaded; i++)
+    {
+        const char *section_id;
+        uint32_t version;
+        uint32_t size;
+        uint8_t *data;
+        load_state_section (&section_id, &version, &size, (void *) &data);
+
+        if (!strncmp (section_id, SECTION_ID_SMS_HW, 4))
+        {
+            if (size == sizeof (hw_state))
+            {
+                memcpy (&hw_state, data, sizeof (hw_state));
+            }
+            else
+            {
+                snepulator_error ("Error", "Save-state contains incorrect hw_state size");
+            }
+        }
+        else if (!strncmp (section_id, SECTION_ID_Z80, 4))
+        {
+            z80_state_load (version, size, data);
+        }
+        else if (!strncmp (section_id, SECTION_ID_RAM, 4))
+        {
+            if (size == SMS_RAM_SIZE)
+            {
+                memcpy (state.ram, data, SMS_RAM_SIZE);
+            }
+            else
+            {
+                snepulator_error ("Error", "Save-state contains incorrect RAM size");
+            }
+        }
+        else if (!strncmp (section_id, SECTION_ID_SRAM, 4))
+        {
+            sram_used = true;
+            if (size == SMS_SRAM_SIZE)
+            {
+                memcpy (state.sram, data, SMS_SRAM_SIZE);
+            }
+            else
+            {
+                snepulator_error ("Error", "Save-state contains incorrect SRAM size");
+            }
+        }
+        else if (!strncmp (section_id, SECTION_ID_VDP, 4))
+        {
+            tms9928a_state_load (version, size, data);
+        }
+        else if (!strncmp (section_id, SECTION_ID_VRAM, 4))
+        {
+            if (size == TMS9928A_VRAM_SIZE)
+            {
+                memcpy (state.vram, data, TMS9928A_VRAM_SIZE);
+            }
+            else
+            {
+                snepulator_error ("Error", "Save-state contains incorrect VRAM size");
+            }
+        }
+        else if (!strncmp (section_id, SECTION_ID_PSG, 4))
+        {
+            sn76489_state_load (version, size, data);
+        }
+        else
+        {
+            printf ("Unknown Section: section_id=%s, version=%u, size=%u, data=%p.\n", section_id, version, size, data);
+        }
+    }
+
+    pthread_mutex_unlock (&state_mutex);
+
+    load_state_end ();
 }
 
 
@@ -664,6 +815,8 @@ void sms_init (void)
     state.get_nmi = sms_get_nmi;
     state.sync = sms_sync;
     state.run = sms_run;
+    state.state_save = sms_state_save;
+    state.state_load = sms_state_load;
 
     /* Begin emulation */
     state.ready = true;
