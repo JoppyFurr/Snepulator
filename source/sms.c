@@ -44,7 +44,7 @@ extern Snepulator_State state;
 extern Snepulator_Gamepad gamepad_1;
 extern Snepulator_Gamepad gamepad_2;
 extern Z80_Regs z80_regs;
-extern uint8_t psg_gg_stereo;
+extern SN76489_State sn76489_state;
 
 
 /* Console hardware state */
@@ -403,7 +403,7 @@ static void sms_io_write (uint8_t addr, uint8_t data)
         if (addr == 0x06)
         {
             /* Stereo sound register */
-            psg_gg_stereo = data;
+            sn76489_state.gg_stereo = data;
         }
     }
 

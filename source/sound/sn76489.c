@@ -12,9 +12,8 @@
 extern Snepulator_State state;
 
 /* State */
-SN76489_Regs psg_regs;
+SN76489_State sn76489_state;
 pthread_mutex_t psg_mutex = PTHREAD_MUTEX_INITIALIZER;
-uint8_t psg_gg_stereo;
 
 #define GG_CH0_RIGHT    BIT_0
 #define GG_CH1_RIGHT    BIT_1
@@ -41,87 +40,86 @@ static uint64_t write_index = 0;
  */
 void sn76489_data_write (uint8_t data)
 {
-    static uint8_t latch = 0x00;
     uint16_t data_low = data & 0x0f;
     uint16_t data_high = data << 4;
 
 
     if (data & 0x80) /* LATCH + LOW DATA */
     {
-        latch = data & 0x70;
+        sn76489_state.latch = data & 0x70;
 
-        switch (latch)
+        switch (sn76489_state.latch)
         {
             /* Channel 0 (tone) */
             case 0x00:
-                psg_regs.tone_0 = (psg_regs.tone_0 & 0x03f0) | data_low;
+                sn76489_state.tone_0 = (sn76489_state.tone_0 & 0x03f0) | data_low;
                 break;
             case 0x10:
-                psg_regs.vol_0 = data_low;
+                sn76489_state.vol_0 = data_low;
                 break;
 
             /* Channel 1 (tone) */
             case 0x20:
-                psg_regs.tone_1 = (psg_regs.tone_1 & 0x03f0) | data_low;
+                sn76489_state.tone_1 = (sn76489_state.tone_1 & 0x03f0) | data_low;
                 break;
             case 0x30:
-                psg_regs.vol_1 = data_low;
+                sn76489_state.vol_1 = data_low;
                 break;
 
             /* Channel 2 (tone) */
             case 0x40:
-                psg_regs.tone_2 = (psg_regs.tone_2 & 0x03f0) | data_low;
+                sn76489_state.tone_2 = (sn76489_state.tone_2 & 0x03f0) | data_low;
                 break;
             case 0x50:
-                psg_regs.vol_2 = data_low;
+                sn76489_state.vol_2 = data_low;
                 break;
 
             /* Channel 3 (noise) */
             case 0x60:
-                psg_regs.noise = data_low;
-                psg_regs.lfsr  = 0x8000;
+                sn76489_state.noise = data_low;
+                sn76489_state.lfsr  = 0x8000;
                 break;
             case 0x70:
-                psg_regs.vol_3 = data_low;
+                sn76489_state.vol_3 = data_low;
             default:
                 break;
         }
     }
     else /* HIGH DATA */
     {
-        switch (latch)
+        switch (sn76489_state.latch)
         {
             /* Channel 0 (tone) */
             case 0x00:
-                psg_regs.tone_0 = (psg_regs.tone_0 & 0x000f) | data_high;
+                sn76489_state.tone_0 = (sn76489_state.tone_0 & 0x000f) | data_high;
                 break;
             case 0x10:
-                psg_regs.vol_0 = data_low;
+                sn76489_state.vol_0 = data_low;
                 break;
 
             /* Channel 1 (tone) */
             case 0x20:
-                psg_regs.tone_1 = (psg_regs.tone_1 & 0x000f) | data_high;
+                sn76489_state.tone_1 = (sn76489_state.tone_1 & 0x000f) | data_high;
                 break;
             case 0x30:
-                psg_regs.vol_1 = data_low;
+                sn76489_state.vol_1 = data_low;
                 break;
 
             /* Channel 2 (tone) */
             case 0x40:
-                psg_regs.tone_2 = (psg_regs.tone_2 & 0x000f) | data_high;
+                sn76489_state.tone_2 = (sn76489_state.tone_2 & 0x000f) | data_high;
                 break;
             case 0x50:
-                psg_regs.vol_2 = data_low;
+                sn76489_state.vol_2 = data_low;
                 break;
 
             /* Channel 3 (noise) */
             case 0x60:
-                psg_regs.noise = data_low;
-                psg_regs.lfsr  = 0x8000;
+                sn76489_state.noise = data_low;
+                sn76489_state.lfsr  = 0x8000;
                 break;
             case 0x70:
-                psg_regs.vol_3 = data_low;
+                sn76489_state.vol_3 = data_low;
             default:
                 break;
         }
@@ -134,18 +132,18 @@ void sn76489_data_write (uint8_t data)
  */
 void sn76489_init (void)
 {
-    memset (&psg_regs, 0, sizeof (psg_regs));
-    psg_regs.vol_0 = 0x0f;
-    psg_regs.vol_1 = 0x0f;
-    psg_regs.vol_2 = 0x0f;
-    psg_regs.vol_3 = 0x0f;
+    memset (&sn76489_state, 0, sizeof (sn76489_state));
+    sn76489_state.vol_0 = 0x0f;
+    sn76489_state.vol_1 = 0x0f;
+    sn76489_state.vol_2 = 0x0f;
+    sn76489_state.vol_3 = 0x0f;
 
-    psg_regs.output_0 =  1;
-    psg_regs.output_1 = -1;
-    psg_regs.output_2 =  1;
-    psg_regs.output_3 = -1;
+    sn76489_state.output_0 =  1;
+    sn76489_state.output_1 = -1;
+    sn76489_state.output_2 =  1;
+    sn76489_state.output_3 = -1;
 
-    psg_gg_stereo = 0xff;
+    sn76489_state.gg_stereo = 0xff;
 }
 
 
@@ -189,62 +187,62 @@ void _psg_run_cycles (uint64_t cycles)
     while (psg_cycles--)
     {
         /* Decrement counters */
-        if (psg_regs.counter_0) { psg_regs.counter_0--; }
-        if (psg_regs.counter_1) { psg_regs.counter_1--; }
-        if (psg_regs.counter_2) { psg_regs.counter_2--; }
-        if (psg_regs.counter_3) { psg_regs.counter_3--; }
+        if (sn76489_state.counter_0) { sn76489_state.counter_0--; }
+        if (sn76489_state.counter_1) { sn76489_state.counter_1--; }
+        if (sn76489_state.counter_2) { sn76489_state.counter_2--; }
+        if (sn76489_state.counter_3) { sn76489_state.counter_3--; }
 
         /* Toggle outputs */
-        if (psg_regs.counter_0 == 0)
+        if (sn76489_state.counter_0 == 0)
         {
-            psg_regs.counter_0 = psg_regs.tone_0;
-            psg_regs.output_0 *= -1;
+            sn76489_state.counter_0 = sn76489_state.tone_0;
+            sn76489_state.output_0 *= -1;
         }
-        if (psg_regs.counter_1 == 0)
+        if (sn76489_state.counter_1 == 0)
         {
-            psg_regs.counter_1 = psg_regs.tone_1;
-            psg_regs.output_1 *= -1;
+            sn76489_state.counter_1 = sn76489_state.tone_1;
+            sn76489_state.output_1 *= -1;
         }
-        if (psg_regs.counter_2 == 0)
+        if (sn76489_state.counter_2 == 0)
         {
-            psg_regs.counter_2 = psg_regs.tone_2;
-            psg_regs.output_2 *= -1;
+            sn76489_state.counter_2 = sn76489_state.tone_2;
+            sn76489_state.output_2 *= -1;
         }
 
         /* Tone channels output +1 if their tone register is zero */
-        if (psg_regs.tone_0 <= 1) { psg_regs.output_0 = 1; }
-        if (psg_regs.tone_1 <= 1) { psg_regs.output_1 = 1; }
-        if (psg_regs.tone_2 <= 1) { psg_regs.output_2 = 1; }
+        if (sn76489_state.tone_0 <= 1) { sn76489_state.output_0 = 1; }
+        if (sn76489_state.tone_1 <= 1) { sn76489_state.output_1 = 1; }
+        if (sn76489_state.tone_2 <= 1) { sn76489_state.output_2 = 1; }
 
-        if (psg_regs.counter_3 == 0)
+        if (sn76489_state.counter_3 == 0)
         {
-            switch (psg_regs.noise & 0x03)
+            switch (sn76489_state.noise & 0x03)
             {
-                case 0x00:  psg_regs.counter_3 = 0x10;              break;
-                case 0x01:  psg_regs.counter_3 = 0x20;              break;
-                case 0x02:  psg_regs.counter_3 = 0x40;              break;
-                case 0x03:  psg_regs.counter_3 = psg_regs.tone_2;   break;
+                case 0x00:  sn76489_state.counter_3 = 0x10;              break;
+                case 0x01:  sn76489_state.counter_3 = 0x20;              break;
+                case 0x02:  sn76489_state.counter_3 = 0x40;              break;
+                case 0x03:  sn76489_state.counter_3 = sn76489_state.tone_2;   break;
                 default:    break;
             }
-            psg_regs.output_3 *= -1;
+            sn76489_state.output_3 *= -1;
 
             /* On transition from -1 to 1, shift the LFSR */
-            if (psg_regs.output_3 == 1)
+            if (sn76489_state.output_3 == 1)
             {
-                psg_regs.output_lfsr = (psg_regs.lfsr & 0x0001);
+                sn76489_state.output_lfsr = (sn76489_state.lfsr & 0x0001);
 
-                if (psg_regs.noise & (1 << 2))
+                if (sn76489_state.noise & (1 << 2))
                 {
                     /* White noise - Tap bits 0 and 3 */
-                    psg_regs.lfsr = (psg_regs.lfsr >> 1) |
-                                    (((psg_regs.lfsr & (1 << 0)) ? 0x8000 : 0) ^ ((psg_regs.lfsr & (1 << 3)) ? 0x8000 : 0));
+                    sn76489_state.lfsr = (sn76489_state.lfsr >> 1) |
+                                    (((sn76489_state.lfsr & (1 << 0)) ? 0x8000 : 0) ^ ((sn76489_state.lfsr & (1 << 3)) ? 0x8000 : 0));
 
                 }
                 else
                 {
                     /* Periodic noise  - Tap bit 0 */
-                    psg_regs.lfsr = (psg_regs.lfsr >> 1) |
-                                    ((psg_regs.lfsr & (1 << 0)) ? 0x8000 : 0);
+                    sn76489_state.lfsr = (sn76489_state.lfsr >> 1) |
+                                    ((sn76489_state.lfsr & (1 << 0)) ? 0x8000 : 0);
                 }
             }
         }
@@ -252,22 +250,30 @@ void _psg_run_cycles (uint64_t cycles)
         /* Store this sample in the ring */
         if (state.console == CONSOLE_GAME_GEAR)
         {
-            sample_ring_left  [write_index % PSG_RING_SIZE] = (psg_gg_stereo & GG_CH0_LEFT  ? psg_regs.output_0    * (0x0f - psg_regs.vol_0) * BASE_VOLUME : 0)
-                                                            + (psg_gg_stereo & GG_CH1_LEFT  ? psg_regs.output_1    * (0x0f - psg_regs.vol_1) * BASE_VOLUME : 0)
-                                                            + (psg_gg_stereo & GG_CH2_LEFT  ? psg_regs.output_2    * (0x0f - psg_regs.vol_2) * BASE_VOLUME : 0)
-                                                            + (psg_gg_stereo & GG_CH3_LEFT  ? psg_regs.output_lfsr * (0x0f - psg_regs.vol_3) * BASE_VOLUME : 0);
+            sample_ring_left  [write_index % PSG_RING_SIZE] = (sn76489_state.gg_stereo & GG_CH0_LEFT
+                                                               ? sn76489_state.output_0    * (0x0f - sn76489_state.vol_0) * BASE_VOLUME : 0)
+                                                            + (sn76489_state.gg_stereo & GG_CH1_LEFT
+                                                               ? sn76489_state.output_1    * (0x0f - sn76489_state.vol_1) * BASE_VOLUME : 0)
+                                                            + (sn76489_state.gg_stereo & GG_CH2_LEFT
+                                                               ? sn76489_state.output_2    * (0x0f - sn76489_state.vol_2) * BASE_VOLUME : 0)
+                                                            + (sn76489_state.gg_stereo & GG_CH3_LEFT
+                                                               ? sn76489_state.output_lfsr * (0x0f - sn76489_state.vol_3) * BASE_VOLUME : 0);
 
-            sample_ring_right [write_index % PSG_RING_SIZE] = (psg_gg_stereo & GG_CH0_RIGHT ? psg_regs.output_0    * (0x0f - psg_regs.vol_0) * BASE_VOLUME : 0)
-                                                            + (psg_gg_stereo & GG_CH1_RIGHT ? psg_regs.output_1    * (0x0f - psg_regs.vol_1) * BASE_VOLUME : 0)
-                                                            + (psg_gg_stereo & GG_CH2_RIGHT ? psg_regs.output_2    * (0x0f - psg_regs.vol_2) * BASE_VOLUME : 0)
-                                                            + (psg_gg_stereo & GG_CH3_RIGHT ? psg_regs.output_lfsr * (0x0f - psg_regs.vol_3) * BASE_VOLUME : 0);
+            sample_ring_right [write_index % PSG_RING_SIZE] = (sn76489_state.gg_stereo & GG_CH0_RIGHT
+                                                               ? sn76489_state.output_0    * (0x0f - sn76489_state.vol_0) * BASE_VOLUME : 0)
+                                                            + (sn76489_state.gg_stereo & GG_CH1_RIGHT
+                                                               ? sn76489_state.output_1    * (0x0f - sn76489_state.vol_1) * BASE_VOLUME : 0)
+                                                            + (sn76489_state.gg_stereo & GG_CH2_RIGHT
+                                                               ? sn76489_state.output_2    * (0x0f - sn76489_state.vol_2) * BASE_VOLUME : 0)
+                                                            + (sn76489_state.gg_stereo & GG_CH3_RIGHT
+                                                               ? sn76489_state.output_lfsr * (0x0f - sn76489_state.vol_3) * BASE_VOLUME : 0);
         }
         else
         {
-            sample_ring_left [write_index % PSG_RING_SIZE] = psg_regs.output_0    * (0x0f - psg_regs.vol_0) * BASE_VOLUME
-                                                           + psg_regs.output_1    * (0x0f - psg_regs.vol_1) * BASE_VOLUME
-                                                           + psg_regs.output_2    * (0x0f - psg_regs.vol_2) * BASE_VOLUME
-                                                           + psg_regs.output_lfsr * (0x0f - psg_regs.vol_3) * BASE_VOLUME;
+            sample_ring_left [write_index % PSG_RING_SIZE] = sn76489_state.output_0    * (0x0f - sn76489_state.vol_0) * BASE_VOLUME
+                                                           + sn76489_state.output_1    * (0x0f - sn76489_state.vol_1) * BASE_VOLUME
+                                                           + sn76489_state.output_2    * (0x0f - sn76489_state.vol_2) * BASE_VOLUME
+                                                           + sn76489_state.output_lfsr * (0x0f - sn76489_state.vol_3) * BASE_VOLUME;
         }
         write_index++;
 

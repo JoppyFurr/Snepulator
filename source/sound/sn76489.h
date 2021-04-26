@@ -5,37 +5,36 @@
 #define PSG_RING_SIZE 16384
 #define BASE_VOLUME 100
 
-typedef struct SN76489_Regs_s {
+typedef struct SN76489_State_s {
 
-    /* 4-bit volume registers */
-    uint8_t vol_0;
-    uint8_t vol_1;
-    uint8_t vol_2;
-    uint8_t vol_3;
+    uint16_t vol_0; /* Volume: 4 bits */
+    uint16_t vol_1;
+    uint16_t vol_2;
+    uint16_t vol_3;
 
-    /* 10-bit tone registers */
-    uint16_t tone_0;
+    uint16_t tone_0; /* Tone: 10 bits */
     uint16_t tone_1;
     uint16_t tone_2;
+    uint16_t noise;  /* Noise: 4 bits */
 
-    /* 4-bit noise register */
-    uint8_t noise;
-
-    /* Counters */
     uint16_t counter_0;
     uint16_t counter_1;
     uint16_t counter_2;
     uint16_t counter_3;
-    uint16_t lfsr;
 
-    /* Outputs */
     int16_t output_0;
     int16_t output_1;
     int16_t output_2;
     int16_t output_3;
-    int16_t output_lfsr;
 
-} SN76489_Regs;
+    uint16_t latch;
+    uint16_t lfsr;
+    uint16_t output_lfsr;
+
+    /* Extensions */
+    uint16_t gg_stereo;
+
+} SN76489_State;
 
 /* Reset PSG to initial power-on state. */
 void sn76489_init (void);
