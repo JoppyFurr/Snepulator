@@ -43,7 +43,7 @@
 extern Snepulator_State state;
 extern Snepulator_Gamepad gamepad_1;
 extern Snepulator_Gamepad gamepad_2;
-extern Z80_Regs z80_regs;
+extern Z80_State z80_state;
 extern SN76489_State sn76489_state;
 
 
@@ -695,8 +695,8 @@ void sms_init (void)
     if (!state.sms_bios_filename)
     {
         /* Z80 interrupt mode and stack pointer */
-        z80_regs.im = 1;
-        z80_regs.sp = 0xdff0;
+        z80_state.im = 1;
+        z80_state.sp = 0xdff0;
 
         hw_state.memory_control |= SMS_MEMORY_CTRL_BIOS_DISABLE;
 
