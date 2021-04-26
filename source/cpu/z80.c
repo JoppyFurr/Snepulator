@@ -3,16 +3,17 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <arpa/inet.h>
 
 #include "../util.h"
 #include "../snepulator.h"
-extern Snepulator_State state;
-
+#include "../save_state.h"
 #include "z80.h"
 #include "z80_names.h"
 
-#define SWAP(TYPE, X, Y) { TYPE tmp = X; X = Y; Y = tmp; }
+extern Snepulator_State state;
 
+#define SWAP(TYPE, X, Y) { TYPE tmp = X; X = Y; Y = tmp; }
 
 /* State */
 Z80_State z80_state;
@@ -4578,4 +4579,71 @@ void z80_run_cycles (uint64_t cycles)
     }
 
     z80_state.excess_cycles = cycles;
+}
+
+
+/*
+ * Export Z80 state.
+ */
+void z80_state_save (void)
+{
+    Z80_State z80_state_be = {
+        .af =            htons (z80_state.af),
+        .bc =            htons (z80_state.bc),
+        .de =            htons (z80_state.de),
+        .hl =            htons (z80_state.hl),
+        .af_alt =        htons (z80_state.af_alt),
+        .bc_alt =        htons (z80_state.bc_alt),
+        .de_alt =        htons (z80_state.de_alt),
+        .hl_alt =        htons (z80_state.hl_alt),
+        .ir =            htons (z80_state.ir),
+        .ix =            htons (z80_state.ix),
+        .iy =            htons (z80_state.iy),
+        .sp =            htons (z80_state.sp),
+        .pc =            htons (z80_state.pc),
+        .im =            z80_state.im,
+        .iff1 =          z80_state.iff1,
+        .iff2 =          z80_state.iff2,
+        .halt =          z80_state.halt,
+        .excess_cycles = htonl (z80_state.excess_cycles)
+    };
+
+    save_state_section_add (SECTION_ID_Z80, 1, sizeof (z80_state_be), &z80_state_be);
+}
+
+
+/*
+ * Import Z80 state.
+ */
+void z80_state_load (uint32_t version, uint32_t size, void *data)
+{
+    Z80_State z80_state_be;
+
+    if (size == sizeof (z80_state_be))
+    {
+        memcpy (&z80_state_be, data, sizeof (z80_state_be));
+
+        z80_state.af =            ntohs (z80_state_be.af);
+        z80_state.bc =            ntohs (z80_state_be.bc);
+        z80_state.de =            ntohs (z80_state_be.de);
+        z80_state.hl =            ntohs (z80_state_be.hl);
+        z80_state.af_alt =        ntohs (z80_state_be.af_alt);
+        z80_state.bc_alt =        ntohs (z80_state_be.bc_alt);
+        z80_state.de_alt =        ntohs (z80_state_be.de_alt);
+        z80_state.hl_alt =        ntohs (z80_state_be.hl_alt);
+        z80_state.ir =            ntohs (z80_state_be.ir);
+        z80_state.ix =            ntohs (z80_state_be.ix);
+        z80_state.iy =            ntohs (z80_state_be.iy);
+        z80_state.sp =            ntohs (z80_state_be.sp);
+        z80_state.pc =            ntohs (z80_state_be.pc);
+        z80_state.im =            z80_state_be.im;
+        z80_state.iff1 =          z80_state_be.iff1;
+        z80_state.iff2 =          z80_state_be.iff2;
+        z80_state.halt =          z80_state_be.halt;
+        z80_state.excess_cycles = ntohl (z80_state_be.excess_cycles);
+    }
+    else
+    {
+        snepulator_error ("Error", "Save-state contains incorrect Z80 size");
+    }
 }
