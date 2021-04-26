@@ -42,6 +42,7 @@ const float Float4_Black[4] = { 0.0, 0.0, 0.0, 0.0 };
 /* Global state */
 Snepulator_State state;
 pthread_mutex_t video_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t state_mutex = PTHREAD_MUTEX_INITIALIZER;
 bool config_capture_events = false;
 SDL_Window *window = NULL;
 SDL_GLContext glcontext = NULL;
