@@ -102,3 +102,9 @@ void z80_run_instruction (void);
 
 /* Simulate the Z80 for the specified number of clock cycles. */
 void z80_run_cycles (uint64_t cycles);
+
+/* Export Z80 state. */
+void z80_state_save (void);
+
+/* Import Z80 state. */
+void z80_state_load (uint32_t version, uint32_t size, void *data);
