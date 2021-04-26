@@ -5,9 +5,11 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <pthread.h>
+#include <arpa/inet.h>
 
 #include "../util.h"
 #include "../snepulator.h"
+#include "../save_state.h"
 #include "sn76489.h"
 extern Snepulator_State state;
 
@@ -344,5 +346,76 @@ void sn76489_get_samples (int16_t *stream, int count)
         }
 
         soundcard_sample_count++;
+    }
+}
+
+
+/*
+ * Export sn76489 state.
+ */
+void sn76489_state_save (void)
+{
+    SN76489_State sn76489_state_be = {
+        .vol_0 =       htons (sn76489_state.vol_0),
+        .vol_1 =       htons (sn76489_state.vol_1),
+        .vol_2 =       htons (sn76489_state.vol_2),
+        .vol_3 =       htons (sn76489_state.vol_3),
+        .tone_0 =      htons (sn76489_state.tone_0),
+        .tone_1 =      htons (sn76489_state.tone_1),
+        .tone_2 =      htons (sn76489_state.tone_2),
+        .noise =       htons (sn76489_state.noise),
+        .counter_0 =   htons (sn76489_state.counter_0),
+        .counter_1 =   htons (sn76489_state.counter_1),
+        .counter_2 =   htons (sn76489_state.counter_2),
+        .counter_3 =   htons (sn76489_state.counter_3),
+        .output_0 =    htons (sn76489_state.output_0),
+        .output_1 =    htons (sn76489_state.output_1),
+        .output_2 =    htons (sn76489_state.output_2),
+        .output_3 =    htons (sn76489_state.output_3),
+        .latch =       htons (sn76489_state.latch),
+        .lfsr =        htons (sn76489_state.lfsr),
+        .output_lfsr = htons (sn76489_state.output_lfsr),
+        .gg_stereo =   htons (sn76489_state.gg_stereo)
+    };
+
+    save_state_section_add (SECTION_ID_PSG, 1, sizeof (sn76489_state_be), &sn76489_state_be);
+}
+
+/*
+ * Import sn76489 state.
+ */
+void sn76489_state_load (uint32_t version, uint32_t size, void *data)
+{
+    SN76489_State sn76489_state_be;
+
+    if (size == sizeof (sn76489_state_be))
+    {
+        memcpy (&sn76489_state_be, data, sizeof (sn76489_state_be));
+
+        sn76489_state.vol_0 =       ntohs (sn76489_state_be.vol_0);
+        sn76489_state.vol_1 =       ntohs (sn76489_state_be.vol_1);
+        sn76489_state.vol_2 =       ntohs (sn76489_state_be.vol_2);
+        sn76489_state.vol_3 =       ntohs (sn76489_state_be.vol_3);
+        sn76489_state.tone_0 =      ntohs (sn76489_state_be.tone_0);
+        sn76489_state.tone_1 =      ntohs (sn76489_state_be.tone_1);
+        sn76489_state.tone_2 =      ntohs (sn76489_state_be.tone_2);
+        sn76489_state.noise =       ntohs (sn76489_state_be.noise);
+        sn76489_state.counter_0 =   ntohs (sn76489_state_be.counter_0);
+        sn76489_state.counter_1 =   ntohs (sn76489_state_be.counter_1);
+        sn76489_state.counter_2 =   ntohs (sn76489_state_be.counter_2);
+        sn76489_state.counter_3 =   ntohs (sn76489_state_be.counter_3);
+        sn76489_state.output_0 =    ntohs (sn76489_state_be.output_0);
+        sn76489_state.output_1 =    ntohs (sn76489_state_be.output_1);
+        sn76489_state.output_2 =    ntohs (sn76489_state_be.output_2);
+        sn76489_state.output_3 =    ntohs (sn76489_state_be.output_3);
+        sn76489_state.latch =       ntohs (sn76489_state_be.latch);
+        sn76489_state.lfsr =        ntohs (sn76489_state_be.lfsr);
+        sn76489_state.output_lfsr = ntohs (sn76489_state_be.output_lfsr);
+        sn76489_state.gg_stereo =   ntohs (sn76489_state_be.gg_stereo);
+
+    }
+    else
+    {
+        snepulator_error ("Error", "Save-state contains incorrect Z80 size");
     }
 }
