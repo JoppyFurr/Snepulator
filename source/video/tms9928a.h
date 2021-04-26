@@ -83,24 +83,25 @@ typedef struct TMS9928A_Registers_s {
 } TMS9928A_Registers;
 
 typedef struct TMS9928A_State_s {
-    TMS9928A_Registers reg_buffer;
     TMS9928A_Registers regs;
-    bool first_byte_received;
-    uint8_t  code;
+    TMS9928A_Registers regs_buffer;
+    uint16_t line;
     uint16_t address;
+    uint8_t  first_byte_received;
+    uint8_t  code;
     uint8_t  read_buffer;
     uint8_t  status;
-    bool collision_buffer [256];
+    uint8_t  collision_buffer [256];
 
     /* SMS VDP extensions */
+    uint16_t cram [32];
     uint8_t  line_interrupt_counter;    /* Line interrupt counter current value */
-    bool     line_interrupt;            /* Line interrupt pending */
-    uint16_t line;                      /* Line number currently being drawn */
+    uint8_t  line_interrupt;            /* Line interrupt pending */
     uint8_t  h_counter;                 /* 8-bit horizontal counter */
     uint8_t  v_counter;                 /* 8-bit line counter */
 
-    /* Frame buffer */
-    float_Colour frame_current  [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
+    /* Game Gear VDP extensions */
+    uint8_t cram_latch;
 } TMS9928A_State;
 
 /* SMS - Range of 8-bit values to map onto the 16-bit v-counter */

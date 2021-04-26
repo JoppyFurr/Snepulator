@@ -136,7 +136,7 @@ float_Colour vdp_to_float [4096] = { };
 
 /* SMS VDP State */
 extern TMS9928A_State tms9928a_state;
-static uint16_t cram [SMS_VDP_CRAM_SIZE];
+extern float_Colour frame_buffer [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
 uint16_t colour_mask;
 
 /*
@@ -163,8 +163,10 @@ void sms_vdp_init (void)
     }
 
     /* TODO: Are there any nonzero default values? */
-    memset (&tms9928a_state.regs, 0, sizeof (tms9928a_state.regs));
-    memset (cram,                 0, sizeof (cram));
+    memset (&tms9928a_state.regs,        0, sizeof (tms9928a_state.regs));
+    memset (&tms9928a_state.regs_buffer, 0, sizeof (tms9928a_state.regs_buffer));
+    memset (tms9928a_state.cram,         0, sizeof (tms9928a_state.cram));
+    memset (frame_buffer,                0, sizeof (frame_buffer));
 }
 
 
@@ -206,19 +208,18 @@ void sms_vdp_data_write (uint8_t value)
         case SMS_VDP_CODE_CRAM_WRITE:
             if (state.console == CONSOLE_GAME_GEAR)
             {
-                static uint8_t latch;
                 if ((tms9928a_state.address & 0x01) == 0x00)
                 {
-                    latch = value;
+                    tms9928a_state.cram_latch = value;
                 }
                 else
                 {
-                    cram [(tms9928a_state.address >> 1) & 0x1f] = (((uint16_t) value) << 8) | latch;
+                    tms9928a_state.cram [(tms9928a_state.address >> 1) & 0x1f] = (((uint16_t) value) << 8) | tms9928a_state.cram_latch;
                 }
             }
             else
             {
-                cram [tms9928a_state.address & 0x1f] = value;
+                tms9928a_state.cram [tms9928a_state.address & 0x1f] = value;
             }
             break;
 
@@ -271,7 +272,7 @@ void sms_vdp_control_write (uint8_t value)
             case TMS9928A_CODE_REG_WRITE:
                 if ((value & 0x0f) <= 10)
                 {
-                    ((uint8_t *) &tms9928a_state.reg_buffer) [value & 0x0f] = tms9928a_state.address & 0x00ff;
+                    ((uint8_t *) &tms9928a_state.regs_buffer) [value & 0x0f] = tms9928a_state.address & 0x00ff;
                 }
                 break;
             case SMS_VDP_CODE_CRAM_WRITE:
@@ -455,7 +456,7 @@ void sms_vdp_process_3d_field (void)
 
     for (uint32_t i = 0; i < (VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES); i++)
     {
-        pixel = colour_saturation (tms9928a_state.frame_current [i], state.video_3d_saturation);
+        pixel = colour_saturation (frame_buffer [i], state.video_3d_saturation);
 
         if (update_red)
         {
@@ -536,10 +537,10 @@ void sms_vdp_render_mode4_pattern_line (const TMS9928A_Config *mode, uint16_t li
             tms9928a_state.collision_buffer [x + offset.x] = true;
         }
 
-        uint16_t pixel = cram [palette + colour_index];
+        uint16_t pixel = tms9928a_state.cram [palette + colour_index];
 
-        tms9928a_state.frame_current [(offset.x + x + VIDEO_SIDE_BORDER) +
-                                      (state.video_start_y + line) * VIDEO_BUFFER_WIDTH] = vdp_to_float [pixel & colour_mask];
+        frame_buffer [(offset.x + x + VIDEO_SIDE_BORDER) +
+                      (state.video_start_y + line) * VIDEO_BUFFER_WIDTH] = vdp_to_float [pixel & colour_mask];
     }
 }
 
@@ -738,7 +739,7 @@ void sms_vdp_render_line (const TMS9928A_Config *config, uint16_t line)
     else if (config->mode & SMS_VDP_MODE_4)
     {
         uint8_t bg_colour;
-        bg_colour = cram [16 + (tms9928a_state.regs.background_colour & 0x0f)];
+        bg_colour = tms9928a_state.cram [16 + (tms9928a_state.regs.background_colour & 0x0f)];
         video_background = vdp_to_float [bg_colour & colour_mask];
     }
     else
@@ -755,7 +756,7 @@ void sms_vdp_render_line (const TMS9928A_Config *config, uint16_t line)
         {
             for (uint32_t x = 0; x < VIDEO_BUFFER_WIDTH; x++)
             {
-                tms9928a_state.frame_current [x + top_line * VIDEO_BUFFER_WIDTH] = video_background;
+                frame_buffer [x + top_line * VIDEO_BUFFER_WIDTH] = video_background;
             }
         }
     }
@@ -763,7 +764,7 @@ void sms_vdp_render_line (const TMS9928A_Config *config, uint16_t line)
     /* Side borders */
     for (int x = 0; x < VIDEO_BUFFER_WIDTH; x++)
     {
-        tms9928a_state.frame_current [x + (state.video_start_y + line) * VIDEO_BUFFER_WIDTH] = video_background;
+        frame_buffer [x + (state.video_start_y + line) * VIDEO_BUFFER_WIDTH] = video_background;
     }
 
     if (tms9928a_state.regs.ctrl_0 & SMS_VDP_CTRL_0_MASK_COL_1)
@@ -782,7 +783,7 @@ void sms_vdp_render_line (const TMS9928A_Config *config, uint16_t line)
         {
             for (uint32_t x = 0; x < VIDEO_BUFFER_WIDTH; x++)
             {
-                tms9928a_state.frame_current [x + bottom_line * VIDEO_BUFFER_WIDTH] = video_background;
+                frame_buffer [x + bottom_line * VIDEO_BUFFER_WIDTH] = video_background;
             }
         }
     }
@@ -886,12 +887,12 @@ void sms_vdp_run_one_scanline ()
                         {
                             continue;
                         }
-                        tms9928a_state.frame_current [x + y * VIDEO_BUFFER_WIDTH] = (float_Colour) { .r = 0.0, .g = 0.0, .b = 0.0 };
+                        frame_buffer [x + y * VIDEO_BUFFER_WIDTH] = (float_Colour) { .r = 0.0, .g = 0.0, .b = 0.0 };
                     }
                 }
             }
 
-            memcpy (state.video_out_data, tms9928a_state.frame_current, sizeof (tms9928a_state.frame_current));
+            memcpy (state.video_out_data, frame_buffer, sizeof (frame_buffer));
         }
 
         pthread_mutex_unlock (&video_mutex);
@@ -926,7 +927,7 @@ void sms_vdp_run_one_scanline ()
     }
 
     /* Propagate register writes that occurred during this line. */
-    tms9928a_state.regs = tms9928a_state.reg_buffer;
+    tms9928a_state.regs = tms9928a_state.regs_buffer;
 
     /* Check for frame interrupt */
     if (tms9928a_state.line == config->lines_active + 1)
