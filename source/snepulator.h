@@ -70,6 +70,7 @@ typedef struct Snepulator_State_s {
     /* Console memory */
     uint8_t *ram;
     uint8_t *sram;
+    uint8_t *vram;
     uint8_t *rom;
     uint8_t *bios;
 

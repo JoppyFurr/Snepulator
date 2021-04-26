@@ -246,6 +246,14 @@ void sg_1000_init (void)
         return;
     }
 
+    /* Create VRAM */
+    state.vram = calloc (TMS9928A_VRAM_SIZE, 1);
+    if (state.vram == NULL)
+    {
+        snepulator_error ("Error", "Unable to allocate SG-1000 VRAM.");
+        return;
+    }
+
     /* Load ROM cart */
     if (state.cart_filename)
     {

@@ -123,7 +123,7 @@ uint8_t tms9928a_data_read ()
 
     tms9928a_state.first_byte_received = false;
 
-    tms9928a_state.read_buffer = tms9928a_state.vram [tms9928a_state.address];
+    tms9928a_state.read_buffer = state.vram [tms9928a_state.address];
 
     tms9928a_state.address = (tms9928a_state.address + 1) & 0x3fff;
 
@@ -144,7 +144,7 @@ void tms9928a_data_write (uint8_t value)
         case TMS9928A_CODE_VRAM_READ:
         case TMS9928A_CODE_VRAM_WRITE:
         case TMS9928A_CODE_REG_WRITE:
-            tms9928a_state.vram [tms9928a_state.address] = value;
+            state.vram [tms9928a_state.address] = value;
             break;
 
         default:
@@ -189,7 +189,7 @@ void tms9928a_control_write (uint8_t value)
         switch (tms9928a_state.code)
         {
             case TMS9928A_CODE_VRAM_READ:
-                tms9928a_state.read_buffer = tms9928a_state.vram[tms9928a_state.address++];
+                tms9928a_state.read_buffer = state.vram[tms9928a_state.address++];
                 break;
             case TMS9928A_CODE_VRAM_WRITE:
                 break;
@@ -286,7 +286,7 @@ void tms9928a_render_sprites_line (const TMS9928A_Config *config, uint16_t line)
     /* Traverse the sprite list, filling the line sprite buffer */
     for (int i = 0; i < 32; i++)
     {
-        TMS9928A_Sprite *sprite = (TMS9928A_Sprite *) &tms9928a_state.vram [sprite_attribute_table_base + i * sizeof (TMS9928A_Sprite)];
+        TMS9928A_Sprite *sprite = (TMS9928A_Sprite *) &state.vram [sprite_attribute_table_base + i * sizeof (TMS9928A_Sprite)];
 
         /* Break if there are no more sprites */
         if (sprite->y == 0xd0)
@@ -344,7 +344,7 @@ void tms9928a_render_sprites_line (const TMS9928A_Config *config, uint16_t line)
         if (tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_SPRITE_SIZE)
         {
             pattern_index &= 0xfc;
-            pattern = (TMS9928A_Pattern *) &tms9928a_state.vram [pattern_generator_base + (pattern_index * sizeof (TMS9928A_Pattern))];
+            pattern = (TMS9928A_Pattern *) &state.vram [pattern_generator_base + (pattern_index * sizeof (TMS9928A_Pattern))];
             int32_Point_2D sub_position;
 
             for (int i = 0; i < 4; i++)
@@ -356,7 +356,7 @@ void tms9928a_render_sprites_line (const TMS9928A_Config *config, uint16_t line)
         }
         else
         {
-            pattern = (TMS9928A_Pattern *) &tms9928a_state.vram [pattern_generator_base + (pattern_index * sizeof (TMS9928A_Pattern))];
+            pattern = (TMS9928A_Pattern *) &state.vram [pattern_generator_base + (pattern_index * sizeof (TMS9928A_Pattern))];
             tms9928a_render_pattern_line (config, line, pattern, sprite->colour_ec << 4, position, true, magnify);
         }
     }
@@ -382,10 +382,10 @@ void tms9928a_render_mode0_background_line (const TMS9928A_Config *config, uint1
 
     for (uint32_t tile_x = 0; tile_x < 32; tile_x++)
     {
-        uint16_t tile = tms9928a_state.vram [name_table_base + ((tile_y << 5) | tile_x)];
+        uint16_t tile = state.vram [name_table_base + ((tile_y << 5) | tile_x)];
 
-        TMS9928A_Pattern *pattern = (TMS9928A_Pattern *) &tms9928a_state.vram [pattern_generator_base + (tile * sizeof (TMS9928A_Pattern))];
-        uint8_t colours = tms9928a_state.vram [colour_table_base + (tile >> 3)];
+        TMS9928A_Pattern *pattern = (TMS9928A_Pattern *) &state.vram [pattern_generator_base + (tile * sizeof (TMS9928A_Pattern))];
+        uint8_t colours = state.vram [colour_table_base + (tile >> 3)];
 
         position.x = 8 * tile_x;
         position.y = 8 * tile_y;
@@ -413,7 +413,7 @@ void tms9928a_render_mode2_background_line (const TMS9928A_Config *config, uint1
 
     for (uint32_t tile_x = 0; tile_x < 32; tile_x++)
     {
-        uint16_t tile = tms9928a_state.vram [name_table_base + ((tile_y << 5) | tile_x)];
+        uint16_t tile = state.vram [name_table_base + ((tile_y << 5) | tile_x)];
 
         /* The screen is broken into three 8-row sections */
         if (tile_y >= 8 && tile_y < 16)
@@ -427,9 +427,9 @@ void tms9928a_render_mode2_background_line (const TMS9928A_Config *config, uint1
         uint16_t pattern_tile = tile & ((((uint16_t) tms9928a_state.regs.background_pg_base) << 8) | 0xff);
         uint16_t colour_tile  = tile & ((((uint16_t) tms9928a_state.regs.colour_table_base) << 3) | 0x07);
 
-        TMS9928A_Pattern *pattern = (TMS9928A_Pattern *) &tms9928a_state.vram [pattern_generator_base + (pattern_tile * sizeof (TMS9928A_Pattern))];
+        TMS9928A_Pattern *pattern = (TMS9928A_Pattern *) &state.vram [pattern_generator_base + (pattern_tile * sizeof (TMS9928A_Pattern))];
 
-        uint8_t colours = tms9928a_state.vram [colour_table_base + colour_tile * 8 + (line & 0x07)];
+        uint8_t colours = state.vram [colour_table_base + colour_tile * 8 + (line & 0x07)];
 
         position.x = 8 * tile_x;
         position.y = 8 * tile_y;
@@ -590,5 +590,4 @@ void tms9928a_run_one_scanline (void)
 void tms9928a_init (void)
 {
     memset (&tms9928a_state.regs, 0, sizeof (tms9928a_state.regs));
-    memset (&tms9928a_state.vram, 0, sizeof (tms9928a_state.vram));
 }

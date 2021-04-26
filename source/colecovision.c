@@ -300,6 +300,14 @@ void colecovision_init (void)
         snepulator_error ("Error", "Unable to allocate Colecovision RAM.");
     }
 
+    /* Create VRAM */
+    state.vram = calloc (TMS9928A_VRAM_SIZE, 1);
+    if (state.vram == NULL)
+    {
+        snepulator_error ("Error", "Unable to allocate Colecovision VRAM.");
+        return;
+    }
+
     /* Load BIOS */
     if (state.colecovision_bios_filename)
     {
