@@ -240,6 +240,28 @@ void snepulator_render_menubar (void)
             ImGui::EndMenu ();
         }
 
+        if (ImGui::BeginMenu ("State"))
+        {
+            if (ImGui::MenuItem ("Quick Save", NULL)) {
+                if (state.ready && state.state_save)
+                {
+                    char *path = quicksave_path ();
+                    state.state_save (path);
+                    free (path);
+                }
+            }
+            if (ImGui::MenuItem ("Quick Load", NULL)) {
+                if (state.ready && state.state_load)
+                {
+                    char *path = quicksave_path ();
+                    state.state_load (path);
+                    free (path);
+                }
+            }
+
+            ImGui::EndMenu ();
+        }
+
         if (ImGui::BeginMenu ("Input"))
         {
 
