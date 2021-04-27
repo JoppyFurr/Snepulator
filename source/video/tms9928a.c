@@ -7,11 +7,13 @@
 #include <stdio.h>
 #include <string.h>
 #include <pthread.h>
+#include <arpa/inet.h>
 
 #include <SDL2/SDL.h>
 
 #include "../util.h"
 #include "../snepulator.h"
+#include "../save_state.h"
 
 #include "tms9928a.h"
 
@@ -590,4 +592,77 @@ void tms9928a_init (void)
 {
     memset (&tms9928a_state.regs, 0, sizeof (tms9928a_state.regs));
     memset (frame_buffer, 0, sizeof (frame_buffer));
+}
+
+
+/*
+ * Export tms9928a state.
+ */
+void tms9928a_state_save (void)
+{
+    TMS9928A_State tms9928a_state_be = {
+        .regs =                   tms9928a_state.regs,
+        .regs_buffer =            tms9928a_state.regs_buffer,
+        .line =                   htons (tms9928a_state.line),
+        .address =                htons (tms9928a_state.address),
+        .first_byte_received =    tms9928a_state.first_byte_received,
+        .code =                   tms9928a_state.code,
+        .read_buffer =            tms9928a_state.read_buffer,
+        .status =                 tms9928a_state.status,
+        .collision_buffer =       { 0 },
+        .cram =                   { 0 },
+        .line_interrupt_counter = tms9928a_state.line_interrupt_counter,
+        .line_interrupt =         tms9928a_state.line_interrupt,
+        .h_counter =              tms9928a_state.h_counter,
+        .v_counter =              tms9928a_state.v_counter,
+        .cram_latch =             tms9928a_state.cram_latch
+    };
+
+    memcpy (tms9928a_state_be.collision_buffer, tms9928a_state.collision_buffer, 256);
+
+    for (uint8_t i = 0; i < 32; i++)
+    {
+        tms9928a_state_be.cram [i] = htons (tms9928a_state.cram[i]);
+    }
+
+    save_state_section_add (SECTION_ID_VDP, 1, sizeof (tms9928a_state_be), &tms9928a_state_be);
+}
+
+
+/*
+ * Import tms9928a state.
+ */
+void tms9928a_state_load (uint32_t version, uint32_t size, void *data)
+{
+    TMS9928A_State tms9928a_state_be;
+
+    if (size == sizeof (tms9928a_state_be))
+    {
+        memcpy (&tms9928a_state_be, data, sizeof (tms9928a_state_be));
+
+        tms9928a_state.regs =                   tms9928a_state_be.regs;
+        tms9928a_state.regs_buffer =            tms9928a_state_be.regs_buffer;
+        tms9928a_state.line =                   ntohs (tms9928a_state_be.line);
+        tms9928a_state.address =                ntohs (tms9928a_state_be.address);
+        tms9928a_state.first_byte_received =    tms9928a_state_be.first_byte_received;
+        tms9928a_state.code =                   tms9928a_state_be.code;
+        tms9928a_state.read_buffer =            tms9928a_state_be.read_buffer;
+        tms9928a_state.status =                 tms9928a_state_be.status;
+
+        memcpy (tms9928a_state.collision_buffer, tms9928a_state_be.collision_buffer, 256);
+        for (uint8_t i = 0; i < 32; i++)
+        {
+            tms9928a_state.cram [i] = ntohs (tms9928a_state_be.cram[i]);
+        }
+
+        tms9928a_state.line_interrupt_counter = tms9928a_state_be.line_interrupt_counter;
+        tms9928a_state.line_interrupt =         tms9928a_state_be.line_interrupt;
+        tms9928a_state.h_counter =              tms9928a_state_be.h_counter;
+        tms9928a_state.v_counter =              tms9928a_state_be.v_counter;
+        tms9928a_state.cram_latch =             tms9928a_state_be.cram_latch;
+    }
+    else
+    {
+        snepulator_error ("Error", "Save-state contains incorrect VDP state size");
+    }
 }

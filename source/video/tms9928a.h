@@ -165,3 +165,9 @@ bool tms9928a_get_interrupt (void);
 
 /* Reset the tms9928a registers and memory to power-on defaults. */
 void tms9928a_init (void);
+
+/* Export tms9928a state. */
+void tms9928a_state_save (void);
+
+/* Import tms9928a state. */
+void tms9928a_state_load (uint32_t version, uint32_t size, void *data);
