@@ -75,6 +75,8 @@ typedef struct Z80_State_s {
     uint8_t iff2;
     uint8_t halt;
 
+    /* Left-over cycles */
+    uint32_t excess_cycles;
 } Z80_State;
 
 /* Z80 FLAGS */

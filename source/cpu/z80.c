@@ -97,6 +97,7 @@ void z80_init (uint8_t (* _memory_read) (uint16_t),
     memset (&z80_state, 0, sizeof (z80_state));
     z80_state.af = 0xffff;
     z80_state.sp = 0xffff;
+    z80_state.excess_cycles = 0;
     z80_cycle = 0;
     used_cycles = 0;
 }
@@ -4487,8 +4488,7 @@ void z80_run_instruction ()
  */
 void z80_run_cycles (uint64_t cycles)
 {
-    static uint64_t excess = 0;
-    cycles += excess;
+    cycles += z80_state.excess_cycles;
 
     /* For now, we only run an instruction if we have
      * enough cycles to run any instruction with following interrupt */
@@ -4577,5 +4577,5 @@ void z80_run_cycles (uint64_t cycles)
 
     }
 
-    excess = cycles;
+    z80_state.excess_cycles = cycles;
 }
