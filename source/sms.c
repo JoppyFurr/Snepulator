@@ -47,7 +47,8 @@ extern Snepulator_Gamepad gamepad_1;
 extern Snepulator_Gamepad gamepad_2;
 extern Z80_State z80_state;
 extern SN76489_State sn76489_state;
-pthread_mutex_t state_mutex;
+
+static pthread_mutex_t sms_state_mutex;
 
 
 /* Console hardware state */
@@ -506,7 +507,7 @@ static void sms_run (uint32_t ms)
     static uint64_t millicycles = 0;
     uint64_t lines;
 
-    pthread_mutex_lock (&state_mutex);
+    pthread_mutex_lock (&sms_state_mutex);
 
     if (gamepad_1.type == GAMEPAD_TYPE_SMS_PADDLE)
     {
@@ -527,7 +528,7 @@ static void sms_run (uint32_t ms)
         sms_vdp_run_one_scanline ();
     }
 
-    pthread_mutex_unlock (&state_mutex);
+    pthread_mutex_unlock (&sms_state_mutex);
 }
 
 
@@ -562,7 +563,7 @@ static void sms_sync (void)
  */
 static void sms_state_save (const char *filename)
 {
-    pthread_mutex_lock (&state_mutex);
+    pthread_mutex_lock (&sms_state_mutex);
 
     /* Begin creating a new save state. */
     if (state.console == CONSOLE_GAME_GEAR)
@@ -588,7 +589,7 @@ static void sms_state_save (const char *filename)
 
     sn76489_state_save ();
 
-    pthread_mutex_unlock (&state_mutex);
+    pthread_mutex_unlock (&sms_state_mutex);
 
     save_state_write (filename);
 }
@@ -607,7 +608,7 @@ static void sms_state_load (const char *filename)
         return;
     }
 
-    pthread_mutex_lock (&state_mutex);
+    pthread_mutex_lock (&sms_state_mutex);
 
     if (!strncmp (console_id, CONSOLE_ID_SMS, 4))
     {
@@ -695,7 +696,7 @@ static void sms_state_load (const char *filename)
         }
     }
 
-    pthread_mutex_unlock (&state_mutex);
+    pthread_mutex_unlock (&sms_state_mutex);
 
     load_state_end ();
 }
