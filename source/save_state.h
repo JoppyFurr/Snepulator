@@ -12,6 +12,7 @@
 
 /* Console-specific state */
 #define SECTION_ID_SMS_HW       "SMS"
+#define SECTION_ID_SG_1000_HW   "SG\0"
 
 /* Memory */
 #define SECTION_ID_RAM          "RAM"

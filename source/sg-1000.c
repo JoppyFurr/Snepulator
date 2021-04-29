@@ -3,6 +3,7 @@
  */
 
 #include <assert.h>
+#include <pthread.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -11,6 +12,7 @@
 
 #include "util.h"
 #include "snepulator.h"
+#include "save_state.h"
 
 #include "gamepad.h"
 #include "cpu/z80.h"
@@ -23,10 +25,22 @@ extern Snepulator_State state;
 extern Snepulator_Gamepad gamepad_1;
 extern Snepulator_Gamepad gamepad_2;
 
+static pthread_mutex_t sg_1000_state_mutex;
+
 #define SG_1000_RAM_SIZE (1 << 10)
 #define SG_1000_SRAM_SIZE (8 << 10)
 
-static uint8_t mapper_bank [3] = { 0x00, 0x01, 0x02 };
+/* Console hardware state */
+typedef struct SG_1000_HW_State_s {
+    uint8_t mapper;
+    uint8_t mapper_bank [3];
+} SG_1000_HW_State;
+
+static SG_1000_HW_State hw_state = {
+    .mapper_bank = { 0x00, 0x01, 0x02 },
+};
+
+static bool sram_used = false;
 
 
 /*
@@ -38,7 +52,7 @@ static uint8_t sg_1000_memory_read (uint16_t addr)
     if (addr >= 0x0000 && addr <= 0xbfff && addr < state.rom_size)
     {
         uint8_t slot = (addr >> 14);
-        uint32_t bank_base = mapper_bank [slot] * ((uint32_t) 16 << 10);
+        uint32_t bank_base = hw_state.mapper_bank [slot] * ((uint32_t) 16 << 10);
         uint16_t offset    = addr & 0x3fff;
 
         return state.rom [(bank_base + offset) & state.rom_mask];
@@ -68,13 +82,14 @@ static void sg_1000_memory_write (uint16_t addr, uint8_t data)
     /* Sega Mapper */
     if (addr == 0xffff)
     {
-        mapper_bank [2] = data & 0x3f;
+        hw_state.mapper_bank [2] = data & 0x3f;
     }
 
     /* Up to 8 KiB of on-cartridge sram */
     if (addr >= 0x8000 && addr <= 0xbfff)
     {
         state.sram [addr & (SG_1000_SRAM_SIZE - 1)] = data;
+        sram_used = true;
     }
 
     /* 1 KiB RAM (mirrored) */
@@ -209,6 +224,8 @@ static void sg_1000_run (uint32_t ms)
     static uint64_t millicycles = 0;
     uint64_t lines;
 
+    pthread_mutex_lock (&sg_1000_state_mutex);
+
     millicycles += (uint64_t) ms * sg_1000_get_clock_rate ();
     lines = millicycles / 228000;
     millicycles -= lines * 228000;
@@ -222,6 +239,141 @@ static void sg_1000_run (uint32_t ms)
         psg_run_cycles (228);
         tms9928a_run_one_scanline ();
     }
+
+    pthread_mutex_unlock (&sg_1000_state_mutex);
+}
+
+
+/*
+ * Export SG-1000 state to a file.
+ */
+static void sg_1000_state_save (const char *filename)
+{
+    pthread_mutex_lock (&sg_1000_state_mutex);
+
+    /* Begin creating a new save state. */
+    save_state_begin (CONSOLE_ID_SG_1000);
+
+    save_state_section_add (SECTION_ID_SG_1000_HW, 1, sizeof (hw_state), &hw_state);
+
+    z80_state_save ();
+    save_state_section_add (SECTION_ID_RAM, 1, SG_1000_RAM_SIZE, state.ram);
+    if (sram_used)
+    {
+        save_state_section_add (SECTION_ID_SRAM, 1, SG_1000_SRAM_SIZE, state.sram);
+    }
+
+    tms9928a_state_save ();
+    save_state_section_add (SECTION_ID_VRAM, 1, TMS9928A_VRAM_SIZE, state.vram);
+
+    sn76489_state_save ();
+
+    pthread_mutex_unlock (&sg_1000_state_mutex);
+
+    save_state_write (filename);
+}
+
+
+/*
+ * Import SG-1000 state from a file.
+ */
+static void sg_1000_state_load (const char *filename)
+{
+    const char *console_id;
+    uint32_t sections_loaded;
+
+    if (load_state_begin (filename, &console_id, &sections_loaded) == -1)
+    {
+        return;
+    }
+
+    pthread_mutex_lock (&sg_1000_state_mutex);
+
+    if (!strncmp (console_id, CONSOLE_ID_SG_1000, 4))
+    {
+        state.console = CONSOLE_SG_1000;
+    }
+    else
+    {
+        return;
+    }
+
+    sram_used = false;
+
+    for (uint32_t i = 0; i < sections_loaded; i++)
+    {
+        const char *section_id;
+        uint32_t version;
+        uint32_t size;
+        uint8_t *data;
+        load_state_section (&section_id, &version, &size, (void *) &data);
+
+        if (!strncmp (section_id, SECTION_ID_SG_1000_HW, 4))
+        {
+            if (size == sizeof (hw_state))
+            {
+                memcpy (&hw_state, data, sizeof (hw_state));
+            }
+            else
+            {
+                snepulator_error ("Error", "Save-state contains incorrect hw_state size");
+            }
+        }
+        else if (!strncmp (section_id, SECTION_ID_Z80, 4))
+        {
+            z80_state_load (version, size, data);
+        }
+        else if (!strncmp (section_id, SECTION_ID_RAM, 4))
+        {
+            if (size == SG_1000_RAM_SIZE)
+            {
+                memcpy (state.ram, data, SG_1000_RAM_SIZE);
+            }
+            else
+            {
+                snepulator_error ("Error", "Save-state contains incorrect RAM size");
+            }
+        }
+        else if (!strncmp (section_id, SECTION_ID_SRAM, 4))
+        {
+            sram_used = true;
+            if (size == SG_1000_SRAM_SIZE)
+            {
+                memcpy (state.sram, data, SG_1000_SRAM_SIZE);
+            }
+            else
+            {
+                snepulator_error ("Error", "Save-state contains incorrect SRAM size");
+            }
+        }
+        else if (!strncmp (section_id, SECTION_ID_VDP, 4))
+        {
+            tms9928a_state_load (version, size, data);
+        }
+        else if (!strncmp (section_id, SECTION_ID_VRAM, 4))
+        {
+            if (size == TMS9928A_VRAM_SIZE)
+            {
+                memcpy (state.vram, data, TMS9928A_VRAM_SIZE);
+            }
+            else
+            {
+                snepulator_error ("Error", "Save-state contains incorrect VRAM size");
+            }
+        }
+        else if (!strncmp (section_id, SECTION_ID_PSG, 4))
+        {
+            sn76489_state_load (version, size, data);
+        }
+        else
+        {
+            printf ("Unknown Section: section_id=%s, version=%u, size=%u, data=%p.\n", section_id, version, size, data);
+        }
+    }
+
+    pthread_mutex_unlock (&sg_1000_state_mutex);
+
+    load_state_end ();
 }
 
 
@@ -230,6 +382,12 @@ static void sg_1000_run (uint32_t ms)
  */
 void sg_1000_init (void)
 {
+    /* Reset the mapper */
+    hw_state.mapper_bank [0] = 0;
+    hw_state.mapper_bank [1] = 1;
+    hw_state.mapper_bank [2] = 2;
+    sram_used = false;
+
     /* Create RAM */
     state.ram = calloc (SG_1000_RAM_SIZE, 1);
     if (state.ram == NULL)
@@ -271,12 +429,14 @@ void sg_1000_init (void)
     tms9928a_init ();
     sn76489_init ();
 
-    /* Hook up the audio callback */
+    /* Hook up the callbacks */
     state.audio_callback = sg_1000_audio_callback;
     state.get_clock_rate = sg_1000_get_clock_rate;
     state.get_int = tms9928a_get_interrupt;
     state.get_nmi = sg_1000_get_nmi;
     state.run = sg_1000_run;
+    state.state_save = sg_1000_state_save;
+    state.state_load = sg_1000_state_load;
 
     /* Begin emulation */
     state.ready = true;
