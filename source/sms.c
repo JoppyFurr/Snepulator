@@ -23,6 +23,12 @@
 #include "sound/sn76489.h"
 #include "sms.h"
 
+extern Snepulator_State state;
+extern Snepulator_Gamepad gamepad_1;
+extern Snepulator_Gamepad gamepad_2;
+extern Z80_State z80_state;
+extern SN76489_State sn76489_state;
+
 #define SMS_RAM_SIZE SIZE_8K
 #define SMS_SRAM_SIZE SIZE_8K
 
@@ -42,13 +48,7 @@
 #define SMS_MEMORY_CTRL_CART_DISABLE 0x40
 #define SMS_MEMORY_CTRL_IO_DISABLE   0x04
 
-extern Snepulator_State state;
-extern Snepulator_Gamepad gamepad_1;
-extern Snepulator_Gamepad gamepad_2;
-extern Z80_State z80_state;
-extern SN76489_State sn76489_state;
-
-static pthread_mutex_t sms_state_mutex;
+static pthread_mutex_t sms_state_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 
 /* Console hardware state */
