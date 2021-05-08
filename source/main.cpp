@@ -42,7 +42,6 @@ const float Float4_Black[4] = { 0.0, 0.0, 0.0, 0.0 };
 /* Global state */
 Snepulator_State state;
 pthread_mutex_t video_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t state_mutex = PTHREAD_MUTEX_INITIALIZER;
 bool config_capture_events = false;
 SDL_Window *window = NULL;
 SDL_GLContext glcontext = NULL;
@@ -313,8 +312,8 @@ void snepulator_reset (void)
     state.state_load = NULL;
 
     /* Clear additional video parameters */
-    state.video_has_border = true;
-    state.video_border_left_extend = 0;
+    state.video_has_border = false;
+    state.video_blank_left = 0;
 
     /* Clear hash and hints */
     memset (state.rom_hash, 0, sizeof (state.rom_hash));
@@ -389,7 +388,6 @@ void snepulator_system_init (void)
     else if (strcmp (extension, ".gg") == 0)
     {
         state.console = CONSOLE_GAME_GEAR;
-        state.video_has_border = false;
         sms_init ();
     }
     else if (strcmp (extension, ".sg") == 0)

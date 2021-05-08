@@ -341,6 +341,9 @@ void snepulator_take_screenshot (void)
     uint32_t width = state.video_width;
     uint32_t height = state.video_height;
     uint32_t stride = VIDEO_BUFFER_WIDTH;
+    uint32_t start_x = state.video_start_x;
+    uint32_t start_y = state.video_start_y;
+
     uint8_t *buffer;
     char    *home = getenv ("HOME");
     char     path [80] = { '\0' };
@@ -351,6 +354,13 @@ void snepulator_take_screenshot (void)
         return;
     }
 
+    /* Crop out the blank column */
+    if (state.console == CONSOLE_MASTER_SYSTEM)
+    {
+        start_x += state.video_blank_left;
+        width -= state.video_blank_left;
+    }
+
     /* 24-bits per pixel */
     buffer = malloc (state.video_width * state.video_height * 3);
 
@@ -359,14 +369,14 @@ void snepulator_take_screenshot (void)
     {
         for (uint32_t x = 0; x < width; x++)
         {
-            buffer [(x + y * width) * 3 + 0] = state.video_out_data [state.video_start_x + x + (state.video_start_y + y) * stride].r * 255.0;
-            buffer [(x + y * width) * 3 + 1] = state.video_out_data [state.video_start_x + x + (state.video_start_y + y) * stride].g * 255.0;
-            buffer [(x + y * width) * 3 + 2] = state.video_out_data [state.video_start_x + x + (state.video_start_y + y) * stride].b * 255.0;
+            buffer [(x + y * width) * 3 + 0] = state.video_out_data [start_x + x + (start_y + y) * stride].r * 255.0;
+            buffer [(x + y * width) * 3 + 1] = state.video_out_data [start_x + x + (start_y + y) * stride].g * 255.0;
+            buffer [(x + y * width) * 3 + 2] = state.video_out_data [start_x + x + (start_y + y) * stride].b * 255.0;
         }
     }
 
     SDL_Surface *screenshot_surface = SDL_CreateRGBSurfaceFrom (buffer, width, height,
-                                      24, state.video_width * 3, 0xff << 0, 0xff << 8, 0xff << 16, 0x00);
+                                      24, width * 3, 0xff << 0, 0xff << 8, 0xff << 16, 0x00);
 
     /* Include the date in the filename */
     time_t time_val;
