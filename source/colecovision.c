@@ -471,6 +471,15 @@ void colecovision_init (void)
     state.state_save = colecovision_state_save;
     state.state_load = colecovision_state_load;
 
+    /* Video parameters */
+    state.render_start_x = VIDEO_SIDE_BORDER;
+    state.render_start_y = (VIDEO_BUFFER_LINES - 192) / 2;
+    state.video_width = 256;
+    state.video_height = 192;
+    state.video_start_x = state.render_start_x;
+    state.video_start_y = state.render_start_y;
+    state.video_has_border = true;
+
     /* Begin emulation */
     state.ready = true;
     state.running = true;

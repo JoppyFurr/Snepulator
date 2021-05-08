@@ -87,14 +87,16 @@ typedef struct Snepulator_State_s {
 
     /* Console video output */
     float_Colour video_out_data [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
-    uint32_t     video_start_x; /* TODO: SDL_Rect? */
-    uint32_t     video_start_y;
-    uint32_t     video_width;
-    uint32_t     video_height;
-    bool         video_has_border;
-    uint32_t     video_border_left_extend;
-    int16_t      phaser_x;
-    int16_t      phaser_y;
+    uint32_t    render_start_x;
+    uint32_t    render_start_y;
+    uint32_t    video_start_x;
+    uint32_t    video_start_y;
+    uint32_t    video_width;
+    uint32_t    video_height;
+    uint32_t    video_blank_left;
+    bool        video_has_border;
+    int16_t     phaser_x;
+    int16_t     phaser_y;
 
     /* Host video output */
     float_Colour video_out_texture_data [VIDEO_BUFFER_WIDTH * 4 * VIDEO_BUFFER_LINES * 4];

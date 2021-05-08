@@ -30,10 +30,10 @@ void video_filter_dim_border (void)
     {
         for (uint32_t x = 0; x < state.video_out_texture_width; x++)
         {
-            if ( ( (y / y_scale) <  state.video_start_y) ||                                   /* Top border */
-                 ( (y / y_scale) >= state.video_start_y + state.video_height) ||              /* Bottom border */
-                 ( (x / x_scale) <  state.video_start_x + state.video_border_left_extend ) || /* Left border */
-                 ( (x / x_scale) >= state.video_start_x + state.video_width ))                /* Right border */
+            if ( ( (y / y_scale) <  state.video_start_y) ||                             /* Top border */
+                 ( (y / y_scale) >= state.video_start_y + state.video_height) ||        /* Bottom border */
+                 ( (x / x_scale) <  state.video_start_x + state.video_blank_left ) ||   /* Left border */
+                 ( (x / x_scale) >= state.video_start_x + state.video_width ))          /* Right border */
             {
                 state.video_out_texture_data [x + y * stride].r *= 0.5;
                 state.video_out_texture_data [x + y * stride].g *= 0.5;
@@ -64,10 +64,10 @@ void video_filter_dot_matrix (void)
         for (int x = 0; x < state.video_out_texture_width; x++)
         {
             /* Black out any border */
-            if ( (y / 4 <  state.video_start_y) ||                                   /* Top border */
-                 (y / 4 >= state.video_start_y + state.video_height) ||              /* Bottom border */
-                 (x / 4 <  state.video_start_x + state.video_border_left_extend ) || /* Left border */
-                 (x / 4 >= state.video_start_x + state.video_width ))                /* Right border */
+            if ( (y / 4 <  state.video_start_y) ||                          /* Top border */
+                 (y / 4 >= state.video_start_y + state.video_height) ||     /* Bottom border */
+                 (x / 4 <  state.video_start_x + state.video_blank_left) || /* Left border */
+                 (x / 4 >= state.video_start_x + state.video_width ))       /* Right border */
             {
                 dest [x + y * stride] = (float_Colour) { .r = 0.0, .g = 0.0, .b = 0.0 };
             }

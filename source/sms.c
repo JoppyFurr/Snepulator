@@ -819,10 +819,6 @@ void sms_init (void)
     state.state_save = sms_state_save;
     state.state_load = sms_state_load;
 
-    /* Begin emulation */
-    state.ready = true;
-    state.running = true;
-
     /* Minimal alternative to the BIOS */
     if (!state.sms_bios_filename)
     {
@@ -840,4 +836,28 @@ void sms_init (void)
         sms_vdp_control_write (0xff);
         sms_vdp_control_write (TMS9928A_CODE_REG_WRITE | 0x0a);
     }
+
+    /* Initial video parameters */
+    state.render_start_x = VIDEO_SIDE_BORDER;
+    state.render_start_y = (VIDEO_BUFFER_LINES - 192) / 2;
+
+    if (state.console == CONSOLE_GAME_GEAR)
+    {
+        state.video_width = 160;
+        state.video_height = 144;
+        state.video_start_x = state.render_start_x + 48;
+        state.video_start_y = state.render_start_y + 24;
+    }
+    else
+    {
+        state.video_width = 256;
+        state.video_height = 192;
+        state.video_start_x = state.render_start_x;
+        state.video_start_y = state.render_start_y;
+        state.video_has_border = true;
+    }
+
+    /* Begin emulation */
+    state.ready = true;
+    state.running = true;
 }

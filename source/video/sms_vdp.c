@@ -540,7 +540,7 @@ void sms_vdp_render_mode4_pattern_line (const TMS9928A_Config *mode, uint16_t li
         uint16_t pixel = tms9928a_state.cram [palette + colour_index];
 
         frame_buffer [(offset.x + x + VIDEO_SIDE_BORDER) +
-                      (state.video_start_y + line) * VIDEO_BUFFER_WIDTH] = vdp_to_float [pixel & colour_mask];
+                      (state.render_start_y + line) * VIDEO_BUFFER_WIDTH] = vdp_to_float [pixel & colour_mask];
     }
 }
 
@@ -728,8 +728,7 @@ void sms_vdp_render_line (const TMS9928A_Config *config, uint16_t line)
 {
     float_Colour video_background =     { .r = 0.0f, .g = 0.0f, .b = 0.0f };
 
-    state.video_start_y = (VIDEO_BUFFER_LINES - config->lines_active) / 2;
-    state.video_start_x = VIDEO_SIDE_BORDER;
+    state.render_start_y = (VIDEO_BUFFER_LINES - config->lines_active) / 2;
 
     /* Background */
     if (!(tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_BLANK))
@@ -752,11 +751,11 @@ void sms_vdp_render_line (const TMS9928A_Config *config, uint16_t line)
     /* Top border */
     if (line == 0)
     {
-        for (uint32_t top_line = 0; top_line < state.video_start_y; top_line++)
+        for (uint32_t border_line = 0; border_line < state.render_start_y; border_line++)
         {
             for (uint32_t x = 0; x < VIDEO_BUFFER_WIDTH; x++)
             {
-                frame_buffer [x + top_line * VIDEO_BUFFER_WIDTH] = video_background;
+                frame_buffer [x + border_line * VIDEO_BUFFER_WIDTH] = video_background;
             }
         }
     }
@@ -764,26 +763,26 @@ void sms_vdp_render_line (const TMS9928A_Config *config, uint16_t line)
     /* Side borders */
     for (int x = 0; x < VIDEO_BUFFER_WIDTH; x++)
     {
-        frame_buffer [x + (state.video_start_y + line) * VIDEO_BUFFER_WIDTH] = video_background;
+        frame_buffer [x + (state.render_start_y + line) * VIDEO_BUFFER_WIDTH] = video_background;
     }
 
     if (tms9928a_state.regs.ctrl_0 & SMS_VDP_CTRL_0_MASK_COL_1)
     {
-        state.video_border_left_extend = 8;
+        state.video_blank_left = 8;
     }
     else
     {
-        state.video_border_left_extend = 0;
+        state.video_blank_left = 0;
     }
 
     /* Bottom border */
     if (line == config->lines_active - 1)
     {
-        for (uint32_t bottom_line = state.video_start_y + config->lines_active; bottom_line < VIDEO_BUFFER_LINES; bottom_line++)
+        for (uint32_t border_line = state.render_start_y + config->lines_active; border_line < VIDEO_BUFFER_LINES; border_line++)
         {
             for (uint32_t x = 0; x < VIDEO_BUFFER_WIDTH; x++)
             {
-                frame_buffer [x + bottom_line * VIDEO_BUFFER_WIDTH] = video_background;
+                frame_buffer [x + border_line * VIDEO_BUFFER_WIDTH] = video_background;
             }
         }
     }
@@ -858,14 +857,9 @@ void sms_vdp_run_one_scanline ()
     {
         pthread_mutex_lock (&video_mutex);
 
-        if (state.console == CONSOLE_GAME_GEAR)
+        if (state.console == CONSOLE_MASTER_SYSTEM)
         {
-            state.video_width = 160;
-            state.video_height = 144;
-        }
-        else
-        {
-            state.video_width = 256;
+            state.video_start_y = state.render_start_y;
             state.video_height = config->lines_active;
         }
 
@@ -882,8 +876,8 @@ void sms_vdp_run_one_scanline ()
                 {
                     for (uint32_t x = 0; x < VIDEO_BUFFER_WIDTH; x++)
                     {
-                        if ((x >= state.video_start_x + 48) && (x < state.video_start_x + 48 + state.video_width) &&
-                            (y >= state.video_start_y + 24) && (y < state.video_start_y + 24 + state.video_height))
+                        if ((x >= state.video_start_x) && (x < state.video_start_x + state.video_width) &&
+                            (y >= state.video_start_y) && (y < state.video_start_y + state.video_height))
                         {
                             continue;
                         }
