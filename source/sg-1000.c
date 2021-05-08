@@ -25,10 +25,10 @@ extern Snepulator_State state;
 extern Snepulator_Gamepad gamepad_1;
 extern Snepulator_Gamepad gamepad_2;
 
-static pthread_mutex_t sg_1000_state_mutex;
-
 #define SG_1000_RAM_SIZE (1 << 10)
 #define SG_1000_SRAM_SIZE (8 << 10)
+
+static pthread_mutex_t sg_1000_state_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /* Console hardware state */
 typedef struct SG_1000_HW_State_s {
