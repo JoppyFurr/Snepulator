@@ -2,31 +2,32 @@
  * Save-state support.
  */
 
-#define SAVE_STATE_MAGIC        "SNEPSAVE"
+#define SAVE_STATE_MAGIC            "SNEPSAVE"
 
 /* Consoles */
-#define CONSOLE_ID_SG_1000      "SG\0"
-#define CONSOLE_ID_COLECOVISION "COL"
-#define CONSOLE_ID_SMS          "SMS"
-#define CONSOLE_ID_GAME_GEAR    "GG\0"
+#define CONSOLE_ID_SG_1000          "SG\0"
+#define CONSOLE_ID_COLECOVISION     "COL"
+#define CONSOLE_ID_SMS              "SMS"
+#define CONSOLE_ID_GAME_GEAR        "GG\0"
 
 /* Console-specific state */
-#define SECTION_ID_SMS_HW       "SMS"
-#define SECTION_ID_SG_1000_HW   "SG\0"
+#define SECTION_ID_SG_1000_HW       "SG\0"
+#define SECTION_ID_COLECOVISION_HW  "COL"
+#define SECTION_ID_SMS_HW           "SMS"
 
 /* Memory */
-#define SECTION_ID_RAM          "RAM"
-#define SECTION_ID_SRAM         "SRAM"
-#define SECTION_ID_VRAM         "VRAM"
+#define SECTION_ID_RAM              "RAM"
+#define SECTION_ID_SRAM             "SRAM"
+#define SECTION_ID_VRAM             "VRAM"
 
 /* CPUs */
-#define SECTION_ID_Z80          "Z80"
+#define SECTION_ID_Z80              "Z80"
 
 /* Sound Chips */
-#define SECTION_ID_PSG          "PSG"
+#define SECTION_ID_PSG              "PSG"
 
 /* Video Chips */
-#define SECTION_ID_VDP          "VDP"
+#define SECTION_ID_VDP              "VDP"
 
 
 /* Begin creating a new save state. */

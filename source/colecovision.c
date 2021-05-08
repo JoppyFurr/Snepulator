@@ -3,6 +3,7 @@
  */
 
 #include <assert.h>
+#include <pthread.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -13,6 +14,7 @@
 
 #include "util.h"
 #include "snepulator.h"
+#include "save_state.h"
 
 #include "gamepad.h"
 #include "cpu/z80.h"
@@ -27,8 +29,15 @@ extern Snepulator_Gamepad gamepad_2;
 
 #define COLECOVISION_RAM_SIZE (1 << 10)
 
+static pthread_mutex_t colecovision_state_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-static ColecoVision_Input_Mode colecovision_input_mode = COLECOVISION_INPUT_MODE_JOYSTICK;
+typedef struct ColecoVision_HW_State_s {
+    uint8_t input_mode;
+} ColecoVision_HW_State;
+
+static ColecoVision_HW_State hw_state = {
+    .input_mode = COLECOVISION_INPUT_MODE_JOYSTICK,
+};
 
 /*
  * Handle ColecoVision memory reads.
@@ -102,7 +111,7 @@ static uint8_t colecovision_io_read (uint8_t addr)
     {
         if ((addr & 0x02) == 0)
         {
-            if (colecovision_input_mode == COLECOVISION_INPUT_MODE_JOYSTICK)
+            if (hw_state.input_mode == COLECOVISION_INPUT_MODE_JOYSTICK)
             {
                 return (gamepad_1.state [GAMEPAD_DIRECTION_UP]      ? 0 : BIT_0) |
                        (gamepad_1.state [GAMEPAD_DIRECTION_RIGHT]   ? 0 : BIT_1) |
@@ -195,7 +204,7 @@ static void colecovision_io_write (uint8_t addr, uint8_t data)
     /* Set input to keypad-mode */
     if (addr >= 0x80 && addr <= 0x9f)
     {
-        colecovision_input_mode = COLECOVISION_INPUT_MODE_KEYPAD;
+        hw_state.input_mode = COLECOVISION_INPUT_MODE_KEYPAD;
     }
 
     /* tms9928a */
@@ -216,7 +225,7 @@ static void colecovision_io_write (uint8_t addr, uint8_t data)
     /* Set input to joystick-mode */
     if (addr >= 0xc0 && addr <= 0xdf)
     {
-        colecovision_input_mode = COLECOVISION_INPUT_MODE_JOYSTICK;
+        hw_state.input_mode = COLECOVISION_INPUT_MODE_JOYSTICK;
     }
 
     /* PSG */
@@ -263,6 +272,8 @@ static void colecovision_run (uint32_t ms)
     static uint64_t millicycles = 0;
     uint64_t lines;
 
+    pthread_mutex_lock (&colecovision_state_mutex);
+
     millicycles += (uint64_t) ms * colecovision_get_clock_rate ();
     lines = millicycles / 228000;
     millicycles -= lines * 228000;
@@ -276,6 +287,8 @@ static void colecovision_run (uint32_t ms)
         psg_run_cycles (228);
         tms9928a_run_one_scanline ();
     }
+
+    pthread_mutex_unlock (&colecovision_state_mutex);
 }
 
 
@@ -285,6 +298,121 @@ static void colecovision_run (uint32_t ms)
 static bool colecovision_get_int (void)
 {
     return false;
+}
+
+
+/*
+ * Export ColecoVision state to a file.
+ */
+static void colecovision_state_save (const char *filename)
+{
+    pthread_mutex_lock (&colecovision_state_mutex);
+
+    /* Begin creating a new save state. */
+    save_state_begin (CONSOLE_ID_COLECOVISION);
+
+    save_state_section_add (SECTION_ID_COLECOVISION_HW, 1, sizeof (hw_state), &hw_state);
+
+    z80_state_save ();
+    save_state_section_add (SECTION_ID_RAM, 1, COLECOVISION_RAM_SIZE, state.ram);
+
+    tms9928a_state_save ();
+    save_state_section_add (SECTION_ID_VRAM, 1, TMS9928A_VRAM_SIZE, state.vram);
+
+    sn76489_state_save ();
+
+    pthread_mutex_unlock (&colecovision_state_mutex);
+    save_state_write (filename);
+}
+
+
+/*
+ * Import ColecoVision state from a file.
+ */
+static void colecovision_state_load (const char *filename)
+{
+    const char *console_id;
+    uint32_t sections_loaded;
+
+    if (load_state_begin (filename, &console_id, &sections_loaded) == -1)
+    {
+        return;
+    }
+
+    pthread_mutex_lock (&colecovision_state_mutex);
+
+
+    if (!strncmp (console_id, CONSOLE_ID_COLECOVISION, 4))
+    {
+        state.console = CONSOLE_COLECOVISION;
+    }
+    else
+    {
+        return;
+    }
+
+    for (uint32_t i = 0; i < sections_loaded; i++)
+    {
+        const char *section_id;
+        uint32_t version;
+        uint32_t size;
+        uint8_t *data;
+        load_state_section (&section_id, &version, &size, (void *) &data);
+
+        if (!strncmp (section_id, SECTION_ID_COLECOVISION_HW, 4))
+        {
+            if (size == sizeof (hw_state))
+            {
+                memcpy (&hw_state, data, sizeof (hw_state));
+            }
+            else
+            {
+                snepulator_error ("Error", "Save-state contains incorrect hw_state size");
+            }
+        }
+        else if (!strncmp (section_id, SECTION_ID_Z80, 4))
+        {
+            z80_state_load (version, size, data);
+        }
+        else if (!strncmp (section_id, SECTION_ID_RAM, 4))
+        {
+            if (size == COLECOVISION_RAM_SIZE)
+            {
+                memcpy (state.ram, data, COLECOVISION_RAM_SIZE);
+            }
+            else
+            {
+                snepulator_error ("Error", "Save-state contains incorrect RAM size");
+            }
+        }
+        else if (!strncmp (section_id, SECTION_ID_VDP, 4))
+        {
+            tms9928a_state_load (version, size, data);
+        }
+        else if (!strncmp (section_id, SECTION_ID_VRAM, 4))
+        {
+            if (size == TMS9928A_VRAM_SIZE)
+            {
+                memcpy (state.vram, data, TMS9928A_VRAM_SIZE);
+            }
+            else
+            {
+                snepulator_error ("Error", "Save-state contains incorrect VRAM size");
+            }
+        }
+        else if (!strncmp (section_id, SECTION_ID_PSG, 4))
+        {
+            sn76489_state_load (version, size, data);
+        }
+        else
+        {
+            printf ("Unknown Section: section_id=%s, version=%u, size=%u, data=%p.\n", section_id, version, size, data);
+        }
+    }
+
+    pthread_mutex_unlock (&colecovision_state_mutex);
+
+    load_state_end ();
 }
 
 
@@ -334,12 +462,14 @@ void colecovision_init (void)
     tms9928a_init ();
     sn76489_init ();
 
-    /* Hook up the audio callback */
+    /* Hook up the callbacks */
     state.audio_callback = colecovision_audio_callback;
     state.get_clock_rate = colecovision_get_clock_rate;
     state.get_int = colecovision_get_int;
     state.get_nmi = tms9928a_get_interrupt;
     state.run = colecovision_run;
+    state.state_save = colecovision_state_save;
+    state.state_load = colecovision_state_load;
 
     /* Begin emulation */
     state.ready = true;
