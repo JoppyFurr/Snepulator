@@ -24,6 +24,16 @@ typedef struct Z80_State_s {
             uint8_t l;
             uint8_t h;
         };
+        struct {
+            uint8_t flag_carry:1;
+            uint8_t flag_sub:1;
+            uint8_t flag_parity_overflow:1;
+            uint8_t flag_x:1;
+            uint8_t flag_half:1;
+            uint8_t flag_y:1;
+            uint8_t flag_zero:1;
+            uint8_t flag_sign:1;
+        };
     };
 
     /* Alternate Register Set */
