@@ -104,122 +104,119 @@ void z80_init (uint8_t (* _memory_read) (uint16_t),
 }
 
 
-#define SET_FLAGS_AND { z80_state.f = (uint8_even_parity [z80_state.a] ? Z80_FLAG_PARITY : 0) | \
-                            (                                  Z80_FLAG_HALF      ) | \
-                            (z80_state.a == 0x00             ? Z80_FLAG_ZERO   : 0) | \
-                            ((z80_state.a & 0x80)            ? Z80_FLAG_SIGN   : 0); }
+#define SET_FLAGS_AND { z80_state.flag_carry = 0; \
+                        z80_state.flag_sub = 0; \
+                        z80_state.flag_parity_overflow = uint8_even_parity [z80_state.a]; \
+                        z80_state.flag_half = 1; \
+                        z80_state.flag_zero = (z80_state.a == 0x00); \
+                        z80_state.flag_sign = (z80_state.a >> 7); }
 
-#define SET_FLAGS_OR_XOR { z80_state.f = (uint8_even_parity [z80_state.a] ? Z80_FLAG_PARITY : 0) | \
-                               (z80_state.a == 0x00             ? Z80_FLAG_ZERO   : 0) | \
-                               ((z80_state.a & 0x80)                      ? Z80_FLAG_SIGN   : 0); }
+#define SET_FLAGS_OR_XOR { z80_state.flag_carry = 0; \
+                           z80_state.flag_sub = 0; \
+                           z80_state.flag_parity_overflow = uint8_even_parity [z80_state.a]; \
+                           z80_state.flag_half = 0; \
+                           z80_state.flag_zero = (z80_state.a == 0x00); \
+                           z80_state.flag_sign = (z80_state.a >> 7); }
 
-#define SET_FLAGS_ADD(X,Y) { z80_state.f = (((uint16_t)X + (uint16_t)Y) & 0x100          ? Z80_FLAG_CARRY    : 0) | \
-                                 (((((int16_t)(int8_t)X) + ((int16_t)(int8_t)Y)) >  127 ||                          \
-                                   (((int16_t)(int8_t)X) + ((int16_t)(int8_t)Y)) < -128) ? Z80_FLAG_OVERFLOW : 0) | \
-                                 (((X & 0x0f) + (Y & 0x0f)) & 0x10                       ? Z80_FLAG_HALF     : 0) | \
-                                 (((X + Y) & 0xff) == 0x00                               ? Z80_FLAG_ZERO     : 0) | \
-                                 ((X + Y) & 0x80                                         ? Z80_FLAG_SIGN     : 0); }
+#define SET_FLAGS_ADD(X,Y) { z80_state.flag_carry = (X + Y) >> 8; \
+                             z80_state.flag_sub = 0; \
+                             z80_state.flag_parity_overflow = (((int8_t) X + (int8_t) Y) > 127 || ((int8_t) X + (int8_t) Y) < -128); \
+                             z80_state.flag_half = ((X & 0x0f) + (Y & 0x0f)) >> 4; \
+                             z80_state.flag_zero = (((X + Y) & 0xff) == 0x00); \
+                             z80_state.flag_sign = (X + Y) >> 7; }
 
-#define SET_FLAGS_SUB(X,Y) { z80_state.f = (((uint16_t)X - (uint16_t)Y) & 0x100 ? Z80_FLAG_CARRY    : 0) | \
-                                 (                                               Z80_FLAG_SUB         ) | \
-                                 (((((int16_t)(int8_t)X) - ((int16_t)(int8_t)Y)) >  127 ||                \
-                                   (((int16_t)(int8_t)X) - ((int16_t)(int8_t)Y)) < -128) ? Z80_FLAG_OVERFLOW : 0) | \
-                                 (((X & 0x0f) - (Y & 0x0f)) & 0x10             ? Z80_FLAG_HALF     : 0) | \
-                                 ((X == Y)                                     ? Z80_FLAG_ZERO     : 0) | \
-                                 ((X - Y) & 0x80                               ? Z80_FLAG_SIGN     : 0); }
+#define SET_FLAGS_SUB(X,Y) { z80_state.flag_carry = (X - Y) >> 8; \
+                             z80_state.flag_sub = 1; \
+                             z80_state.flag_parity_overflow = (((int8_t) X - (int8_t) Y) > 127 || ((int8_t) X - (int8_t) Y) < -128); \
+                             z80_state.flag_half = ((X & 0x0f) - (Y & 0x0f)) >> 4; \
+                             z80_state.flag_zero = (X == Y); \
+                             z80_state.flag_sign = (X - Y) >> 7; }
 
-#define CARRY_BIT (z80_state.f & Z80_FLAG_CARRY)
+#define SET_FLAGS_ADC(X) { z80_state.flag_sub = 0; \
+                           z80_state.flag_parity_overflow = (((int8_t) z80_state.a + (int8_t) X + z80_state.flag_carry) > 127 || \
+                                                             ((int8_t) z80_state.a + (int8_t) X + z80_state.flag_carry) < -128); \
+                           z80_state.flag_half = ((z80_state.a & 0x0f) + (X & 0x0f) + z80_state.flag_carry) >> 4; \
+                           z80_state.flag_zero = (((z80_state.a + X + z80_state.flag_carry) & 0xff) == 0x00); \
+                           z80_state.flag_sign = (z80_state.a + X + z80_state.flag_carry) >> 7; \
+                           z80_state.flag_carry = (z80_state.a + X + z80_state.flag_carry) >> 8; }
 
-#define SET_FLAGS_ADC(X) { z80_state.f = (((uint16_t)z80_state.a + (uint16_t)X + CARRY_BIT) & 0x100  ? Z80_FLAG_CARRY    : 0) | \
-                               (((((int16_t)(int8_t)z80_state.a) + ((int16_t)(int8_t)X) + CARRY_BIT) >  127 || \
-                                 (((int16_t)(int8_t)z80_state.a) + ((int16_t)(int8_t)X) + CARRY_BIT) < -128) ? Z80_FLAG_OVERFLOW : 0) | \
-                               (((z80_state.a & 0x0f) + (X & 0x0f) + CARRY_BIT) & 0x10     ? Z80_FLAG_HALF     : 0) | \
-                               (((z80_state.a + X + CARRY_BIT) & 0xff) == 0x00             ? Z80_FLAG_ZERO     : 0) | \
-                               ((z80_state.a + X + CARRY_BIT) & 0x80                       ? Z80_FLAG_SIGN     : 0); }
+#define SET_FLAGS_SBC(X) { z80_state.flag_sub = 1; \
+                           z80_state.flag_parity_overflow = (((int8_t) z80_state.a - (int8_t) X - z80_state.flag_carry) > 127 || \
+                                                             ((int8_t) z80_state.a - (int8_t) X - z80_state.flag_carry) < -128); \
+                           z80_state.flag_half = ((z80_state.a & 0x0f) - (X & 0x0f) - z80_state.flag_carry) >> 4; \
+                           z80_state.flag_zero = (((z80_state.a - X - z80_state.flag_carry) & 0xff) == 0x00); \
+                           z80_state.flag_sign = (z80_state.a - X - z80_state.flag_carry) >> 7; \
+                           z80_state.flag_carry = (z80_state.a - X - z80_state.flag_carry) >> 8; }
 
-#define SET_FLAGS_SBC(X) { z80_state.f = (((uint16_t)z80_state.a - (uint16_t)X - CARRY_BIT) & 0x100  ? Z80_FLAG_CARRY    : 0) | \
-                               (                                                            Z80_FLAG_SUB         ) | \
-                               (((((int16_t)(int8_t)z80_state.a) - ((int16_t)(int8_t)X) - CARRY_BIT) >  127 || \
-                                 (((int16_t)(int8_t)z80_state.a) - ((int16_t)(int8_t)X) - CARRY_BIT) < -128) ? Z80_FLAG_OVERFLOW : 0) | \
-                               (((z80_state.a & 0x0f) - (X & 0x0f) - CARRY_BIT) & 0x10     ? Z80_FLAG_HALF     : 0) | \
-                               (((z80_state.a - X - CARRY_BIT) & 0xff) == 0x00             ? Z80_FLAG_ZERO     : 0) | \
-                               ((z80_state.a - X - CARRY_BIT) & 0x80                       ? Z80_FLAG_SIGN     : 0); }
+#define SET_FLAGS_INC(X) { z80_state.flag_sub = 0; \
+                           z80_state.flag_parity_overflow = (X == 0x80); \
+                           z80_state.flag_half = ((X & 0x0f) == 0x00); \
+                           z80_state.flag_zero = (X == 0x00); \
+                           z80_state.flag_sign = X >> 7; }
 
-#define SET_FLAGS_INC(X) { z80_state.f = (z80_state.f & Z80_FLAG_CARRY       ) | \
-                               (X == 0x80          ? Z80_FLAG_OVERFLOW : 0) | \
-                               ((X & 0x0f) == 0x00 ? Z80_FLAG_HALF     : 0) | \
-                               (X == 0x00          ? Z80_FLAG_ZERO     : 0) | \
-                               ((X  & 0x80)        ? Z80_FLAG_SIGN     : 0); }
+#define SET_FLAGS_DEC(X) { z80_state.flag_sub = 1; \
+                           z80_state.flag_parity_overflow = (X == 0x7f); \
+                           z80_state.flag_half = ((X & 0x0f) == 0x0f); \
+                           z80_state.flag_zero = (X == 0x00); \
+                           z80_state.flag_sign = X >> 7; }
 
-#define SET_FLAGS_DEC(X) { z80_state.f = (z80_state.f & Z80_FLAG_CARRY       ) | \
-                               (                     Z80_FLAG_SUB         ) | \
-                               (X == 0x7f          ? Z80_FLAG_OVERFLOW : 0) | \
-                               ((X & 0x0f) == 0x0f ? Z80_FLAG_HALF     : 0) | \
-                               (X == 0x00          ? Z80_FLAG_ZERO     : 0) | \
-                               ((X & 0x80)         ? Z80_FLAG_SIGN     : 0); }
+#define SET_FLAGS_ADD_16(X,Y) { z80_state.flag_carry = (X + Y) >> 16; \
+                                z80_state.flag_sub = 0; \
+                                z80_state.flag_half = ((X & 0x0fff) + (Y & 0xfff)) >> 12; }
 
-#define SET_FLAGS_ADD_16(Y,X) { z80_state.f = (z80_state.f & (Z80_FLAG_OVERFLOW | Z80_FLAG_ZERO | Z80_FLAG_SIGN))     | \
-                                    ((((uint32_t)Y + (uint32_t)X) & 0x10000)                      ? Z80_FLAG_CARRY : 0) | \
-                                    ((((uint32_t)(Y & 0x0fff) + (uint32_t)(X & 0x0fff)) & 0x1000) ? Z80_FLAG_HALF  : 0); }
+#define SET_FLAGS_ADC_16(X) { z80_state.flag_sub = 0; \
+                              z80_state.flag_parity_overflow = (((int16_t) z80_state.hl + (int16_t) X + z80_state.flag_carry) >  32767 || \
+                                                                ((int16_t) z80_state.hl + (int16_t) X + z80_state.flag_carry) < -32768); \
+                              z80_state.flag_half = ((z80_state.hl & 0xfff) + (X & 0xfff) + z80_state.flag_carry) >> 12; \
+                              z80_state.flag_zero = (((z80_state.hl + X + z80_state.flag_carry) & 0xffff) == 0x0000); \
+                              z80_state.flag_sign = (z80_state.hl + X + z80_state.flag_carry) >> 15; \
+                              z80_state.flag_carry = (z80_state.hl + X + z80_state.flag_carry) >> 16; }
 
-#define SET_FLAGS_SUB_16(Y,X) { z80_state.f = (z80_state.f & (Z80_FLAG_OVERFLOW | Z80_FLAG_ZERO | Z80_FLAG_SIGN)    ) | \
-                                    (                                                               Z80_FLAG_SUB      ) | \
-                                    ((((uint32_t)Y - (uint32_t)X) & 0x10000)                      ? Z80_FLAG_CARRY : 0) | \
-                                    ((((uint32_t)(Y & 0x0fff) - (uint32_t)(X & 0x0fff)) & 0x1000) ? Z80_FLAG_HALF  : 0); }
+#define SET_FLAGS_SBC_16(X) { z80_state.flag_sub = 1; \
+                              z80_state.flag_parity_overflow = (((int16_t) z80_state.hl - (int16_t) X - z80_state.flag_carry) >  32767 || \
+                                                                ((int16_t) z80_state.hl - (int16_t) X - z80_state.flag_carry) < -32768); \
+                              z80_state.flag_half = ((z80_state.hl & 0xfff) - (X & 0xfff) - z80_state.flag_carry) >> 12; \
+                              z80_state.flag_zero = (((z80_state.hl - X - z80_state.flag_carry) & 0xffff) == 0x0000); \
+                              z80_state.flag_sign = (z80_state.hl - X - z80_state.flag_carry) >> 15; \
+                              z80_state.flag_carry = (z80_state.hl - X - z80_state.flag_carry) >> 16; }
 
-#define SET_FLAGS_ADC_16(X) { z80_state.f = (((uint32_t)z80_state.hl + (uint32_t)X + CARRY_BIT) & 0x10000  ? Z80_FLAG_CARRY    : 0) | \
-                                  (((((int32_t)(int16_t)z80_state.hl) + ((int32_t)(int16_t)X) + CARRY_BIT) >  32767 || \
-                                    (((int32_t)(int16_t)z80_state.hl) + ((int32_t)(int16_t)X) + CARRY_BIT) < -32768)  ? Z80_FLAG_OVERFLOW : 0) | \
-                                  (((z80_state.hl & 0xfff) + (X & 0xfff) + CARRY_BIT) & 0x1000      ? Z80_FLAG_HALF     : 0) | \
-                                  (((z80_state.hl + X + CARRY_BIT) & 0xffff) == 0x0000              ? Z80_FLAG_ZERO     : 0) | \
-                                  ((z80_state.hl + X + CARRY_BIT) & 0x8000                          ? Z80_FLAG_SIGN     : 0); }
+#define SET_FLAGS_CPI_CPD(X) { z80_state.flag_sub = 1; \
+                               z80_state.flag_parity_overflow = (z80_state.bc != 0); \
+                               z80_state.flag_half = ((z80_state.a & 0x0f) - (X & 0x0f)) >> 4; \
+                               z80_state.flag_zero = (z80_state.a == X); \
+                               z80_state.flag_sign = (z80_state.a - X) >> 7; }
 
-#define SET_FLAGS_SBC_16(X) { z80_state.f = (((uint32_t)z80_state.hl - (uint32_t)X - CARRY_BIT) & 0x10000    ? Z80_FLAG_CARRY    : 0) | \
-                                  (                                                                  Z80_FLAG_SUB         ) | \
-                                  (((((int32_t)(int16_t)z80_state.hl) - ((int32_t)(int16_t)X) - CARRY_BIT) >  32767 || \
-                                    (((int32_t)(int16_t)z80_state.hl) - ((int32_t)(int16_t)X) - CARRY_BIT) < -32768)  ? Z80_FLAG_OVERFLOW : 0) | \
-                                  (((z80_state.hl & 0x0fff) - (X & 0x0fff) - CARRY_BIT) & 0x1000    ? Z80_FLAG_HALF     : 0) | \
-                                  (((z80_state.hl - X - CARRY_BIT) & 0xffff) == 0x0000              ? Z80_FLAG_ZERO     : 0) | \
-                                  ((z80_state.hl - X - CARRY_BIT) & 0x8000                          ? Z80_FLAG_SIGN     : 0); }
+#define SET_FLAGS_RLC(X) { z80_state.flag_carry = X; \
+                           z80_state.flag_sub = 0; \
+                           z80_state.flag_parity_overflow = uint8_even_parity [X]; \
+                           z80_state.flag_half = 0; \
+                           z80_state.flag_zero = (X == 0x00); \
+                           z80_state.flag_sign = X >> 7; }
 
-#define SET_FLAGS_CPD_CPI(X) { z80_state.f = (z80_state.f            & Z80_FLAG_CARRY       ) | \
-                                   (                                   Z80_FLAG_SUB         ) | \
-                                   ((z80_state.bc)                   ? Z80_FLAG_OVERFLOW : 0) | \
-                                   (((z80_state.a & 0x0f) - (X & 0x0f)) & 0x10 ? Z80_FLAG_HALF     : 0) | \
-                                   ((z80_state.a == X)               ? Z80_FLAG_ZERO     : 0) | \
-                                   ((z80_state.a - X) & 0x80         ? Z80_FLAG_SIGN     : 0); }
+#define SET_FLAGS_RRC(X) { z80_state.flag_carry = X >> 7; \
+                           z80_state.flag_sub = 0; \
+                           z80_state.flag_parity_overflow = uint8_even_parity [X]; \
+                           z80_state.flag_half = 0; \
+                           z80_state.flag_zero = (X == 0x00); \
+                           z80_state.flag_sign = X >> 7; }
 
-#define SET_FLAGS_RLCA(X) { z80_state.f = (z80_state.f & (Z80_FLAG_PARITY | Z80_FLAG_ZERO | Z80_FLAG_SIGN)) | \
-                                ((X & 0x01)                           ? Z80_FLAG_CARRY : 0); }
+#define SET_FLAGS_RL_RR(X) { z80_state.flag_sub = 0; \
+                             z80_state.flag_parity_overflow = uint8_even_parity [X]; \
+                             z80_state.flag_half = 0; \
+                             z80_state.flag_zero = (X == 0x00); \
+                             z80_state.flag_sign = X >> 7; }
 
-#define SET_FLAGS_RLC(X) { z80_state.f = (uint8_even_parity [X]        ? Z80_FLAG_PARITY : 0) | \
-                               ((X & 0x01)                             ? Z80_FLAG_CARRY  : 0) | \
-                               (X == 0x00                              ? Z80_FLAG_ZERO   : 0) | \
-                               ((X & 0x80)                             ? Z80_FLAG_SIGN   : 0); }
+#define SET_FLAGS_RLD_RRD { z80_state.flag_sub = 0; \
+                            z80_state.flag_parity_overflow = uint8_even_parity [z80_state.a]; \
+                            z80_state.flag_half = 0; \
+                            z80_state.flag_zero = (z80_state.a == 0x00); \
+                            z80_state.flag_sign = z80_state.a >> 7; }
 
-#define SET_FLAGS_RRC(X) { z80_state.f = (uint8_even_parity [X]        ? Z80_FLAG_PARITY : 0) | \
-                               ((X & 0x80)                             ? Z80_FLAG_CARRY  : 0) | \
-                               (X == 0x00                              ? Z80_FLAG_ZERO   : 0) | \
-                               ((X & 0x80)                             ? Z80_FLAG_SIGN   : 0); }
-
-#define SET_FLAGS_RL(X) { z80_state.f = (uint8_even_parity [X]         ? Z80_FLAG_PARITY : 0) | \
-                              (X == 0x00                               ? Z80_FLAG_ZERO   : 0) | \
-                              ((X & 0x80)                              ? Z80_FLAG_SIGN   : 0); }
-
-#define SET_FLAGS_RR(X) { z80_state.f = (uint8_even_parity [X]         ? Z80_FLAG_PARITY : 0) | \
-                              (X == 0x00                               ? Z80_FLAG_ZERO   : 0) | \
-                              ((X & 0x80)                              ? Z80_FLAG_SIGN   : 0); }
-
-#define SET_FLAGS_RRD_RLD { z80_state.f = (z80_state.f            & Z80_FLAG_CARRY)      | \
-                                (uint8_even_parity [z80_state.a]  ? Z80_FLAG_PARITY : 0) | \
-                                (z80_state.a == 0x00              ? Z80_FLAG_ZERO   : 0) | \
-                                (z80_state.a & 0x80               ? Z80_FLAG_SIGN   : 0); }
-
-
-#define SET_FLAGS_ED_IN(X) { z80_state.f = (z80_state.f & Z80_FLAG_CARRY     ) | \
-                                 (X & 0x80              ? Z80_FLAG_SIGN   : 0) | \
-                                 (X == 0                ? Z80_FLAG_ZERO   : 0) | \
-                                 (uint8_even_parity [X] ? Z80_FLAG_PARITY : 0); }
+#define SET_FLAGS_ED_IN(X) { z80_state.flag_sub = 0; \
+                             z80_state.flag_parity_overflow = uint8_even_parity [X]; \
+                             z80_state.flag_half = 0; \
+                             z80_state.flag_zero = (X == 0); \
+                             z80_state.flag_sign = X >> 7; }
 
 
 
@@ -254,31 +251,31 @@ uint32_t z80_ix_iy_bit_instruction (uint16_t reg_ix_iy_w)
                                     SET_FLAGS_RRC (data);       CYCLES (23);    break;
         case 0x10: /* RL  (ix+*) */ temp = data;
                                     data = (data << 1) | ((z80_state.f & Z80_FLAG_CARRY) ? 0x01 : 0x00);
-                                    SET_FLAGS_RL (data);
-                                    z80_state.f |= (temp & 0x80) ? Z80_FLAG_CARRY : 0;
+                                    SET_FLAGS_RL_RR (data);
+                                    z80_state.flag_carry = temp >> 7;
                                                                 CYCLES (23);    break;
         case 0x18: /* RR  (ix+*) */ temp = data;
                                     data = (data >> 1) | ((z80_state.f & Z80_FLAG_CARRY) ? 0x80 : 0x00);
-                                    SET_FLAGS_RR (data);
-                                    z80_state.f |= (temp & 0x01) ? Z80_FLAG_CARRY : 0;
+                                    SET_FLAGS_RL_RR (data);
+                                    z80_state.flag_carry = temp;
                                                                 CYCLES (23);    break;
 
         case 0x20: /* SLA (ix+*) */ temp = data;
-                                    data = (data << 1); SET_FLAGS_RL (data);
-                                    z80_state.f |= (temp & 0x80) ? Z80_FLAG_CARRY : 0;
+                                    data = (data << 1); SET_FLAGS_RL_RR (data);
+                                    z80_state.flag_carry = temp >> 7;
                                                                 CYCLES (23);    break;
         case 0x28: /* SRA (ix+*) */ temp = data;
-                                    data = (data >> 1) | (data & 0x80); SET_FLAGS_RR (data);
-                                    z80_state.f |= (temp & 0x01) ? Z80_FLAG_CARRY : 0;
+                                    data = (data >> 1) | (data & 0x80); SET_FLAGS_RL_RR (data);
+                                    z80_state.flag_carry = temp;
                                                                 CYCLES (23);    break;
 
         case 0x30: /* SLL (ix+*) */ temp = data;
-                                    data = (data << 1) | 0x01; SET_FLAGS_RL (data);
-                                    z80_state.f |= (temp & 0x80) ? Z80_FLAG_CARRY : 0;
+                                    data = (data << 1) | 0x01; SET_FLAGS_RL_RR (data);
+                                    z80_state.flag_carry = temp >> 7;
                                                                 CYCLES (23);    break;
         case 0x38: /* SRL (ix+*) */ temp = data;
-                                    data = (data >> 1); SET_FLAGS_RR (data);
-                                    z80_state.f |= (temp & 0x01) ? Z80_FLAG_CARRY : 0;
+                                    data = (data >> 1); SET_FLAGS_RL_RR (data);
+                                    z80_state.flag_carry = temp;
                                                                 CYCLES (23);    break;
         case 0x40: case 0x48: case 0x50: case 0x58: /* BIT */
         case 0x60: case 0x68: case 0x70: case 0x78:
@@ -505,14 +502,14 @@ uint16_t z80_ix_iy_instruction (uint16_t reg_ix_iy_in)
                                       SET_FLAGS_ADD (z80_state.a, temp);
                                       z80_state.a += temp;                CYCLES (19);    break;
 
-        case 0x8c: /* ADC A,IXH    */ temp = reg_ix_iy.h + CARRY_BIT;
+        case 0x8c: /* ADC A,IXH    */ temp = reg_ix_iy.h + z80_state.flag_carry;
                                       SET_FLAGS_ADC (reg_ix_iy.h);
                                       z80_state.a += temp;                CYCLES (8);     break;
-        case 0x8d: /* ADC A,IXL    */ temp = reg_ix_iy.l + CARRY_BIT;
+        case 0x8d: /* ADC A,IXL    */ temp = reg_ix_iy.l + z80_state.flag_carry;
                                       SET_FLAGS_ADC (reg_ix_iy.l);
                                       z80_state.a += temp;                CYCLES (8);     break;
         case 0x8e: /* ADC A,(IX+*) */ value_read = memory_read (reg_ix_iy.w + (int8_t) param.l);
-                                      temp = value_read + CARRY_BIT;
+                                      temp = value_read + z80_state.flag_carry;
                                       SET_FLAGS_ADC (value_read);
                                       z80_state.a += temp;                CYCLES (19);    break;
 
@@ -523,14 +520,14 @@ uint16_t z80_ix_iy_instruction (uint16_t reg_ix_iy_in)
         case 0x96: /* SUB A,(IX+*) */ temp = memory_read (reg_ix_iy.w + (int8_t) param.l);
                                       SET_FLAGS_SUB (z80_state.a, temp);
                                       z80_state.a -= temp;                CYCLES (19);    break;
-        case 0x9c: /* SBC A,IXH    */ temp = reg_ix_iy.h + CARRY_BIT;
+        case 0x9c: /* SBC A,IXH    */ temp = reg_ix_iy.h + z80_state.flag_carry;
                                       SET_FLAGS_SBC (reg_ix_iy.h);
                                       z80_state.a -= temp;                CYCLES (8);     break;
-        case 0x9d: /* SBC A,IXL    */ temp = reg_ix_iy.l + CARRY_BIT;
+        case 0x9d: /* SBC A,IXL    */ temp = reg_ix_iy.l + z80_state.flag_carry;
                                       SET_FLAGS_SBC (reg_ix_iy.l);
                                       z80_state.a -= temp;                CYCLES (8);     break;
         case 0x9e: /* SBC A,(IX+*) */ value_read= memory_read (reg_ix_iy.w + (int8_t) param.l);
-                                      temp = value_read + CARRY_BIT;
+                                      temp = value_read + z80_state.flag_carry;
                                       SET_FLAGS_SBC (value_read);
                                       z80_state.a -= temp;                CYCLES (19);    break;
 
@@ -619,8 +616,8 @@ static uint8_t z80_cb_10_rl (uint8_t value)
 {
     uint8_t result;
     result = (value << 1) | ((z80_state.f & Z80_FLAG_CARRY) ? 0x01 : 0x00);
-    SET_FLAGS_RL (result);
-    z80_state.f |= (value & 0x80) ? Z80_FLAG_CARRY : 0;
+    SET_FLAGS_RL_RR (result);
+    z80_state.flag_carry = value >> 7;
     return result;
 }
 
@@ -630,8 +627,8 @@ static uint8_t z80_cb_18_rr (uint8_t value)
 {
     uint8_t result;
     result = (value >> 1) | ((z80_state.f & Z80_FLAG_CARRY) ? 0x80 : 0x00);
-    SET_FLAGS_RR (result);
-    z80_state.f |= (value & 0x01) ? Z80_FLAG_CARRY : 0;
+    SET_FLAGS_RL_RR (result);
+    z80_state.flag_carry = value;
     return result;
 }
 
@@ -641,8 +638,8 @@ static uint8_t z80_cb_20_sla (uint8_t value)
 {
     uint8_t result;
     result = (value << 1);
-    SET_FLAGS_RL (result);
-    z80_state.f |= (value & 0x80) ? Z80_FLAG_CARRY : 0;
+    SET_FLAGS_RL_RR (result);
+    z80_state.flag_carry = value >> 7;
     return result;
 }
 
@@ -652,8 +649,8 @@ static uint8_t z80_cb_28_sra (uint8_t value)
 {
     uint8_t result;
     result = (value >> 1) | (value & 0x80);
-    SET_FLAGS_RR (result);
-    z80_state.f |= (value & 0x01) ? Z80_FLAG_CARRY : 0;
+    SET_FLAGS_RL_RR (result);
+    z80_state.flag_carry = value;
     return result;
 }
 
@@ -662,8 +659,8 @@ static uint8_t z80_cb_30_sll (uint8_t value)
 {
     uint8_t result;
     result = (value << 1) | 0x01;
-    SET_FLAGS_RL (result);
-    z80_state.f |= (value & 0x80) ? Z80_FLAG_CARRY : 0;
+    SET_FLAGS_RL_RR (result);
+    z80_state.flag_carry = value >> 7;
     return result;
 }
 
@@ -673,8 +670,8 @@ static uint8_t z80_cb_38_srl (uint8_t value)
 {
     uint8_t result;
     result = (value >> 1);
-    SET_FLAGS_RR (result);
-    z80_state.f |= (value & 0x01) ? Z80_FLAG_CARRY : 0;
+    SET_FLAGS_RL_RR (result);
+    z80_state.flag_carry = value;
     return result;
 }
 
@@ -900,7 +897,7 @@ static void z80_ed_41_out_c_b (void)
 static void z80_ed_42_sbc_hl_bc (void)
 {
     uint16_t temp;
-    temp = z80_state.bc + CARRY_BIT;
+    temp = z80_state.bc + z80_state.flag_carry;
     SET_FLAGS_SBC_16 (z80_state.bc);
     z80_state.hl -= temp;
     used_cycles += 15;
@@ -983,7 +980,7 @@ static void z80_ed_49_out_c_c (void)
 static void z80_ed_4a_adc_hl_bc (void)
 {
     uint16_t temp;
-    temp = z80_state.bc + CARRY_BIT;
+    temp = z80_state.bc + z80_state.flag_carry;
     SET_FLAGS_ADC_16 (z80_state.bc);
     z80_state.hl += temp;
     used_cycles += 15;
@@ -1055,7 +1052,7 @@ static void z80_ed_51_out_c_d (void)
 static void z80_ed_52_sbc_hl_de (void)
 {
     uint16_t temp;
-    temp = z80_state.de + CARRY_BIT;
+    temp = z80_state.de + z80_state.flag_carry;
     SET_FLAGS_SBC_16 (z80_state.de);
     z80_state.hl -= temp;
     used_cycles += 15;
@@ -1129,7 +1126,7 @@ static void z80_ed_59_out_c_e (void)
 /* ADC HL, DE */
 static void z80_ed_5a_adc_hl_de (void)
 {
-    uint16_t temp = z80_state.de + CARRY_BIT;
+    uint16_t temp = z80_state.de + z80_state.flag_carry;
     SET_FLAGS_ADC_16 (z80_state.de);
     z80_state.hl += temp;
     used_cycles += 15;
@@ -1203,7 +1200,7 @@ static void z80_ed_61_out_c_h (void)
 /* SBC HL, HL */
 static void z80_ed_62_sbc_hl_hl (void)
 {
-    uint16_t temp = z80_state.hl + CARRY_BIT;
+    uint16_t temp = z80_state.hl + z80_state.flag_carry;
     SET_FLAGS_SBC_16 (z80_state.hl);
     z80_state.hl -= temp;
     used_cycles += 15;
@@ -1260,7 +1257,7 @@ static void z80_ed_67_rrd (void)
     /* Upper 4 bits go to A */
     z80_state.a = (z80_state.a & 0xf0) | shifted.h;
 
-    SET_FLAGS_RRD_RLD;
+    SET_FLAGS_RLD_RRD;
     used_cycles += 18;
 }
 
@@ -1285,7 +1282,7 @@ static void z80_ed_69_out_c_l (void)
 /* ADC HL, HL */
 static void z80_ed_6a_adc_hl_hl (void)
 {
-    uint16_t temp = z80_state.hl + CARRY_BIT;
+    uint16_t temp = z80_state.hl + z80_state.flag_carry;
     SET_FLAGS_ADC_16 (z80_state.hl);
     z80_state.hl += temp;
     used_cycles += 15;
@@ -1340,7 +1337,7 @@ static void z80_ed_6f_rld (void)
     /* Upper 4 bits go to A */
     z80_state.a = (z80_state.a & 0xf0) | shifted.h;
 
-    SET_FLAGS_RRD_RLD;
+    SET_FLAGS_RLD_RRD;
     used_cycles += 18;
 }
 
@@ -1366,7 +1363,7 @@ static void z80_ed_71_out_c_0 (void)
 /* SBC HL, SP */
 static void z80_ed_72_sbc_hl_sp (void)
 {
-    uint16_t temp = z80_state.sp + CARRY_BIT;
+    uint16_t temp = z80_state.sp + z80_state.flag_carry;
     SET_FLAGS_SBC_16 (z80_state.sp);
     z80_state.hl -= temp;
     used_cycles += 15;
@@ -1427,7 +1424,7 @@ static void z80_ed_79_out_c_a (void)
 /* ADC HL, SP */
 static void z80_ed_7a_adc_hl_sp (void)
 {
-    uint16_t temp = z80_state.sp + CARRY_BIT;
+    uint16_t temp = z80_state.sp + z80_state.flag_carry;
     SET_FLAGS_ADC_16 (z80_state.sp);
     z80_state.hl += temp;
     used_cycles += 15;
@@ -1487,7 +1484,7 @@ static void z80_ed_a1_cpi (void)
     uint8_t temp = memory_read (z80_state.hl);
     z80_state.hl++;
     z80_state.bc--;
-    SET_FLAGS_CPD_CPI (temp);
+    SET_FLAGS_CPI_CPD (temp);
     used_cycles += 16;
 }
 
@@ -1537,7 +1534,7 @@ static void z80_ed_a9_cpd (void)
     uint8_t temp = memory_read (z80_state.hl);
     z80_state.hl--;
     z80_state.bc--;
-    SET_FLAGS_CPD_CPI (temp);
+    SET_FLAGS_CPI_CPD (temp);
     used_cycles += 16;
 }
 
@@ -1605,7 +1602,7 @@ static void z80_ed_b1_cpir (void)
     {
         used_cycles += 16;
     }
-    SET_FLAGS_CPD_CPI (temp);
+    SET_FLAGS_CPI_CPD (temp);
 }
 
 
@@ -1673,7 +1670,7 @@ static void z80_ed_b9_cpdr (void)
     uint8_t temp = memory_read (z80_state.hl);
     z80_state.hl--;
     z80_state.bc--;
-    SET_FLAGS_CPD_CPI (temp);
+    SET_FLAGS_CPI_CPD (temp);
     if (z80_state.bc != 0 && z80_state.a != temp)
     {
         z80_state.pc -= 2;
@@ -1864,7 +1861,9 @@ static void z80_06_ld_b_x (void)
 static void z80_07_rlca (void)
 {
     z80_state.a = (z80_state.a << 1) | (z80_state.a >> 7);
-    SET_FLAGS_RLCA (z80_state.a);
+    z80_state.flag_carry = z80_state.a;
+    z80_state.flag_sub = 0;
+    z80_state.flag_half = 0;
     used_cycles += 4;
 }
 
@@ -1932,7 +1931,9 @@ static void z80_0e_ld_c_x (void)
 static void z80_0f_rrca (void)
 {
     z80_state.a = (z80_state.a >> 1) | (z80_state.a << 7);
-    z80_state.f = (z80_state.f & (Z80_FLAG_PARITY | Z80_FLAG_ZERO | Z80_FLAG_SIGN)) | ((z80_state.a & 0x80) ? Z80_FLAG_CARRY : 0);
+    z80_state.flag_carry = z80_state.a >> 7;
+    z80_state.flag_sub = 0;
+    z80_state.flag_half = 0;
     used_cycles += 4;
 }
 
@@ -2009,7 +2010,7 @@ static void z80_16_ld_d_x (void)
 static void z80_17_rla (void)
 {
     uint8_t temp = z80_state.a;
-    z80_state.a = (z80_state.a << 1) + CARRY_BIT;
+    z80_state.a = (z80_state.a << 1) + z80_state.flag_carry;
     z80_state.f = (z80_state.f & (Z80_FLAG_PARITY | Z80_FLAG_ZERO | Z80_FLAG_SIGN)) | ((temp & 0x80) ? Z80_FLAG_CARRY : 0);
     used_cycles += 4;
 }
@@ -2457,7 +2458,7 @@ static void z80_3e_ld_a_x (void)
 /* CCF */
 static void z80_3f_ccf (void)
 {
-    z80_state.f = (z80_state.f & (Z80_FLAG_SIGN | Z80_FLAG_ZERO | Z80_FLAG_OVERFLOW)) | (CARRY_BIT ? Z80_FLAG_HALF : Z80_FLAG_CARRY);
+    z80_state.f = (z80_state.f & (Z80_FLAG_SIGN | Z80_FLAG_ZERO | Z80_FLAG_OVERFLOW)) | (z80_state.flag_carry ? Z80_FLAG_HALF : Z80_FLAG_CARRY);
     used_cycles += 4;
 }
 
@@ -3042,7 +3043,7 @@ static void z80_87_add_a_a (void)
 /* ADC A, B */
 static void z80_88_adc_a_b (void)
 {
-    uint8_t temp = z80_state.b + CARRY_BIT;
+    uint8_t temp = z80_state.b + z80_state.flag_carry;
     SET_FLAGS_ADC (z80_state.b);
     z80_state.a += temp;
     used_cycles += 4;
@@ -3052,7 +3053,7 @@ static void z80_88_adc_a_b (void)
 /* ADC A, C */
 static void z80_89_adc_a_c (void)
 {
-    uint8_t temp = z80_state.c + CARRY_BIT;
+    uint8_t temp = z80_state.c + z80_state.flag_carry;
     SET_FLAGS_ADC (z80_state.c);
     z80_state.a += temp;
     used_cycles += 4;
@@ -3062,7 +3063,7 @@ static void z80_89_adc_a_c (void)
 /* ADC A, D */
 static void z80_8a_adc_a_d (void)
 {
-    uint8_t temp = z80_state.d + CARRY_BIT;
+    uint8_t temp = z80_state.d + z80_state.flag_carry;
     SET_FLAGS_ADC (z80_state.d);
     z80_state.a += temp;
     used_cycles += 4;
@@ -3072,7 +3073,7 @@ static void z80_8a_adc_a_d (void)
 /* ADC A, E */
 static void z80_8b_adc_a_e (void)
 {
-    uint8_t temp = z80_state.e + CARRY_BIT;
+    uint8_t temp = z80_state.e + z80_state.flag_carry;
     SET_FLAGS_ADC (z80_state.e);
     z80_state.a += temp;
     used_cycles += 4;
@@ -3082,7 +3083,7 @@ static void z80_8b_adc_a_e (void)
 /* ADC A, H */
 static void z80_8c_adc_a_h (void)
 {
-    uint8_t temp = z80_state.h + CARRY_BIT;
+    uint8_t temp = z80_state.h + z80_state.flag_carry;
     SET_FLAGS_ADC (z80_state.h);
     z80_state.a += temp;
     used_cycles += 4;
@@ -3092,7 +3093,7 @@ static void z80_8c_adc_a_h (void)
 /* ADC A, L */
 static void z80_8d_adc_a_l (void)
 {
-    uint8_t temp = z80_state.l + CARRY_BIT;
+    uint8_t temp = z80_state.l + z80_state.flag_carry;
     SET_FLAGS_ADC (z80_state.l);
     z80_state.a += temp;
     used_cycles += 4;
@@ -3103,7 +3104,7 @@ static void z80_8d_adc_a_l (void)
 static void z80_8e_adc_a_hl (void)
 {
     uint8_t value = memory_read (z80_state.hl);
-    uint8_t temp = value + CARRY_BIT;
+    uint8_t temp = value + z80_state.flag_carry;
     SET_FLAGS_ADC (value);
     z80_state.a += temp;
     used_cycles += 7;
@@ -3113,7 +3114,7 @@ static void z80_8e_adc_a_hl (void)
 /* ADC A, A */
 static void z80_8f_adc_a_a (void)
 {
-    uint8_t temp = z80_state.a + CARRY_BIT;
+    uint8_t temp = z80_state.a + z80_state.flag_carry;
     SET_FLAGS_ADC (z80_state.a);
     z80_state.a += temp;
     used_cycles += 4;
@@ -3196,7 +3197,7 @@ static void z80_97_sub_a_a (void)
 /* SBC A, B */
 static void z80_98_sbc_a_b (void)
 {
-    uint8_t temp = z80_state.b + CARRY_BIT;
+    uint8_t temp = z80_state.b + z80_state.flag_carry;
     SET_FLAGS_SBC (z80_state.b);
     z80_state.a -= temp;
     used_cycles += 4;
@@ -3206,7 +3207,7 @@ static void z80_98_sbc_a_b (void)
 /* SBC A, C */
 static void z80_99_sbc_a_c (void)
 {
-    uint8_t temp = z80_state.c + CARRY_BIT;
+    uint8_t temp = z80_state.c + z80_state.flag_carry;
     SET_FLAGS_SBC (z80_state.c);
     z80_state.a -= temp;
     used_cycles += 4;
@@ -3216,7 +3217,7 @@ static void z80_99_sbc_a_c (void)
 /* SBC A, D */
 static void z80_9a_sbc_a_d (void)
 {
-    uint8_t temp = z80_state.d + CARRY_BIT;
+    uint8_t temp = z80_state.d + z80_state.flag_carry;
     SET_FLAGS_SBC (z80_state.d);
     z80_state.a -= temp;
     used_cycles += 4;
@@ -3226,7 +3227,7 @@ static void z80_9a_sbc_a_d (void)
 /* SBC A, E */
 static void z80_9b_sbc_a_e (void)
 {
-    uint8_t temp = z80_state.e + CARRY_BIT;
+    uint8_t temp = z80_state.e + z80_state.flag_carry;
     SET_FLAGS_SBC (z80_state.e);
     z80_state.a -= temp;
     used_cycles += 4;
@@ -3236,7 +3237,7 @@ static void z80_9b_sbc_a_e (void)
 /* SBC A, H */
 static void z80_9c_sbc_a_h (void)
 {
-    uint8_t temp = z80_state.h + CARRY_BIT;
+    uint8_t temp = z80_state.h + z80_state.flag_carry;
     SET_FLAGS_SBC (z80_state.h);
     z80_state.a -= temp;
     used_cycles += 4;
@@ -3246,7 +3247,7 @@ static void z80_9c_sbc_a_h (void)
 /* SBC A, L */
 static void z80_9d_sbc_a_l (void)
 {
-    uint8_t temp = z80_state.l + CARRY_BIT;
+    uint8_t temp = z80_state.l + z80_state.flag_carry;
     SET_FLAGS_SBC (z80_state.l);
     z80_state.a -= temp;
     used_cycles += 4;
@@ -3257,7 +3258,7 @@ static void z80_9d_sbc_a_l (void)
 static void z80_9e_sbc_a_hl (void)
 {
     uint8_t value = memory_read (z80_state.hl);
-    uint8_t temp = value + CARRY_BIT;
+    uint8_t temp = value + z80_state.flag_carry;
     SET_FLAGS_SBC (value);
     z80_state.a -= temp;
     used_cycles += 7;
@@ -3267,7 +3268,7 @@ static void z80_9e_sbc_a_hl (void)
 /* SBC A, A */
 static void z80_9f_sbc_a_a (void)
 {
-    uint8_t temp = z80_state.a + CARRY_BIT;
+    uint8_t temp = z80_state.a + z80_state.flag_carry;
     SET_FLAGS_SBC (z80_state.a);
     z80_state.a -= temp;
     used_cycles += 4;
@@ -3791,7 +3792,7 @@ static void z80_cd_call_xx (void)
 static void z80_ce_adc_a_x (void)
 {
     uint8_t imm = memory_read (z80_state.pc++);
-    uint8_t temp = imm + CARRY_BIT;
+    uint8_t temp = imm + z80_state.flag_carry;
     SET_FLAGS_ADC (imm);
     z80_state.a += temp;
     used_cycles += 7;
@@ -3988,7 +3989,7 @@ static void z80_dd_ix (void)
 static void z80_de_sbc_a_x (void)
 {
     uint8_t imm = memory_read (z80_state.pc++);
-    uint8_t temp = imm + CARRY_BIT;
+    uint8_t temp = imm + z80_state.flag_carry;
     SET_FLAGS_SBC (imm);
     z80_state.a -= temp;
     used_cycles += 7;
