@@ -5282,13 +5282,6 @@ void z80_run_cycles (uint64_t cycles)
     {
         used_cycles = 0;
 
-        /* TIMING DEBUG */
-        uint8_t debug_instruction [4];
-        debug_instruction [0] = memory_read (z80_state.pc + 0);
-        debug_instruction [1] = memory_read (z80_state.pc + 1);
-        debug_instruction [2] = memory_read (z80_state.pc + 2);
-        debug_instruction [3] = memory_read (z80_state.pc + 3);
-
         if (z80_state.halt)
         {
             /* NOP */
@@ -5298,15 +5291,6 @@ void z80_run_cycles (uint64_t cycles)
         {
             z80_run_instruction ();
         }
-
-        if (used_cycles == 0)
-        {
-            snprintf (state.error_buffer, 79, "Instruction took no time: %x %x %x %x.",
-                      debug_instruction [0], debug_instruction [1], debug_instruction [2], debug_instruction [3]);
-            snepulator_error ("Z80 Error", state.error_buffer);
-            return;
-        }
-        /* END TIMING DEBUG */
 
         /* Check for interrupts */
         if (instructions_before_interrupts)
