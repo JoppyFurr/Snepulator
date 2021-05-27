@@ -162,11 +162,8 @@ void sms_vdp_init (void)
         colour_mask = 0x3f;
     }
 
-    /* TODO: Are there any nonzero default values? */
-    memset (&tms9928a_state.regs,        0, sizeof (tms9928a_state.regs));
-    memset (&tms9928a_state.regs_buffer, 0, sizeof (tms9928a_state.regs_buffer));
-    memset (tms9928a_state.cram,         0, sizeof (tms9928a_state.cram));
-    memset (frame_buffer,                0, sizeof (frame_buffer));
+    memset (&tms9928a_state, 0, sizeof (tms9928a_state));
+    memset (frame_buffer, 0, sizeof (frame_buffer));
 }
 
 
@@ -273,6 +270,10 @@ void sms_vdp_control_write (uint8_t value)
                 if ((value & 0x0f) <= 10)
                 {
                     ((uint8_t *) &tms9928a_state.regs_buffer) [value & 0x0f] = tms9928a_state.address & 0x00ff;
+
+                    /* Enabling interrupts should take affect immediately */
+                    tms9928a_state.regs.ctrl_1 &= ~TMS9928A_CTRL_1_FRAME_INT_EN;
+                    tms9928a_state.regs.ctrl_1 |= tms9928a_state.regs_buffer.ctrl_1 & TMS9928A_CTRL_1_FRAME_INT_EN;
                 }
                 break;
             case SMS_VDP_CODE_CRAM_WRITE:

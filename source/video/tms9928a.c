@@ -131,7 +131,6 @@ uint8_t tms9928a_data_read ()
     tms9928a_state.address = (tms9928a_state.address + 1) & 0x3fff;
 
     return data;
-
 }
 
 
@@ -200,6 +199,10 @@ void tms9928a_control_write (uint8_t value)
                 if ((value & 0x0f) <= 10)
                 {
                     ((uint8_t *) &tms9928a_state.regs_buffer) [value & 0x0f] = tms9928a_state.address & 0x00ff;
+
+                    /* Enabling interrupts should take affect immediately */
+                    tms9928a_state.regs.ctrl_1 &= ~TMS9928A_CTRL_1_FRAME_INT_EN;
+                    tms9928a_state.regs.ctrl_1 |= tms9928a_state.regs_buffer.ctrl_1 & TMS9928A_CTRL_1_FRAME_INT_EN;
                 }
                 break;
             default:
@@ -590,7 +593,7 @@ void tms9928a_run_one_scanline (void)
  */
 void tms9928a_init (void)
 {
-    memset (&tms9928a_state.regs, 0, sizeof (tms9928a_state.regs));
+    memset (&tms9928a_state, 0, sizeof (tms9928a_state));
     memset (frame_buffer, 0, sizeof (frame_buffer));
 }
 
