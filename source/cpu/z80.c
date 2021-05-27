@@ -30,11 +30,7 @@ void    (* memory_write)(uint16_t, uint8_t) = NULL;
 uint8_t (* io_read)     (uint8_t) = NULL;
 void    (* io_write)    (uint8_t, uint8_t) = NULL;
 
-/* TODO: Note: Interrupts should not be accepted until after the instruction following EI */
-
 /* TODO: Consider the accuracy of the R register */
-
-uint8_t instructions_before_interrupts = 0;
 
 static const uint8_t uint8_even_parity [256] = {
     1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1,
@@ -2514,6 +2510,7 @@ static void z80_ed_xx_nop (void)
 {
     used_cycles += 8;
 }
+
 
 void (*z80_ed_instruction [256]) (void) = {
     z80_ed_xx_nop,      z80_ed_xx_nop,      z80_ed_xx_nop,          z80_ed_xx_nop,
@@ -5152,7 +5149,7 @@ static void z80_fb_ei (void)
 {
     z80_state.iff1 = true;
     z80_state.iff2 = true;
-    instructions_before_interrupts = 2;
+    z80_state.wait_after_ei = true;
     used_cycles += 4;
 }
 
@@ -5317,12 +5314,13 @@ void z80_run_cycles (uint64_t cycles)
         }
 
         /* Check for interrupts */
-        if (instructions_before_interrupts)
-            instructions_before_interrupts--;
-
-        if (!instructions_before_interrupts)
+        if (z80_state.wait_after_ei)
         {
-            /* First, check for a non-maskable interrupt (edge-triggerd) */
+            z80_state.wait_after_ei = false;
+        }
+        else
+        {
+            /* First, check for a non-maskable interrupt (edge-triggered) */
             static bool nmi_previous = 0;
             bool nmi = state.get_nmi ();
             if (nmi && nmi_previous == 0)
@@ -5354,12 +5352,11 @@ void z80_run_cycles (uint64_t cycles)
 
                 switch (z80_state.im)
                 {
-                    /* TODO: Cycle count? */
                     case 1:
                         memory_write (--z80_state.sp, z80_state.pc_h);
                         memory_write (--z80_state.sp, z80_state.pc_l);
                         z80_state.pc = 0x38;
-                        used_cycles += 11;
+                        used_cycles += 13;
                         break;
                     default:
                         snprintf (state.error_buffer, 79, "Unsupported interrupt mode %d.", z80_state.im);
@@ -5398,6 +5395,7 @@ void z80_state_save (void)
         .im =            z80_state.im,
         .iff1 =          z80_state.iff1,
         .iff2 =          z80_state.iff2,
+        .wait_after_ei = z80_state.wait_after_ei,
         .halt =          z80_state.halt,
         .excess_cycles = htonl (z80_state.excess_cycles)
     };
@@ -5433,6 +5431,7 @@ void z80_state_load (uint32_t version, uint32_t size, void *data)
         z80_state.im =            z80_state_be.im;
         z80_state.iff1 =          z80_state_be.iff1;
         z80_state.iff2 =          z80_state_be.iff2;
+        z80_state.wait_after_ei = z80_state_be.wait_after_ei;
         z80_state.halt =          z80_state_be.halt;
         z80_state.excess_cycles = ntohl (z80_state_be.excess_cycles);
     }
