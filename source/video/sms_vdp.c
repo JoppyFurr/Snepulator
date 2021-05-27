@@ -59,7 +59,6 @@ extern uint64_t z80_cycle;
     SMS_VDP_TO_FLOAT (0x3f)  /* White */ \
 }
 
-/* TODO: Does the v_counter exist outside of Mode4? */
 
 /* Display mode details */
 static const TMS9928A_Config Mode0_PAL = {
@@ -284,8 +283,6 @@ void sms_vdp_control_write (uint8_t value)
     }
 }
 
-
-/* TODO: Implement some kind of "Run CPU until frame completes" code */
 
 /*
  * Assemble the four mode-bits.
@@ -581,7 +578,6 @@ void sms_vdp_render_mode4_background_line (const TMS9928A_Config *mode, uint16_t
         fine_scroll_x = 0;
     }
 
-    /* TODO: The vertical scroll value should only take affect between active frames, not mid-frame */
     for (uint32_t tile_x = 0; tile_x < 32; tile_x++)
     {
         pattern_flags = priority ? PATTERN_TRANSPARENCY : 0;
@@ -629,7 +625,6 @@ void sms_vdp_render_mode4_background_line (const TMS9928A_Config *mode, uint16_t
     }
 }
 
-/* TODO: If we allow more than eight sprites per line, will games use it? Yes. */
 
 /*
  * Render one line of the sprite layer.
@@ -935,7 +930,6 @@ void sms_vdp_run_one_scanline ()
     else
         tms9928a_state.line_interrupt_counter = tms9928a_state.regs.line_counter_reset;
 
-    /* TODO: Does the line interrupt exist outside of mode 4? */
     /* Check for line interrupt */
     if (tms9928a_state.line <= config->lines_active && tms9928a_state.line_interrupt_counter == 0xff)
     {
