@@ -83,6 +83,7 @@ typedef struct Z80_State_s {
     uint8_t im;
     uint8_t iff1;
     uint8_t iff2;
+    uint8_t wait_after_ei;
     uint8_t halt;
 
     /* Left-over cycles */
