@@ -634,6 +634,10 @@ int main_gui_loop (void)
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
                 video_filter_scanlines ();
+                if (state.video_has_border) /* TODO: Reduce duplication */
+                {
+                    state.video_show_border = true;
+                }
                 break;
         }
 
@@ -678,6 +682,7 @@ int main_gui_loop (void)
                 state.video_scale = 1;
             }
 
+            ImGui::PushStyleVar (ImGuiStyleVar_WindowPadding, ImVec2 (0.0, 0.0));
             ImGui::PushStyleColor (ImGuiCol_WindowBg, ImVec4 (0.0f, 0.0f, 0.0f, 0.0f));
             ImGui::SetNextWindowPos (ImVec2 (0, 0));
             ImGui::SetNextWindowSize (ImVec2 (state.host_width, state.host_height));
@@ -715,6 +720,7 @@ int main_gui_loop (void)
                           /* Border */ ImColor (0, 0, 0, 0));
             ImGui::End ();
             ImGui::PopStyleColor (1);
+            ImGui::PopStyleVar ();
         }
 
         /* Draw to HW */
