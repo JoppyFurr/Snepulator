@@ -67,14 +67,15 @@ eval $CXX $CXXFLAGS \
     source/gui/menubar.cpp \
     source/gui/open.cpp \
     -DIMGUI_IMPL_OPENGL_LOADER_GL3W \
-    libraries/imgui-1.76/*.cpp \
-    libraries/imgui-1.76/examples/libs/gl3w/GL/gl3w.c \
-    libraries/imgui-1.76/examples/imgui_impl_opengl3.cpp \
-    libraries/imgui-1.76/examples/imgui_impl_sdl.cpp \
+    libraries/imgui-1.83/*.cpp \
+    libraries/imgui-1.83/backends/imgui_impl_opengl3.cpp \
+    libraries/imgui-1.83/backends/imgui_impl_sdl.cpp \
+    libraries/imgui-1.83/examples/libs/gl3w/GL/gl3w.c \
     `sdl2-config --cflags` \
     -I source/ \
-    -I libraries/imgui-1.76/ \
-    -I libraries/imgui-1.76/examples/libs/gl3w/ \
+    -I libraries/imgui-1.83/ \
+    -I libraries/imgui-1.83/backends/ \
+    -I libraries/imgui-1.83/examples/libs/gl3w/ \
     `sdl2-config --libs` \
     -ldl -lpng -lm -DBUILD_DATE=\\\"$DATE\\\" \
     -lpthread \
