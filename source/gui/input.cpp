@@ -149,7 +149,7 @@ void input_start (void)
     input_combo_index = 0;
 
     /* Initially selected device is player-1's device */
-    for (int i = 0; i < gamepad_list_count; i++)
+    for (uint32_t i = 0; i < gamepad_list_count; i++)
     {
         if (gamepad_list [i].instance_id == gamepad_1.instance_id)
         {
@@ -224,7 +224,7 @@ void snepulator_render_input_modal (void)
         ImGui::PushItemWidth (width - 16);
         if (ImGui::BeginCombo ("##Device", gamepad_get_name (input_combo_index)))
         {
-            for (int i = 0; i < gamepad_list_count; i++)
+            for (uint32_t i = 0; i < gamepad_list_count; i++)
             {
                 if (ImGui::Selectable (gamepad_get_name (i), i == input_combo_index))
                 {

@@ -75,7 +75,7 @@ void snepulator_render_open_modal (void)
         /* State */
         static std::vector<std::string> file_list;
         static std::vector<std::string> dir_list;
-        static int selected_file = 0;
+        static uint32_t selected_file = 0;
         bool open_action = false;
         DIR *dir = NULL;
 
@@ -169,7 +169,7 @@ void snepulator_render_open_modal (void)
 
         /* Current directory contents */
         ImGui::BeginChild ("Files", ImVec2 (width - 16, height - (titlebar_height + above_box + below_box)), true);
-        for (int i = 0; i < file_list.size (); i++)
+        for (uint32_t i = 0; i < file_list.size (); i++)
         {
             ImVec2 draw_cursor = ImGui::GetCursorScreenPos ();
             ImVec2 row_size    = ImGui::CalcTextSize (file_list [i].c_str (), NULL, true);
