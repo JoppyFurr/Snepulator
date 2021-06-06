@@ -14,6 +14,7 @@ else
 fi
 
 CFLAGS="-std=c11 -O2 -Wall -Werror"
+CXXFLAGS="-std=c++11 -O2"
 
 # Create a build directory if it does not already exist.
 mkdir -p work
@@ -59,8 +60,7 @@ fi
 
 # Compile C++11 GUI and link to the rest of the code.
 echo "Compiling GUI and linking..."
-eval $CXX \
-    -O2 \
+eval $CXX $CXXFLAGS \
     work/*.o \
     source/main.cpp \
     source/gui/input.cpp \
