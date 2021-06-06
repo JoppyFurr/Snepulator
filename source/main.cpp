@@ -10,8 +10,8 @@
 #include <SDL2/SDL.h>
 
 #include "imgui.h"
-#include "examples/imgui_impl_sdl.h"
-#include "examples/imgui_impl_opengl3.h"
+#include "imgui_impl_sdl.h"
+#include "imgui_impl_opengl3.h"
 
 extern "C" {
 
@@ -510,13 +510,11 @@ int main_gui_loop (void)
         {
             /* Standard font */
             ImGui::GetIO ().FontGlobalScale = 0.5;
-            font->DisplayOffset.y = 1;
         }
         else
         {
             /* Pixel-doubled font */
             ImGui::GetIO ().FontGlobalScale = 1.0;
-            font->DisplayOffset.y = 2;
         }
 
         /* Issue: SDL_PollEvent can take over 400 ms when attaching a
@@ -889,7 +887,6 @@ int main (int argc, char **argv)
     font_config.SizePixels = 13 * 2;
     font = ImGui::GetIO ().Fonts->AddFontDefault (&font_config);
     ImGui::GetIO ().FontGlobalScale = 0.5;
-    font->DisplayOffset.y = 1;
 
     /* Style */
     ImGui::PushStyleColor (ImGuiCol_MenuBarBg,      ImVec4 (0.4, 0.0, 0.0, 1.0));
