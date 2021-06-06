@@ -5,11 +5,6 @@
 #include "blake3.h"
 #include "blake3_impl.h"
 
-// The dynamically detected SIMD degree of the current platform.
-size_t blake3_simd_degree(void) {
-  return 1;
-}
-
 INLINE void chunk_state_init(blake3_chunk_state *self, const uint32_t key[8],
                              uint8_t flags) {
   memcpy(self->cv, key, BLAKE3_KEY_LEN);
@@ -84,7 +79,7 @@ INLINE output_t make_output(const uint32_t input_cv[8],
 INLINE void output_chaining_value(const output_t *self, uint8_t cv[32]) {
   uint32_t cv_words[8];
   memcpy(cv_words, self->input_cv, 32);
-  blake3_compress_in_place_portable(cv_words, self->block, self->block_len,
+  blake3_compress_in_place(cv_words, self->block, self->block_len,
                            self->counter, self->flags);
   store_cv_words(cv, cv_words);
 }
@@ -95,7 +90,7 @@ INLINE void output_root_bytes(const output_t *self, uint64_t seek, uint8_t *out,
   size_t offset_within_block = seek % 64;
   uint8_t wide_buf[64];
   while (out_len > 0) {
-    blake3_compress_xof_portable(self->input_cv, self->block, self->block_len,
+    blake3_compress_xof(self->input_cv, self->block, self->block_len,
                         output_block_counter, self->flags | ROOT, wide_buf);
     size_t available_bytes = 64 - offset_within_block;
     size_t memcpy_len;
@@ -119,7 +114,7 @@ INLINE void chunk_state_update(blake3_chunk_state *self, const uint8_t *input,
     input += take;
     input_len -= take;
     if (input_len > 0) {
-      blake3_compress_in_place_portable(
+      blake3_compress_in_place(
           self->cv, self->buf, BLAKE3_BLOCK_LEN, self->chunk_counter,
           self->flags | chunk_state_maybe_start_flag(self));
       self->blocks_compressed += 1;
@@ -129,7 +124,7 @@ INLINE void chunk_state_update(blake3_chunk_state *self, const uint8_t *input,
   }
 
   while (input_len > BLAKE3_BLOCK_LEN) {
-    blake3_compress_in_place_portable(self->cv, input, BLAKE3_BLOCK_LEN,
+    blake3_compress_in_place(self->cv, input, BLAKE3_BLOCK_LEN,
                              self->chunk_counter,
                              self->flags | chunk_state_maybe_start_flag(self));
     self->blocks_compressed += 1;
@@ -186,7 +181,7 @@ INLINE size_t compress_chunks_parallel(const uint8_t *input, size_t input_len,
     chunks_array_len += 1;
   }
 
-  blake3_hash_many_portable(chunks_array, chunks_array_len,
+  blake3_hash_many(chunks_array, chunks_array_len,
                    BLAKE3_CHUNK_LEN / BLAKE3_BLOCK_LEN, key, chunk_counter,
                    true, flags, CHUNK_START, CHUNK_END, out);
 
@@ -229,7 +224,7 @@ INLINE size_t compress_parents_parallel(const uint8_t *child_chaining_values,
     parents_array_len += 1;
   }
 
-  blake3_hash_many_portable(parents_array, parents_array_len, 1, key,
+  blake3_hash_many(parents_array, parents_array_len, 1, key,
                    0, // Parents always use counter 0.
                    false, flags | PARENT,
                    0, // Parents have no start flags.
