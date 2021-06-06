@@ -293,7 +293,7 @@ void snepulator_render_menubar (void)
 
                 ImGui::Separator ();
 
-                for (int i = 0; i < gamepad_list_count; i++)
+                for (uint32_t i = 0; i < gamepad_list_count; i++)
                 {
                     if (ImGui::MenuItem (gamepad_get_name (i), NULL, gamepad_list [i].instance_id == gamepad_1.instance_id))
                     {
@@ -304,7 +304,7 @@ void snepulator_render_menubar (void)
             }
             if (ImGui::BeginMenu ("Player 2"))
             {
-                for (int i = 0; i < gamepad_list_count; i++)
+                for (uint32_t i = 0; i < gamepad_list_count; i++)
                 {
                     if (ImGui::MenuItem (gamepad_get_name (i), NULL, gamepad_list [i].instance_id == gamepad_2.instance_id))
                     {

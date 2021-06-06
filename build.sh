@@ -14,7 +14,7 @@ else
 fi
 
 CFLAGS="-std=c11 -O2 -Wall -Werror"
-CXXFLAGS="-std=c++11 -O2"
+CXXFLAGS="-std=c++11 -O2 -Wall -Werror"
 
 # Create a build directory if it does not already exist.
 mkdir -p work

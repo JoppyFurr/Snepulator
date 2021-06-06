@@ -80,12 +80,12 @@ void snepulator_draw_logo (void)
 {
     memset (state.video_out_data, 0, sizeof (state.video_out_data));
 
-    for (int y = 0; y < snepulator_logo.height; y++)
+    for (uint32_t y = 0; y < snepulator_logo.height; y++)
     {
         uint32_t x_offset = VIDEO_BUFFER_WIDTH / 2 - snepulator_logo.width / 2;
         uint32_t y_offset = VIDEO_BUFFER_LINES / 2 - snepulator_logo.height / 2;
 
-        for (int x = 0; x < snepulator_logo.width; x++)
+        for (uint32_t x = 0; x < snepulator_logo.width; x++)
         {
             state.video_out_data [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].r =
                 snepulator_logo.pixel_data [(x + y * snepulator_logo.width) * 3 + 0] / 255.0;
@@ -419,12 +419,12 @@ void snepulator_pause (void)
     }
 
     /* Draw the "Pause" splash over the screen */
-    for (int y = 0; y < snepulator_paused.height; y++)
+    for (uint32_t y = 0; y < snepulator_paused.height; y++)
     {
         uint32_t x_offset = VIDEO_BUFFER_WIDTH / 2 - snepulator_paused.width / 2;
         uint32_t y_offset = VIDEO_BUFFER_LINES / 2 - snepulator_paused.height / 2;
 
-        for (int x = 0; x < snepulator_paused.width; x++)
+        for (uint32_t x = 0; x < snepulator_paused.width; x++)
         {
             /* Treat black as transparent */
             if (snepulator_paused.pixel_data [(x + y * snepulator_paused.width) * 3 + 0] == 0)
@@ -578,7 +578,7 @@ int main_gui_loop (void)
             }
 
             /* Device change */
-            else if (event.type == SDL_JOYDEVICEADDED | event.type == SDL_JOYDEVICEREMOVED)
+            else if (event.type == SDL_JOYDEVICEADDED || event.type == SDL_JOYDEVICEREMOVED)
             {
                 /* If a player's joystick has been disconnected, pause the game */
                 if (event.type == SDL_JOYDEVICEREMOVED && gamepad_joystick_user_count (event.jdevice.which) != 0)
