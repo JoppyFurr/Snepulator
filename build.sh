@@ -41,6 +41,8 @@ eval $CC $CFLAGS -c source/util.c            -o work/util.o
 echo "Compiling libraries..."
 eval $CC $CFLAGS -c libraries/BLAKE3/blake3.c -o work/blake3.o
 eval $CC $CFLAGS -c libraries/BLAKE3/blake3_portable.c -o work/blake3_portable.o
+eval $CC $CFLAGS -c libraries/BLAKE3/blake3_dispatch.c -o work/blake3_dispatch.o \
+                 -DBLAKE3_NO_SSE2 -DBLAKE3_NO_SSE41 -DBLAKE3_NO_AVX2 -DBLAKE3_NO_AVX512
 eval $CC $CFLAGS -c libraries/SDL_SavePNG/savepng.c -o work/SDL_SavePNG.o
 
 # OS-specific compiler options
