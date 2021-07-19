@@ -13,7 +13,7 @@ else
     CXX=g++
 fi
 
-CFLAGS="-std=c11 -O2 -Wall -Werror"
+CFLAGS="-std=c11 -O2 -Wall -Werror -D_POSIX_C_SOURCE=200809L"
 CXXFLAGS="-std=c++11 -O2 -Wall -Werror"
 
 # Create a build directory if it does not already exist.

@@ -228,9 +228,9 @@ void snepulator_render_menubar (void)
                 uint32_t start_time;
                 uint32_t end_time;
                 state.running = false;
-                start_time = SDL_GetTicks ();
+                start_time = snepulator_get_ticks ();
                 state.run (5 * 60000); /* Simulate five minutes */
-                end_time = SDL_GetTicks ();
+                end_time = snepulator_get_ticks ();
                 state.running = true;
 
                 fprintf (stdout, "[DEBUG] Took %d ms to emulate five minutes. (%fx speed-up)\n",

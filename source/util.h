@@ -47,6 +47,12 @@ typedef struct float_Colour_s {
     float b;
 } float_Colour;
 
+/* Get the number of ticks that have passed */
+uint32_t snepulator_get_ticks (void);
+
+/* Delay for a number of ticks */
+void snepulator_delay (uint32_t ticks);
+
 /* Get the directory that the snepulator files reside in. */
 int32_t snepulator_directory (char **path_ptr);
 

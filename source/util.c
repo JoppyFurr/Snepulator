@@ -8,9 +8,11 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <sys/types.h>
 
 #include <SDL2/SDL.h>
@@ -23,6 +25,55 @@
 
 /* Global state */
 extern Snepulator_State state;
+
+/*
+ * Get the number of ticks that have passed.
+ *
+ * Based on SDL_GetTicks ()
+ * Assumes that monotonic time is supported.
+ */
+uint32_t snepulator_get_ticks (void)
+{
+    static struct timespec start;
+    static bool ticks_started = false;
+    struct timespec now;
+    uint32_t ticks;
+
+    if (!ticks_started)
+    {
+        ticks_started = true;
+        clock_gettime (CLOCK_MONOTONIC_RAW, &start);
+    }
+
+    clock_gettime (CLOCK_MONOTONIC_RAW, &now);
+    ticks = (uint32_t) ((now.tv_sec - start.tv_sec) * 1000 + (now.tv_nsec - start.tv_nsec) / 1000000);
+
+    return ticks;
+}
+
+
+/*
+ * Delay for a number of ticks.
+ *
+ * Based on SDL_Delay ()
+ */
+void snepulator_delay (uint32_t ticks)
+{
+    struct timespec request;
+    struct timespec remaining;
+    int ret;
+
+    remaining.tv_sec = ticks / 1000;
+    remaining.tv_nsec = (ticks % 1000) * 1000000;
+
+    do
+    {
+        errno = 0;
+        request.tv_sec = remaining.tv_sec;
+        request.tv_nsec = remaining.tv_nsec;
+        ret = nanosleep (&request, &remaining);
+    } while (ret && (errno == EINTR));
+}
 
 
 /*

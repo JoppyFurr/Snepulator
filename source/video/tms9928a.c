@@ -566,7 +566,7 @@ void tms9928a_run_one_scanline (void)
         /* Update statistics (rolling average) */
         static int vdp_previous_completion_time = 0;
         static int vdp_current_time = 0;
-        vdp_current_time = SDL_GetTicks ();
+        vdp_current_time = snepulator_get_ticks ();
         if (vdp_previous_completion_time)
         {
             state.vdp_framerate *= 0.95;

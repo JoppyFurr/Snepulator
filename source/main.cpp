@@ -446,16 +446,16 @@ void snepulator_pause (void)
 /*
  * Thread to run the actual console emulation.
  *
- * Completely separated from the GUI, time is kept using SDL_GetTicks ().
+ * Completely separated from the GUI, time is kept using snepulator_get_ticks ().
  */
 void *main_emulation_loop (void *data)
 {
-    static uint32_t ticks_previous = SDL_GetTicks ();
+    static uint32_t ticks_previous = snepulator_get_ticks ();
     uint32_t ticks_current;
 
     while (!state.abort)
     {
-        ticks_current = SDL_GetTicks ();
+        ticks_current = snepulator_get_ticks ();
         if (state.running)
         {
             state.run (ticks_current - ticks_previous);
@@ -464,7 +464,7 @@ void *main_emulation_loop (void *data)
         ticks_previous = ticks_current;
 
         /* Sleep */
-        SDL_Delay (1);
+        snepulator_delay (1);
     }
 
     pthread_exit (NULL);
@@ -558,7 +558,7 @@ int main_gui_loop (void)
             /* Use mouse motion to show / hide the menubar */
             if (event.type == SDL_MOUSEMOTION)
             {
-                state.mouse_time = SDL_GetTicks ();
+                state.mouse_time = snepulator_get_ticks ();
                 state.show_gui = true;
                 SDL_ShowCursor (SDL_ENABLE);
             }
@@ -660,7 +660,7 @@ int main_gui_loop (void)
         }
 
         /* Hide the GUI and cursor if the mouse is not being used */
-        if (SDL_GetTicks() > (state.mouse_time + 3000))
+        if (snepulator_get_ticks() > (state.mouse_time + 3000))
         {
             if (state.running)
             {
@@ -733,7 +733,7 @@ int main_gui_loop (void)
         /* Update statistics (rolling average) */
         static int host_previous_completion_time = 0;
         static int host_current_time = 0;
-        host_current_time = SDL_GetTicks ();
+        host_current_time = snepulator_get_ticks ();
         if (host_previous_completion_time)
         {
             state.host_framerate *= 0.95;
