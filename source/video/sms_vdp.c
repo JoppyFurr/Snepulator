@@ -11,8 +11,6 @@
 #include <string.h>
 #include <pthread.h>
 
-#include <SDL2/SDL.h>
-
 #include "../util.h"
 #include "../snepulator.h"
 #include "../sms.h"

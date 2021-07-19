@@ -9,8 +9,6 @@
 #include <pthread.h>
 #include <arpa/inet.h>
 
-#include <SDL2/SDL.h>
-
 #include "../util.h"
 #include "../snepulator.h"
 #include "../save_state.h"
