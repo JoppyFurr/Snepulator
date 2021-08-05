@@ -146,45 +146,21 @@ void snepulator_render_menubar (void)
             ImGui::Separator ();
 
             if (ImGui::MenuItem ("World", NULL, state.region == REGION_WORLD)) {
-                state.region = REGION_WORLD;
-                config_string_set ("sms", "region", "World");
-                config_write ();
+                snepulator_region_set (REGION_WORLD);
             }
             if (ImGui::MenuItem ("Japan", NULL, state.region == REGION_JAPAN)) {
-                state.region = REGION_JAPAN;
-                config_string_set ("sms", "region", "Japan");
-                config_write ();
+                snepulator_region_set (REGION_JAPAN);
             }
             ImGui::Separator ();
 
             if (ImGui::MenuItem ("Auto", NULL, state.format_auto)) {
-                state.format_auto = true;
-                config_string_set ("sms", "format", "Auto");
-                config_write ();
-
-                if (state.ready == true)
-                {
-                    if (state.rom_hints & SMS_HINT_PAL_ONLY)
-                    {
-                        state.format = VIDEO_FORMAT_PAL;
-                    }
-                    else
-                    {
-                        state.format = VIDEO_FORMAT_NTSC;
-                    }
-                }
+                snepulator_video_format_set (VIDEO_FORMAT_AUTO);
             }
             if (ImGui::MenuItem ("NTSC", NULL, state.format == VIDEO_FORMAT_NTSC)) {
-                state.format = VIDEO_FORMAT_NTSC;
-                state.format_auto = false;
-                config_string_set ("sms", "format", "NTSC");
-                config_write ();
+                snepulator_video_format_set (VIDEO_FORMAT_NTSC);
             }
             if (ImGui::MenuItem ("PAL",  NULL, state.format == VIDEO_FORMAT_PAL))  {
-                state.format = VIDEO_FORMAT_PAL;
-                state.format_auto = false;
-                config_string_set ("sms", "format", "PAL");
-                config_write ();
+                snepulator_video_format_set (VIDEO_FORMAT_PAL);
             }
             ImGui::Separator ();
 
@@ -344,54 +320,46 @@ void snepulator_render_menubar (void)
         {
             if (ImGui::BeginMenu ("Filter"))
             {
-                if (ImGui::MenuItem ("Dot Matrix",  NULL, state.video_filter == VIDEO_FILTER_DOT_MATRIX))
+                if (ImGui::MenuItem ("Nearest Neighbour", NULL, state.video_filter == VIDEO_FILTER_NEAREST))
                 {
-                    state.video_filter = VIDEO_FILTER_DOT_MATRIX;
-                    config_string_set ("video", "filter", "Dot Matrix");
-                    config_write ();
+                    snepulator_video_filter_set (VIDEO_FILTER_NEAREST);
                 }
                 if (ImGui::MenuItem ("Linear Interpolation",  NULL, state.video_filter == VIDEO_FILTER_LINEAR))
                 {
-                    state.video_filter = VIDEO_FILTER_LINEAR;
-                    config_string_set ("video", "filter", "Linear");
-                    config_write ();
-                }
-                if (ImGui::MenuItem ("Nearest Neighbour", NULL, state.video_filter == VIDEO_FILTER_NEAREST))
-                {
-                    state.video_filter = VIDEO_FILTER_NEAREST;
-                    config_string_set ("video", "filter", "Nearest");
-                    config_write ();
+                    snepulator_video_filter_set (VIDEO_FILTER_LINEAR);
                 }
                 if (ImGui::MenuItem ("Scanlines",  NULL, state.video_filter == VIDEO_FILTER_SCANLINES))
                 {
-                    state.video_filter = VIDEO_FILTER_SCANLINES;
-                    config_string_set ("video", "filter", "Scanlines");
-                    config_write ();
+                    snepulator_video_filter_set (VIDEO_FILTER_SCANLINES);
+                }
+                if (ImGui::MenuItem ("Dot Matrix",  NULL, state.video_filter == VIDEO_FILTER_DOT_MATRIX))
+                {
+                    snepulator_video_filter_set (VIDEO_FILTER_DOT_MATRIX);
                 }
                 ImGui::EndMenu ();
             }
 
             if (ImGui::BeginMenu ("3D Mode"))
             {
-                if (ImGui::MenuItem ("Left image only", NULL, state.video_3d_mode == VIDEO_3D_LEFT_ONLY))
-                {
-                    state.video_3d_mode = VIDEO_3D_LEFT_ONLY;
-                }
-                if (ImGui::MenuItem ("Right image only", NULL, state.video_3d_mode == VIDEO_3D_RIGHT_ONLY))
-                {
-                    state.video_3d_mode = VIDEO_3D_RIGHT_ONLY;
-                }
                 if (ImGui::MenuItem ("Red-Cyan", NULL, state.video_3d_mode == VIDEO_3D_RED_CYAN))
                 {
-                    state.video_3d_mode = VIDEO_3D_RED_CYAN;
+                    snepulator_video_3d_mode_set (VIDEO_3D_RED_CYAN);
                 }
                 if (ImGui::MenuItem ("Red-Green", NULL, state.video_3d_mode == VIDEO_3D_RED_GREEN))
                 {
-                    state.video_3d_mode = VIDEO_3D_RED_GREEN;
+                    snepulator_video_3d_mode_set (VIDEO_3D_RED_GREEN);
                 }
                 if (ImGui::MenuItem ("Magenta-Green", NULL, state.video_3d_mode == VIDEO_3D_MAGENTA_GREEN))
                 {
-                    state.video_3d_mode = VIDEO_3D_MAGENTA_GREEN;
+                    snepulator_video_3d_mode_set (VIDEO_3D_MAGENTA_GREEN);
+                }
+                if (ImGui::MenuItem ("Left image only", NULL, state.video_3d_mode == VIDEO_3D_LEFT_ONLY))
+                {
+                    snepulator_video_3d_mode_set (VIDEO_3D_LEFT_ONLY);
+                }
+                if (ImGui::MenuItem ("Right image only", NULL, state.video_3d_mode == VIDEO_3D_RIGHT_ONLY))
+                {
+                    snepulator_video_3d_mode_set (VIDEO_3D_RIGHT_ONLY);
                 }
 
                 ImGui::Separator ();
@@ -400,23 +368,23 @@ void snepulator_render_menubar (void)
                 {
                     if (ImGui::MenuItem ("Saturation 0%", NULL, state.video_3d_saturation == 0.0))
                     {
-                        state.video_3d_saturation = 0.0;
+                        snepulator_video_3d_saturation_set (0.0);
                     }
                     if (ImGui::MenuItem ("Saturation 25%", NULL, state.video_3d_saturation == 0.25))
                     {
-                        state.video_3d_saturation = 0.25;
+                        snepulator_video_3d_saturation_set (0.25);
                     }
                     if (ImGui::MenuItem ("Saturation 50%", NULL, state.video_3d_saturation == 0.50))
                     {
-                        state.video_3d_saturation = 0.50;
+                        snepulator_video_3d_saturation_set (0.50);
                     }
                     if (ImGui::MenuItem ("Saturation 75%", NULL, state.video_3d_saturation == 0.75))
                     {
-                        state.video_3d_saturation = 0.75;
+                        snepulator_video_3d_saturation_set (0.75);
                     }
                     if (ImGui::MenuItem ("Saturation 100%", NULL, state.video_3d_saturation == 1.0))
                     {
-                        state.video_3d_saturation = 1.0;
+                        snepulator_video_3d_saturation_set (1.0);
                     }
                     ImGui::EndMenu ();
                 }

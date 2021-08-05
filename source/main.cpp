@@ -18,6 +18,7 @@ extern "C" {
 #include "util.h"
 #include "snepulator.h"
 #include "config.h"
+#include "database/sms_db.h"
 
 #include "gamepad.h"
 #include "sg-1000.h"
@@ -210,10 +211,38 @@ void snepulator_load_colecovision_bios (char *path)
 int config_import (void)
 {
     char *string = NULL;
+    uint32_t uint = 0;
 
     config_read ();
 
-    /* Video filter - Defaults to Scanlines */
+    /* SMS Region - Defaults to World */
+    state.region = REGION_WORLD;
+    if (config_string_get ("sms", "region", &string) == 0)
+    {
+        if (strcmp (string, "Japan") == 0)
+        {
+            state.region = REGION_JAPAN;
+        }
+    }
+
+    /* Video Format - Defaults to Auto */
+    state.format = VIDEO_FORMAT_NTSC;
+    state.format_auto = true;
+    if (config_string_get ("sms", "format", &string) == 0)
+    {
+        if (strcmp (string, "PAL") == 0)
+        {
+            state.format = VIDEO_FORMAT_PAL;
+            state.format_auto = false;
+        }
+        else if (strcmp (string, "NTSC") == 0)
+        {
+            state.format = VIDEO_FORMAT_NTSC;
+            state.format_auto = false;
+        }
+    }
+
+    /* Video Filter - Defaults to Scanlines */
     state.video_filter = VIDEO_FILTER_SCANLINES;
     if (config_string_get ("video", "filter", &string) == 0)
     {
@@ -231,31 +260,33 @@ int config_import (void)
         }
     }
 
-    /* SMS Format - Defaults to Auto */
-    state.format = VIDEO_FORMAT_NTSC;
-    state.format_auto = true;
-    if (config_string_get ("sms", "format", &string) == 0)
+    /* 3D Video Mode - Defaults to Red-Cyan */
+    state.video_3d_mode = VIDEO_3D_RED_CYAN;
+    if (config_string_get ("video", "3d-mode", &string) == 0)
     {
-        if (strcmp (string, "PAL") == 0)
+        if (strcmp (string, "Red-Green") == 0)
         {
-            state.format = VIDEO_FORMAT_PAL;
-            state.format_auto = false;
+            state.video_3d_mode = VIDEO_3D_RED_GREEN;
         }
-        else if (strcmp (string, "NTSC") == 0)
+        else if (strcmp (string, "Magenta-Green") == 0)
         {
-            state.format = VIDEO_FORMAT_NTSC;
-            state.format_auto = false;
+            state.video_3d_mode = VIDEO_3D_MAGENTA_GREEN;
+        }
+        else if (strcmp (string, "Left-Only") == 0)
+        {
+            state.video_3d_mode = VIDEO_3D_LEFT_ONLY;
+        }
+        else if (strcmp (string, "Right-Only") == 0)
+        {
+            state.video_3d_mode = VIDEO_3D_RIGHT_ONLY;
         }
     }
 
-    /* SMS Region - Defaults to World */
-    state.region = REGION_WORLD;
-    if (config_string_get ("sms", "region", &string) == 0)
+    /* 3D Video Colour Saturation - Defaults to 25% */
+    state.video_3d_saturation = 0.25;
+    if (config_uint_get ("video", "3d-saturation", &uint) == 0)
     {
-        if (strcmp (string, "Japan") == 0)
-        {
-            state.region = REGION_JAPAN;
-        }
+        state.video_3d_saturation = uint / 100.0;
     }
 
     /* BIOS Paths */
@@ -746,6 +777,146 @@ int main_gui_loop (void)
 
     return 0;
 }
+
+
+/*
+ * Set the console region.
+ */
+void snepulator_region_set (Console_Region region)
+{
+    if (region == REGION_WORLD)
+    {
+        state.region = REGION_WORLD;
+        config_string_set ("sms", "region", "World");
+    }
+    else if (region == REGION_JAPAN)
+    {
+        state.region = REGION_JAPAN;
+        config_string_set ("sms", "region", "Japan");
+    }
+
+    config_write ();
+}
+
+
+/*
+ * Set the console video filter.
+ */
+void snepulator_video_filter_set (Video_Filter filter)
+{
+    if (filter == VIDEO_FILTER_NEAREST)
+    {
+        state.video_filter = VIDEO_FILTER_NEAREST;
+        config_string_set ("video", "filter", "Nearest");
+    }
+    else if (filter == VIDEO_FILTER_LINEAR)
+    {
+        state.video_filter = VIDEO_FILTER_LINEAR;
+        config_string_set ("video", "filter", "Linear");
+    }
+    else if (filter == VIDEO_FILTER_SCANLINES)
+    {
+        state.video_filter = VIDEO_FILTER_SCANLINES;
+        config_string_set ("video", "filter", "Scanlines");
+    }
+    else if (filter == VIDEO_FILTER_DOT_MATRIX)
+    {
+        state.video_filter = VIDEO_FILTER_DOT_MATRIX;
+        config_string_set ("video", "filter", "Dot Matrix");
+    }
+
+    config_write ();
+}
+
+
+/*
+ * Set the video format.
+ */
+void snepulator_video_format_set (Video_Format format)
+{
+    if (format == VIDEO_FORMAT_NTSC)
+    {
+        state.format_auto = false;
+        state.format = VIDEO_FORMAT_NTSC;
+        config_string_set ("sms", "format", "NTSC");
+    }
+    else if (format == VIDEO_FORMAT_PAL)
+    {
+        state.format_auto = false;
+        state.format = VIDEO_FORMAT_PAL;
+        config_string_set ("sms", "format", "PAL");
+    }
+    else if (format == VIDEO_FORMAT_AUTO)
+    {
+        state.format_auto = true;
+        config_string_set ("sms", "format", "Auto");
+
+        if (state.ready == true)
+        {
+            if (state.rom_hints & SMS_HINT_PAL_ONLY)
+            {
+                state.format = VIDEO_FORMAT_PAL;
+            }
+            else
+            {
+                state.format = VIDEO_FORMAT_NTSC;
+            }
+        }
+    }
+
+    config_write ();
+}
+
+
+/*
+ * Set the video 3D mode.
+ */
+void snepulator_video_3d_mode_set (Video_3D_Mode mode)
+{
+    if (mode == VIDEO_3D_RED_CYAN)
+    {
+        state.video_3d_mode = VIDEO_3D_RED_CYAN;
+        config_string_set ("video", "3d-mode", "Red-Cyan");
+    }
+    else if (mode == VIDEO_3D_RED_GREEN)
+    {
+        state.video_3d_mode = VIDEO_3D_RED_GREEN;
+        config_string_set ("video", "3d-mode", "Red-Green");
+    }
+    else if (mode == VIDEO_3D_MAGENTA_GREEN)
+    {
+        state.video_3d_mode = VIDEO_3D_MAGENTA_GREEN;
+        config_string_set ("video", "3d-mode", "Magenta-Green");
+    }
+    else if (mode == VIDEO_3D_LEFT_ONLY)
+    {
+        state.video_3d_mode = VIDEO_3D_LEFT_ONLY;
+        config_string_set ("video", "3d-mode", "Left-Only");
+    }
+    else if (mode == VIDEO_3D_RIGHT_ONLY)
+    {
+        state.video_3d_mode = VIDEO_3D_RIGHT_ONLY;
+        config_string_set ("video", "3d-mode", "Right-Only");
+    }
+
+    config_write ();
+}
+
+
+/*
+ * Set the video 3D colour saturation.
+ */
+void snepulator_video_3d_saturation_set (double saturation)
+{
+    if (saturation >= 0.0 && saturation <= 1.0)
+    {
+        state.video_3d_saturation = saturation;
+        config_uint_set ("video", "3d-saturation", saturation * 100);
+    }
+
+    config_write ();
+}
+
 
 /*
  * Initial text sent to stdout when starting.

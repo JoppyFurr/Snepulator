@@ -17,29 +17,30 @@ typedef enum Console_e {
 } Console;
 
 typedef enum Video_Filter_e {
-    VIDEO_FILTER_DOT_MATRIX,
+    VIDEO_FILTER_NEAREST = 0,
     VIDEO_FILTER_LINEAR,
-    VIDEO_FILTER_NEAREST,
-    VIDEO_FILTER_SCANLINES
+    VIDEO_FILTER_SCANLINES,
+    VIDEO_FILTER_DOT_MATRIX
 } Video_Filter;
 
-typedef enum Video_3D_Mode_e {
-        VIDEO_3D_LEFT_ONLY,
-        VIDEO_3D_RIGHT_ONLY,
-        VIDEO_3D_RED_CYAN,
-        VIDEO_3D_RED_GREEN,
-        VIDEO_3D_MAGENTA_GREEN
-} Video_3D_Mode;
-
 typedef enum Video_Format_e {
-    VIDEO_FORMAT_NTSC,
-    VIDEO_FORMAT_PAL
+    VIDEO_FORMAT_NTSC = 0,
+    VIDEO_FORMAT_PAL,
+    VIDEO_FORMAT_AUTO
 } Video_Format;
 
 typedef enum Console_Region_t {
-    REGION_WORLD,
+    REGION_WORLD = 0,
     REGION_JAPAN
 } Console_Region;
+
+typedef enum Video_3D_Mode_e {
+    VIDEO_3D_RED_CYAN = 0,
+    VIDEO_3D_RED_GREEN,
+    VIDEO_3D_MAGENTA_GREEN,
+    VIDEO_3D_LEFT_ONLY,
+    VIDEO_3D_RIGHT_ONLY
+} Video_3D_Mode;
 
 
 typedef struct Snepulator_State_s {
@@ -133,8 +134,23 @@ void snepulator_error (const char *title, const char *message);
 /* Pause emulation and show the pause screen. */
 void snepulator_pause (void);
 
-/* Clean up after the previously running system */
+/* Clean up after the previously running system. */
 void snepulator_reset (void);
 
-/* Call the appropriate initialisation for the chosen ROM */
+/* Set the console region. */
+void snepulator_region_set (Console_Region region);
+
+/* Set the console video filter. */
+void snepulator_video_filter_set (Video_Filter filter);
+
+/* Set the console video format. */
+void snepulator_video_format_set (Video_Format format);
+
+/* Set the video 3D mode. */
+void snepulator_video_3d_mode_set (Video_3D_Mode mode);
+
+/* Set the video 3D colour saturation. */
+void snepulator_video_3d_saturation_set (double saturation);
+
+/* Call the appropriate initialisation for the chosen ROM. */
 void snepulator_system_init (void);
