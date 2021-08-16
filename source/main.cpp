@@ -37,6 +37,14 @@ extern "C" {
 #include "../images/snepulator_logo.c"
 #include "../images/snepulator_paused.c"
 
+/* Shaders */
+const char *vertex_shader_source =
+    #include "shader.vert"
+;
+const char *fragment_shader_source =
+    #include "shader.frag"
+;
+
 /* Constants */
 const float Float4_Black[4] = { 0.0, 0.0, 0.0, 0.0 };
 
@@ -517,17 +525,152 @@ void toggle_fullscreen (void)
 
 /*
  * Main GUI loop.
+ *
+ * Video path:
+ *
+ *   ╭────────────────────────╮
+ *   │    VDP frame-buffer    │
+ *   ╰───────────┬────────────╯
+ *               │ memcpy
+ *   ╭───────────┴────────────╮
+ *   │  state.video_out_data  │
+ *   ╰───────────┬────────────╯
+ *               │ glTexImage2D
+ *   ╭───────────┴────────────╮
+ *   │   video_out_texture    │
+ *   ╰───────────┬────────────╯
+ *               │ render-to-texture
+ *   ╭───────────┴────────────╮
+ *   │    display_texture     │
+ *   ╰────────────────────────╯
+ *
  */
 int main_gui_loop (void)
 {
     GLuint video_out_texture = 0;
+    GLuint display_frame_buffer = 0;
+    GLuint display_texture = 0;
+    GLuint vertex_shader = 0;
+    GLuint fragment_shader = 0;
+    GLuint shader_program = 0;
+    GLint location;
 
-    /* Create texture for video output */
+    GLuint vertex_array = 0;
+    GLuint vertex_buffer = 0;
+
+    int gl_success = 0;
+
+    /* Create the video-out texture, initialise with an empty image */
     glGenTextures (1, &video_out_texture);
     glBindTexture (GL_TEXTURE_2D, video_out_texture);
     glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameterfv (GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, Float4_Black);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexImage2D (GL_TEXTURE_2D, 0, GL_RGB,
+                  VIDEO_BUFFER_WIDTH, VIDEO_BUFFER_LINES,
+                  0, GL_RGB, GL_FLOAT, NULL);
+
+    /* Create the display frame buffer */
+    glGenFramebuffers (1, &display_frame_buffer);
+    glBindFramebuffer (GL_FRAMEBUFFER, display_frame_buffer);
+
+    /* Create the display texture, initialise with an empty image */
+    glGenTextures (1, &display_texture);
+    glBindTexture (GL_TEXTURE_2D, display_texture);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexImage2D (GL_TEXTURE_2D, 0, GL_RGB,
+                  VIDEO_BUFFER_WIDTH, VIDEO_BUFFER_LINES,
+                  0, GL_RGB, GL_FLOAT, NULL);
+
+    /* Configure the frame buffer */
+    glFramebufferTexture (GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, display_texture, 0);
+    GLenum display_draw_buffers [1] = { GL_COLOR_ATTACHMENT0 };
+    glDrawBuffers (1, display_draw_buffers);
+
+    /* Check if anything went wrong */
+    if (glCheckFramebufferStatus (GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+    {
+        snepulator_error ("GL Error", "Error setting up frame buffer");
+    }
+
+    /* Restore the default render target */
+    glBindFramebuffer (GL_FRAMEBUFFER, 0);
+
+    glGenVertexArrays (1, &vertex_array);
+    glBindVertexArray (vertex_array);
+
+    static const GLfloat vertex_data [] =
+    {
+        /* Position */
+        -1.0f, -1.0f, 0.0f,
+         1.0f, -1.0f, 0.0f,
+        -1.0f,  1.0f, 0.0f,
+        -1.0f,  1.0f, 0.0f,
+         1.0f, -1.0f, 0.0f,
+         1.0f,  1.0f, 0.0f
+    };
+
+    glGenBuffers (1, &vertex_buffer);
+    glBindBuffer (GL_ARRAY_BUFFER, vertex_buffer);
+    glBufferData (GL_ARRAY_BUFFER, sizeof (vertex_data), vertex_data, GL_STATIC_DRAW);
+
+    /* Attibute 0: Position */
+    glVertexAttribPointer (0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof (GLfloat), (void *) 0);
+    glEnableVertexAttribArray (0);
+
+    /*********************
+     **  Vertex Shader  **
+     *********************/
+    vertex_shader = glCreateShader (GL_VERTEX_SHADER);
+    glShaderSource (vertex_shader, 1, &vertex_shader_source, NULL);
+    glCompileShader (vertex_shader);
+
+    glGetShaderiv (vertex_shader, GL_COMPILE_STATUS, &gl_success);
+    if (!gl_success)
+    {
+        char info_log [512] = { '\0' };
+        glGetShaderInfoLog (vertex_shader, 512, NULL, info_log);
+        snepulator_error ("GLSL", info_log);
+    }
+
+    /***********************
+     **  Fragment Shader  **
+     ***********************/
+    fragment_shader = glCreateShader (GL_FRAGMENT_SHADER);
+    glShaderSource (fragment_shader, 1, &fragment_shader_source, NULL);
+    glCompileShader (fragment_shader);
+
+    glGetShaderiv (fragment_shader, GL_COMPILE_STATUS, &gl_success);
+    if (!gl_success)
+    {
+        char info_log [512] = { '\0' };
+        glGetShaderInfoLog (fragment_shader, 512, NULL, info_log);
+        snepulator_error ("GLSL", info_log);
+    }
+
+    /**********************
+     **  Shader Program  **
+     **********************/
+    shader_program = glCreateProgram ();
+    glAttachShader (shader_program, vertex_shader);
+    glAttachShader (shader_program, fragment_shader);
+    glLinkProgram (shader_program);
+
+    glGetProgramiv (shader_program, GL_LINK_STATUS, &gl_success);
+    if (!gl_success)
+    {
+        char info_log [512] = { '\0' };
+        glGetShaderInfoLog (shader_program, 512, NULL, info_log);
+        snepulator_error ("GLSL", info_log);
+    }
+
+    glDeleteShader (vertex_shader);
+    glDeleteShader (fragment_shader);
+
     snepulator_draw_logo ();
 
     /* Main loop */
@@ -619,25 +762,24 @@ int main_gui_loop (void)
             }
         }
 
-        /* Copy and filter the video-out texture data into the GUI */
-        glBindTexture (GL_TEXTURE_2D, video_out_texture);
-        glTexParameterfv (GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, Float4_Black);
+        /* Scale the image to a multiple of SMS resolution */
+        state.video_scale = (state.host_width / state.video_width) > (state.host_height / state.video_height) ?
+                            (state.host_height / state.video_height) : (state.host_width  / state.video_width);
 
-        pthread_mutex_lock (&video_mutex);
+        if (state.video_scale < 1)
+        {
+            state.video_scale = 1;
+        }
 
+        /* TODO: Remove state.video_out_texture_width/height */
+#if 0
         switch (state.video_filter)
         {
-            case VIDEO_FILTER_DOT_MATRIX:
-                glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-                glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-                video_filter_dot_matrix ();
-                break;
-
-            case VIDEO_FILTER_LINEAR:
-                glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-                glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            case VIDEO_FILTER_NEAREST:
+                glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+                glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
                 memcpy (state.video_out_texture_data, state.video_out_data, sizeof (state.video_out_data));
-                if (state.video_has_border)
+                if (state.video_has_border) /* TODO: Reduce duplication */
                 {
                     video_filter_dim_border ();
                     state.video_show_border = true;
@@ -646,11 +788,11 @@ int main_gui_loop (void)
                 state.video_out_texture_height = VIDEO_BUFFER_LINES;
                 break;
 
-            case VIDEO_FILTER_NEAREST:
-                glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-                glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            case VIDEO_FILTER_LINEAR:
+                glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+                glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
                 memcpy (state.video_out_texture_data, state.video_out_data, sizeof (state.video_out_data));
-                if (state.video_has_border) /* TODO: Reduce duplication */
+                if (state.video_has_border)
                 {
                     video_filter_dim_border ();
                     state.video_show_border = true;
@@ -668,12 +810,74 @@ int main_gui_loop (void)
                     state.video_show_border = true;
                 }
                 break;
+
+            case VIDEO_FILTER_DOT_MATRIX:
+                glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+                glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                video_filter_dot_matrix ();
+                break;
+        }
+#endif
+
+        /* TODO: Switching to render-to-texture seems to have introduced tearing */
+
+        /* Copy the most recent frame into video_out_texture */
+        glBindTexture (GL_TEXTURE_2D, video_out_texture);
+        pthread_mutex_lock (&video_mutex);
+        glTexImage2D (GL_TEXTURE_2D, 0, GL_RGB,
+                      VIDEO_BUFFER_WIDTH, VIDEO_BUFFER_LINES,
+                      0, GL_RGB, GL_FLOAT, state.video_out_data);
+        pthread_mutex_unlock (&video_mutex);
+
+        /* Set the display-texture size to match the window resolution */
+        glBindTexture (GL_TEXTURE_2D, display_texture);
+        glTexImage2D (GL_TEXTURE_2D, 0, GL_RGB,
+                      state.host_width, state.host_height,
+                      0, GL_RGB, GL_FLOAT, NULL);
+
+        /* Set the render target to our frame buffer */
+        glBindFramebuffer (GL_FRAMEBUFFER, display_frame_buffer);
+        glViewport (0, 0, state.host_width, state.host_height);
+
+        /* Set the uniforms */
+        location = glGetUniformLocation (shader_program, "input_resolution");
+        if (location != -1)
+        {
+            glUniform2ui (location, state.video_width, state.video_height);
         }
 
-        glTexImage2D (GL_TEXTURE_2D, 0, GL_RGB, state.video_out_texture_width, state.video_out_texture_height,
-                      0, GL_RGB, GL_FLOAT, state.video_out_texture_data);
+        location = glGetUniformLocation (shader_program, "input_start");
+        if (location != -1)
+        {
+            glUniform2ui (location, state.video_start_x, state.video_start_y);
+        }
 
-        pthread_mutex_unlock (&video_mutex);
+        location = glGetUniformLocation (shader_program, "output_resolution");
+        if (location != -1)
+        {
+            glUniform2ui (location, state.host_width, state.host_height);
+        }
+
+        location = glGetUniformLocation (shader_program, "options");
+        if (location != -1)
+        {
+            glUniform3ui (location, state.video_filter, state.video_has_border, state.video_blank_left);
+        }
+
+        location = glGetUniformLocation (shader_program, "scale");
+        if (location != -1)
+        {
+            glUniform1ui (location, state.video_scale);
+        }
+
+        /* Render to texture */
+        glUseProgram (shader_program);
+        glBindVertexArray (vertex_array);
+        glBindTexture (GL_TEXTURE_2D, video_out_texture);
+        glDrawArrays (GL_TRIANGLES, 0, 6);
+
+        /* Restore default render target */
+        glBindFramebuffer (GL_FRAMEBUFFER, 0);
 
         /* Render ImGui */
         ImGui_ImplOpenGL3_NewFrame ();
@@ -702,15 +906,6 @@ int main_gui_loop (void)
 
         /* Window Contents */
         {
-            /* Scale the image to a multiple of SMS resolution */
-            state.video_scale = (state.host_width / state.video_width) > (state.host_height / state.video_height) ?
-                                (state.host_height / state.video_height) : (state.host_width  / state.video_width);
-
-            if (state.video_scale < 1)
-            {
-                state.video_scale = 1;
-            }
-
             ImGui::PushStyleVar (ImGuiStyleVar_WindowPadding, ImVec2 (0.0, 0.0));
             ImGui::PushStyleColor (ImGuiCol_WindowBg, ImVec4 (0.0f, 0.0f, 0.0f, 0.0f));
             ImGui::SetNextWindowPos (ImVec2 (0, 0));
@@ -723,30 +918,16 @@ int main_gui_loop (void)
                                               ImGuiWindowFlags_NoFocusOnAppearing |
                                               ImGuiWindowFlags_NoBringToFrontOnFocus);
 
-            /* First, draw the background, taken from the leftmost slice of the actual image */
-            if (state.video_show_border)
-            {
-                ImGui::SetCursorPosX (0);
-                ImGui::SetCursorPosY (state.host_height / 2 - (VIDEO_BUFFER_LINES * state.video_scale) / 2);
-
-                ImGui::Image ((void *) (uintptr_t) video_out_texture,
-                              /* Size   */ ImVec2 (state.host_width, VIDEO_BUFFER_LINES * state.video_scale),
-                              /* uv0    */ ImVec2 (0.00, 0.0),
-                              /* uv1    */ ImVec2 (0.01, 1.0),
-                              /* Tint   */ ImColor (255, 255, 255, 255),
-                              /* Border */ ImColor (0, 0, 0, 0));
-            }
-
-            /* Now, draw the actual image */
-            ImGui::SetCursorPosX (state.host_width  / 2 - (VIDEO_BUFFER_WIDTH * state.video_scale) / 2);
-            ImGui::SetCursorPosY (state.host_height / 2 - (VIDEO_BUFFER_LINES * state.video_scale) / 2);
-
-            ImGui::Image ((void *) (uintptr_t) video_out_texture,
-                          /* Size   */ ImVec2 (VIDEO_BUFFER_WIDTH * state.video_scale, VIDEO_BUFFER_LINES * state.video_scale),
+            /* Draw the rendered-to texture to the screen. */
+            ImGui::SetCursorPosX (0);
+            ImGui::SetCursorPosY (0);
+            ImGui::Image ((void *) (uintptr_t) display_texture,
+                          /* Size   */ ImVec2 (state.host_width, state.host_height),
                           /* uv0    */ ImVec2 (0.0, 0.0),
                           /* uv1    */ ImVec2 (1.0, 1.0),
                           /* Tint   */ ImColor (255, 255, 255, 255),
                           /* Border */ ImColor (0, 0, 0, 0));
+
             ImGui::End ();
             ImGui::PopStyleColor (1);
             ImGui::PopStyleVar ();
