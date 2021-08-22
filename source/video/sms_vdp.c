@@ -760,7 +760,7 @@ void sms_vdp_render_line (const TMS9928A_Config *config, uint16_t line)
         frame_buffer [x + (state.render_start_y + line) * VIDEO_BUFFER_WIDTH] = video_background;
     }
 
-    if (tms9928a_state.regs.ctrl_0 & SMS_VDP_CTRL_0_MASK_COL_1)
+    if (state.console == CONSOLE_MASTER_SYSTEM && tms9928a_state.regs.ctrl_0 & SMS_VDP_CTRL_0_MASK_COL_1)
     {
         state.video_blank_left = 8;
     }

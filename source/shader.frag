@@ -1,101 +1,147 @@
 R"(
 #version 330 core
 
-#define VIDEO_SIDE_BORDER       8u
-#define VIDEO_BUFFER_WIDTH      (256u + (2u * VIDEO_SIDE_BORDER))
-#define VIDEO_BUFFER_LINES      240u
+#define VIDEO_SIDE_BORDER       8
+#define VIDEO_BUFFER_WIDTH      (256 + (2 * VIDEO_SIDE_BORDER))
+#define VIDEO_BUFFER_LINES      240
 
-#define VIDEO_FILTER_NEAREST    0u
-#define VIDEO_FILTER_LINEAR     1u
-#define VIDEO_FILTER_SCANLINES  2u
-#define VIDEO_FILTER_DOT_MATRIX 3u
+#define VIDEO_FILTER_NEAREST    0
+#define VIDEO_FILTER_LINEAR     1
+#define VIDEO_FILTER_SCANLINES  2
+#define VIDEO_FILTER_DOT_MATRIX 3
+
+#define OPTION_VIDEO_FILTER     (options.x)
+#define OPTION_SHOW_BORDER      (options.y)
+#define OPTION_BLANK_LEFT       (options.z)
+
+#define BLACK                   vec4 (0.0, 0.0, 0.0, 1.0)
 
 in vec4 gl_FragCoord;
 
 out vec4 pixel;
 
 uniform sampler2D video_out;
-uniform uvec2 input_resolution;
-uniform uvec2 input_start;
-uniform uvec2 output_resolution;
-uniform uvec3 options; /* x = video_filter, y = has_border, z = blank_left */
-uniform uint scale;
+uniform ivec2 video_resolution;
+uniform ivec2 video_start;
+uniform ivec2 output_resolution;
+uniform ivec3 options; /* x = video_filter, y = show_border, z = blank_left */
+uniform int scale;
 
-/* TODO: Confirm layout: Is y=0 the top or the bottom? */
+vec4 get_pixel (int x, int y)
+{
+    bool active_area;
+
+    if (x >= video_start.x + OPTION_BLANK_LEFT && x < (video_start.x + video_resolution.x) &&
+        y >= video_start.y                     && y < (video_start.y + video_resolution.y))
+    {
+        active_area = true;
+    }
+    else
+    {
+        active_area = false;
+    }
+
+    if (active_area)
+    {
+        return texelFetch (video_out, ivec2 (x, y), 0);
+    }
+    else if (bool (OPTION_SHOW_BORDER))
+    {
+        return mix (BLACK, texelFetch (video_out, ivec2 (x, y), 0), 0.5);
+    }
+
+    return BLACK;
+}
 
 void main()
 {
+    /* Screen location of this fragment. */
+    int x = int (gl_FragCoord.x);
+    int y = int (gl_FragCoord.y);
+
+    /* First screen-pixel of the video_out texture area. */
+    int start_x = output_resolution.x / 2 - (VIDEO_BUFFER_WIDTH * scale) / 2;
+    int start_y = output_resolution.y / 2 - (VIDEO_BUFFER_LINES * scale) / 2;
+
     /* Index into the source texture. */
-    uint video_x;
-    uint video_y;
+    /* TODO: Consider division behaviour when crossing the negative boundary */
+    int video_x = (x - start_x) / scale;
+    int video_y = (y - start_y) / scale;
 
-    /* Location on screen of this fragment. */
-    uint x = uint (gl_FragCoord.x);
-    uint y = uint (gl_FragCoord.y);
+    /* Counts how many screen-pixels we are into this video-pixel */
+    int mod_x = ((output_resolution.x * scale) + (x - start_x)) % scale;
+    int mod_y = ((output_resolution.y * scale) + (y - start_y)) % scale;
 
-    /* "start" - First pixel off the active area. */
-    uint start_x = output_resolution.x / 2u - (input_resolution.x * scale) / 2u;
-    uint start_y = output_resolution.y / 2u - (input_resolution.y * scale) / 2u;
-
-    /* "end" - First pixel of the right/bottom border. */
-    uint end_x = start_x + input_resolution.x * scale;
-    uint end_y = start_y + input_resolution.y * scale;
-
-    bool border = false;
-
-    /* Left border. */
-    if (x < start_x)
+    /* For areas outside the video_out texture area, select the pixel a column
+       inward from the edge of the texture. This makes it safe to sample the
+       surrounding pixels. */
+    if (video_x < 1)
     {
-        video_x = 0u;
-        border = true;
+        video_x = 1;
     }
-    /* Active area. */
-    else if (x < end_x)
+    else if (video_x > VIDEO_BUFFER_WIDTH - 2)
     {
-        video_x = input_start.x + (x - start_x) / scale;
+        video_x = VIDEO_BUFFER_WIDTH - 2;
     }
-    else
-    /* Right border. */
-    {
-        video_x = VIDEO_BUFFER_WIDTH - 1u;
-        border = true;
-    }
+
+    /* TODO: Increased buffer size to handle higher-resolution games. */
 
     /* Top border. */
-    if (y < start_y)
+    if (video_y < 1)
     {
-        video_y = 0u;
-        video_x = 0u;
-        border = true;
+        video_y = 1;
     }
     /* Active area. */
-    else if (y < end_y)
+    else if (video_y > VIDEO_BUFFER_LINES - 2)
     {
-        video_y = input_start.y + (y - start_y) / scale;
-    }
-    else
-    /* Bottom border. */
-    {
-        video_y = VIDEO_BUFFER_LINES - 1u;
-        video_x = 0u;
-        border = true;
+        video_y = VIDEO_BUFFER_LINES - 2;
     }
 
-    /* Handle SMS left-blank. */
-    if (video_x < (VIDEO_SIDE_BORDER + options.z))
+    switch (OPTION_VIDEO_FILTER)
     {
-        border = true;
-    }
+        case VIDEO_FILTER_LINEAR:
 
-    if (border)
-    {
-        pixel = mix (vec4 (0.0, 0.0, 0.0, 1.0),
-                     texture (video_out, vec2 (float(video_x) / (VIDEO_BUFFER_WIDTH - 1u), float(video_y) / (VIDEO_BUFFER_LINES - 1u))),
-                     0.5);
-    }
-    else
-    {
-        pixel = texture (video_out, vec2 (float(video_x) / (VIDEO_BUFFER_WIDTH - 1u), float(video_y) / (VIDEO_BUFFER_LINES - 1u)));
+            float x_mix = float (mod_x) / float (scale);
+            float y_mix = float (mod_y) / float (scale);
+
+            /* Fetch the four pixels to interpolate between */
+            vec4 pixel_tl = get_pixel (video_x,     video_y    );
+            vec4 pixel_tr = get_pixel (video_x + 1, video_y    );
+            vec4 pixel_bl = get_pixel (video_x,     video_y + 1);
+            vec4 pixel_br = get_pixel (video_x + 1, video_y + 1);
+
+            /* Interpolate */
+            vec4 pixel_t = mix (pixel_tl, pixel_tr, x_mix);
+            vec4 pixel_b = mix (pixel_bl, pixel_br, x_mix);
+            pixel        = mix (pixel_t,  pixel_b,  y_mix);
+            break;
+
+        case VIDEO_FILTER_SCANLINES:
+            if (mod_y == 0)
+            {
+                pixel = vec4 (0.0, 0.0, 0.0, 1.0);
+            }
+            else
+            {
+                pixel = get_pixel (video_x, video_y);
+            }
+            break;
+
+        case VIDEO_FILTER_DOT_MATRIX:
+            if ((mod_x == 0) || (mod_y == 0))
+            {
+                pixel = BLACK;
+            }
+            else
+            {
+                pixel = get_pixel (video_x, video_y);
+            }
+            break;
+
+        case VIDEO_FILTER_NEAREST:
+        default:
+            pixel = get_pixel (video_x, video_y);
+            break;
     }
 }
 )"

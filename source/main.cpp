@@ -772,39 +772,11 @@ int main_gui_loop (void)
         }
 
         /* TODO: Remove state.video_out_texture_width/height */
-#if 0
         switch (state.video_filter)
         {
             case VIDEO_FILTER_NEAREST:
-                glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-                glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-                memcpy (state.video_out_texture_data, state.video_out_data, sizeof (state.video_out_data));
-                if (state.video_has_border) /* TODO: Reduce duplication */
-                {
-                    video_filter_dim_border ();
-                    state.video_show_border = true;
-                }
-                state.video_out_texture_width = VIDEO_BUFFER_WIDTH;
-                state.video_out_texture_height = VIDEO_BUFFER_LINES;
-                break;
-
             case VIDEO_FILTER_LINEAR:
-                glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-                glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-                memcpy (state.video_out_texture_data, state.video_out_data, sizeof (state.video_out_data));
-                if (state.video_has_border)
-                {
-                    video_filter_dim_border ();
-                    state.video_show_border = true;
-                }
-                state.video_out_texture_width = VIDEO_BUFFER_WIDTH;
-                state.video_out_texture_height = VIDEO_BUFFER_LINES;
-                break;
-
             case VIDEO_FILTER_SCANLINES:
-                glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-                glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-                video_filter_scanlines ();
                 if (state.video_has_border) /* TODO: Reduce duplication */
                 {
                     state.video_show_border = true;
@@ -812,14 +784,28 @@ int main_gui_loop (void)
                 break;
 
             case VIDEO_FILTER_DOT_MATRIX:
-                glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-                glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-                video_filter_dot_matrix ();
+                state.video_show_border = false;
                 break;
         }
-#endif
 
-        /* TODO: Switching to render-to-texture seems to have introduced tearing */
+        /* TODO: Switching to render-to-texture seems to have introduced tearing.
+         *       Not seen on smaller windows.. Could this be caused by the use of
+         *       a 1440p texture?
+         *
+         *       A couple of options can be investigated:
+         *       - Using a Renderbuffer instead of a Texture
+         *       - Directly rendering to the display, instead of to a texture
+         *       - Using a half-resolution output texture for large displays
+         *
+         *       Alternatively: Use a variable-sized display texture, matching
+         *       the old texture sizes. Eg, 4× SMS resolution for dot-matrix,
+         *       3× SMS resolution for scanlines, etc.
+         *
+         *       Another possibility: Can we do the render-to-texture when the
+         *       emulator has completed rendering an SMS frame, with a double-
+         *       buffered output, so that the render-the-latest-frame callback
+         *       only needs to pick which pre-rendered texture to show.
+         */
 
         /* Copy the most recent frame into video_out_texture */
         glBindTexture (GL_TEXTURE_2D, video_out_texture);
@@ -840,34 +826,34 @@ int main_gui_loop (void)
         glViewport (0, 0, state.host_width, state.host_height);
 
         /* Set the uniforms */
-        location = glGetUniformLocation (shader_program, "input_resolution");
+        location = glGetUniformLocation (shader_program, "video_resolution");
         if (location != -1)
         {
-            glUniform2ui (location, state.video_width, state.video_height);
+            glUniform2i (location, state.video_width, state.video_height);
         }
 
-        location = glGetUniformLocation (shader_program, "input_start");
+        location = glGetUniformLocation (shader_program, "video_start");
         if (location != -1)
         {
-            glUniform2ui (location, state.video_start_x, state.video_start_y);
+            glUniform2i (location, state.video_start_x, state.video_start_y);
         }
 
         location = glGetUniformLocation (shader_program, "output_resolution");
         if (location != -1)
         {
-            glUniform2ui (location, state.host_width, state.host_height);
+            glUniform2i (location, state.host_width, state.host_height);
         }
 
         location = glGetUniformLocation (shader_program, "options");
         if (location != -1)
         {
-            glUniform3ui (location, state.video_filter, state.video_has_border, state.video_blank_left);
+            glUniform3i (location, state.video_filter, state.video_show_border, state.video_blank_left);
         }
 
         location = glGetUniformLocation (shader_program, "scale");
         if (location != -1)
         {
-            glUniform1ui (location, state.video_scale);
+            glUniform1i (location, state.video_scale);
         }
 
         /* Render to texture */
