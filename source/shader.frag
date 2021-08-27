@@ -27,6 +27,11 @@ uniform ivec2 output_resolution;
 uniform ivec3 options; /* x = video_filter, y = show_border, z = blank_left */
 uniform int scale;
 
+
+/*
+ * Given a pixel coordinate into the video-out, return the colour value.
+ * This  function handles the dimming of the border area.
+ */
 vec4 get_pixel (int x, int y)
 {
     bool active_area;
@@ -53,6 +58,61 @@ vec4 get_pixel (int x, int y)
     return BLACK;
 }
 
+
+/*
+ * Given a line number, return the portion of light that is allowed
+ * to pass through when the scanline filter is enabled.
+ */
+float scanline_mix (int line)
+{
+    int t; /* Thickness of the shading at the top and bottom of each scanline. */
+
+    if (scale > 4)
+    {
+        t = scale / 4;
+    }
+    else
+    {
+        t = 1;
+    }
+
+    switch (scale)
+    {
+        /* Hard-coded values for lower resolutions. */
+        case 1:
+            return 0.75;
+        case 2:
+            return 1.0 - float (line) * 0.5;
+
+        default:
+            /* Ramp up, average brightness = 0.625 */
+            if (line < t)
+            {
+                float position = (float (line) + 0.5) / float (t);
+                float mix = 0.25 + position * 0.75;
+
+                return smoothstep (0.0, 1.0, mix);
+            }
+            /* Constant, average brightness = 1.0 */
+            if (line < (t + (scale - 2 * t)))
+            {
+                return 1.0;
+            }
+            /* Ramp down, average brightness = 0.625 */
+            else
+            {
+                float position = (float (line - (scale - t)) + 0.5) / float (t);
+                float mix = 1.0 - position * 0.75;
+
+                return smoothstep (0.0, 1.0, mix);
+            }
+    }
+}
+
+
+/*
+ * Entry point for fragment shader.
+ */
 void main()
 {
     /* Screen location of this fragment. */
@@ -84,8 +144,6 @@ void main()
         video_x = VIDEO_BUFFER_WIDTH - 2;
     }
 
-    /* TODO: Increased buffer size to handle higher-resolution games. */
-
     /* Top border. */
     if (video_y < 1)
     {
@@ -97,12 +155,14 @@ void main()
         video_y = VIDEO_BUFFER_LINES - 2;
     }
 
+    float x_mix;
+    float y_mix;
+
     switch (OPTION_VIDEO_FILTER)
     {
         case VIDEO_FILTER_LINEAR:
-
-            float x_mix = float (mod_x) / float (scale);
-            float y_mix = float (mod_y) / float (scale);
+            x_mix = float (mod_x) / float (scale);
+            y_mix = float (mod_y) / float (scale);
 
             /* Fetch the four pixels to interpolate between */
             vec4 pixel_tl = get_pixel (video_x,     video_y    );
@@ -117,14 +177,16 @@ void main()
             break;
 
         case VIDEO_FILTER_SCANLINES:
-            if (mod_y == 0)
-            {
-                pixel = vec4 (0.0, 0.0, 0.0, 1.0);
-            }
-            else
-            {
-                pixel = get_pixel (video_x, video_y);
-            }
+
+            /* Interpolate in the X axis */
+            x_mix = smoothstep (0.0, 1.0, float (mod_x) / float (scale));
+            vec4 pixel_l = get_pixel (video_x,     video_y);
+            vec4 pixel_r = get_pixel (video_x + 1, video_y);
+            pixel = mix (pixel_l, pixel_r, x_mix);
+
+            /* Apply scanlines */
+            pixel = mix (BLACK, pixel, scanline_mix (mod_y));
+
             break;
 
         case VIDEO_FILTER_DOT_MATRIX:
