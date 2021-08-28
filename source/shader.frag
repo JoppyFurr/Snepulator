@@ -117,7 +117,7 @@ void main()
 {
     /* Screen location of this fragment. */
     int x = int (gl_FragCoord.x);
-    int y = int (gl_FragCoord.y);
+    int y = (output_resolution.y - 1) - int (gl_FragCoord.y);
 
     /* First screen-pixel of the video_out texture area. */
     int start_x = output_resolution.x / 2 - (VIDEO_BUFFER_WIDTH * scale) / 2;

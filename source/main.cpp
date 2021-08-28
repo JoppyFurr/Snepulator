@@ -537,26 +537,81 @@ void toggle_fullscreen (void)
  *   ╰───────────┬────────────╯
  *               │ glTexImage2D
  *   ╭───────────┴────────────╮
- *   │   video_out_texture    │
- *   ╰───────────┬────────────╯
- *               │ render-to-texture
- *   ╭───────────┴────────────╮
- *   │    display_texture     │
+ *   │      GLSL Shader       │
  *   ╰────────────────────────╯
- *
  */
-int main_gui_loop (void)
+
+
+/*
+ * Render with GLSL Shader.
+ */
+GLuint shader_program = 0;
+GLuint video_out_texture = 0;
+GLuint vertex_array = 0;
+void shader_callback (const ImDrawList *parent_list, const ImDrawCmd *cmd)
 {
-    GLuint video_out_texture = 0;
-    GLuint display_frame_buffer = 0;
-    GLuint display_texture = 0;
-    GLuint vertex_shader = 0;
-    GLuint fragment_shader = 0;
-    GLuint shader_program = 0;
+    GLint last_program;
+    GLint last_vertex_array;
     GLint location;
 
-    GLuint vertex_array = 0;
-    GLuint vertex_buffer = 0;
+    /* Save the state that we're about to modify */
+    glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
+    glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &last_vertex_array);
+
+    glUseProgram (shader_program);
+
+    /* Copy the most recent frame into video_out_texture */
+    /* TODO: Should this happen when the frame is complete instead of here? */
+    glBindTexture (GL_TEXTURE_2D, video_out_texture);
+    pthread_mutex_lock (&video_mutex);
+    glTexImage2D (GL_TEXTURE_2D, 0, GL_RGB,
+                  VIDEO_BUFFER_WIDTH, VIDEO_BUFFER_LINES,
+                  0, GL_RGB, GL_FLOAT, state.video_out_data);
+    pthread_mutex_unlock (&video_mutex);
+
+
+    /* Set the uniforms */
+    location = glGetUniformLocation (shader_program, "video_resolution");
+    if (location != -1)
+    {
+        glUniform2i (location, state.video_width, state.video_height);
+    }
+
+    location = glGetUniformLocation (shader_program, "video_start");
+    if (location != -1)
+    {
+        glUniform2i (location, state.video_start_x, state.video_start_y);
+    }
+
+    location = glGetUniformLocation (shader_program, "output_resolution");
+    if (location != -1)
+    {
+        glUniform2i (location, state.host_width, state.host_height);
+    }
+
+    location = glGetUniformLocation (shader_program, "options");
+    if (location != -1)
+    {
+        glUniform3i (location, state.video_filter, state.video_show_border, state.video_blank_left);
+    }
+
+    location = glGetUniformLocation (shader_program, "scale");
+    if (location != -1)
+    {
+        glUniform1i (location, state.video_scale);
+    }
+
+    glBindVertexArray (vertex_array);
+    glDrawArrays (GL_TRIANGLES, 0, 6);
+
+    /* Restore state */
+    glUseProgram (last_program);
+    glBindVertexArray (last_vertex_array);
+}
+
+
+int main_gui_loop (void)
+{
 
     int gl_success = 0;
 
@@ -571,35 +626,7 @@ int main_gui_loop (void)
                   VIDEO_BUFFER_WIDTH, VIDEO_BUFFER_LINES,
                   0, GL_RGB, GL_FLOAT, NULL);
 
-    /* Create the display frame buffer */
-    glGenFramebuffers (1, &display_frame_buffer);
-    glBindFramebuffer (GL_FRAMEBUFFER, display_frame_buffer);
-
-    /* Create the display texture, initialise with an empty image */
-    glGenTextures (1, &display_texture);
-    glBindTexture (GL_TEXTURE_2D, display_texture);
-    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexImage2D (GL_TEXTURE_2D, 0, GL_RGB,
-                  VIDEO_BUFFER_WIDTH, VIDEO_BUFFER_LINES,
-                  0, GL_RGB, GL_FLOAT, NULL);
-
-    /* Configure the frame buffer */
-    glFramebufferTexture (GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, display_texture, 0);
-    GLenum display_draw_buffers [1] = { GL_COLOR_ATTACHMENT0 };
-    glDrawBuffers (1, display_draw_buffers);
-
-    /* Check if anything went wrong */
-    if (glCheckFramebufferStatus (GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-    {
-        snepulator_error ("GL Error", "Error setting up frame buffer");
-    }
-
-    /* Restore the default render target */
-    glBindFramebuffer (GL_FRAMEBUFFER, 0);
-
+    /* Create two triangles to cover the screen */
     glGenVertexArrays (1, &vertex_array);
     glBindVertexArray (vertex_array);
 
@@ -614,6 +641,7 @@ int main_gui_loop (void)
          1.0f,  1.0f, 0.0f
     };
 
+    GLuint vertex_buffer = 0;
     glGenBuffers (1, &vertex_buffer);
     glBindBuffer (GL_ARRAY_BUFFER, vertex_buffer);
     glBufferData (GL_ARRAY_BUFFER, sizeof (vertex_data), vertex_data, GL_STATIC_DRAW);
@@ -625,6 +653,7 @@ int main_gui_loop (void)
     /*********************
      **  Vertex Shader  **
      *********************/
+    GLuint vertex_shader = 0;
     vertex_shader = glCreateShader (GL_VERTEX_SHADER);
     glShaderSource (vertex_shader, 1, &vertex_shader_source, NULL);
     glCompileShader (vertex_shader);
@@ -640,6 +669,7 @@ int main_gui_loop (void)
     /***********************
      **  Fragment Shader  **
      ***********************/
+    GLuint fragment_shader = 0;
     fragment_shader = glCreateShader (GL_FRAGMENT_SHADER);
     glShaderSource (fragment_shader, 1, &fragment_shader_source, NULL);
     glCompileShader (fragment_shader);
@@ -671,6 +701,7 @@ int main_gui_loop (void)
     glDeleteShader (vertex_shader);
     glDeleteShader (fragment_shader);
 
+    /* TODO: To avoid a flicker - only draw this if no game is loaded. */
     snepulator_draw_logo ();
 
     /* Main loop */
@@ -777,9 +808,13 @@ int main_gui_loop (void)
             case VIDEO_FILTER_NEAREST:
             case VIDEO_FILTER_LINEAR:
             case VIDEO_FILTER_SCANLINES:
-                if (state.video_has_border) /* TODO: Reduce duplication */
+                if (state.video_has_border)
                 {
                     state.video_show_border = true;
+                }
+                else
+                {
+                    state.video_show_border = false;
                 }
                 break;
 
@@ -787,83 +822,6 @@ int main_gui_loop (void)
                 state.video_show_border = false;
                 break;
         }
-
-        /* TODO: Switching to render-to-texture seems to have introduced tearing.
-         *       Not seen on smaller windows.. Could this be caused by the use of
-         *       a 1440p texture?
-         *
-         *       A couple of options can be investigated:
-         *       - Using a Renderbuffer instead of a Texture
-         *       - Directly rendering to the display, instead of to a texture
-         *       - Using a half-resolution output texture for large displays
-         *
-         *       Alternatively: Use a variable-sized display texture, matching
-         *       the old texture sizes. Eg, 4× SMS resolution for dot-matrix,
-         *       3× SMS resolution for scanlines, etc.
-         *
-         *       Another possibility: Can we do the render-to-texture when the
-         *       emulator has completed rendering an SMS frame, with a double-
-         *       buffered output, so that the render-the-latest-frame callback
-         *       only needs to pick which pre-rendered texture to show.
-         */
-
-        /* Copy the most recent frame into video_out_texture */
-        glBindTexture (GL_TEXTURE_2D, video_out_texture);
-        pthread_mutex_lock (&video_mutex);
-        glTexImage2D (GL_TEXTURE_2D, 0, GL_RGB,
-                      VIDEO_BUFFER_WIDTH, VIDEO_BUFFER_LINES,
-                      0, GL_RGB, GL_FLOAT, state.video_out_data);
-        pthread_mutex_unlock (&video_mutex);
-
-        /* Set the display-texture size to match the window resolution */
-        glBindTexture (GL_TEXTURE_2D, display_texture);
-        glTexImage2D (GL_TEXTURE_2D, 0, GL_RGB,
-                      state.host_width, state.host_height,
-                      0, GL_RGB, GL_FLOAT, NULL);
-
-        /* Set the render target to our frame buffer */
-        glBindFramebuffer (GL_FRAMEBUFFER, display_frame_buffer);
-        glViewport (0, 0, state.host_width, state.host_height);
-
-        /* Set the uniforms */
-        location = glGetUniformLocation (shader_program, "video_resolution");
-        if (location != -1)
-        {
-            glUniform2i (location, state.video_width, state.video_height);
-        }
-
-        location = glGetUniformLocation (shader_program, "video_start");
-        if (location != -1)
-        {
-            glUniform2i (location, state.video_start_x, state.video_start_y);
-        }
-
-        location = glGetUniformLocation (shader_program, "output_resolution");
-        if (location != -1)
-        {
-            glUniform2i (location, state.host_width, state.host_height);
-        }
-
-        location = glGetUniformLocation (shader_program, "options");
-        if (location != -1)
-        {
-            glUniform3i (location, state.video_filter, state.video_show_border, state.video_blank_left);
-        }
-
-        location = glGetUniformLocation (shader_program, "scale");
-        if (location != -1)
-        {
-            glUniform1i (location, state.video_scale);
-        }
-
-        /* Render to texture */
-        glUseProgram (shader_program);
-        glBindVertexArray (vertex_array);
-        glBindTexture (GL_TEXTURE_2D, video_out_texture);
-        glDrawArrays (GL_TRIANGLES, 0, 6);
-
-        /* Restore default render target */
-        glBindFramebuffer (GL_FRAMEBUFFER, 0);
 
         /* Render ImGui */
         ImGui_ImplOpenGL3_NewFrame ();
@@ -890,34 +848,27 @@ int main_gui_loop (void)
             }
         }
 
-        /* Window Contents */
-        {
-            ImGui::PushStyleVar (ImGuiStyleVar_WindowPadding, ImVec2 (0.0, 0.0));
-            ImGui::PushStyleColor (ImGuiCol_WindowBg, ImVec4 (0.0f, 0.0f, 0.0f, 0.0f));
-            ImGui::SetNextWindowPos (ImVec2 (0, 0));
-            ImGui::SetNextWindowSize (ImVec2 (state.host_width, state.host_height));
-            ImGui::Begin ("VDP Output", NULL, ImGuiWindowFlags_NoTitleBar |
-                                              ImGuiWindowFlags_NoResize |
-                                              ImGuiWindowFlags_NoScrollbar |
-                                              ImGuiWindowFlags_NoInputs |
-                                              ImGuiWindowFlags_NoSavedSettings |
-                                              ImGuiWindowFlags_NoFocusOnAppearing |
-                                              ImGuiWindowFlags_NoBringToFrontOnFocus);
+        /* Video-out display area. */
+        ImGui::PushStyleVar (ImGuiStyleVar_WindowPadding, ImVec2 (0.0, 0.0));
+        ImGui::PushStyleColor (ImGuiCol_WindowBg, ImVec4 (0.0f, 0.0f, 0.0f, 0.0f));
+        ImGui::SetNextWindowPos (ImVec2 (0, 0));
+        ImGui::SetNextWindowSize (ImVec2 (state.host_width, state.host_height));
+        ImGui::Begin ("VDP Output", NULL, ImGuiWindowFlags_NoTitleBar |
+                                          ImGuiWindowFlags_NoResize |
+                                          ImGuiWindowFlags_NoScrollbar |
+                                          ImGuiWindowFlags_NoInputs |
+                                          ImGuiWindowFlags_NoSavedSettings |
+                                          ImGuiWindowFlags_NoFocusOnAppearing |
+                                          ImGuiWindowFlags_NoBringToFrontOnFocus);
 
-            /* Draw the rendered-to texture to the screen. */
-            ImGui::SetCursorPosX (0);
-            ImGui::SetCursorPosY (0);
-            ImGui::Image ((void *) (uintptr_t) display_texture,
-                          /* Size   */ ImVec2 (state.host_width, state.host_height),
-                          /* uv0    */ ImVec2 (0.0, 0.0),
-                          /* uv1    */ ImVec2 (1.0, 1.0),
-                          /* Tint   */ ImColor (255, 255, 255, 255),
-                          /* Border */ ImColor (0, 0, 0, 0));
+        ImGui::Text ("This text should not be visible.");
+        ImDrawList* draw_list = ImGui::GetWindowDrawList();
+        draw_list->AddCallback (shader_callback, NULL);
 
-            ImGui::End ();
-            ImGui::PopStyleColor (1);
-            ImGui::PopStyleVar ();
-        }
+        ImGui::End ();
+        ImGui::PopStyleColor (1);
+        ImGui::PopStyleVar ();
+
 
         /* Draw to HW */
         ImGui::Render ();
