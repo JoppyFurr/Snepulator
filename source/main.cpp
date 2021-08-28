@@ -822,10 +822,11 @@ int main_gui_loop (void)
                 break;
         }
 
-        /* Render ImGui */
+        /* Start the Dear ImGui frame. */
         ImGui_ImplOpenGL3_NewFrame ();
         ImGui_ImplSDL2_NewFrame (window);
         ImGui::NewFrame ();
+
         if (state.show_gui)
         {
             snepulator_render_menubar ();
@@ -837,7 +838,7 @@ int main_gui_loop (void)
             }
         }
 
-        /* Hide the GUI and cursor if the mouse is not being used */
+        /* Hide the GUI and cursor if the mouse is not being moved. */
         if (snepulator_get_ticks() > (state.mouse_time + 3000))
         {
             if (state.running)
@@ -869,9 +870,8 @@ int main_gui_loop (void)
         ImGui::PopStyleVar ();
 
 
-        /* Draw to HW */
+        /* Rendering */
         ImGui::Render ();
-        SDL_GL_MakeCurrent (window, glcontext);
         glViewport (0, 0, (int)ImGui::GetIO ().DisplaySize.x, (int)ImGui::GetIO ().DisplaySize.y);
         glClearColor (0.0, 0.0, 0.0, 0.0);
         glClear (GL_COLOR_BUFFER_BIT);
@@ -1167,6 +1167,7 @@ int main (int argc, char **argv)
         SDL_Quit ();
         return EXIT_FAILURE;
     }
+    SDL_GL_MakeCurrent (window, glcontext);
     SDL_GL_SetSwapInterval (1);
 
     /* GL Loader */
@@ -1194,7 +1195,7 @@ int main (int argc, char **argv)
     ImGui::CreateContext ();
     ImGui::GetIO ().IniFilename = NULL;
     ImGui_ImplSDL2_InitForOpenGL (window, glcontext);
-    ImGui_ImplOpenGL3_Init ();
+    ImGui_ImplOpenGL3_Init ("#version 330 core");
 
     /* Double font size to allow both 1× and 2× size to appear crisp. */
     ImFontConfig font_config = { };
