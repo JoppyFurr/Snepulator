@@ -125,6 +125,12 @@ typedef struct Snepulator_State_s {
 
 } Snepulator_State;
 
+/* Open an SDL audio device. */
+void snepulator_audio_device_open (const char *device);
+
+/* If an SDL audio device is open, close it. */
+void snepulator_audio_device_close ();
+
 /* Draw the logo to the output texture. */
 void snepulator_draw_logo (void);
 

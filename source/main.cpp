@@ -1056,21 +1056,47 @@ static void about (void)
 
 
 /*
- * Entry point.
+ * Open an SDL audio device.
  */
-int main (int argc, char **argv)
+SDL_AudioDeviceID audio_device_id = 0;
+void snepulator_audio_device_open (const char *device)
 {
-    /* Audio */
-    SDL_AudioDeviceID audio_device_id;
-    SDL_AudioSpec desired_audiospec;
+    SDL_AudioSpec desired_audiospec = { };
     SDL_AudioSpec obtained_audiospec;
-    memset (&desired_audiospec, 0, sizeof (desired_audiospec));
+
+    /* First, close any previous audio device */
+    snepulator_audio_device_close ();
+
     desired_audiospec.freq = 48000;
     desired_audiospec.format = AUDIO_S16LSB;
     desired_audiospec.channels = 2;
     desired_audiospec.samples = 1024;
     desired_audiospec.callback = snepulator_audio_callback;
 
+    audio_device_id = SDL_OpenAudioDevice (device, 0, &desired_audiospec, &obtained_audiospec,
+                                           SDL_AUDIO_ALLOW_FREQUENCY_CHANGE | SDL_AUDIO_ALLOW_FORMAT_CHANGE | SDL_AUDIO_ALLOW_CHANNELS_CHANGE);
+    SDL_PauseAudioDevice (audio_device_id, 0);
+}
+
+
+/*
+ * If an SDL audio device is open, close it.
+ */
+void snepulator_audio_device_close ()
+{
+    if (audio_device_id > 0)
+    {
+        SDL_CloseAudioDevice (audio_device_id);
+    }
+    audio_device_id = 0;
+}
+
+
+/*
+ * Entry point.
+ */
+int main (int argc, char **argv)
+{
     about ();
 
     /* Initialise Snepulator state */
@@ -1195,9 +1221,7 @@ int main (int argc, char **argv)
     ImGui::PushStyleVar (ImGuiStyleVar_WindowBorderSize, 0.0);
 
     /* Open the default audio device */
-    audio_device_id = SDL_OpenAudioDevice (NULL, 0, &desired_audiospec, &obtained_audiospec,
-                                           SDL_AUDIO_ALLOW_FREQUENCY_CHANGE | SDL_AUDIO_ALLOW_FORMAT_CHANGE | SDL_AUDIO_ALLOW_CHANNELS_CHANGE);
-    SDL_PauseAudioDevice (audio_device_id, 0);
+    snepulator_audio_device_open (NULL);
 
     /* Initialise gamepad support */
     gamepad_init ();
@@ -1227,11 +1251,12 @@ int main (int argc, char **argv)
         free (state.error_message);
     }
 
+    snepulator_audio_device_close ();
+
     ImGui_ImplOpenGL3_Shutdown ();
     ImGui_ImplSDL2_Shutdown ();
     ImGui::DestroyContext ();
 
-    SDL_CloseAudioDevice (audio_device_id);
     SDL_GL_DeleteContext (glcontext);
     SDL_DestroyWindow (window);
     SDL_Quit ();

@@ -302,6 +302,8 @@ void snepulator_render_menubar (void)
         {
             if (ImGui::BeginMenu ("Device"))
             {
+                static char current_device[80] = { '\0' };
+
                 int count = SDL_GetNumAudioDevices (0);
                 for (int i = 0; i < count; i++)
                 {
@@ -309,7 +311,11 @@ void snepulator_render_menubar (void)
                     if (audio_device_name == NULL)
                         audio_device_name = "Unknown Audio Device";
 
-                    if (ImGui::MenuItem (audio_device_name, NULL)) { }
+                    if (ImGui::MenuItem (audio_device_name, NULL, !strncmp (audio_device_name, current_device, 80)))
+                    {
+                        strncpy (current_device, audio_device_name, 79);
+                        snepulator_audio_device_open (audio_device_name);
+                    }
                 }
                 ImGui::EndMenu ();
             }
