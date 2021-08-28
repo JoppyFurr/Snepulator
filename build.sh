@@ -27,7 +27,6 @@ echo "Compiling emulator..."
 eval $CC $CFLAGS -c source/cpu/z80.c         -o work/z80.o
 eval $CC $CFLAGS -c source/database/sms_db.c -o work/sms_db.o
 eval $CC $CFLAGS -c source/sound/sn76489.c   -o work/sn76489.o
-eval $CC $CFLAGS -c source/video/filter.c    -o work/filter.o
 eval $CC $CFLAGS -c source/video/tms9928a.c  -o work/tms9928a.o
 eval $CC $CFLAGS -c source/video/sms_vdp.c   -o work/sms_vdp.o
 eval $CC $CFLAGS -c source/colecovision.c    -o work/colecovision.o

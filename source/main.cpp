@@ -24,7 +24,6 @@ extern "C" {
 #include "sg-1000.h"
 #include "sms.h"
 #include "colecovision.h"
-#include "video/filter.h"
 
 }
 
