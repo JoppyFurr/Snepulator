@@ -164,6 +164,12 @@ void snepulator_render_menubar (void)
             }
             ImGui::Separator ();
 
+            if (ImGui::MenuItem ("Remove Sprite Limit", NULL, state.remove_sprite_limit))
+            {
+                snepulator_remove_sprite_limit_set (!state.remove_sprite_limit);
+            }
+            ImGui::Separator ();
+
             if (ImGui::BeginMenu ("Info"))
             {
                 ImGui::Text ("%s", state.console == CONSOLE_MASTER_SYSTEM ? "Master System" :

@@ -82,9 +82,10 @@ typedef struct Snepulator_State_s {
     uint32_t bios_size;
 
     /* Console configuration */
-    bool           format_auto;
-    Video_Format   format;
-    Console_Region region;
+    bool            format_auto;
+    Video_Format    format;
+    Console_Region  region;
+    bool            remove_sprite_limit;
 
     /* Console video output */
     float_Colour video_out_data [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
@@ -139,6 +140,9 @@ void snepulator_error (const char *title, const char *message);
 
 /* Pause emulation and show the pause screen. */
 void snepulator_pause (void);
+
+/* Set whether or not to remove the sprite limit. */
+void snepulator_remove_sprite_limit_set (bool remove_sprite_limit);
 
 /* Clean up after the previously running system. */
 void snepulator_reset (void);

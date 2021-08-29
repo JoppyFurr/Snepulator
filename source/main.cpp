@@ -249,6 +249,13 @@ int config_import (void)
         }
     }
 
+    /* Remove Sprite Limit - Defaults to off */
+    state.remove_sprite_limit = false;
+    if (config_uint_get ("hacks", "remove-sprite-limit", &uint) == 0)
+    {
+        state.remove_sprite_limit = uint;
+    }
+
     /* Video Filter - Defaults to Scanlines */
     state.video_filter = VIDEO_FILTER_SCANLINES;
     if (config_string_get ("video", "filter", &string) == 0)
@@ -915,6 +922,17 @@ void snepulator_region_set (Console_Region region)
     config_write ();
 }
 
+
+/*
+ * Set whether or not to remove the sprite limit.
+ */
+void snepulator_remove_sprite_limit_set (bool remove_sprite_limit)
+{
+    state.remove_sprite_limit = remove_sprite_limit;
+    config_uint_set ("hacks", "remove-sprite-limit", remove_sprite_limit);
+
+    config_write ();
+}
 
 /*
  * Set the console video filter.

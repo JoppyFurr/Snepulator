@@ -633,7 +633,7 @@ void sms_vdp_render_mode4_sprites_line (const TMS9928A_Config *mode, uint16_t li
     uint16_t sprite_pattern_offset = (tms9928a_state.regs.sprite_pg_base & 0x04) ? 256 : 0;
     uint8_t pattern_height = (tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_SPRITE_MAG) ? 16 : 8;
     uint8_t sprite_height = (tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_SPRITE_SIZE) ? (pattern_height << 1) : pattern_height;
-    uint8_t line_sprite_buffer [8];
+    uint8_t line_sprite_buffer [64];
     uint8_t line_sprite_count = 0;
     SMS_VDP_Mode4_Pattern *pattern;
     int32_Point_2D position;
@@ -664,7 +664,7 @@ void sms_vdp_render_mode4_sprites_line (const TMS9928A_Config *mode, uint16_t li
         /* If the sprite is on this line, add it to the buffer */
         if (line >= position.y && line < position.y + sprite_height)
         {
-            if (line_sprite_count == 8)
+            if (line_sprite_count == 8 && !state.remove_sprite_limit)
             {
                 tms9928a_state.status |= TMS9928A_SPRITE_OVERFLOW;
                 break;
