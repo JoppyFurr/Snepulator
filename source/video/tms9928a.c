@@ -275,7 +275,7 @@ void tms9928a_render_sprites_line (const TMS9928A_Config *config, uint16_t line)
     uint16_t sprite_attribute_table_base = (((uint16_t) tms9928a_state.regs.sprite_attr_table_base) << 7) & 0x3f80;
     uint16_t pattern_generator_base = (((uint16_t) tms9928a_state.regs.sprite_pg_base) << 11) & 0x3800;
     uint8_t sprite_size = (tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_SPRITE_SIZE) ? 16 : 8;
-    TMS9928A_Sprite *line_sprite_buffer [4];
+    TMS9928A_Sprite *line_sprite_buffer [32];
     uint8_t line_sprite_count = 0;
     TMS9928A_Pattern *pattern;
     int32_Point_2D position;
@@ -306,7 +306,7 @@ void tms9928a_render_sprites_line (const TMS9928A_Config *config, uint16_t line)
         /* If the sprite is on this line, add it to the buffer */
         if (line >= position.y && line < position.y + (sprite_size << magnify))
         {
-            if (line_sprite_count == 4)
+            if (line_sprite_count == 4 && !state.remove_sprite_limit)
             {
                 tms9928a_state.status |= TMS9928A_SPRITE_OVERFLOW;
                 /* TODO: Fifth sprite field in status byte */
