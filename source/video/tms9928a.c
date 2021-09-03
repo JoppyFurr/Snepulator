@@ -463,7 +463,7 @@ void tms9928a_render_line (const TMS9928A_Config *config, uint16_t line)
     state.render_start_y = (VIDEO_BUFFER_LINES - config->lines_active) / 2;
 
     /* Background */
-    if (!(tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_BLANK))
+    if (!(tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_BLANK) && !state.disable_blanking)
     {
         /* Display is blank */
     }
@@ -505,7 +505,7 @@ void tms9928a_render_line (const TMS9928A_Config *config, uint16_t line)
     }
 
     /* Return without rendering patterns if BLANK is enabled */
-    if (!(tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_BLANK))
+    if (!(tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_BLANK) && !state.disable_blanking)
     {
         return;
     }

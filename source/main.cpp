@@ -263,6 +263,13 @@ int config_import (void)
         state.remove_sprite_limit = uint;
     }
 
+    /* Disable blanking - Defaults to off */
+    state.disable_blanking = false;
+    if (config_uint_get ("hacks", "disable-blanking", &uint) == 0)
+    {
+        state.disable_blanking = uint;
+    }
+
     /* Video Filter - Defaults to Scanlines */
     state.video_filter = VIDEO_FILTER_SCANLINES;
     if (config_string_get ("video", "filter", &string) == 0)
@@ -929,6 +936,7 @@ void snepulator_region_set (Console_Region region)
     config_write ();
 }
 
+
 /*
  * Set whether or not to overclock.
  */
@@ -949,6 +957,7 @@ void snepulator_overclock_set (bool overclock)
     config_write ();
 }
 
+
 /*
  * Set whether or not to remove the sprite limit.
  */
@@ -959,6 +968,19 @@ void snepulator_remove_sprite_limit_set (bool remove_sprite_limit)
 
     config_write ();
 }
+
+
+/*
+ * Disable screen blanking when the blanking bit is set.
+ */
+void snepulator_disable_blanking_set (bool disable_blanking)
+{
+    state.disable_blanking = disable_blanking;
+    config_uint_set ("hacks", "disable-blanking", disable_blanking);
+
+    config_write ();
+}
+
 
 /*
  * Set the console video filter.

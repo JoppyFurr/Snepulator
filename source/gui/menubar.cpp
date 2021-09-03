@@ -172,6 +172,10 @@ void snepulator_render_menubar (void)
             {
                 snepulator_remove_sprite_limit_set (!state.remove_sprite_limit);
             }
+            if (ImGui::MenuItem ("Disable Blanking", NULL, state.disable_blanking))
+            {
+                snepulator_disable_blanking_set (!state.disable_blanking);
+            }
             ImGui::Separator ();
 
             if (ImGui::BeginMenu ("Info"))

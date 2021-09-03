@@ -83,10 +83,11 @@ typedef struct Snepulator_State_s {
 
     /* Console configuration */
     bool            format_auto;
-    Video_Format    format;                 /* 50 Hz PAL / 60 Hz NTSC */
+    Video_Format    format;                 /* 50 Hz PAL / 60 Hz NTSC. */
     Console_Region  region;
-    uint32_t        overclock;              /* Extra CPU cycles to run per line */
-    bool            remove_sprite_limit;    /* Remove the single line sprite limit */
+    uint32_t        overclock;              /* Extra CPU cycles to run per line. */
+    bool            remove_sprite_limit;    /* Remove the single line sprite limit. */
+    bool            disable_blanking;       /* Don't blank the screen when the blank bit is set. */
 
     /* Console video output */
     float_Colour video_out_data [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
@@ -132,6 +133,9 @@ void snepulator_audio_device_open (const char *device);
 
 /* If an SDL audio device is open, close it. */
 void snepulator_audio_device_close ();
+
+/* Disable screen blanking when the blanking bit is set. */
+void snepulator_disable_blanking_set (bool disable_blanking);
 
 /* Draw the logo to the output texture. */
 void snepulator_draw_logo (void);
