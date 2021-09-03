@@ -249,6 +249,13 @@ int config_import (void)
         }
     }
 
+    /* Overclock - Defaults to off */
+    state.overclock = 0;
+    if (config_uint_get ("hacks", "overclock", &uint) == 0)
+    {
+        state.overclock = uint;
+    }
+
     /* Remove Sprite Limit - Defaults to off */
     state.remove_sprite_limit = false;
     if (config_uint_get ("hacks", "remove-sprite-limit", &uint) == 0)
@@ -922,6 +929,25 @@ void snepulator_region_set (Console_Region region)
     config_write ();
 }
 
+/*
+ * Set whether or not to overclock.
+ */
+void snepulator_overclock_set (bool overclock)
+{
+    if (overclock)
+    {
+        /* A 50% overclock */
+        state.overclock = 114;
+    }
+    else
+    {
+        state.overclock = 0;
+    }
+
+    config_uint_set ("hacks", "overclock", state.overclock);
+
+    config_write ();
+}
 
 /*
  * Set whether or not to remove the sprite limit.

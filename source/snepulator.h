@@ -83,9 +83,10 @@ typedef struct Snepulator_State_s {
 
     /* Console configuration */
     bool            format_auto;
-    Video_Format    format;
+    Video_Format    format;                 /* 50 Hz PAL / 60 Hz NTSC */
     Console_Region  region;
-    bool            remove_sprite_limit;
+    uint32_t        overclock;              /* Extra CPU cycles to run per line */
+    bool            remove_sprite_limit;    /* Remove the single line sprite limit */
 
     /* Console video output */
     float_Colour video_out_data [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
@@ -137,6 +138,9 @@ void snepulator_draw_logo (void);
 
 /* Display an error message */
 void snepulator_error (const char *title, const char *message);
+
+/* Set whether or not to overclock. */
+void snepulator_overclock_set (bool overclock);
 
 /* Pause emulation and show the pause screen. */
 void snepulator_pause (void);

@@ -523,7 +523,7 @@ static void sms_run (uint32_t ms)
         assert (lines >= 0);
 
         /* 228 CPU cycles per scanline */
-        z80_run_cycles (228);
+        z80_run_cycles (228 + state.overclock);
         psg_run_cycles (228);
         sms_vdp_run_one_scanline ();
     }

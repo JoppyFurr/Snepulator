@@ -235,7 +235,7 @@ static void sg_1000_run (uint32_t ms)
         assert (lines >= 0);
 
         /* 228 CPU cycles per scanline */
-        z80_run_cycles (228);
+        z80_run_cycles (228 + state.overclock);
         psg_run_cycles (228);
         tms9928a_run_one_scanline ();
     }

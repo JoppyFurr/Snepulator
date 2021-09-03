@@ -164,6 +164,10 @@ void snepulator_render_menubar (void)
             }
             ImGui::Separator ();
 
+            if (ImGui::MenuItem ("Overclock", NULL, !!state.overclock))
+            {
+                snepulator_overclock_set (!state.overclock);
+            }
             if (ImGui::MenuItem ("Remove Sprite Limit", NULL, state.remove_sprite_limit))
             {
                 snepulator_remove_sprite_limit_set (!state.remove_sprite_limit);
