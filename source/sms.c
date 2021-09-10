@@ -475,11 +475,15 @@ static bool sms_get_nmi ()
  */
 static void sms_audio_callback (void *userdata, uint8_t *stream, int len)
 {
-    /* Assuming little-endian host */
-    if (state.running)
+    if (state.run == RUN_STATE_RUNNING)
+    {
+        /* Assuming little-endian host */
         sn76489_get_samples ((int16_t *)stream, len / 2);
+    }
     else
+    {
         memset (stream, 0, len);
+    }
 }
 
 
@@ -815,7 +819,7 @@ void sms_init (void)
     state.get_int = sms_vdp_get_interrupt;
     state.get_nmi = sms_get_nmi;
     state.sync = sms_sync;
-    state.run = sms_run;
+    state.run_callback = sms_run;
     state.state_save = sms_state_save;
     state.state_load = sms_state_load;
 
@@ -858,6 +862,5 @@ void sms_init (void)
     }
 
     /* Begin emulation */
-    state.ready = true;
-    state.running = true;
+    state.run = RUN_STATE_RUNNING;
 }

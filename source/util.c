@@ -306,6 +306,7 @@ uint32_t round_up (uint32_t n)
     return result;
 }
 
+
 /*
  * Use BLAKE3 to make a 12-byte hash for the current ROM.
  */
@@ -317,6 +318,7 @@ void snepulator_hash_rom (uint8_t *buffer, uint32_t rom_size)
     blake3_hasher_update (&hasher, buffer, rom_size);
     blake3_hasher_finalize (&hasher, state.rom_hash, HASH_LENGTH);
 }
+
 
 /*
  * Load a rom file into a buffer.

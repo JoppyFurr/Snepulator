@@ -8,6 +8,13 @@
 
 #define HASH_LENGTH 12
 
+typedef enum Run_State_e {
+    RUN_STATE_INIT,     /* No ROM has been loaded. */
+    RUN_STATE_RUNNING,  /* A ROM has been loaded and is running. */
+    RUN_STATE_PAUSED,   /* A ROM has been loaded and is paused. */
+    RUN_STATE_EXIT      /* Shut down. */
+} Run_State;
+
 typedef enum Console_e {
     CONSOLE_NONE = 0,
     CONSOLE_COLECOVISION,
@@ -44,9 +51,7 @@ typedef enum Video_3D_Mode_e {
 
 
 typedef struct Snepulator_State_s {
-    bool    ready;      /* Ready to run - A console and ROM are loaded. */
-    bool    running;    /* Emulation is actively running. */
-    bool    abort;      /* Attempt to cleanly exit. */
+    Run_State run;
 
     /* Interface */
     bool show_gui;
@@ -61,7 +66,7 @@ typedef struct Snepulator_State_s {
 
     /* Console API */
     Console console;
-    void (*run) (uint32_t ms);
+    void (*run_callback) (uint32_t ms);
     void (*audio_callback) (void *userdata, uint8_t *stream, int len);
     uint32_t (*get_clock_rate) (void);
     bool (*get_int) (void);
@@ -147,7 +152,7 @@ void snepulator_error (const char *title, const char *message);
 void snepulator_overclock_set (bool overclock);
 
 /* Pause emulation and show the pause screen. */
-void snepulator_pause (void);
+void snepulator_pause_set (bool pause);
 
 /* Set whether or not to remove the sprite limit. */
 void snepulator_remove_sprite_limit_set (bool remove_sprite_limit);

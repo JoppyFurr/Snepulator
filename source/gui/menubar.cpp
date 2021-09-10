@@ -62,7 +62,7 @@ void snepulator_render_menubar (void)
         {
             if (ImGui::MenuItem ("Open ROM...", NULL))
             {
-                state.running = false;
+                snepulator_pause_set (true);
                 open_state.title = "Open ROM...";
                 snepulator_set_open_regex (".*\\.(bin|col|gg|sg|sms)$");
                 open_state.callback = snepulator_load_rom;
@@ -73,7 +73,7 @@ void snepulator_render_menubar (void)
             {
                 if (ImGui::MenuItem ("Master System...", NULL))
                 {
-                    state.running = false;
+                    snepulator_pause_set (true);
                     open_state.title = "Open Master System BIOS...";
                     snepulator_set_open_regex (".*\\.(bin|sms)$");
                     open_state.callback = snepulator_load_sms_bios;
@@ -81,7 +81,7 @@ void snepulator_render_menubar (void)
                 }
                 if (ImGui::MenuItem ("ColecoVision...", NULL))
                 {
-                    state.running = false;
+                    snepulator_pause_set (true);
                     open_state.title = "Open ColecoVision BIOS...";
                     snepulator_set_open_regex (".*\\.(col)$");
                     open_state.callback = snepulator_load_colecovision_bios;
@@ -120,20 +120,15 @@ void snepulator_render_menubar (void)
                 snepulator_draw_logo ();
             }
 
-            if (ImGui::MenuItem ("Pause", NULL, !state.running)) {
-                if (state.ready) {
-                    if (state.running)
-                    {
-                        snepulator_pause ();
-                    }
-                    else
-                    {
-                        state.running = true;
-                    }
-                }
+            if (ImGui::MenuItem ("Pause", NULL, state.run == RUN_STATE_PAUSED))
+            {
+                snepulator_pause_set (state.run != RUN_STATE_PAUSED);
             }
             ImGui::Separator ();
-            if (ImGui::MenuItem ("Quit", NULL)) { state.abort = true; }
+            if (ImGui::MenuItem ("Quit", NULL))
+            {
+                state.run = RUN_STATE_EXIT;
+            }
             ImGui::EndMenu ();
         }
 
@@ -217,11 +212,11 @@ void snepulator_render_menubar (void)
             {
                 uint32_t start_time;
                 uint32_t end_time;
-                state.running = false;
+                snepulator_pause_set (true);
                 start_time = snepulator_get_ticks ();
-                state.run (5 * 60000); /* Simulate five minutes */
+                state.run_callback (5 * 60000); /* Simulate five minutes */
                 end_time = snepulator_get_ticks ();
-                state.running = true;
+                snepulator_pause_set (false);
 
                 fprintf (stdout, "[DEBUG] Took %d ms to emulate five minutes. (%fx speed-up)\n",
                          end_time - start_time, (5.0 * 60000.0) / (end_time - start_time));
@@ -233,7 +228,7 @@ void snepulator_render_menubar (void)
         if (ImGui::BeginMenu ("State"))
         {
             if (ImGui::MenuItem ("Quick Save", NULL)) {
-                if (state.ready && state.state_save)
+                if ((state.run == RUN_STATE_RUNNING || state.run == RUN_STATE_PAUSED) && state.state_save)
                 {
                     char *path = quicksave_path ();
                     state.state_save (path);
@@ -241,11 +236,12 @@ void snepulator_render_menubar (void)
                 }
             }
             if (ImGui::MenuItem ("Quick Load", NULL)) {
-                if (state.ready && state.state_load)
+                if ((state.run == RUN_STATE_RUNNING || state.run == RUN_STATE_PAUSED) && state.state_load)
                 {
                     char *path = quicksave_path ();
                     state.state_load (path);
                     free (path);
+                    snepulator_pause_set (false);
                 }
             }
 

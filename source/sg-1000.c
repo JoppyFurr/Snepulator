@@ -193,11 +193,15 @@ static bool sg_1000_get_nmi ()
  */
 static void sg_1000_audio_callback (void *userdata, uint8_t *stream, int len)
 {
-    /* Assuming little-endian host */
-    if (state.running)
+    if (state.run == RUN_STATE_RUNNING)
+    {
+        /* Assuming little-endian host */
         sn76489_get_samples ((int16_t *)stream, len / 2);
+    }
     else
+    {
         memset (stream, 0, len);
+    }
 }
 
 
@@ -434,7 +438,7 @@ void sg_1000_init (void)
     state.get_clock_rate = sg_1000_get_clock_rate;
     state.get_int = tms9928a_get_interrupt;
     state.get_nmi = sg_1000_get_nmi;
-    state.run = sg_1000_run;
+    state.run_callback = sg_1000_run;
     state.state_save = sg_1000_state_save;
     state.state_load = sg_1000_state_load;
 
@@ -448,6 +452,5 @@ void sg_1000_init (void)
     state.video_has_border = true;
 
     /* Begin emulation */
-    state.ready = true;
-    state.running = true;
+    state.run = RUN_STATE_RUNNING;
 }

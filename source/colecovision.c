@@ -241,11 +241,15 @@ static void colecovision_io_write (uint8_t addr, uint8_t data)
  */
 static void colecovision_audio_callback (void *userdata, uint8_t *stream, int len)
 {
-    /* Assuming little-endian host */
-    if (state.running)
+    if (state.run == RUN_STATE_RUNNING)
+    {
+        /* Assuming little-endian host */
         sn76489_get_samples ((int16_t *)stream, len / 2);
+    }
     else
+    {
         memset (stream, 0, len);
+    }
 }
 
 
@@ -467,7 +471,7 @@ void colecovision_init (void)
     state.get_clock_rate = colecovision_get_clock_rate;
     state.get_int = colecovision_get_int;
     state.get_nmi = tms9928a_get_interrupt;
-    state.run = colecovision_run;
+    state.run_callback = colecovision_run;
     state.state_save = colecovision_state_save;
     state.state_load = colecovision_state_load;
 
@@ -481,6 +485,5 @@ void colecovision_init (void)
     state.video_has_border = true;
 
     /* Begin emulation */
-    state.ready = true;
-    state.running = true;
+    state.run = RUN_STATE_RUNNING;
 }

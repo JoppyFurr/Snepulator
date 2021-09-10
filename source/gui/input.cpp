@@ -145,7 +145,7 @@ bool input_modal_consume_event (SDL_Event event)
  */
 void input_start (void)
 {
-    state.running = false;
+    snepulator_pause_set (true);
     input_combo_index = 0;
 
     /* Initially selected device is player-1's device */
@@ -391,16 +391,14 @@ void snepulator_render_input_modal (void)
         ImGui::SameLine (ImGui::GetContentRegionAvail().x + 16 - 128 * 3);
         if (ImGui::Button ("Cancel", ImVec2 (120,0))) {
 
-            /* TODO: Restore the saved configuration */
+            /* TODO: Re-load the saved configuration */
 
             remap_button = GAMEPAD_BUTTON_COUNT;
             gamepad_change_device (3, GAMEPAD_INDEX_NONE);
-            if (state.ready)
-            {
-                state.running = true;
-            }
             config_capture_events = false;
             ImGui::CloseCurrentPopup ();
+
+            snepulator_pause_set (false);
         }
         ImGui::SameLine ();
         if (ImGui::Button ("Remap", ImVec2 (120,0))) {
@@ -415,19 +413,13 @@ void snepulator_render_input_modal (void)
         }
         ImGui::SameLine ();
         if (ImGui::Button ("OK", ImVec2 (120,0))) {
-
-            if (state.ready)
-            {
-                /* TODO: Rather than going to "Running", restore to what the state was previously */
-                state.running = true;
-            }
-
             remap_button = GAMEPAD_BUTTON_COUNT;
             gamepad_change_device (3, GAMEPAD_INDEX_NONE);
             config_capture_events = false;
             ImGui::CloseCurrentPopup ();
-
             gamepad_config_export ();
+
+            snepulator_pause_set (false);
         }
 
         ImGui::EndPopup ();

@@ -209,12 +209,8 @@ void snepulator_render_open_modal (void)
         ImGui::Spacing ();
         ImGui::SameLine (ImGui::GetContentRegionAvail().x + 16 - 128 - 128);
         if (ImGui::Button ("Cancel", ImVec2 (120,0))) {
-            if (state.ready)
-            {
-                /* TODO: Preserve previous state */
-                state.running = true;
-            }
             ImGui::CloseCurrentPopup ();
+            snepulator_pause_set (false);
         }
         ImGui::SameLine ();
         if (ImGui::Button ("Open", ImVec2 (120,0))) {

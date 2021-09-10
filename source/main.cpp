@@ -65,8 +65,7 @@ void snepulator_render_input_modal (void);
  */
 void snepulator_error (const char *title, const char *message)
 {
-    state.running = false;
-    state.ready = false;
+    state.run = RUN_STATE_INIT;
     state.show_gui = true;
 
     /* All errors get printed to console */
@@ -349,7 +348,7 @@ void snepulator_audio_callback (void *userdata, uint8_t *stream, int len)
 void snepulator_reset (void)
 {
     /* Stop emulation */
-    state.running = false;
+    snepulator_pause_set (true);
 
     /* Save any battery-backed memory. */
     if (state.sync != NULL)
@@ -358,10 +357,10 @@ void snepulator_reset (void)
     }
 
     /* Mark the system as not-ready. */
-    state.ready = false;
+    state.run = RUN_STATE_INIT;
 
     /* Clear callback functions */
-    state.run = NULL;
+    state.run_callback = NULL;
     state.audio_callback = NULL;
     state.get_clock_rate = NULL;
     state.get_int = NULL;
@@ -464,40 +463,56 @@ void snepulator_system_init (void)
 
 
 /*
- * Pause emulation and show the pause screen.
+ * Pause or resume emulation.
+ *
+ * When pausing, a greyscale copy of the latest frame is stored in a buffer.
+ *
+ * Will have no effect if the state is INIT or EXIT.
  */
-void snepulator_pause (void)
+void snepulator_pause_set (bool pause)
 {
-
-    state.running = false;
-
-    /* Convert the screen to black and white */
-    for (int x = 0; x < (VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES); x++)
+    /* Pause */
+    if (pause == true && state.run == RUN_STATE_RUNNING)
     {
-        state.video_out_data [x] = to_greyscale (state.video_out_data [x]);
+        state.run = RUN_STATE_PAUSED;
+
+        /* Convert the screen to black and white */
+        for (int x = 0; x < (VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES); x++)
+        {
+            state.video_out_data [x] = to_greyscale (state.video_out_data [x]);
+        }
+
+        /* TODO: Copy the frame into a buffer */
+
+        /* TODO: Replace this with an animation */
+        /* Draw the "Pause" splash over the screen */
+        for (uint32_t y = 0; y < snepulator_paused.height; y++)
+        {
+            uint32_t x_offset = VIDEO_BUFFER_WIDTH / 2 - snepulator_paused.width / 2;
+            uint32_t y_offset = VIDEO_BUFFER_LINES / 2 - snepulator_paused.height / 2;
+
+            for (uint32_t x = 0; x < snepulator_paused.width; x++)
+            {
+                /* Treat black as transparent */
+                if (snepulator_paused.pixel_data [(x + y * snepulator_paused.width) * 3 + 0] == 0)
+                {
+                    continue;
+                }
+
+                state.video_out_data [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].r =
+                    snepulator_paused.pixel_data [(x + y * snepulator_paused.width) * 3 + 0] / 255.0;
+                state.video_out_data [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].g =
+                    snepulator_paused.pixel_data [(x + y * snepulator_paused.width) * 3 + 1] / 255.0;
+                state.video_out_data [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].b =
+                    snepulator_paused.pixel_data [(x + y * snepulator_paused.width) * 3 + 2] / 255.0;
+            }
+        }
     }
 
-    /* Draw the "Pause" splash over the screen */
-    for (uint32_t y = 0; y < snepulator_paused.height; y++)
+    /* Un-pause */
+    else if (pause == false && state.run == RUN_STATE_PAUSED)
     {
-        uint32_t x_offset = VIDEO_BUFFER_WIDTH / 2 - snepulator_paused.width / 2;
-        uint32_t y_offset = VIDEO_BUFFER_LINES / 2 - snepulator_paused.height / 2;
-
-        for (uint32_t x = 0; x < snepulator_paused.width; x++)
-        {
-            /* Treat black as transparent */
-            if (snepulator_paused.pixel_data [(x + y * snepulator_paused.width) * 3 + 0] == 0)
-            {
-                continue;
-            }
-
-            state.video_out_data [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].r =
-                snepulator_paused.pixel_data [(x + y * snepulator_paused.width) * 3 + 0] / 255.0;
-            state.video_out_data [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].g =
-                snepulator_paused.pixel_data [(x + y * snepulator_paused.width) * 3 + 1] / 255.0;
-            state.video_out_data [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].b =
-                snepulator_paused.pixel_data [(x + y * snepulator_paused.width) * 3 + 2] / 255.0;
-        }
+        state.run = RUN_STATE_RUNNING;
     }
 }
 
@@ -512,12 +527,13 @@ void *main_emulation_loop (void *data)
     static uint32_t ticks_previous = snepulator_get_ticks ();
     uint32_t ticks_current;
 
-    while (!state.abort)
+    while (state.run != RUN_STATE_EXIT)
     {
         ticks_current = snepulator_get_ticks ();
-        if (state.running)
+
+        if (state.run == RUN_STATE_RUNNING)
         {
-            state.run (ticks_current - ticks_previous);
+            state.run_callback (ticks_current - ticks_previous);
         }
 
         ticks_previous = ticks_current;
@@ -683,7 +699,7 @@ int main_gui_loop (void)
     {
         char info_log [512] = { '\0' };
         glGetShaderInfoLog (vertex_shader, 512, NULL, info_log);
-        snepulator_error ("GLSL", info_log);
+        snepulator_error ("Vertex Shader", info_log);
     }
 
     /***********************
@@ -699,7 +715,7 @@ int main_gui_loop (void)
     {
         char info_log [512] = { '\0' };
         glGetShaderInfoLog (fragment_shader, 512, NULL, info_log);
-        snepulator_error ("GLSL", info_log);
+        snepulator_error ("Fragment Shader:", info_log);
     }
 
     /**********************
@@ -725,7 +741,7 @@ int main_gui_loop (void)
     snepulator_draw_logo ();
 
     /* Main loop */
-    while (!state.abort)
+    while (state.run != RUN_STATE_EXIT)
     {
         /* Process user-input */
         SDL_GetWindowSize (window, &state.host_width, &state.host_height);
@@ -759,7 +775,7 @@ int main_gui_loop (void)
 
             if (event.type == SDL_QUIT)
             {
-                state.abort = true;
+                state.run = RUN_STATE_EXIT;
             }
 
             /* Allow ROM files to be dropped onto the Snepulator window */
@@ -806,7 +822,7 @@ int main_gui_loop (void)
                 /* If a player's joystick has been disconnected, pause the game */
                 if (event.type == SDL_JOYDEVICEREMOVED && gamepad_joystick_user_count (event.jdevice.which) != 0)
                 {
-                    snepulator_pause ();
+                    snepulator_pause_set (true);
                 }
 
                 gamepad_list_update ();
@@ -862,7 +878,7 @@ int main_gui_loop (void)
         /* Hide the GUI and cursor if the mouse is not being moved. */
         if (snepulator_get_ticks() > (state.mouse_time + 3000))
         {
-            if (state.running)
+            if (state.run == RUN_STATE_RUNNING)
             {
                 state.show_gui = false;
                 SDL_ShowCursor (SDL_DISABLE);
@@ -1034,7 +1050,7 @@ void snepulator_video_format_set (Video_Format format)
         state.format_auto = true;
         config_string_set ("sms", "format", "Auto");
 
-        if (state.ready == true)
+        if (state.run == RUN_STATE_RUNNING || state.run == RUN_STATE_PAUSED)
         {
             if (state.rom_hints & SMS_HINT_PAL_ONLY)
             {
