@@ -16,8 +16,6 @@ R"(
 
 #define BLACK                   vec4 (0.0, 0.0, 0.0, 1.0)
 
-in vec4 gl_FragCoord;
-
 out vec4 pixel;
 
 uniform sampler2D video_out;
