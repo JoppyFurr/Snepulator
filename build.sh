@@ -38,6 +38,8 @@ eval $CC $CFLAGS -c source/sms.c             -o work/sms.o
 eval $CC $CFLAGS -c source/snepulator.c      -o work/snepulator.o
 eval $CC $CFLAGS -c source/util.c            -o work/util.o
 
+# TODO: Don't recompile libraries every time...
+
 # C Libraries
 echo "Compiling libraries..."
 eval $CC $CFLAGS -c libraries/BLAKE3/blake3.c -o work/blake3.o
@@ -63,6 +65,7 @@ echo "Compiling GUI and linking..."
 eval $CXX $CXXFLAGS \
     work/*.o \
     source/main.cpp \
+    source/shader.cpp \
     source/gui/input.cpp \
     source/gui/menubar.cpp \
     source/gui/open.cpp \
