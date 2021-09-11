@@ -27,6 +27,125 @@ extern Snepulator_State state;
 
 
 /*
+ * Import settings from configuration from file.
+ */
+int snepulator_config_import (void)
+{
+    char *string = NULL;
+    uint32_t uint = 0;
+
+    config_read ();
+
+    /* SMS Region - Defaults to World */
+    state.region = REGION_WORLD;
+    if (config_string_get ("sms", "region", &string) == 0)
+    {
+        if (strcmp (string, "Japan") == 0)
+        {
+            state.region = REGION_JAPAN;
+        }
+    }
+
+    /* Video Format - Defaults to Auto */
+    state.format = VIDEO_FORMAT_NTSC;
+    state.format_auto = true;
+    if (config_string_get ("sms", "format", &string) == 0)
+    {
+        if (strcmp (string, "PAL") == 0)
+        {
+            state.format = VIDEO_FORMAT_PAL;
+            state.format_auto = false;
+        }
+        else if (strcmp (string, "NTSC") == 0)
+        {
+            state.format = VIDEO_FORMAT_NTSC;
+            state.format_auto = false;
+        }
+    }
+
+    /* Overclock - Defaults to off */
+    state.overclock = 0;
+    if (config_uint_get ("hacks", "overclock", &uint) == 0)
+    {
+        state.overclock = uint;
+    }
+
+    /* Remove Sprite Limit - Defaults to off */
+    state.remove_sprite_limit = false;
+    if (config_uint_get ("hacks", "remove-sprite-limit", &uint) == 0)
+    {
+        state.remove_sprite_limit = uint;
+    }
+
+    /* Disable blanking - Defaults to off */
+    state.disable_blanking = false;
+    if (config_uint_get ("hacks", "disable-blanking", &uint) == 0)
+    {
+        state.disable_blanking = uint;
+    }
+
+    /* Video Filter - Defaults to Scanlines */
+    state.video_filter = VIDEO_FILTER_SCANLINES;
+    if (config_string_get ("video", "filter", &string) == 0)
+    {
+        if (strcmp (string, "Dot Matrix") == 0)
+        {
+            state.video_filter = VIDEO_FILTER_DOT_MATRIX;
+        }
+        else if (strcmp (string, "Linear") == 0)
+        {
+            state.video_filter = VIDEO_FILTER_LINEAR;
+        }
+        else if (strcmp (string, "Nearest") == 0)
+        {
+            state.video_filter = VIDEO_FILTER_NEAREST;
+        }
+    }
+
+    /* 3D Video Mode - Defaults to Red-Cyan */
+    state.video_3d_mode = VIDEO_3D_RED_CYAN;
+    if (config_string_get ("video", "3d-mode", &string) == 0)
+    {
+        if (strcmp (string, "Red-Green") == 0)
+        {
+            state.video_3d_mode = VIDEO_3D_RED_GREEN;
+        }
+        else if (strcmp (string, "Magenta-Green") == 0)
+        {
+            state.video_3d_mode = VIDEO_3D_MAGENTA_GREEN;
+        }
+        else if (strcmp (string, "Left-Only") == 0)
+        {
+            state.video_3d_mode = VIDEO_3D_LEFT_ONLY;
+        }
+        else if (strcmp (string, "Right-Only") == 0)
+        {
+            state.video_3d_mode = VIDEO_3D_RIGHT_ONLY;
+        }
+    }
+
+    /* 3D Video Colour Saturation - Defaults to 25% */
+    state.video_3d_saturation = 0.25;
+    if (config_uint_get ("video", "3d-saturation", &uint) == 0)
+    {
+        state.video_3d_saturation = uint / 100.0;
+    }
+
+    /* BIOS Paths */
+    if (config_string_get ("sms", "bios", &string) == 0)
+    {
+        state.sms_bios_filename = strdup (string);
+    }
+    if (config_string_get ("colecovision", "bios", &string) == 0)
+    {
+        state.colecovision_bios_filename = strdup (string);
+    }
+
+    return 0;
+}
+
+
+/*
  * Disable screen blanking when the blanking bit is set.
  */
 void snepulator_disable_blanking_set (bool disable_blanking)

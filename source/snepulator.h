@@ -134,6 +134,9 @@ typedef struct Snepulator_State_s {
 } Snepulator_State;
 
 
+/* Import settings from configuration from file. */
+int snepulator_config_import (void);
+
 /* Disable screen blanking when the blanking bit is set. */
 void snepulator_disable_blanking_set (bool disable_blanking);
 
