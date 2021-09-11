@@ -47,6 +47,7 @@ extern bool config_capture_events; /* TODO: Move into state */
 void snepulator_load_rom (char *path);
 void snepulator_load_sms_bios (char *path);
 void snepulator_load_colecovision_bios (char *path);
+void snepulator_audio_device_open (const char *device);
 
 /*
  * Render the menubar.

@@ -35,6 +35,7 @@ eval $CC $CFLAGS -c source/gamepad.c         -o work/gamepad.o
 eval $CC $CFLAGS -c source/sg-1000.c         -o work/sg-1000.o
 eval $CC $CFLAGS -c source/save_state.c      -o work/save_state.o
 eval $CC $CFLAGS -c source/sms.c             -o work/sms.o
+eval $CC $CFLAGS -c source/snepulator.c      -o work/snepulator.o
 eval $CC $CFLAGS -c source/util.c            -o work/util.o
 
 # C Libraries

@@ -1,0 +1,408 @@
+/*
+ * Snepulator
+ *
+ * Main OS-independent code
+ */
+
+#include <ctype.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "util.h"
+#include "snepulator.h"
+#include "config.h"
+#include "database/sms_db.h"
+
+#include "sg-1000.h"
+#include "sms.h"
+#include "colecovision.h"
+
+/* Images */
+#include "../images/snepulator_logo.c"
+#include "../images/snepulator_paused.c"
+
+extern Snepulator_State state;
+
+
+/*
+ * Disable screen blanking when the blanking bit is set.
+ */
+void snepulator_disable_blanking_set (bool disable_blanking)
+{
+    state.disable_blanking = disable_blanking;
+    config_uint_set ("hacks", "disable-blanking", disable_blanking);
+
+    config_write ();
+}
+
+
+/*
+ * Draw the logo to the output texture.
+ */
+void snepulator_draw_logo (void)
+{
+    memset (state.video_out_data, 0, sizeof (state.video_out_data));
+
+    for (uint32_t y = 0; y < snepulator_logo.height; y++)
+    {
+        uint32_t x_offset = VIDEO_BUFFER_WIDTH / 2 - snepulator_logo.width / 2;
+        uint32_t y_offset = VIDEO_BUFFER_LINES / 2 - snepulator_logo.height / 2;
+
+        for (uint32_t x = 0; x < snepulator_logo.width; x++)
+        {
+            state.video_out_data [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].r =
+                snepulator_logo.pixel_data [(x + y * snepulator_logo.width) * 3 + 0] / 255.0;
+            state.video_out_data [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].g =
+                snepulator_logo.pixel_data [(x + y * snepulator_logo.width) * 3 + 1] / 255.0;
+            state.video_out_data [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].b =
+                snepulator_logo.pixel_data [(x + y * snepulator_logo.width) * 3 + 2] / 255.0;
+        }
+    }
+}
+
+
+/*
+ * Set whether or not to overclock.
+ */
+void snepulator_overclock_set (bool overclock)
+{
+    if (overclock)
+    {
+        /* A 50% overclock */
+        state.overclock = 114;
+    }
+    else
+    {
+        state.overclock = 0;
+    }
+
+    config_uint_set ("hacks", "overclock", state.overclock);
+
+    config_write ();
+}
+
+
+/*
+ * Pause or resume emulation.
+ *
+ * Will have no effect if the state is INIT or EXIT.
+ */
+void snepulator_pause_set (bool pause)
+{
+    /* Pause */
+    if (pause == true && state.run == RUN_STATE_RUNNING)
+    {
+        state.run = RUN_STATE_PAUSED;
+
+        /* Convert the screen to black and white */
+        for (int x = 0; x < (VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES); x++)
+        {
+            state.video_out_data [x] = to_greyscale (state.video_out_data [x]);
+        }
+
+        /* TODO: Copy the frame into a buffer */
+
+        /* TODO: Replace this with an animation */
+        /* Draw the "Pause" splash over the screen */
+        for (uint32_t y = 0; y < snepulator_paused.height; y++)
+        {
+            uint32_t x_offset = VIDEO_BUFFER_WIDTH / 2 - snepulator_paused.width / 2;
+            uint32_t y_offset = VIDEO_BUFFER_LINES / 2 - snepulator_paused.height / 2;
+
+            for (uint32_t x = 0; x < snepulator_paused.width; x++)
+            {
+                /* Treat black as transparent */
+                if (snepulator_paused.pixel_data [(x + y * snepulator_paused.width) * 3 + 0] == 0)
+                {
+                    continue;
+                }
+
+                state.video_out_data [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].r =
+                    snepulator_paused.pixel_data [(x + y * snepulator_paused.width) * 3 + 0] / 255.0;
+                state.video_out_data [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].g =
+                    snepulator_paused.pixel_data [(x + y * snepulator_paused.width) * 3 + 1] / 255.0;
+                state.video_out_data [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].b =
+                    snepulator_paused.pixel_data [(x + y * snepulator_paused.width) * 3 + 2] / 255.0;
+            }
+        }
+    }
+
+    /* Un-pause */
+    else if (pause == false && state.run == RUN_STATE_PAUSED)
+    {
+        state.run = RUN_STATE_RUNNING;
+    }
+}
+
+
+/*
+ * Set the console region.
+ */
+void snepulator_region_set (Console_Region region)
+{
+    if (region == REGION_WORLD)
+    {
+        state.region = REGION_WORLD;
+        config_string_set ("sms", "region", "World");
+    }
+    else if (region == REGION_JAPAN)
+    {
+        state.region = REGION_JAPAN;
+        config_string_set ("sms", "region", "Japan");
+    }
+
+    config_write ();
+}
+
+
+/*
+ * Set whether or not to remove the sprite limit.
+ */
+void snepulator_remove_sprite_limit_set (bool remove_sprite_limit)
+{
+    state.remove_sprite_limit = remove_sprite_limit;
+    config_uint_set ("hacks", "remove-sprite-limit", remove_sprite_limit);
+
+    config_write ();
+}
+
+
+/*
+ * Clear the state of the currently running system.
+ */
+void snepulator_reset (void)
+{
+    /* Stop emulation */
+    snepulator_pause_set (true);
+
+    /* Save any battery-backed memory. */
+    if (state.sync != NULL)
+    {
+        state.sync ();
+    }
+
+    /* Mark the system as not-ready. */
+    state.run = RUN_STATE_INIT;
+
+    /* Clear callback functions */
+    state.run_callback = NULL;
+    state.audio_callback = NULL;
+    state.get_clock_rate = NULL;
+    state.get_int = NULL;
+    state.get_nmi = NULL;
+    state.sync = NULL;
+    state.state_save = NULL;
+    state.state_load = NULL;
+
+    /* Clear additional video parameters */
+    state.video_has_border = false;
+    state.video_blank_left = 0;
+
+    /* Clear hash and hints */
+    memset (state.rom_hash, 0, sizeof (state.rom_hash));
+    state.rom_hints = 0x00;
+
+    /* Free memory */
+    if (state.ram != NULL)
+    {
+        free (state.ram);
+        state.ram = NULL;
+    }
+    if (state.sram != NULL)
+    {
+        free (state.sram);
+        state.sram = NULL;
+    }
+    if (state.vram != NULL)
+    {
+        free (state.vram);
+        state.vram = NULL;
+    }
+    if (state.bios != NULL)
+    {
+        free (state.bios);
+        state.bios = NULL;
+        state.bios_size = 0;
+    }
+    if (state.rom != NULL)
+    {
+        free (state.rom);
+        state.rom = NULL;
+        state.rom_size = 0;
+        state.rom_mask = 0;
+    }
+
+    /* Auto format default to NTSC */
+    if (state.format_auto)
+    {
+        state.format = VIDEO_FORMAT_NTSC;
+    }
+}
+
+
+/*
+ * Call the appropriate initialisation for the chosen ROM
+ */
+void snepulator_system_init (void)
+{
+    char extension[16] = { '\0' };
+    char *extension_ptr = NULL;
+
+    snepulator_reset ();
+
+    if (state.cart_filename != NULL)
+    {
+        extension_ptr = strrchr (state.cart_filename, '.');
+
+        if (extension_ptr != NULL)
+        {
+            for (int i = 0; i < 15 && extension_ptr[i] != '\0'; i++)
+            {
+                extension [i] = tolower (extension_ptr [i]);
+            }
+        }
+    }
+
+    if (strcmp (extension, ".col") == 0)
+    {
+        state.console = CONSOLE_COLECOVISION;
+        colecovision_init ();
+    }
+    else if (strcmp (extension, ".gg") == 0)
+    {
+        state.console = CONSOLE_GAME_GEAR;
+        sms_init ();
+    }
+    else if (strcmp (extension, ".sg") == 0)
+    {
+        state.console = CONSOLE_SG_1000;
+        sg_1000_init ();
+    }
+    else
+    {
+        /* Default to Master System */
+        state.console = CONSOLE_MASTER_SYSTEM;
+        sms_init ();
+    }
+}
+
+
+/*
+ * Set the video 3D mode.
+ */
+void snepulator_video_3d_mode_set (Video_3D_Mode mode)
+{
+    if (mode == VIDEO_3D_RED_CYAN)
+    {
+        state.video_3d_mode = VIDEO_3D_RED_CYAN;
+        config_string_set ("video", "3d-mode", "Red-Cyan");
+    }
+    else if (mode == VIDEO_3D_RED_GREEN)
+    {
+        state.video_3d_mode = VIDEO_3D_RED_GREEN;
+        config_string_set ("video", "3d-mode", "Red-Green");
+    }
+    else if (mode == VIDEO_3D_MAGENTA_GREEN)
+    {
+        state.video_3d_mode = VIDEO_3D_MAGENTA_GREEN;
+        config_string_set ("video", "3d-mode", "Magenta-Green");
+    }
+    else if (mode == VIDEO_3D_LEFT_ONLY)
+    {
+        state.video_3d_mode = VIDEO_3D_LEFT_ONLY;
+        config_string_set ("video", "3d-mode", "Left-Only");
+    }
+    else if (mode == VIDEO_3D_RIGHT_ONLY)
+    {
+        state.video_3d_mode = VIDEO_3D_RIGHT_ONLY;
+        config_string_set ("video", "3d-mode", "Right-Only");
+    }
+
+    config_write ();
+}
+
+
+/*
+ * Set the video 3D colour saturation.
+ */
+void snepulator_video_3d_saturation_set (double saturation)
+{
+    if (saturation >= 0.0 && saturation <= 1.0)
+    {
+        state.video_3d_saturation = saturation;
+        config_uint_set ("video", "3d-saturation", saturation * 100);
+    }
+
+    config_write ();
+}
+
+
+/*
+ * Set the console video filter.
+ */
+void snepulator_video_filter_set (Video_Filter filter)
+{
+    if (filter == VIDEO_FILTER_NEAREST)
+    {
+        state.video_filter = VIDEO_FILTER_NEAREST;
+        config_string_set ("video", "filter", "Nearest");
+    }
+    else if (filter == VIDEO_FILTER_LINEAR)
+    {
+        state.video_filter = VIDEO_FILTER_LINEAR;
+        config_string_set ("video", "filter", "Linear");
+    }
+    else if (filter == VIDEO_FILTER_SCANLINES)
+    {
+        state.video_filter = VIDEO_FILTER_SCANLINES;
+        config_string_set ("video", "filter", "Scanlines");
+    }
+    else if (filter == VIDEO_FILTER_DOT_MATRIX)
+    {
+        state.video_filter = VIDEO_FILTER_DOT_MATRIX;
+        config_string_set ("video", "filter", "Dot Matrix");
+    }
+
+    config_write ();
+}
+
+
+/*
+ * Set the video format.
+ */
+void snepulator_video_format_set (Video_Format format)
+{
+    if (format == VIDEO_FORMAT_NTSC)
+    {
+        state.format_auto = false;
+        state.format = VIDEO_FORMAT_NTSC;
+        config_string_set ("sms", "format", "NTSC");
+    }
+    else if (format == VIDEO_FORMAT_PAL)
+    {
+        state.format_auto = false;
+        state.format = VIDEO_FORMAT_PAL;
+        config_string_set ("sms", "format", "PAL");
+    }
+    else if (format == VIDEO_FORMAT_AUTO)
+    {
+        state.format_auto = true;
+        config_string_set ("sms", "format", "Auto");
+
+        if (state.run == RUN_STATE_RUNNING || state.run == RUN_STATE_PAUSED)
+        {
+            if (state.rom_hints & SMS_HINT_PAL_ONLY)
+            {
+                state.format = VIDEO_FORMAT_PAL;
+            }
+            else
+            {
+                state.format = VIDEO_FORMAT_NTSC;
+            }
+        }
+    }
+
+    config_write ();
+}

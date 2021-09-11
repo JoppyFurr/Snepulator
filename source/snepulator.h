@@ -133,11 +133,6 @@ typedef struct Snepulator_State_s {
 
 } Snepulator_State;
 
-/* Open an SDL audio device. */
-void snepulator_audio_device_open (const char *device);
-
-/* If an SDL audio device is open, close it. */
-void snepulator_audio_device_close ();
 
 /* Disable screen blanking when the blanking bit is set. */
 void snepulator_disable_blanking_set (bool disable_blanking);
@@ -145,14 +140,14 @@ void snepulator_disable_blanking_set (bool disable_blanking);
 /* Draw the logo to the output texture. */
 void snepulator_draw_logo (void);
 
-/* Display an error message */
-void snepulator_error (const char *title, const char *message);
-
 /* Set whether or not to overclock. */
 void snepulator_overclock_set (bool overclock);
 
-/* Pause emulation and show the pause screen. */
+/* Pause or resume emulation. */
 void snepulator_pause_set (bool pause);
+
+/* Set the console region. */
+void snepulator_region_set (Console_Region region);
 
 /* Set whether or not to remove the sprite limit. */
 void snepulator_remove_sprite_limit_set (bool remove_sprite_limit);
@@ -160,14 +155,8 @@ void snepulator_remove_sprite_limit_set (bool remove_sprite_limit);
 /* Clean up after the previously running system. */
 void snepulator_reset (void);
 
-/* Set the console region. */
-void snepulator_region_set (Console_Region region);
-
-/* Set the console video filter. */
-void snepulator_video_filter_set (Video_Filter filter);
-
-/* Set the console video format. */
-void snepulator_video_format_set (Video_Format format);
+/* Call the appropriate initialisation for the chosen ROM. */
+void snepulator_system_init (void);
 
 /* Set the video 3D mode. */
 void snepulator_video_3d_mode_set (Video_3D_Mode mode);
@@ -175,5 +164,22 @@ void snepulator_video_3d_mode_set (Video_3D_Mode mode);
 /* Set the video 3D colour saturation. */
 void snepulator_video_3d_saturation_set (double saturation);
 
-/* Call the appropriate initialisation for the chosen ROM. */
-void snepulator_system_init (void);
+/* Set the console video filter. */
+void snepulator_video_filter_set (Video_Filter filter);
+
+/* Set the console video format. */
+void snepulator_video_format_set (Video_Format format);
+
+/***************************
+ *  Implemented in main.c  *
+ ***************************/
+
+/* Open an SDL audio device. */
+void snepulator_audio_device_open (const char *device);
+
+/* Display an error message */
+void snepulator_error (const char *title, const char *message);
+
+
+
+
