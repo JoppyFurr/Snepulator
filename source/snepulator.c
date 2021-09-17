@@ -27,6 +27,54 @@ extern Snepulator_State state;
 
 
 /*
+ * Set and run a console BIOS.
+ *
+ * The console is detected by file extension.
+ */
+void snepulator_bios_set (char *path)
+{
+    snepulator_reset ();
+
+    if (state.cart_filename != NULL)
+    {
+        free (state.cart_filename);
+        state.cart_filename = NULL;
+    }
+
+    snepulator_console_set_from_path (path);
+
+    switch (state.console)
+    {
+        case CONSOLE_COLECOVISION:
+            if (state.colecovision_bios_filename != NULL)
+            {
+                free (state.colecovision_bios_filename);
+            }
+            break;
+            /* Store and use the BIOS */
+            config_string_set ("colecovision", "bios", path);
+            config_write ();
+
+            state.colecovision_bios_filename = strdup (path);
+            colecovision_init ();
+        case CONSOLE_MASTER_SYSTEM:
+        default:
+            if (state.sms_bios_filename != NULL)
+            {
+                free (state.sms_bios_filename);
+            }
+            /* Store and use the BIOS */
+            config_string_set ("sms", "bios", path);
+            config_write ();
+
+            state.sms_bios_filename = strdup (path);
+            sms_init ();
+            break;
+    }
+}
+
+
+/*
  * Import settings from configuration from file.
  */
 int snepulator_config_import (void)
@@ -142,6 +190,47 @@ int snepulator_config_import (void)
     }
 
     return 0;
+}
+
+
+/*
+ * Set state.console using the file extension.
+ */
+void snepulator_console_set_from_path (const char *path)
+{
+    char extension[16] = { '\0' };
+    char *extension_ptr = NULL;
+
+    if (path != NULL)
+    {
+        extension_ptr = strrchr (path, '.');
+
+        if (extension_ptr != NULL)
+        {
+            for (int i = 0; i < 15 && extension_ptr[i] != '\0'; i++)
+            {
+                extension [i] = tolower (extension_ptr [i]);
+            }
+        }
+    }
+
+    if (strcmp (extension, ".col") == 0)
+    {
+        state.console = CONSOLE_COLECOVISION;
+    }
+    else if (strcmp (extension, ".gg") == 0)
+    {
+        state.console = CONSOLE_GAME_GEAR;
+    }
+    else if (strcmp (extension, ".sg") == 0)
+    {
+        state.console = CONSOLE_SG_1000;
+    }
+    else
+    {
+        /* Default to Master System */
+        state.console = CONSOLE_MASTER_SYSTEM;
+    }
 }
 
 
@@ -362,48 +451,46 @@ void snepulator_reset (void)
 
 
 /*
+ * Set the currently running ROM and initialise the system.
+ */
+void snepulator_rom_set (char *path)
+{
+    if (state.cart_filename != NULL)
+    {
+        free (state.cart_filename);
+    }
+
+    state.cart_filename = strdup (path);
+
+    snepulator_system_init ();
+}
+
+
+/*
  * Call the appropriate initialisation for the chosen ROM
  */
 void snepulator_system_init (void)
 {
-    char extension[16] = { '\0' };
-    char *extension_ptr = NULL;
-
     snepulator_reset ();
 
-    if (state.cart_filename != NULL)
-    {
-        extension_ptr = strrchr (state.cart_filename, '.');
+    snepulator_console_set_from_path (state.cart_filename);
 
-        if (extension_ptr != NULL)
-        {
-            for (int i = 0; i < 15 && extension_ptr[i] != '\0'; i++)
-            {
-                extension [i] = tolower (extension_ptr [i]);
-            }
-        }
-    }
+    switch (state.console)
+    {
+        case CONSOLE_COLECOVISION:
+            colecovision_init ();
+            break;
 
-    if (strcmp (extension, ".col") == 0)
-    {
-        state.console = CONSOLE_COLECOVISION;
-        colecovision_init ();
-    }
-    else if (strcmp (extension, ".gg") == 0)
-    {
-        state.console = CONSOLE_GAME_GEAR;
-        sms_init ();
-    }
-    else if (strcmp (extension, ".sg") == 0)
-    {
-        state.console = CONSOLE_SG_1000;
-        sg_1000_init ();
-    }
-    else
-    {
-        /* Default to Master System */
-        state.console = CONSOLE_MASTER_SYSTEM;
-        sms_init ();
+        case CONSOLE_SG_1000:
+            sg_1000_init ();
+            break;
+
+        case CONSOLE_MASTER_SYSTEM:
+        case CONSOLE_GAME_GEAR:
+        default:
+            /* Default to Master System */
+            sms_init ();
+            break;
     }
 }
 

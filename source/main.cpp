@@ -105,78 +105,6 @@ void snepulator_render_error ()
 
 
 /*
- * Callback for "Load ROM..."
- */
-void snepulator_load_rom (char *path)
-{
-    if (state.cart_filename != NULL)
-    {
-        free (state.cart_filename);
-    }
-
-    state.cart_filename = strdup (path);
-
-    snepulator_system_init ();
-}
-
-
-/*
- * Callback for "Load Master System BIOS..."
- * Removes the cartridge and runs a BIOS.
- */
-void snepulator_load_sms_bios (char *path)
-{
-    snepulator_reset ();
-
-    if (state.cart_filename != NULL)
-    {
-        free (state.cart_filename);
-        state.cart_filename = NULL;
-    }
-
-    if (state.sms_bios_filename != NULL)
-    {
-        free (state.sms_bios_filename);
-    }
-
-    /* Store and use the BIOS */
-    config_string_set ("sms", "bios", path);
-    config_write ();
-
-    state.sms_bios_filename = strdup (path);
-    sms_init ();
-}
-
-
-/*
- * Callback for "Load ColecoVision BIOS..."
- * Removes the cartridge and runs a BIOS.
- */
-void snepulator_load_colecovision_bios (char *path)
-{
-    snepulator_reset ();
-
-    if (state.cart_filename != NULL)
-    {
-        free (state.cart_filename);
-        state.cart_filename = NULL;
-    }
-
-    if (state.colecovision_bios_filename != NULL)
-    {
-        free (state.colecovision_bios_filename);
-    }
-
-    /* Store and use the BIOS */
-    config_string_set ("colecovision", "bios", path);
-    config_write ();
-
-    state.colecovision_bios_filename = strdup (path);
-    colecovision_init ();
-}
-
-
-/*
  * Audio callback wrapper.
  */
 void snepulator_audio_callback (void *userdata, uint8_t *stream, int len)
@@ -293,7 +221,7 @@ int main_gui_loop (void)
             /* Allow ROM files to be dropped onto the Snepulator window */
             if (event.type == SDL_DROPFILE && event.drop.file != NULL)
             {
-                snepulator_load_rom (event.drop.file);
+                snepulator_rom_set (event.drop.file);
                 SDL_free (event.drop.file);
             }
 

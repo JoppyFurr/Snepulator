@@ -44,9 +44,6 @@ extern Snepulator_State state;
 extern File_Open_State open_state;
 extern bool config_capture_events; /* TODO: Move into state */
 
-void snepulator_load_rom (char *path);
-void snepulator_load_sms_bios (char *path);
-void snepulator_load_colecovision_bios (char *path);
 void snepulator_audio_device_open (const char *device);
 
 /*
@@ -66,7 +63,7 @@ void snepulator_render_menubar (void)
                 snepulator_pause_set (true);
                 open_state.title = "Open ROM...";
                 snepulator_set_open_regex (".*\\.(bin|col|gg|sg|sms)$");
-                open_state.callback = snepulator_load_rom;
+                open_state.callback = snepulator_rom_set;
                 open_modal = true;
             }
 
@@ -77,7 +74,7 @@ void snepulator_render_menubar (void)
                     snepulator_pause_set (true);
                     open_state.title = "Open Master System BIOS...";
                     snepulator_set_open_regex (".*\\.(bin|sms)$");
-                    open_state.callback = snepulator_load_sms_bios;
+                    open_state.callback = snepulator_bios_set;
                     open_modal = true;
                 }
                 if (ImGui::MenuItem ("ColecoVision...", NULL))
@@ -85,7 +82,7 @@ void snepulator_render_menubar (void)
                     snepulator_pause_set (true);
                     open_state.title = "Open ColecoVision BIOS...";
                     snepulator_set_open_regex (".*\\.(col)$");
-                    open_state.callback = snepulator_load_colecovision_bios;
+                    open_state.callback = snepulator_bios_set;
                     open_modal = true;
                 }
                 if (ImGui::BeginMenu ("Clear"))

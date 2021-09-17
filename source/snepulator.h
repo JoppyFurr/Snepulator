@@ -134,8 +134,14 @@ typedef struct Snepulator_State_s {
 } Snepulator_State;
 
 
+/* Set and run a console BIOS. */
+void snepulator_bios_set (char *path);
+
 /* Import settings from configuration from file. */
 int snepulator_config_import (void);
+
+/* Set state.console using the file extension. */
+void snepulator_console_set_from_path (const char *path);
 
 /* Disable screen blanking when the blanking bit is set. */
 void snepulator_disable_blanking_set (bool disable_blanking);
@@ -157,6 +163,9 @@ void snepulator_remove_sprite_limit_set (bool remove_sprite_limit);
 
 /* Clean up after the previously running system. */
 void snepulator_reset (void);
+
+/* Set the currently running ROM and initialise the system. */
+void snepulator_rom_set (char *path);
 
 /* Call the appropriate initialisation for the chosen ROM. */
 void snepulator_system_init (void);
