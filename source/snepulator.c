@@ -31,7 +31,7 @@ extern Snepulator_State state;
  *
  * The console is detected by file extension.
  */
-void snepulator_bios_set (char *path)
+void snepulator_bios_set (const char *path)
 {
     snepulator_reset ();
 
@@ -453,7 +453,7 @@ void snepulator_reset (void)
 /*
  * Set the currently running ROM and initialise the system.
  */
-void snepulator_rom_set (char *path)
+void snepulator_rom_set (const char *path)
 {
     if (state.cart_filename != NULL)
     {

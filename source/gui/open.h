@@ -6,7 +6,7 @@ typedef struct File_Open_State_s {
     const char *title;
     const char *regex;
     bool path_cached;
-    void (*callback) (char *path);
+    void (*callback) (const char *path);
 } File_Open_State;
 
 /* Change the regex used to filter files to open. */

@@ -135,7 +135,7 @@ typedef struct Snepulator_State_s {
 
 
 /* Set and run a console BIOS. */
-void snepulator_bios_set (char *path);
+void snepulator_bios_set (const char *path);
 
 /* Import settings from configuration from file. */
 int snepulator_config_import (void);
@@ -165,7 +165,7 @@ void snepulator_remove_sprite_limit_set (bool remove_sprite_limit);
 void snepulator_reset (void);
 
 /* Set the currently running ROM and initialise the system. */
-void snepulator_rom_set (char *path);
+void snepulator_rom_set (const char *path);
 
 /* Call the appropriate initialisation for the chosen ROM. */
 void snepulator_system_init (void);
