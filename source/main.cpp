@@ -278,7 +278,6 @@ int main_gui_loop (void)
             state.video_scale = 1;
         }
 
-        /* TODO: Remove state.video_out_texture_width/height */
         switch (state.video_filter)
         {
             case VIDEO_FILTER_NEAREST:
