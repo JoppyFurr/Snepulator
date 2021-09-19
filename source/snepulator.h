@@ -108,6 +108,7 @@ typedef struct Snepulator_State_s {
     int16_t     phaser_y;
 
     /* Host video output */
+    float_Colour video_pause_data [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
     int          host_width;
     int          host_height;
     Video_Filter video_filter;
@@ -148,6 +149,9 @@ void snepulator_draw_logo (void);
 
 /* Set whether or not to overclock. */
 void snepulator_overclock_set (bool overclock);
+
+/* Animate the pause screen. */
+void snepulator_pause_animate (void);
 
 /* Pause or resume emulation. */
 void snepulator_pause_set (bool pause);

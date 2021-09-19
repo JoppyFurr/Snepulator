@@ -5,6 +5,7 @@
  */
 
 #include <ctype.h>
+#include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -293,6 +294,51 @@ void snepulator_overclock_set (bool overclock)
 
 
 /*
+ * Animate the pause screen.
+ */
+void snepulator_pause_animate (void)
+{
+    /* Each letter overlaps by one pixel */
+    uint32_t x_base = VIDEO_BUFFER_WIDTH / 2 - (snepulator_paused.width - 5) / 2;
+    uint32_t y_base = VIDEO_BUFFER_LINES / 2 - snepulator_paused.height / 2;
+
+    const uint32_t letter_position [7] = {  0, 23, 46, 69,  92, 115, 138 };
+
+    uint32_t frame_time = snepulator_get_ticks ();
+
+    /* Draw over a greyscale copy of the last-drawn frame */
+    memcpy (state.video_out_data, state.video_pause_data, sizeof (state.video_out_data));
+
+    for (uint32_t letter = 0; letter < 6; letter++)
+    {
+        uint32_t letter_start = letter_position [letter];
+        uint32_t letter_end = letter_position [letter + 1];
+
+        float y_offset = 5.0 * sin (frame_time / -400.0 + letter_start / 20.0);
+
+        for (uint32_t x = letter_start; x < letter_end; x++)
+        {
+            for (uint32_t y = 0; y < snepulator_paused.height; y++)
+            {
+                /* Treat black as transparent */
+                if (snepulator_paused.pixel_data [(x + y * snepulator_paused.width) * 3 + 0] == 0)
+                {
+                    continue;
+                }
+
+                state.video_out_data [(x + x_base - letter) + (uint32_t) (y + y_base + y_offset) * VIDEO_BUFFER_WIDTH].r =
+                    snepulator_paused.pixel_data [(x + y * snepulator_paused.width) * 3 + 0] / 255.0;
+                state.video_out_data [(x + x_base - letter) + (uint32_t) (y + y_base + y_offset) * VIDEO_BUFFER_WIDTH].g =
+                    snepulator_paused.pixel_data [(x + y * snepulator_paused.width) * 3 + 1] / 255.0;
+                state.video_out_data [(x + x_base - letter) + (uint32_t) (y + y_base + y_offset) * VIDEO_BUFFER_WIDTH].b =
+                    snepulator_paused.pixel_data [(x + y * snepulator_paused.width) * 3 + 2] / 255.0;
+            }
+        }
+    }
+}
+
+
+/*
  * Pause or resume emulation.
  *
  * Will have no effect if the state is INIT or EXIT.
@@ -304,37 +350,13 @@ void snepulator_pause_set (bool pause)
     {
         state.run = RUN_STATE_PAUSED;
 
-        /* Convert the screen to black and white */
+        /* Convert the screen to black and white, and sore in the pause buffer */
         for (int x = 0; x < (VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES); x++)
         {
-            state.video_out_data [x] = to_greyscale (state.video_out_data [x]);
+            state.video_pause_data [x] = to_greyscale (state.video_out_data [x]);
         }
 
-        /* TODO: Copy the frame into a buffer */
-
-        /* TODO: Replace this with an animation */
-        /* Draw the "Pause" splash over the screen */
-        for (uint32_t y = 0; y < snepulator_paused.height; y++)
-        {
-            uint32_t x_offset = VIDEO_BUFFER_WIDTH / 2 - snepulator_paused.width / 2;
-            uint32_t y_offset = VIDEO_BUFFER_LINES / 2 - snepulator_paused.height / 2;
-
-            for (uint32_t x = 0; x < snepulator_paused.width; x++)
-            {
-                /* Treat black as transparent */
-                if (snepulator_paused.pixel_data [(x + y * snepulator_paused.width) * 3 + 0] == 0)
-                {
-                    continue;
-                }
-
-                state.video_out_data [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].r =
-                    snepulator_paused.pixel_data [(x + y * snepulator_paused.width) * 3 + 0] / 255.0;
-                state.video_out_data [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].g =
-                    snepulator_paused.pixel_data [(x + y * snepulator_paused.width) * 3 + 1] / 255.0;
-                state.video_out_data [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].b =
-                    snepulator_paused.pixel_data [(x + y * snepulator_paused.width) * 3 + 2] / 255.0;
-            }
-        }
+        memcpy (state.video_out_data, state.video_pause_data, sizeof (state.video_out_data));
     }
 
     /* Un-pause */

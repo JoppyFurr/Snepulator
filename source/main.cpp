@@ -324,6 +324,12 @@ int main_gui_loop (void)
             }
         }
 
+        /* Animate the pause screen. */
+        if (state.run == RUN_STATE_PAUSED)
+        {
+            snepulator_pause_animate ();
+        }
+
         /* Video-out display area. */
         ImGui::PushStyleVar (ImGuiStyleVar_WindowPadding, ImVec2 (0.0, 0.0));
         ImGui::PushStyleColor (ImGuiCol_WindowBg, ImVec4 (0.0f, 0.0f, 0.0f, 0.0f));
