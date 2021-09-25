@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 
 #include "util.h"
 #include "snepulator.h"
@@ -25,6 +26,7 @@
 #include "../images/snepulator_paused.c"
 
 extern Snepulator_State state;
+extern pthread_mutex_t video_mutex;
 
 
 /*
@@ -301,14 +303,14 @@ void snepulator_pause_animate (void)
     /* Each letter overlaps by one pixel */
     uint32_t x_base = VIDEO_BUFFER_WIDTH / 2 - (snepulator_paused.width - 5) / 2;
     uint32_t y_base = VIDEO_BUFFER_LINES / 2 - snepulator_paused.height / 2;
-
     const uint32_t letter_position [7] = {  0, 23, 46, 69,  92, 115, 138 };
 
-    uint32_t frame_time = snepulator_get_ticks ();
+    pthread_mutex_lock (&video_mutex);
 
     /* Draw over a greyscale copy of the last-drawn frame */
     memcpy (state.video_out_data, state.video_pause_data, sizeof (state.video_out_data));
 
+    uint32_t frame_time = snepulator_get_ticks ();
     for (uint32_t letter = 0; letter < 6; letter++)
     {
         uint32_t letter_start = letter_position [letter];
@@ -335,6 +337,8 @@ void snepulator_pause_animate (void)
             }
         }
     }
+
+    pthread_mutex_unlock (&video_mutex);
 }
 
 
@@ -350,6 +354,8 @@ void snepulator_pause_set (bool pause)
     {
         state.run = RUN_STATE_PAUSED;
 
+        pthread_mutex_lock (&video_mutex);
+
         /* Convert the screen to black and white, and sore in the pause buffer */
         for (int x = 0; x < (VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES); x++)
         {
@@ -357,6 +363,8 @@ void snepulator_pause_set (bool pause)
         }
 
         memcpy (state.video_out_data, state.video_pause_data, sizeof (state.video_out_data));
+
+        pthread_mutex_unlock (&video_mutex);
     }
 
     /* Un-pause */
