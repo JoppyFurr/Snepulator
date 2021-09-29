@@ -243,29 +243,37 @@ static void sms_memory_write (uint16_t addr, uint8_t data)
 static uint8_t sms_io_read (uint8_t addr)
 {
     /* Game Gear specific registers */
-    if (addr == 0x00 && state.console == CONSOLE_GAME_GEAR)
+    if (addr <= 0x06 && state.console == CONSOLE_GAME_GEAR)
     {
-        uint8_t value = 0;
-
-        /* STT */
-        if (!gamepad_1.state [GAMEPAD_BUTTON_START])
+        if (addr == 0x00)
         {
-            value |= BIT_7;
-        }
+            uint8_t value = 0;
 
-        /* NJAP */
-        if (state.region == REGION_WORLD)
+            /* STT */
+            if (!gamepad_1.state [GAMEPAD_BUTTON_START])
+            {
+                value |= BIT_7;
+            }
+
+            /* NJAP */
+            if (state.region == REGION_WORLD)
+            {
+                value |= BIT_6;
+            }
+
+            /* NNTS */
+            if (state.format == VIDEO_FORMAT_PAL)
+            {
+                value |= BIT_5;
+            }
+
+            return value;
+        }
+        else if (addr == 0x05)
         {
-            value |= BIT_6;
+            /* Gear-to-Gear Status */
+            return 0x00;
         }
-
-        /* NNTS */
-        if (state.format == VIDEO_FORMAT_PAL)
-        {
-            value |= BIT_5;
-        }
-
-        return value;
     }
 
     /* VDP Counters */
