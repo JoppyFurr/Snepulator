@@ -824,7 +824,7 @@ void sms_init (void)
     state.state_load = sms_state_load;
 
     /* Minimal alternative to the BIOS */
-    if (!state.sms_bios_filename)
+    if (state.bios == NULL)
     {
         /* Z80 interrupt mode and stack pointer */
         z80_state.im = 1;
