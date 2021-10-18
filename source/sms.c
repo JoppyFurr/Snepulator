@@ -26,8 +26,10 @@
 extern Snepulator_State state;
 extern Snepulator_Gamepad gamepad_1;
 extern Snepulator_Gamepad gamepad_2;
-extern Z80_State z80_state;
 extern SN76489_State sn76489_state;
+
+static Z80_Context *z80_context = NULL;
+
 
 #define SMS_RAM_SIZE SIZE_8K
 #define SMS_SRAM_SIZE SIZE_8K
@@ -71,6 +73,19 @@ static SMS_HW_State hw_state = {
 static bool export_paddle = false;
 SMS_3D_Field sms_3d_field = SMS_3D_FIELD_NONE;
 static bool sram_used = false;
+
+
+/*
+ * Clean up any console-specific structures.
+ */
+static void sms_cleanup (void)
+{
+    if (z80_context != NULL)
+    {
+        free (z80_context);
+        z80_context = NULL;
+    }
+}
 
 
 /*
@@ -386,7 +401,7 @@ static uint8_t sms_io_read (uint8_t addr)
 
             if (gamepad_1.type == GAMEPAD_TYPE_SMS_PHASER)
             {
-                port_1_th |= sms_vdp_get_phaser_th ();
+                port_1_th |= sms_vdp_get_phaser_th (z80_context->cycle_count);
             }
 
             /* I/O Port B/misc */
@@ -535,7 +550,7 @@ static void sms_run (uint32_t ms)
         assert (lines >= 0);
 
         /* 228 CPU cycles per scanline */
-        z80_run_cycles (228 + state.overclock);
+        z80_run_cycles (z80_context, 228 + state.overclock);
         psg_run_cycles (228);
         sms_vdp_run_one_scanline ();
     }
@@ -589,7 +604,7 @@ static void sms_state_save (const char *filename)
 
     save_state_section_add (SECTION_ID_SMS_HW, 1, sizeof (hw_state), &hw_state);
 
-    z80_state_save ();
+    z80_state_save (z80_context);
     save_state_section_add (SECTION_ID_RAM, 1, SMS_RAM_SIZE, state.ram);
     if (sram_used)
     {
@@ -658,7 +673,7 @@ static void sms_state_load (const char *filename)
         }
         else if (!strncmp (section_id, SECTION_ID_Z80, 4))
         {
-            z80_state_load (version, size, data);
+            z80_state_load (z80_context, version, size, data);
         }
         else if (!strncmp (section_id, SECTION_ID_RAM, 4))
         {
@@ -817,15 +832,17 @@ void sms_init (void)
     sms_3d_field = SMS_3D_FIELD_NONE;
 
     /* Initialise CPU and VDP */
-    z80_init (sms_memory_read, sms_memory_write, sms_io_read, sms_io_write);
+    /* TODO: Create a clean up function to free the context. */
+    z80_context = z80_init (sms_memory_read, sms_memory_write,
+                  sms_io_read, sms_io_write,
+                  sms_vdp_get_interrupt, sms_get_nmi);
     sms_vdp_init ();
     sn76489_init ();
 
     /* Hook up callbacks */
     state.audio_callback = sms_audio_callback;
+    state.cleanup = sms_cleanup;
     state.get_clock_rate = sms_get_clock_rate;
-    state.get_int = sms_vdp_get_interrupt;
-    state.get_nmi = sms_get_nmi;
     state.sync = sms_sync;
     state.run_callback = sms_run;
     state.state_save = sms_state_save;
@@ -835,8 +852,8 @@ void sms_init (void)
     if (state.bios == NULL)
     {
         /* Z80 interrupt mode and stack pointer */
-        z80_state.im = 1;
-        z80_state.sp = 0xdff0;
+        z80_context->state.im = 1;
+        z80_context->state.sp = 0xdff0;
 
         hw_state.memory_control |= SMS_MEMORY_CTRL_BIOS_DISABLE;
 

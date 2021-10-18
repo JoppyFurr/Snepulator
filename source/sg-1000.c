@@ -25,6 +25,8 @@ extern Snepulator_State state;
 extern Snepulator_Gamepad gamepad_1;
 extern Snepulator_Gamepad gamepad_2;
 
+static Z80_Context *z80_context = NULL;
+
 #define SG_1000_RAM_SIZE (1 << 10)
 #define SG_1000_SRAM_SIZE (8 << 10)
 
@@ -41,6 +43,19 @@ static SG_1000_HW_State hw_state = {
 };
 
 static bool sram_used = false;
+
+
+/*
+ * Clean up any console-specific structures.
+ */
+static void sg_1000_cleanup (void)
+{
+    if (z80_context != NULL)
+    {
+        free (z80_context);
+        z80_context = NULL;
+    }
+}
 
 
 /*
@@ -239,7 +254,7 @@ static void sg_1000_run (uint32_t ms)
         assert (lines >= 0);
 
         /* 228 CPU cycles per scanline */
-        z80_run_cycles (228 + state.overclock);
+        z80_run_cycles (z80_context, 228 + state.overclock);
         psg_run_cycles (228);
         tms9928a_run_one_scanline ();
     }
@@ -260,7 +275,7 @@ static void sg_1000_state_save (const char *filename)
 
     save_state_section_add (SECTION_ID_SG_1000_HW, 1, sizeof (hw_state), &hw_state);
 
-    z80_state_save ();
+    z80_state_save (z80_context);
     save_state_section_add (SECTION_ID_RAM, 1, SG_1000_RAM_SIZE, state.ram);
     if (sram_used)
     {
@@ -325,7 +340,7 @@ static void sg_1000_state_load (const char *filename)
         }
         else if (!strncmp (section_id, SECTION_ID_Z80, 4))
         {
-            z80_state_load (version, size, data);
+            z80_state_load (z80_context, version, size, data);
         }
         else if (!strncmp (section_id, SECTION_ID_RAM, 4))
         {
@@ -429,15 +444,16 @@ void sg_1000_init (void)
     }
 
     /* Initialise hardware */
-    z80_init (sg_1000_memory_read, sg_1000_memory_write, sg_1000_io_read, sg_1000_io_write);
+    z80_context = z80_init (sg_1000_memory_read, sg_1000_memory_write,
+                            sg_1000_io_read, sg_1000_io_write,
+                            tms9928a_get_interrupt, sg_1000_get_nmi);
     tms9928a_init ();
     sn76489_init ();
 
     /* Hook up the callbacks */
     state.audio_callback = sg_1000_audio_callback;
+    state.cleanup = sg_1000_cleanup;
     state.get_clock_rate = sg_1000_get_clock_rate;
-    state.get_int = tms9928a_get_interrupt;
-    state.get_nmi = sg_1000_get_nmi;
     state.run_callback = sg_1000_run;
     state.state_save = sg_1000_state_save;
     state.state_load = sg_1000_state_load;

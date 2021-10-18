@@ -27,6 +27,8 @@ extern Snepulator_State state;
 extern Snepulator_Gamepad gamepad_1;
 extern Snepulator_Gamepad gamepad_2;
 
+static Z80_Context *z80_context = NULL;
+
 #define COLECOVISION_RAM_SIZE (1 << 10)
 
 static pthread_mutex_t colecovision_state_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -38,6 +40,20 @@ typedef struct ColecoVision_HW_State_s {
 static ColecoVision_HW_State hw_state = {
     .input_mode = COLECOVISION_INPUT_MODE_JOYSTICK,
 };
+
+
+/*
+ * Clean up any console-specific structures.
+ */
+static void colecovision_cleanup (void)
+{
+    if (z80_context != NULL)
+    {
+        free (z80_context);
+        z80_context = NULL;
+    }
+}
+
 
 /*
  * Handle ColecoVision memory reads.
@@ -287,7 +303,7 @@ static void colecovision_run (uint32_t ms)
         assert (lines >= 0);
 
         /* 228 CPU cycles per scanline */
-        z80_run_cycles (228 + state.overclock);
+        z80_run_cycles (z80_context, 228 + state.overclock);
         psg_run_cycles (228);
         tms9928a_run_one_scanline ();
     }
@@ -317,7 +333,7 @@ static void colecovision_state_save (const char *filename)
 
     save_state_section_add (SECTION_ID_COLECOVISION_HW, 1, sizeof (hw_state), &hw_state);
 
-    z80_state_save ();
+    z80_state_save (z80_context);
     save_state_section_add (SECTION_ID_RAM, 1, COLECOVISION_RAM_SIZE, state.ram);
 
     tms9928a_state_save ();
@@ -376,7 +392,7 @@ static void colecovision_state_load (const char *filename)
         }
         else if (!strncmp (section_id, SECTION_ID_Z80, 4))
         {
-            z80_state_load (version, size, data);
+            z80_state_load (z80_context, version, size, data);
         }
         else if (!strncmp (section_id, SECTION_ID_RAM, 4))
         {
@@ -462,15 +478,16 @@ void colecovision_init (void)
     }
 
     /* Initialise hardware */
-    z80_init (colecovision_memory_read, colecovision_memory_write, colecovision_io_read, colecovision_io_write);
+    z80_context = z80_init (colecovision_memory_read, colecovision_memory_write,
+                            colecovision_io_read, colecovision_io_write,
+                            colecovision_get_int, tms9928a_get_interrupt);
     tms9928a_init ();
     sn76489_init ();
 
     /* Hook up the callbacks */
     state.audio_callback = colecovision_audio_callback;
+    state.cleanup = colecovision_cleanup;
     state.get_clock_rate = colecovision_get_clock_rate;
-    state.get_int = colecovision_get_int;
-    state.get_nmi = tms9928a_get_interrupt;
     state.run_callback = colecovision_run;
     state.state_save = colecovision_state_save;
     state.state_load = colecovision_state_load;

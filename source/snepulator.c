@@ -424,12 +424,16 @@ void snepulator_reset (void)
     /* Mark the system as not-ready. */
     state.run = RUN_STATE_INIT;
 
+    /* Free any console-specific resources */
+    if (state.cleanup != NULL)
+    {
+        state.cleanup ();
+    }
+
     /* Clear callback functions */
     state.run_callback = NULL;
     state.audio_callback = NULL;
     state.get_clock_rate = NULL;
-    state.get_int = NULL;
-    state.get_nmi = NULL;
     state.sync = NULL;
     state.state_save = NULL;
     state.state_load = NULL;

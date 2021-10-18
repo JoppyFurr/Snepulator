@@ -21,7 +21,6 @@ extern Snepulator_State state;
 extern Snepulator_Gamepad gamepad_1;
 extern pthread_mutex_t video_mutex;
 extern SMS_3D_Field sms_3d_field;
-extern uint64_t z80_cycle;
 
 #include "tms9928a.h"
 #include "sms_vdp.h"
@@ -297,7 +296,7 @@ uint8_t sms_vdp_mode_get (void)
 /*
  * Check if the light phaser is receiving light
  */
-bool sms_vdp_get_phaser_th (void)
+bool sms_vdp_get_phaser_th (uint64_t z80_cycle)
 {
     int32_t scan_x = ((z80_cycle % 228) * 342) / 228;
     int32_t scan_y = tms9928a_state.line;

@@ -52,4 +52,4 @@ void sms_vdp_run_one_scanline (void);
 bool sms_vdp_get_interrupt (void);
 
 /* Check if the light phaser is receiving light */
-bool sms_vdp_get_phaser_th (void);
+bool sms_vdp_get_phaser_th (uint64_t z80_cycle);

@@ -27,7 +27,6 @@ extern "C" {
 #include "sms.h"
 #include "colecovision.h"
 
-extern Z80_State z80_state;
 extern TMS9928A_Mode sms_vdp_mode_get (void);
 
 /* TODO: Access through a function instead of accessing the array */
@@ -181,6 +180,7 @@ void snepulator_render_menubar (void)
 
                 ImGui::Separator ();
 
+#if 0
                 ImGui::Text ("CPU");
                 ImGui::Text ("PC : %04x    SP : %04x", z80_state.pc, z80_state.sp);
                 ImGui::Text ("AF : %04x    BC : %04x", z80_state.af, z80_state.bc);
@@ -189,6 +189,7 @@ void snepulator_render_menubar (void)
                 ImGui::Text ("IM : %d       IFF: %d/%d", z80_state.im, z80_state.iff1, z80_state.iff2);
 
                 ImGui::Separator ();
+#endif
 
                 ImGui::Text ("Video");
                 ImGui::Text ("Mode : %s", tms9928a_mode_name_get (sms_vdp_mode_get ()));
