@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
 #include <arpa/inet.h>
@@ -16,9 +17,6 @@
 #include "tms9928a.h"
 
 extern Snepulator_State state;
-extern pthread_mutex_t video_mutex;
-TMS9928A_State tms9928a_state;
-float_Colour frame_buffer [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
 
 const char *tms9928a_mode_name [16] = {
     "Mode 0 - Graphics I Mode",
@@ -118,15 +116,15 @@ const char *tms9928a_mode_name_get (TMS9928A_Mode mode)
 /*
  * Read one byte from the tms9928a data port.
  */
-uint8_t tms9928a_data_read ()
+uint8_t tms9928a_data_read (TMS9928A_Context *context)
 {
-    uint8_t data = tms9928a_state.read_buffer;
+    uint8_t data = context->state.read_buffer;
 
-    tms9928a_state.first_byte_received = false;
+    context->state.first_byte_received = false;
 
-    tms9928a_state.read_buffer = state.vram [tms9928a_state.address];
+    context->state.read_buffer = context->vram [context->state.address];
 
-    tms9928a_state.address = (tms9928a_state.address + 1) & 0x3fff;
+    context->state.address = (context->state.address + 1) & 0x3fff;
 
     return data;
 }
@@ -135,36 +133,36 @@ uint8_t tms9928a_data_read ()
 /*
  * Write one byte to the tms9928a data port.
  */
-void tms9928a_data_write (uint8_t value)
+void tms9928a_data_write (TMS9928A_Context *context, uint8_t value)
 {
-    tms9928a_state.first_byte_received = false;
+    context->state.first_byte_received = false;
 
-    switch (tms9928a_state.code)
+    switch (context->state.code)
     {
         case TMS9928A_CODE_VRAM_READ:
         case TMS9928A_CODE_VRAM_WRITE:
         case TMS9928A_CODE_REG_WRITE:
-            state.vram [tms9928a_state.address] = value;
+            context->vram [context->state.address] = value;
             break;
 
         default:
             break;
     }
-    tms9928a_state.address = (tms9928a_state.address + 1) & 0x3fff;
+    context->state.address = (context->state.address + 1) & 0x3fff;
 }
 
 
 /*
  * Read one byte from the tms9928a control (status) port.
  */
-uint8_t tms9928a_status_read ()
+uint8_t tms9928a_status_read (TMS9928A_Context *context)
 {
-    uint8_t status = tms9928a_state.status;
-    tms9928a_state.first_byte_received = false;
+    uint8_t status = context->state.status;
+    context->state.first_byte_received = false;
 
     /* Clear on read */
-    tms9928a_state.status = 0x00;
-    tms9928a_state.line_interrupt = false; /* "The flag remains set until the control port (IO port 0xbf) is read */
+    context->state.status = 0x00;
+    context->state.line_interrupt = false; /* "The flag remains set until the control port (IO port 0xbf) is read */
 
     return status;
 }
@@ -173,34 +171,34 @@ uint8_t tms9928a_status_read ()
 /*
  * Write one byte to the tms9928a control port.
  */
-void tms9928a_control_write (uint8_t value)
+void tms9928a_control_write (TMS9928A_Context *context, uint8_t value)
 {
-    if (!tms9928a_state.first_byte_received) /* First byte */
+    if (!context->state.first_byte_received) /* First byte */
     {
-        tms9928a_state.first_byte_received = true;
-        tms9928a_state.address = (tms9928a_state.address & 0x3f00) | ((uint16_t) value << 0);
+        context->state.first_byte_received = true;
+        context->state.address = (context->state.address & 0x3f00) | ((uint16_t) value << 0);
     }
     else /* Second byte */
     {
-        tms9928a_state.first_byte_received = false;
-        tms9928a_state.address = (tms9928a_state.address & 0x00ff) | ((uint16_t) (value & 0x3f) << 8);
-        tms9928a_state.code = value & 0xc0;
+        context->state.first_byte_received = false;
+        context->state.address = (context->state.address & 0x00ff) | ((uint16_t) (value & 0x3f) << 8);
+        context->state.code = value & 0xc0;
 
-        switch (tms9928a_state.code)
+        switch (context->state.code)
         {
             case TMS9928A_CODE_VRAM_READ:
-                tms9928a_state.read_buffer = state.vram[tms9928a_state.address++];
+                context->state.read_buffer = context->vram[context->state.address++];
                 break;
             case TMS9928A_CODE_VRAM_WRITE:
                 break;
             case TMS9928A_CODE_REG_WRITE:
                 if ((value & 0x0f) <= 10)
                 {
-                    ((uint8_t *) &tms9928a_state.regs_buffer) [value & 0x0f] = tms9928a_state.address & 0x00ff;
+                    ((uint8_t *) &context->state.regs_buffer) [value & 0x0f] = context->state.address & 0x00ff;
 
                     /* Enabling interrupts should take affect immediately */
-                    tms9928a_state.regs.ctrl_1 &= ~TMS9928A_CTRL_1_FRAME_INT_EN;
-                    tms9928a_state.regs.ctrl_1 |= tms9928a_state.regs_buffer.ctrl_1 & TMS9928A_CTRL_1_FRAME_INT_EN;
+                    context->state.regs.ctrl_1 &= ~TMS9928A_CTRL_1_FRAME_INT_EN;
+                    context->state.regs.ctrl_1 |= context->state.regs_buffer.ctrl_1 & TMS9928A_CTRL_1_FRAME_INT_EN;
                 }
                 break;
             default:
@@ -213,12 +211,12 @@ void tms9928a_control_write (uint8_t value)
 /*
  * Check if the tms9928a is currently requesting an interrupt.
  */
-bool tms9928a_get_interrupt (void)
+bool tms9928a_get_interrupt (TMS9928A_Context *context)
 {
     bool interrupt = false;
 
     /* Frame interrupt */
-    if ((tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_FRAME_INT_EN) && (tms9928a_state.status & TMS9928A_STATUS_INT))
+    if ((context->state.regs.ctrl_1 & TMS9928A_CTRL_1_FRAME_INT_EN) && (context->state.status & TMS9928A_STATUS_INT))
     {
         interrupt = true;
     }
@@ -230,8 +228,9 @@ bool tms9928a_get_interrupt (void)
 /*
  * Render one line of an 8x8 pattern.
  */
-static void tms9928a_render_pattern_line (const TMS9928A_Config *config, uint16_t line, TMS9928A_Pattern *pattern_base,
-                                          uint8_t tile_colours, int32_Point_2D offset, bool sprite, bool magnify)
+static void tms9928a_render_pattern_line (TMS9928A_Context *context, const TMS9928A_Config *config, uint16_t line,
+                                          TMS9928A_Pattern *pattern_base, uint8_t tile_colours, int32_Point_2D offset,
+                                          bool sprite, bool magnify)
 {
     uint8_t line_data;
 
@@ -256,12 +255,12 @@ static void tms9928a_render_pattern_line (const TMS9928A_Config *config, uint16_
             }
             else
             {
-                colour_index = tms9928a_state.regs.background_colour & 0x0f;
+                colour_index = context->state.regs.background_colour & 0x0f;
             }
         }
 
         float_Colour pixel = config->palette [colour_index];
-        frame_buffer [(offset.x + x + VIDEO_SIDE_BORDER) + (state.render_start_y + line) * VIDEO_BUFFER_WIDTH] = pixel;
+        context->frame_buffer [(offset.x + x + VIDEO_SIDE_BORDER) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = pixel;
     }
 }
 
@@ -270,11 +269,11 @@ static void tms9928a_render_pattern_line (const TMS9928A_Config *config, uint16_
  * Render this line's sprites for modes with sprite support.
  * Sprites can be either 8×8 pixels, or 16×16.
  */
-void tms9928a_render_sprites_line (const TMS9928A_Config *config, uint16_t line)
+void tms9928a_render_sprites_line (TMS9928A_Context *context, const TMS9928A_Config *config, uint16_t line)
 {
-    uint16_t sprite_attribute_table_base = (((uint16_t) tms9928a_state.regs.sprite_attr_table_base) << 7) & 0x3f80;
-    uint16_t pattern_generator_base = (((uint16_t) tms9928a_state.regs.sprite_pg_base) << 11) & 0x3800;
-    uint8_t sprite_size = (tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_SPRITE_SIZE) ? 16 : 8;
+    uint16_t sprite_attribute_table_base = (((uint16_t) context->state.regs.sprite_attr_table_base) << 7) & 0x3f80;
+    uint16_t pattern_generator_base = (((uint16_t) context->state.regs.sprite_pg_base) << 11) & 0x3800;
+    uint8_t sprite_size = (context->state.regs.ctrl_1 & TMS9928A_CTRL_1_SPRITE_SIZE) ? 16 : 8;
     TMS9928A_Sprite *line_sprite_buffer [32];
     uint8_t line_sprite_count = 0;
     TMS9928A_Pattern *pattern;
@@ -282,7 +281,7 @@ void tms9928a_render_sprites_line (const TMS9928A_Config *config, uint16_t line)
     bool magnify = false;
 
     /* Sprite magnification */
-    if (tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_SPRITE_MAG)
+    if (context->state.regs.ctrl_1 & TMS9928A_CTRL_1_SPRITE_MAG)
     {
         magnify = true;
     }
@@ -290,7 +289,7 @@ void tms9928a_render_sprites_line (const TMS9928A_Config *config, uint16_t line)
     /* Traverse the sprite list, filling the line sprite buffer */
     for (int i = 0; i < 32; i++)
     {
-        TMS9928A_Sprite *sprite = (TMS9928A_Sprite *) &state.vram [sprite_attribute_table_base + i * sizeof (TMS9928A_Sprite)];
+        TMS9928A_Sprite *sprite = (TMS9928A_Sprite *) &context->vram [sprite_attribute_table_base + i * sizeof (TMS9928A_Sprite)];
 
         /* Break if there are no more sprites */
         if (sprite->y == 0xd0)
@@ -306,9 +305,9 @@ void tms9928a_render_sprites_line (const TMS9928A_Config *config, uint16_t line)
         /* If the sprite is on this line, add it to the buffer */
         if (line >= position.y && line < position.y + (sprite_size << magnify))
         {
-            if (line_sprite_count == 4 && !state.remove_sprite_limit)
+            if (line_sprite_count == 4 && !context->remove_sprite_limit)
             {
-                tms9928a_state.status |= TMS9928A_SPRITE_OVERFLOW;
+                context->state.status |= TMS9928A_SPRITE_OVERFLOW;
                 /* TODO: Fifth sprite field in status byte */
                 break;
             }
@@ -345,23 +344,23 @@ void tms9928a_render_sprites_line (const TMS9928A_Config *config, uint16_t line)
 
         /* TODO: Sprite collisions */
 
-        if (tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_SPRITE_SIZE)
+        if (context->state.regs.ctrl_1 & TMS9928A_CTRL_1_SPRITE_SIZE)
         {
             pattern_index &= 0xfc;
-            pattern = (TMS9928A_Pattern *) &state.vram [pattern_generator_base + (pattern_index * sizeof (TMS9928A_Pattern))];
+            pattern = (TMS9928A_Pattern *) &context->vram [pattern_generator_base + (pattern_index * sizeof (TMS9928A_Pattern))];
             int32_Point_2D sub_position;
 
             for (int i = 0; i < 4; i++)
             {
                 sub_position.x = position.x + ((i & 2) ? (8 << magnify) : 0);
                 sub_position.y = position.y + ((i & 1) ? (8 << magnify) : 0);
-                tms9928a_render_pattern_line (config, line, pattern + i, sprite->colour_ec << 4, sub_position, true, magnify);
+                tms9928a_render_pattern_line (context, config, line, pattern + i, sprite->colour_ec << 4, sub_position, true, magnify);
             }
         }
         else
         {
-            pattern = (TMS9928A_Pattern *) &state.vram [pattern_generator_base + (pattern_index * sizeof (TMS9928A_Pattern))];
-            tms9928a_render_pattern_line (config, line, pattern, sprite->colour_ec << 4, position, true, magnify);
+            pattern = (TMS9928A_Pattern *) &context->vram [pattern_generator_base + (pattern_index * sizeof (TMS9928A_Pattern))];
+            tms9928a_render_pattern_line (context, config, line, pattern, sprite->colour_ec << 4, position, true, magnify);
         }
     }
 }
@@ -370,7 +369,7 @@ void tms9928a_render_sprites_line (const TMS9928A_Config *config, uint16_t line)
 /*
  * Render one line of the mode0 background layer.
  */
-void tms9928a_render_mode0_background_line (const TMS9928A_Config *config, uint16_t line)
+void tms9928a_render_mode0_background_line (TMS9928A_Context *context, const TMS9928A_Config *config, uint16_t line)
 {
     uint16_t name_table_base;
     uint16_t pattern_generator_base;
@@ -378,22 +377,22 @@ void tms9928a_render_mode0_background_line (const TMS9928A_Config *config, uint1
     uint32_t tile_y = line / 8;
     int32_Point_2D position;
 
-    name_table_base = (((uint16_t) tms9928a_state.regs.name_table_base) << 10) & 0x3c00;
+    name_table_base = (((uint16_t) context->state.regs.name_table_base) << 10) & 0x3c00;
 
-    pattern_generator_base = (((uint16_t) tms9928a_state.regs.background_pg_base) << 11) & 0x3800;
+    pattern_generator_base = (((uint16_t) context->state.regs.background_pg_base) << 11) & 0x3800;
 
-    colour_table_base = (((uint16_t) tms9928a_state.regs.colour_table_base) << 6) & 0x3fc0;
+    colour_table_base = (((uint16_t) context->state.regs.colour_table_base) << 6) & 0x3fc0;
 
     for (uint32_t tile_x = 0; tile_x < 32; tile_x++)
     {
-        uint16_t tile = state.vram [name_table_base + ((tile_y << 5) | tile_x)];
+        uint16_t tile = context->vram [name_table_base + ((tile_y << 5) | tile_x)];
 
-        TMS9928A_Pattern *pattern = (TMS9928A_Pattern *) &state.vram [pattern_generator_base + (tile * sizeof (TMS9928A_Pattern))];
-        uint8_t colours = state.vram [colour_table_base + (tile >> 3)];
+        TMS9928A_Pattern *pattern = (TMS9928A_Pattern *) &context->vram [pattern_generator_base + (tile * sizeof (TMS9928A_Pattern))];
+        uint8_t colours = context->vram [colour_table_base + (tile >> 3)];
 
         position.x = 8 * tile_x;
         position.y = 8 * tile_y;
-        tms9928a_render_pattern_line (config, line, pattern, colours, position, false, false);
+        tms9928a_render_pattern_line (context, config, line, pattern, colours, position, false, false);
     }
 }
 
@@ -401,7 +400,7 @@ void tms9928a_render_mode0_background_line (const TMS9928A_Config *config, uint1
 /*
  * Render one line of the mode2 background layer.
  */
-void tms9928a_render_mode2_background_line (const TMS9928A_Config *config, uint16_t line)
+void tms9928a_render_mode2_background_line (TMS9928A_Context *context, const TMS9928A_Config *config, uint16_t line)
 {
     uint16_t name_table_base;
     uint16_t pattern_generator_base;
@@ -409,15 +408,15 @@ void tms9928a_render_mode2_background_line (const TMS9928A_Config *config, uint1
     uint32_t tile_y = line / 8;
     int32_Point_2D position;
 
-    name_table_base = (((uint16_t) tms9928a_state.regs.name_table_base) << 10) & 0x3c00;
+    name_table_base = (((uint16_t) context->state.regs.name_table_base) << 10) & 0x3c00;
 
-    pattern_generator_base = (((uint16_t) tms9928a_state.regs.background_pg_base) << 11) & 0x2000;
+    pattern_generator_base = (((uint16_t) context->state.regs.background_pg_base) << 11) & 0x2000;
 
-    colour_table_base = (((uint16_t) tms9928a_state.regs.colour_table_base) << 6) & 0x2000;
+    colour_table_base = (((uint16_t) context->state.regs.colour_table_base) << 6) & 0x2000;
 
     for (uint32_t tile_x = 0; tile_x < 32; tile_x++)
     {
-        uint16_t tile = state.vram [name_table_base + ((tile_y << 5) | tile_x)];
+        uint16_t tile = context->vram [name_table_base + ((tile_y << 5) | tile_x)];
 
         /* The screen is broken into three 8-row sections */
         if (tile_y >= 8 && tile_y < 16)
@@ -428,16 +427,16 @@ void tms9928a_render_mode2_background_line (const TMS9928A_Config *config, uint1
         {
             tile += 0x200;
         }
-        uint16_t pattern_tile = tile & ((((uint16_t) tms9928a_state.regs.background_pg_base) << 8) | 0xff);
-        uint16_t colour_tile  = tile & ((((uint16_t) tms9928a_state.regs.colour_table_base) << 3) | 0x07);
+        uint16_t pattern_tile = tile & ((((uint16_t) context->state.regs.background_pg_base) << 8) | 0xff);
+        uint16_t colour_tile  = tile & ((((uint16_t) context->state.regs.colour_table_base) << 3) | 0x07);
 
-        TMS9928A_Pattern *pattern = (TMS9928A_Pattern *) &state.vram [pattern_generator_base + (pattern_tile * sizeof (TMS9928A_Pattern))];
+        TMS9928A_Pattern *pattern = (TMS9928A_Pattern *) &context->vram [pattern_generator_base + (pattern_tile * sizeof (TMS9928A_Pattern))];
 
-        uint8_t colours = state.vram [colour_table_base + colour_tile * 8 + (line & 0x07)];
+        uint8_t colours = context->vram [colour_table_base + colour_tile * 8 + (line & 0x07)];
 
         position.x = 8 * tile_x;
         position.y = 8 * tile_y;
-        tms9928a_render_pattern_line (config, line, pattern, colours, position, false, false);
+        tms9928a_render_pattern_line (context, config, line, pattern, colours, position, false, false);
     }
 }
 
@@ -445,31 +444,31 @@ void tms9928a_render_mode2_background_line (const TMS9928A_Config *config, uint1
 /*
  * Assemble the three mode-bits.
  */
-static uint8_t tms9928a_mode_get (void)
+static uint8_t tms9928a_mode_get (TMS9928A_Context *context)
 {
-    return ((tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_MODE_1) ? BIT_0 : 0) +
-           ((tms9928a_state.regs.ctrl_0 & TMS9928A_CTRL_0_MODE_2) ? BIT_1 : 0) +
-           ((tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_MODE_3) ? BIT_2 : 0);
+    return ((context->state.regs.ctrl_1 & TMS9928A_CTRL_1_MODE_1) ? BIT_0 : 0) +
+           ((context->state.regs.ctrl_0 & TMS9928A_CTRL_0_MODE_2) ? BIT_1 : 0) +
+           ((context->state.regs.ctrl_1 & TMS9928A_CTRL_1_MODE_3) ? BIT_2 : 0);
 }
 
 
 /*
  * Render one active line of output for the tms9928a.
  */
-void tms9928a_render_line (const TMS9928A_Config *config, uint16_t line)
+void tms9928a_render_line (TMS9928A_Context *context, const TMS9928A_Config *config, uint16_t line)
 {
     float_Colour video_background =     { .r = 0.0f, .g = 0.0f, .b = 0.0f };
 
-    state.render_start_y = (VIDEO_BUFFER_LINES - config->lines_active) / 2;
+    context->render_start_y = (VIDEO_BUFFER_LINES - config->lines_active) / 2;
 
     /* Background */
-    if (!(tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_BLANK) && !state.disable_blanking)
+    if (!(context->state.regs.ctrl_1 & TMS9928A_CTRL_1_BLANK) && !context->disable_blanking)
     {
         /* Display is blank */
     }
     else
     {
-        video_background = config->palette [tms9928a_state.regs.background_colour & 0x0f];
+        video_background = config->palette [context->state.regs.background_colour & 0x0f];
     }
 
     /* Note: The top/bottom borders use the background colour of the first and last active lines. */
@@ -477,11 +476,11 @@ void tms9928a_render_line (const TMS9928A_Config *config, uint16_t line)
     /* Top border */
     if (line == 0)
     {
-        for (uint32_t border_line = 0; border_line < state.render_start_y; border_line++)
+        for (uint32_t border_line = 0; border_line < context->render_start_y; border_line++)
         {
             for (uint32_t x = 0; x < VIDEO_BUFFER_WIDTH; x++)
             {
-                frame_buffer [x + border_line * VIDEO_BUFFER_WIDTH] = video_background;
+                context->frame_buffer [x + border_line * VIDEO_BUFFER_WIDTH] = video_background;
             }
         }
     }
@@ -489,36 +488,36 @@ void tms9928a_render_line (const TMS9928A_Config *config, uint16_t line)
     /* Side borders */
     for (int x = 0; x < VIDEO_BUFFER_WIDTH; x++)
     {
-        frame_buffer [x + (state.render_start_y + line) * VIDEO_BUFFER_WIDTH] = video_background;
+        context->frame_buffer [x + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = video_background;
     }
 
     /* Bottom border */
     if (line == config->lines_active - 1)
     {
-        for (uint32_t border_line = state.render_start_y + config->lines_active; border_line < VIDEO_BUFFER_LINES; border_line++)
+        for (uint32_t border_line = context->render_start_y + config->lines_active; border_line < VIDEO_BUFFER_LINES; border_line++)
         {
             for (uint32_t x = 0; x < VIDEO_BUFFER_WIDTH; x++)
             {
-                frame_buffer [x + border_line * VIDEO_BUFFER_WIDTH] = video_background;
+                context->frame_buffer [x + border_line * VIDEO_BUFFER_WIDTH] = video_background;
             }
         }
     }
 
     /* Return without rendering patterns if BLANK is enabled */
-    if (!(tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_BLANK) && !state.disable_blanking)
+    if (!(context->state.regs.ctrl_1 & TMS9928A_CTRL_1_BLANK) && !context->disable_blanking)
     {
         return;
     }
 
     if (config->mode == TMS9928A_MODE_0)
     {
-        tms9928a_render_mode0_background_line (config, line);
-        tms9928a_render_sprites_line (config, line);
+        tms9928a_render_mode0_background_line (context, config, line);
+        tms9928a_render_sprites_line (context, config, line);
     }
     else if (config->mode & TMS9928A_MODE_2)
     {
-        tms9928a_render_mode2_background_line (config, line);
-        tms9928a_render_sprites_line (config, line);
+        tms9928a_render_mode2_background_line (context, config, line);
+        tms9928a_render_sprites_line (context, config, line);
     }
 }
 
@@ -526,19 +525,19 @@ void tms9928a_render_line (const TMS9928A_Config *config, uint16_t line)
 /*
  * Run one scanline on the tms9928a.
  */
-void tms9928a_run_one_scanline (void)
+void tms9928a_run_one_scanline (TMS9928A_Context *context)
 {
     const TMS9928A_Config *config;
-    TMS9928A_Mode mode = tms9928a_mode_get ();
+    TMS9928A_Mode mode = tms9928a_mode_get (context);
 
     switch (mode)
     {
         case TMS9928A_MODE_0: /* Mode 0: 32 x 24 8-byte tiles, sprites enabled. */
-            config = (state.format == VIDEO_FORMAT_NTSC) ? &Mode0_NTSC : &Mode0_PAL;
+            config = (context->format == VIDEO_FORMAT_NTSC) ? &Mode0_NTSC : &Mode0_PAL;
             break;
 
         case TMS9928A_MODE_2: /* Mode 2: 32 × 24 8-byte tiles, sprites enabled, three colour/pattern tables */
-            config = (state.format == VIDEO_FORMAT_NTSC) ? &Mode2_NTSC : &Mode2_PAL;
+            config = (context->format == VIDEO_FORMAT_NTSC) ? &Mode2_NTSC : &Mode2_PAL;
             break;
 
         default:
@@ -547,19 +546,15 @@ void tms9928a_run_one_scanline (void)
     }
 
     /* If this is an active line, render it */
-    if (tms9928a_state.line < config->lines_active)
+    if (context->state.line < config->lines_active)
     {
-        tms9928a_render_line (config, tms9928a_state.line);
+        tms9928a_render_line (context, config, context->state.line);
     }
 
     /* If this the final active line, copy to the frame buffer */
-    if (tms9928a_state.line == config->lines_active - 1)
+    if (context->state.line == config->lines_active - 1)
     {
-        pthread_mutex_lock (&video_mutex);
-        state.video_width = 256;
-        state.video_height = 192;
-        memcpy (state.video_out_data, frame_buffer, sizeof (frame_buffer));
-        pthread_mutex_unlock (&video_mutex);
+        context->frame_done (context->parent);
 
         /* Update statistics (rolling average) */
         static int vdp_previous_completion_time = 0;
@@ -574,14 +569,14 @@ void tms9928a_run_one_scanline (void)
     }
 
     /* Update values for the next line */
-    tms9928a_state.line = (tms9928a_state.line + 1) % config->lines_total;
+    context->state.line = (context->state.line + 1) % config->lines_total;
 
     /* Propagate register writes that occurred during this line. */
-    tms9928a_state.regs = tms9928a_state.regs_buffer;
+    context->state.regs = context->state.regs_buffer;
 
     /* Check for frame interrupt */
-    if (tms9928a_state.line == config->lines_active + 1)
-        tms9928a_state.status |= TMS9928A_STATUS_INT;
+    if (context->state.line == config->lines_active + 1)
+        context->state.status |= TMS9928A_STATUS_INT;
 
 }
 
@@ -589,41 +584,55 @@ void tms9928a_run_one_scanline (void)
 /*
  * Reset the tms9928a registers and memory to power-on defaults.
  */
-void tms9928a_init (void)
+TMS9928A_Context *tms9928a_init (void *parent, void (* frame_done) (void *))
 {
-    memset (&tms9928a_state, 0, sizeof (tms9928a_state));
-    memset (frame_buffer, 0, sizeof (frame_buffer));
+    TMS9928A_Context *context;
+
+    context = calloc (1, sizeof (TMS9928A_Context));
+    if (context == NULL)
+    {
+        snepulator_error ("Error", "Unable to allocate memory for TMS9928A_Context");
+        return NULL;
+    }
+
+    context->parent = parent;
+    context->frame_done = frame_done;
+
+    context->video_width = 256;
+    context->video_height = 192;
+
+    return context;
 }
 
 
 /*
  * Export tms9928a state.
  */
-void tms9928a_state_save (void)
+void tms9928a_state_save (TMS9928A_Context *context)
 {
     TMS9928A_State tms9928a_state_be = {
-        .regs =                   tms9928a_state.regs,
-        .regs_buffer =            tms9928a_state.regs_buffer,
-        .line =                   htons (tms9928a_state.line),
-        .address =                htons (tms9928a_state.address),
-        .first_byte_received =    tms9928a_state.first_byte_received,
-        .code =                   tms9928a_state.code,
-        .read_buffer =            tms9928a_state.read_buffer,
-        .status =                 tms9928a_state.status,
+        .regs =                   context->state.regs,
+        .regs_buffer =            context->state.regs_buffer,
+        .line =                   htons (context->state.line),
+        .address =                htons (context->state.address),
+        .first_byte_received =    context->state.first_byte_received,
+        .code =                   context->state.code,
+        .read_buffer =            context->state.read_buffer,
+        .status =                 context->state.status,
         .collision_buffer =       { 0 },
         .cram =                   { 0 },
-        .line_interrupt_counter = tms9928a_state.line_interrupt_counter,
-        .line_interrupt =         tms9928a_state.line_interrupt,
-        .h_counter =              tms9928a_state.h_counter,
-        .v_counter =              tms9928a_state.v_counter,
-        .cram_latch =             tms9928a_state.cram_latch
+        .line_interrupt_counter = context->state.line_interrupt_counter,
+        .line_interrupt =         context->state.line_interrupt,
+        .h_counter =              context->state.h_counter,
+        .v_counter =              context->state.v_counter,
+        .cram_latch =             context->state.cram_latch
     };
 
-    memcpy (tms9928a_state_be.collision_buffer, tms9928a_state.collision_buffer, 256);
+    memcpy (tms9928a_state_be.collision_buffer, context->state.collision_buffer, 256);
 
     for (uint8_t i = 0; i < 32; i++)
     {
-        tms9928a_state_be.cram [i] = htons (tms9928a_state.cram[i]);
+        tms9928a_state_be.cram [i] = htons (context->state.cram[i]);
     }
 
     save_state_section_add (SECTION_ID_VDP, 1, sizeof (tms9928a_state_be), &tms9928a_state_be);
@@ -633,7 +642,7 @@ void tms9928a_state_save (void)
 /*
  * Import tms9928a state.
  */
-void tms9928a_state_load (uint32_t version, uint32_t size, void *data)
+void tms9928a_state_load (TMS9928A_Context *context, uint32_t version, uint32_t size, void *data)
 {
     TMS9928A_State tms9928a_state_be;
 
@@ -641,26 +650,26 @@ void tms9928a_state_load (uint32_t version, uint32_t size, void *data)
     {
         memcpy (&tms9928a_state_be, data, sizeof (tms9928a_state_be));
 
-        tms9928a_state.regs =                   tms9928a_state_be.regs;
-        tms9928a_state.regs_buffer =            tms9928a_state_be.regs_buffer;
-        tms9928a_state.line =                   ntohs (tms9928a_state_be.line);
-        tms9928a_state.address =                ntohs (tms9928a_state_be.address);
-        tms9928a_state.first_byte_received =    tms9928a_state_be.first_byte_received;
-        tms9928a_state.code =                   tms9928a_state_be.code;
-        tms9928a_state.read_buffer =            tms9928a_state_be.read_buffer;
-        tms9928a_state.status =                 tms9928a_state_be.status;
+        context->state.regs =                   tms9928a_state_be.regs;
+        context->state.regs_buffer =            tms9928a_state_be.regs_buffer;
+        context->state.line =                   ntohs (tms9928a_state_be.line);
+        context->state.address =                ntohs (tms9928a_state_be.address);
+        context->state.first_byte_received =    tms9928a_state_be.first_byte_received;
+        context->state.code =                   tms9928a_state_be.code;
+        context->state.read_buffer =            tms9928a_state_be.read_buffer;
+        context->state.status =                 tms9928a_state_be.status;
 
-        memcpy (tms9928a_state.collision_buffer, tms9928a_state_be.collision_buffer, 256);
+        memcpy (context->state.collision_buffer, tms9928a_state_be.collision_buffer, 256);
         for (uint8_t i = 0; i < 32; i++)
         {
-            tms9928a_state.cram [i] = ntohs (tms9928a_state_be.cram[i]);
+            context->state.cram [i] = ntohs (tms9928a_state_be.cram[i]);
         }
 
-        tms9928a_state.line_interrupt_counter = tms9928a_state_be.line_interrupt_counter;
-        tms9928a_state.line_interrupt =         tms9928a_state_be.line_interrupt;
-        tms9928a_state.h_counter =              tms9928a_state_be.h_counter;
-        tms9928a_state.v_counter =              tms9928a_state_be.v_counter;
-        tms9928a_state.cram_latch =             tms9928a_state_be.cram_latch;
+        context->state.line_interrupt_counter = tms9928a_state_be.line_interrupt_counter;
+        context->state.line_interrupt =         tms9928a_state_be.line_interrupt;
+        context->state.h_counter =              tms9928a_state_be.h_counter;
+        context->state.v_counter =              tms9928a_state_be.v_counter;
+        context->state.cram_latch =             tms9928a_state_be.cram_latch;
     }
     else
     {

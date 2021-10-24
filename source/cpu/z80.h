@@ -92,6 +92,7 @@ typedef struct Z80_State_s {
 
 typedef struct Z80_Context_s {
 
+    void *parent;
     Z80_State state;
     uint64_t cycle_count; /* Cycle counter since power-on */
     uint64_t used_cycles; /* Cycles used by the current instruction */
@@ -101,8 +102,8 @@ typedef struct Z80_Context_s {
     void    (* memory_write) (uint16_t, uint8_t);
     uint8_t (* io_read)      (uint8_t);
     void    (* io_write)     (uint8_t, uint8_t);
-    bool    (* get_int)       (void);
-    bool    (* get_nmi)       (void);
+    bool    (* get_int)      (void *);
+    bool    (* get_nmi)      (void *);
 
 } Z80_Context;
 
@@ -119,12 +120,13 @@ typedef struct Z80_Context_s {
 #define Z80_FLAG_NONE       0x00
 
 /* Create the Z80 context with power-on defaults. */
-Z80_Context *z80_init (uint8_t (* memory_read) (uint16_t),
+Z80_Context *z80_init (void *parent,
+                       uint8_t (* memory_read) (uint16_t),
                        void    (* memory_write)(uint16_t, uint8_t),
                        uint8_t (* io_read)     (uint8_t),
                        void    (* io_write)    (uint8_t, uint8_t),
-                       bool    (* get_int)     (void),
-                       bool    (* get_nmi)     (void));
+                       bool    (* get_int)     (void *),
+                       bool    (* get_nmi)     (void *));
 
 /* Simulate the Z80 for the specified number of clock cycles. */
 void z80_run_cycles (Z80_Context *context, uint64_t cycles);

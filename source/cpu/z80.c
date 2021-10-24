@@ -42,12 +42,13 @@ static const uint8_t uint8_even_parity [256] = {
 /*
  * Create the Z80 context with power-on defaults.
  */
-Z80_Context *z80_init (uint8_t (* memory_read) (uint16_t),
+Z80_Context *z80_init (void *parent,
+                       uint8_t (* memory_read) (uint16_t),
                        void    (* memory_write)(uint16_t, uint8_t),
                        uint8_t (* io_read)     (uint8_t),
                        void    (* io_write)    (uint8_t, uint8_t),
-                       bool    (* get_int)     (void),
-                       bool    (* get_nmi)     (void))
+                       bool    (* get_int)     (void *),
+                       bool    (* get_nmi)     (void *))
 {
     Z80_Context *context;
 
@@ -58,6 +59,7 @@ Z80_Context *z80_init (uint8_t (* memory_read) (uint16_t),
         return NULL;
     }
 
+    context->parent       = parent;
     context->memory_read  = memory_read;
     context->memory_write = memory_write;
     context->io_read      = io_read;
@@ -5316,7 +5318,7 @@ void z80_run_cycles (Z80_Context *context, uint64_t cycles)
         {
             /* First, check for a non-maskable interrupt (edge-triggered) */
             static bool nmi_previous = 0;
-            bool nmi = context->get_nmi ();
+            bool nmi = context->get_nmi (context->parent);
             if (nmi && nmi_previous == 0)
             {
                 if (context->state.halt)
@@ -5333,7 +5335,7 @@ void z80_run_cycles (Z80_Context *context, uint64_t cycles)
             nmi_previous = nmi;
 
             /* Then check for maskable interrupts */
-            if (context->state.iff1 && context->get_int ())
+            if (context->state.iff1 && context->get_int (context->parent))
             {
                 if (context->state.halt)
                 {

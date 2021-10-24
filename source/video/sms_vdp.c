@@ -19,8 +19,6 @@
 
 extern Snepulator_State state;
 extern Snepulator_Gamepad gamepad_1;
-extern pthread_mutex_t video_mutex;
-extern SMS_3D_Field sms_3d_field;
 
 #include "tms9928a.h"
 #include "sms_vdp.h"
@@ -127,39 +125,53 @@ static const TMS9928A_Config Mode4_NTSC240 = {
                        { .first = 0x00, .last = 0x06 } }
 };
 
-float_Colour vdp_to_float [4096] = { };
-
-
-/* SMS VDP State */
-extern TMS9928A_State tms9928a_state;
-extern float_Colour frame_buffer [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
-uint16_t colour_mask;
 
 /*
- * Reset the VDP registers and memory to power-on defaults.
+ * Create a SMS VDP context with power-on defaults.
  */
-void sms_vdp_init (void)
+TMS9928A_Context *sms_vdp_init (void *parent, void (* frame_done) (void *), Console console)
 {
-    /* Populate vdp_to_float colour table */
-    if (state.console == CONSOLE_GAME_GEAR)
+    TMS9928A_Context *context;
+
+    context = calloc (1, sizeof (TMS9928A_Context));
+    if (context == NULL)
     {
+        snepulator_error ("Error", "Unable to allocate memory for TMS9928A_Context");
+        return NULL;
+    }
+
+    /* TODO: Only calculate each table once, choose the table based on console.
+     *       Could this be combined with the tms9928A .palette? */
+
+    /* Populate vdp_to_float colour table */
+    if (console == CONSOLE_GAME_GEAR)
+    {
+        context->is_game_gear = true;
+        context->video_width = 160;
+        context->video_height = 144;
+
         for (uint32_t i = 0; i < 4096; i++)
         {
-            vdp_to_float [i] = (float_Colour) GG_VDP_TO_FLOAT (i);
+            context->vdp_to_float [i] = (float_Colour) GG_VDP_TO_FLOAT (i);
         }
-        colour_mask = 0x0fff;
+        context->vdp_to_float_mask = 0x0fff;
     }
     else
     {
+        context->video_width = 256;
+        context->video_height = 192;
+
         for (uint32_t i = 0; i < 64; i++)
         {
-            vdp_to_float [i] = (float_Colour) SMS_VDP_TO_FLOAT (i);
+            context->vdp_to_float [i] = (float_Colour) SMS_VDP_TO_FLOAT (i);
         }
-        colour_mask = 0x3f;
+        context->vdp_to_float_mask = 0x3f;
     }
 
-    memset (&tms9928a_state, 0, sizeof (tms9928a_state));
-    memset (frame_buffer, 0, sizeof (frame_buffer));
+    context->parent = parent;
+    context->frame_done = frame_done;
+
+    return context;
 }
 
 
@@ -167,15 +179,15 @@ void sms_vdp_init (void)
 /*
  * Read one byte from the VDP data port.
  */
-uint8_t sms_vdp_data_read ()
+uint8_t sms_vdp_data_read (TMS9928A_Context *context)
 {
-    uint8_t data = tms9928a_state.read_buffer;
+    uint8_t data = context->state.read_buffer;
 
-    tms9928a_state.first_byte_received = false;
+    context->state.first_byte_received = false;
 
-    tms9928a_state.read_buffer = state.vram [tms9928a_state.address];
+    context->state.read_buffer = context->vram [context->state.address];
 
-    tms9928a_state.address = (tms9928a_state.address + 1) & 0x3fff;
+    context->state.address = (context->state.address + 1) & 0x3fff;
 
     return data;
 
@@ -185,55 +197,55 @@ uint8_t sms_vdp_data_read ()
 /*
  * Write one byte to the VDP data port.
  */
-void sms_vdp_data_write (uint8_t value)
+void sms_vdp_data_write (TMS9928A_Context *context, uint8_t value)
 {
-    tms9928a_state.first_byte_received = false;
-    tms9928a_state.read_buffer = value;
+    context->state.first_byte_received = false;
+    context->state.read_buffer = value;
 
-    switch (tms9928a_state.code)
+    switch (context->state.code)
     {
         case TMS9928A_CODE_VRAM_READ:
         case TMS9928A_CODE_VRAM_WRITE:
         case TMS9928A_CODE_REG_WRITE:
-            state.vram [tms9928a_state.address] = value;
+            context->vram [context->state.address] = value;
             break;
 
         case SMS_VDP_CODE_CRAM_WRITE:
-            if (state.console == CONSOLE_GAME_GEAR)
+            if (context->is_game_gear)
             {
-                if ((tms9928a_state.address & 0x01) == 0x00)
+                if ((context->state.address & 0x01) == 0x00)
                 {
-                    tms9928a_state.cram_latch = value;
+                    context->state.cram_latch = value;
                 }
                 else
                 {
-                    tms9928a_state.cram [(tms9928a_state.address >> 1) & 0x1f] = (((uint16_t) value) << 8) | tms9928a_state.cram_latch;
+                    context->state.cram [(context->state.address >> 1) & 0x1f] = (((uint16_t) value) << 8) | context->state.cram_latch;
                 }
             }
             else
             {
-                tms9928a_state.cram [tms9928a_state.address & 0x1f] = value;
+                context->state.cram [context->state.address & 0x1f] = value;
             }
             break;
 
         default:
             break;
     }
-    tms9928a_state.address = (tms9928a_state.address + 1) & 0x3fff;
+    context->state.address = (context->state.address + 1) & 0x3fff;
 }
 
 
 /*
  * Read one byte from the VDP control (status) port.
  */
-uint8_t sms_vdp_status_read ()
+uint8_t sms_vdp_status_read (TMS9928A_Context *context)
 {
-    uint8_t status = tms9928a_state.status;
-    tms9928a_state.first_byte_received = false;
+    uint8_t status = context->state.status;
+    context->state.first_byte_received = false;
 
     /* Clear on read */
-    tms9928a_state.status = 0x00;
-    tms9928a_state.line_interrupt = false; /* "The flag remains set until the control port (IO port 0xbf) is read */
+    context->state.status = 0x00;
+    context->state.line_interrupt = false; /* "The flag remains set until the control port (IO port 0xbf) is read */
 
     return status;
 }
@@ -242,34 +254,34 @@ uint8_t sms_vdp_status_read ()
 /*
  * Write one byte to the VDP control port.
  */
-void sms_vdp_control_write (uint8_t value)
+void sms_vdp_control_write (TMS9928A_Context *context, uint8_t value)
 {
-    if (!tms9928a_state.first_byte_received) /* First byte */
+    if (!context->state.first_byte_received) /* First byte */
     {
-        tms9928a_state.first_byte_received = true;
-        tms9928a_state.address = (tms9928a_state.address & 0x3f00) | ((uint16_t) value << 0);
+        context->state.first_byte_received = true;
+        context->state.address = (context->state.address & 0x3f00) | ((uint16_t) value << 0);
     }
     else /* Second byte */
     {
-        tms9928a_state.first_byte_received = false;
-        tms9928a_state.address = (tms9928a_state.address & 0x00ff) | ((uint16_t) (value & 0x3f) << 8);
-        tms9928a_state.code = value & 0xc0;
+        context->state.first_byte_received = false;
+        context->state.address = (context->state.address & 0x00ff) | ((uint16_t) (value & 0x3f) << 8);
+        context->state.code = value & 0xc0;
 
-        switch (tms9928a_state.code)
+        switch (context->state.code)
         {
             case TMS9928A_CODE_VRAM_READ:
-                tms9928a_state.read_buffer = state.vram [tms9928a_state.address++];
+                context->state.read_buffer = context->vram [context->state.address++];
                 break;
             case TMS9928A_CODE_VRAM_WRITE:
                 break;
             case TMS9928A_CODE_REG_WRITE:
                 if ((value & 0x0f) <= 10)
                 {
-                    ((uint8_t *) &tms9928a_state.regs_buffer) [value & 0x0f] = tms9928a_state.address & 0x00ff;
+                    ((uint8_t *) &context->state.regs_buffer) [value & 0x0f] = context->state.address & 0x00ff;
 
                     /* Enabling interrupts should take affect immediately */
-                    tms9928a_state.regs.ctrl_1 &= ~TMS9928A_CTRL_1_FRAME_INT_EN;
-                    tms9928a_state.regs.ctrl_1 |= tms9928a_state.regs_buffer.ctrl_1 & TMS9928A_CTRL_1_FRAME_INT_EN;
+                    context->state.regs.ctrl_1 &= ~TMS9928A_CTRL_1_FRAME_INT_EN;
+                    context->state.regs.ctrl_1 |= context->state.regs_buffer.ctrl_1 & TMS9928A_CTRL_1_FRAME_INT_EN;
                 }
                 break;
             case SMS_VDP_CODE_CRAM_WRITE:
@@ -284,22 +296,22 @@ void sms_vdp_control_write (uint8_t value)
 /*
  * Assemble the four mode-bits.
  */
-uint8_t sms_vdp_mode_get (void)
+uint8_t sms_vdp_mode_get (TMS9928A_Context *context)
 {
-    return ((tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_MODE_1) ? BIT_0 : 0) +
-           ((tms9928a_state.regs.ctrl_0 & TMS9928A_CTRL_0_MODE_2) ? BIT_1 : 0) +
-           ((tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_MODE_3) ? BIT_2 : 0) +
-           ((tms9928a_state.regs.ctrl_0 & SMS_VDP_CTRL_0_MODE_4)  ? BIT_3 : 0);
+    return ((context->state.regs.ctrl_1 & TMS9928A_CTRL_1_MODE_1) ? BIT_0 : 0) +
+           ((context->state.regs.ctrl_0 & TMS9928A_CTRL_0_MODE_2) ? BIT_1 : 0) +
+           ((context->state.regs.ctrl_1 & TMS9928A_CTRL_1_MODE_3) ? BIT_2 : 0) +
+           ((context->state.regs.ctrl_0 & SMS_VDP_CTRL_0_MODE_4)  ? BIT_3 : 0);
 }
 
 
 /*
  * Check if the light phaser is receiving light
  */
-bool sms_vdp_get_phaser_th (uint64_t z80_cycle)
+bool sms_vdp_get_phaser_th (TMS9928A_Context *context, uint64_t z80_cycle)
 {
     int32_t scan_x = ((z80_cycle % 228) * 342) / 228;
-    int32_t scan_y = tms9928a_state.line;
+    int32_t scan_y = context->state.line;
 
     int32_t delta_x = scan_x - state.phaser_x;
     int32_t delta_y = scan_y - state.phaser_y;
@@ -323,155 +335,63 @@ bool sms_vdp_get_phaser_th (uint64_t z80_cycle)
  *  -  58 pixels of blanking and sync: (136 - 248)
  *  -  13 pixels of left border:       (249 - 255)
  */
-uint8_t sms_vdp_get_h_counter (void)
+uint8_t sms_vdp_get_h_counter (TMS9928A_Context *context)
 {
     if (gamepad_1.type == GAMEPAD_TYPE_SMS_PHASER &&
-        tms9928a_state.line >= (state.phaser_y - SMS_PHASER_RADIUS) &&
-        tms9928a_state.line <= (state.phaser_y + SMS_PHASER_RADIUS))
+        context->state.line >= (state.phaser_y - SMS_PHASER_RADIUS) &&
+        context->state.line <= (state.phaser_y + SMS_PHASER_RADIUS))
     {
-        int32_t y_offset = state.phaser_y - tms9928a_state.line;
+        int32_t y_offset = state.phaser_y - context->state.line;
         int32_t x_offset = sqrt (SMS_PHASER_RADIUS * SMS_PHASER_RADIUS + y_offset * y_offset);
 
-        tms9928a_state.h_counter = (state.phaser_x - x_offset) / 2;
+        context->state.h_counter = (state.phaser_x - x_offset) / 2;
 
-        if (tms9928a_state.h_counter < 0)
+        if (context->state.h_counter < 0)
         {
-            tms9928a_state.h_counter = 0;
+            context->state.h_counter = 0;
         }
-        if (tms9928a_state.h_counter > 0x7f)
+        if (context->state.h_counter > 0x7f)
         {
-            tms9928a_state.h_counter = 0x7f;
+            context->state.h_counter = 0x7f;
         }
 
         /* Games seem to add their own left-offset */
-        tms9928a_state.h_counter += 24;
+        context->state.h_counter += 24;
     }
 
-    return tms9928a_state.h_counter;
+    return context->state.h_counter;
 }
 
 
 /*
  * Read the 8-bit v-counter.
  */
-uint8_t sms_vdp_get_v_counter (void)
+uint8_t sms_vdp_get_v_counter (TMS9928A_Context *context)
 {
-    return tms9928a_state.v_counter;
+    return context->state.v_counter;
 }
 
 
 /*
  * Check if the VDP is currently requesting an interrupt.
  */
-bool sms_vdp_get_interrupt (void)
+bool sms_vdp_get_interrupt (TMS9928A_Context *context)
 {
     bool interrupt = false;
 
     /* Frame interrupt */
-    if ((tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_FRAME_INT_EN) && (tms9928a_state.status & TMS9928A_STATUS_INT))
+    if ((context->state.regs.ctrl_1 & TMS9928A_CTRL_1_FRAME_INT_EN) && (context->state.status & TMS9928A_STATUS_INT))
     {
         interrupt = true;
     }
 
     /* Line interrupt */
-    if ((tms9928a_state.regs.ctrl_0 & SMS_VDP_CTRL_0_LINE_INT_EN) && tms9928a_state.line_interrupt)
+    if ((context->state.regs.ctrl_0 & SMS_VDP_CTRL_0_LINE_INT_EN) && context->state.line_interrupt)
     {
         interrupt = true;
     }
 
     return interrupt;
-}
-
-
-/*
- * Process the new 3d field to update the anaglyph output image.
- */
-void sms_vdp_process_3d_field (void)
-{
-    bool update_red = false;
-    bool update_green = false;
-    bool update_blue = false;
-    float_Colour pixel;
-
-    switch (state.video_3d_mode)
-    {
-        case VIDEO_3D_LEFT_ONLY:
-            if (sms_3d_field == SMS_3D_FIELD_LEFT)
-            {
-                update_red = true;
-                update_green = true;
-                update_blue = true;
-            }
-            break;
-
-        case VIDEO_3D_RIGHT_ONLY:
-            if (sms_3d_field == SMS_3D_FIELD_RIGHT)
-            {
-                update_red = true;
-                update_green = true;
-                update_blue = true;
-            }
-            break;
-
-        case VIDEO_3D_RED_CYAN:
-            if (sms_3d_field == SMS_3D_FIELD_LEFT)
-            {
-                update_red = true;
-            }
-            else
-            {
-                update_green = true;
-                update_blue = true;
-            }
-            break;
-
-        case VIDEO_3D_RED_GREEN:
-            if (sms_3d_field == SMS_3D_FIELD_LEFT)
-            {
-                update_red = true;
-            }
-            else
-            {
-                update_green = true;
-            }
-            break;
-
-        case VIDEO_3D_MAGENTA_GREEN:
-            if (sms_3d_field == SMS_3D_FIELD_LEFT)
-            {
-                update_red = true;
-                update_blue = true;
-            }
-            else
-            {
-                update_green = true;
-            }
-            break;
-    }
-
-    for (uint32_t i = 0; i < (VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES); i++)
-    {
-        pixel = colour_saturation (frame_buffer [i], state.video_3d_saturation);
-
-        if (update_red)
-        {
-            state.video_out_data [i].r = pixel.r;
-        }
-        if (update_green)
-        {
-            state.video_out_data [i].g = pixel.g;
-        }
-        if (update_blue)
-        {
-            state.video_out_data [i].b = pixel.b;
-        }
-
-        /* Special case where blue is not used */
-        if (state.video_3d_mode == VIDEO_3D_RED_GREEN)
-        {
-            state.video_out_data [i].b = 0.0;
-        }
-    }
 }
 
 
@@ -484,8 +404,8 @@ void sms_vdp_process_3d_field (void)
 /*
  * Render one line of an 8x8 pattern.
  */
-void sms_vdp_render_mode4_pattern_line (const TMS9928A_Config *mode, uint16_t line, SMS_VDP_Mode4_Pattern *pattern_base,
-                                        SMS_VDP_Palette palette, int32_Point_2D offset, uint8_t flags)
+static void sms_vdp_render_mode4_pattern_line (TMS9928A_Context *context, const TMS9928A_Config *mode, uint16_t line, SMS_VDP_Mode4_Pattern *pattern_base,
+                                               SMS_VDP_Palette palette, int32_Point_2D offset, uint8_t flags)
 {
     char *line_base;
 
@@ -503,7 +423,7 @@ void sms_vdp_render_mode4_pattern_line (const TMS9928A_Config *mode, uint16_t li
             continue;
 
         /* Don't draw the left-most eight pixels if BIT_5 of CTRL_1 is set */
-        if (tms9928a_state.regs.ctrl_0 & SMS_VDP_CTRL_0_MASK_COL_1 && x + offset.x < 8)
+        if (context->state.regs.ctrl_0 & SMS_VDP_CTRL_0_MASK_COL_1 && x + offset.x < 8)
             continue;
 
         int shift;
@@ -524,18 +444,18 @@ void sms_vdp_render_mode4_pattern_line (const TMS9928A_Config *mode, uint16_t li
         /* Sprite collision detection */
         if (flags & PATTERN_COLLISIONS)
         {
-            if (tms9928a_state.collision_buffer [x + offset.x])
+            if (context->state.collision_buffer [x + offset.x])
             {
-                tms9928a_state.status |= TMS9928A_SPRITE_COLLISION;
+                context->state.status |= TMS9928A_SPRITE_COLLISION;
             }
 
-            tms9928a_state.collision_buffer [x + offset.x] = true;
+            context->state.collision_buffer [x + offset.x] = true;
         }
 
-        uint16_t pixel = tms9928a_state.cram [palette + colour_index];
+        uint16_t pixel = context->state.cram [palette + colour_index];
 
-        frame_buffer [(offset.x + x + VIDEO_SIDE_BORDER) +
-                      (state.render_start_y + line) * VIDEO_BUFFER_WIDTH] = vdp_to_float [pixel & colour_mask];
+        context->frame_buffer [(offset.x + x + VIDEO_SIDE_BORDER) +
+                               (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = context->vdp_to_float [pixel & context->vdp_to_float_mask];
     }
 }
 
@@ -547,29 +467,29 @@ void sms_vdp_render_mode4_pattern_line (const TMS9928A_Config *mode, uint16_t li
 /*
  * Render one line of the background layer.
  */
-void sms_vdp_render_mode4_background_line (const TMS9928A_Config *mode, uint16_t line, bool priority)
+static void sms_vdp_render_mode4_background_line (TMS9928A_Context *context, const TMS9928A_Config *mode, uint16_t line, bool priority)
 {
     uint16_t name_table_base;
     uint8_t num_rows = (mode->lines_active == 192) ? 28 : 32;
-    uint8_t start_column = 32 - ((tms9928a_state.regs.bg_scroll_x & 0xf8) >> 3);
-    uint8_t fine_scroll_x = tms9928a_state.regs.bg_scroll_x & 0x07;
-    uint8_t start_row = ((tms9928a_state.regs.bg_scroll_y % (8 * num_rows)) & 0xf8) >> 3;
-    uint8_t fine_scroll_y = (tms9928a_state.regs.bg_scroll_y % (8 * num_rows)) & 0x07;
+    uint8_t start_column = 32 - ((context->state.regs.bg_scroll_x & 0xf8) >> 3);
+    uint8_t fine_scroll_x = context->state.regs.bg_scroll_x & 0x07;
+    uint8_t start_row = ((context->state.regs.bg_scroll_y % (8 * num_rows)) & 0xf8) >> 3;
+    uint8_t fine_scroll_y = (context->state.regs.bg_scroll_y % (8 * num_rows)) & 0x07;
     uint32_t tile_y = (line + fine_scroll_y) / 8;
     int32_Point_2D position;
     uint8_t pattern_flags;
 
     if (mode->lines_active == 192)
     {
-        name_table_base = (((uint16_t) tms9928a_state.regs.name_table_base) << 10) & 0x3800;
+        name_table_base = (((uint16_t) context->state.regs.name_table_base) << 10) & 0x3800;
     }
     else
     {
-        name_table_base = ((((uint16_t) tms9928a_state.regs.name_table_base) << 10) & 0x3000) + 0x700;
+        name_table_base = ((((uint16_t) context->state.regs.name_table_base) << 10) & 0x3000) + 0x700;
     }
 
     /* Bit 6 in ctrl_0 can disable horizontal scrolling for the first two rows */
-    if (tms9928a_state.regs.ctrl_0 & SMS_VDP_CTRL_0_LOCK_ROW_0_1 && line < 16)
+    if (context->state.regs.ctrl_0 & SMS_VDP_CTRL_0_LOCK_ROW_0_1 && line < 16)
     {
         start_column = 0;
         fine_scroll_x = 0;
@@ -580,7 +500,7 @@ void sms_vdp_render_mode4_background_line (const TMS9928A_Config *mode, uint16_t
         pattern_flags = priority ? PATTERN_TRANSPARENCY : 0;
 
         /* Bit 7 in ctrl_0 can disable vertical scrolling for the rightmost eight columns */
-        if (tile_x == 24 && (tms9928a_state.regs.ctrl_0 & SMS_VDP_CTRL_0_LOCK_COL_24_31))
+        if (tile_x == 24 && (context->state.regs.ctrl_0 & SMS_VDP_CTRL_0_LOCK_COL_24_31))
         {
             start_row = 0;
             fine_scroll_y = 0;
@@ -590,13 +510,13 @@ void sms_vdp_render_mode4_background_line (const TMS9928A_Config *mode, uint16_t
         uint16_t tile_address = name_table_base + ((((tile_y + start_row) % num_rows) << 6) | ((tile_x + start_column) % 32 << 1));
 
         /* SMS1 VDP name-table mirroring */
-        if (state.rom_hints & SMS_HINT_SMS1_VDP && !(tms9928a_state.regs.name_table_base & 0x01))
+        if (context->sms1_vdp_hint && !(context->state.regs.name_table_base & 0x01))
         {
             tile_address &= ~0x0400;
         }
 
-        uint16_t tile = ((uint16_t)(state.vram [tile_address])) +
-                        (((uint16_t)(state.vram [tile_address + 1])) << 8);
+        uint16_t tile = ((uint16_t)(context->vram [tile_address])) +
+                        (((uint16_t)(context->vram [tile_address + 1])) << 8);
 
         /* If we are rendering the "priority" layer, skip any non-priority tiles */
         if (priority && !(tile & 0x1000))
@@ -612,13 +532,13 @@ void sms_vdp_render_mode4_background_line (const TMS9928A_Config *mode, uint16_t
             pattern_flags |= PATTERN_FLIP_V;
         }
 
-        SMS_VDP_Mode4_Pattern *pattern = (SMS_VDP_Mode4_Pattern *) &state.vram [(tile & 0x1ff) * sizeof (SMS_VDP_Mode4_Pattern)];
+        SMS_VDP_Mode4_Pattern *pattern = (SMS_VDP_Mode4_Pattern *) &context->vram [(tile & 0x1ff) * sizeof (SMS_VDP_Mode4_Pattern)];
 
         SMS_VDP_Palette palette = (tile & (1 << 11)) ? SMS_VDP_PALETTE_SPRITE : SMS_VDP_PALETTE_BACKGROUND;
 
         position.x = 8 * tile_x + fine_scroll_x;
         position.y = 8 * tile_y - fine_scroll_y;
-        sms_vdp_render_mode4_pattern_line (mode, line, pattern, palette, position, pattern_flags);
+        sms_vdp_render_mode4_pattern_line (context, mode, line, pattern, palette, position, pattern_flags);
     }
 }
 
@@ -626,12 +546,12 @@ void sms_vdp_render_mode4_background_line (const TMS9928A_Config *mode, uint16_t
 /*
  * Render one line of the sprite layer.
  */
-void sms_vdp_render_mode4_sprites_line (const TMS9928A_Config *mode, uint16_t line)
+static void sms_vdp_render_mode4_sprites_line (TMS9928A_Context *context, const TMS9928A_Config *mode, uint16_t line)
 {
-    uint16_t sprite_attribute_table_base = (((uint16_t) tms9928a_state.regs.sprite_attr_table_base) << 7) & 0x3f00;
-    uint16_t sprite_pattern_offset = (tms9928a_state.regs.sprite_pg_base & 0x04) ? 256 : 0;
-    uint8_t pattern_height = (tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_SPRITE_MAG) ? 16 : 8;
-    uint8_t sprite_height = (tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_SPRITE_SIZE) ? (pattern_height << 1) : pattern_height;
+    uint16_t sprite_attribute_table_base = (((uint16_t) context->state.regs.sprite_attr_table_base) << 7) & 0x3f00;
+    uint16_t sprite_pattern_offset = (context->state.regs.sprite_pg_base & 0x04) ? 256 : 0;
+    uint8_t pattern_height = (context->state.regs.ctrl_1 & TMS9928A_CTRL_1_SPRITE_MAG) ? 16 : 8;
+    uint8_t sprite_height = (context->state.regs.ctrl_1 & TMS9928A_CTRL_1_SPRITE_SIZE) ? (pattern_height << 1) : pattern_height;
     uint8_t line_sprite_buffer [64];
     uint8_t line_sprite_count = 0;
     SMS_VDP_Mode4_Pattern *pattern;
@@ -639,7 +559,7 @@ void sms_vdp_render_mode4_sprites_line (const TMS9928A_Config *mode, uint16_t li
     uint8_t pattern_flags = PATTERN_TRANSPARENCY | PATTERN_COLLISIONS;
 
     /* Sprite magnification */
-    if (tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_SPRITE_MAG)
+    if (context->state.regs.ctrl_1 & TMS9928A_CTRL_1_SPRITE_MAG)
     {
         pattern_flags |= PATTERN_MAGNIFY;
     }
@@ -647,7 +567,7 @@ void sms_vdp_render_mode4_sprites_line (const TMS9928A_Config *mode, uint16_t li
     /* Traverse the sprite list, filling the line sprite buffer */
     for (int i = 0; i < 64; i++)
     {
-        uint8_t y = state.vram [sprite_attribute_table_base + i];
+        uint8_t y = context->vram [sprite_attribute_table_base + i];
 
         /* Break if there are no more sprites */
         if (mode->lines_active == 192 && y == 0xd0)
@@ -663,9 +583,9 @@ void sms_vdp_render_mode4_sprites_line (const TMS9928A_Config *mode, uint16_t li
         /* If the sprite is on this line, add it to the buffer */
         if (line >= position.y && line < position.y + sprite_height)
         {
-            if (line_sprite_count == 8 && !state.remove_sprite_limit)
+            if (line_sprite_count == 8 && !context->remove_sprite_limit)
             {
-                tms9928a_state.status |= TMS9928A_SPRITE_OVERFLOW;
+                context->state.status |= TMS9928A_SPRITE_OVERFLOW;
                 break;
             }
             line_sprite_buffer [line_sprite_count++] = i;
@@ -673,21 +593,21 @@ void sms_vdp_render_mode4_sprites_line (const TMS9928A_Config *mode, uint16_t li
     }
 
     /* Clear the sprite collision buffer */
-    memset (tms9928a_state.collision_buffer, 0, sizeof (tms9928a_state.collision_buffer));
+    memset (context->state.collision_buffer, 0, sizeof (context->state.collision_buffer));
 
     /* Render the sprites in the line sprite buffer.
      * Done in reverse order so that the first sprite is the one left on the screen */
     while (line_sprite_count--)
     {
         uint16_t i = line_sprite_buffer [line_sprite_count];
-        uint8_t y = state.vram [sprite_attribute_table_base + i];
-        uint8_t x = state.vram [sprite_attribute_table_base + 0x80 + i * 2];
-        uint8_t pattern_index = state.vram [sprite_attribute_table_base + 0x80 + i * 2 + 1];
+        uint8_t y = context->vram [sprite_attribute_table_base + i];
+        uint8_t x = context->vram [sprite_attribute_table_base + 0x80 + i * 2];
+        uint8_t pattern_index = context->vram [sprite_attribute_table_base + 0x80 + i * 2 + 1];
 
         position.x = x;
 
         /* Bit 3 in ctrl_0 shifts all sprites eight pixels to the left */
-        if (tms9928a_state.regs.ctrl_0 & SMS_VDP_CTRL_0_EC)
+        if (context->state.regs.ctrl_0 & SMS_VDP_CTRL_0_EC)
         {
             position.x -= 8;
         }
@@ -698,17 +618,17 @@ void sms_vdp_render_mode4_sprites_line (const TMS9928A_Config *mode, uint16_t li
         else
             position.y = y + 1;
 
-        if (tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_SPRITE_SIZE)
+        if (context->state.regs.ctrl_1 & TMS9928A_CTRL_1_SPRITE_SIZE)
             pattern_index &= 0xfe;
 
-        pattern = (SMS_VDP_Mode4_Pattern *) &state.vram [(sprite_pattern_offset + pattern_index) * sizeof (SMS_VDP_Mode4_Pattern)];
-        sms_vdp_render_mode4_pattern_line (mode, line, pattern, SMS_VDP_PALETTE_SPRITE, position, pattern_flags);
+        pattern = (SMS_VDP_Mode4_Pattern *) &context->vram [(sprite_pattern_offset + pattern_index) * sizeof (SMS_VDP_Mode4_Pattern)];
+        sms_vdp_render_mode4_pattern_line (context, mode, line, pattern, SMS_VDP_PALETTE_SPRITE, position, pattern_flags);
 
-        if (tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_SPRITE_SIZE)
+        if (context->state.regs.ctrl_1 & TMS9928A_CTRL_1_SPRITE_SIZE)
         {
             position.y += pattern_height;
-            pattern = (SMS_VDP_Mode4_Pattern *) &state.vram [(sprite_pattern_offset + pattern_index + 1) * sizeof (SMS_VDP_Mode4_Pattern)];
-            sms_vdp_render_mode4_pattern_line (mode, line, pattern, SMS_VDP_PALETTE_SPRITE, position, pattern_flags);
+            pattern = (SMS_VDP_Mode4_Pattern *) &context->vram [(sprite_pattern_offset + pattern_index + 1) * sizeof (SMS_VDP_Mode4_Pattern)];
+            sms_vdp_render_mode4_pattern_line (context, mode, line, pattern, SMS_VDP_PALETTE_SPRITE, position, pattern_flags);
         }
     }
 }
@@ -717,26 +637,24 @@ void sms_vdp_render_mode4_sprites_line (const TMS9928A_Config *mode, uint16_t li
 /*
  * Render one active line of output for the SMS VDP.
  */
-void sms_vdp_render_line (const TMS9928A_Config *config, uint16_t line)
+static void sms_vdp_render_line (TMS9928A_Context *context, const TMS9928A_Config *config, uint16_t line)
 {
     float_Colour video_background =     { .r = 0.0f, .g = 0.0f, .b = 0.0f };
 
-    state.render_start_y = (VIDEO_BUFFER_LINES - config->lines_active) / 2;
-
     /* Background */
-    if (!(tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_BLANK) && !state.disable_blanking)
+    if (!(context->state.regs.ctrl_1 & TMS9928A_CTRL_1_BLANK) && !context->disable_blanking)
     {
         /* Display is blank */
     }
     else if (config->mode & SMS_VDP_MODE_4)
     {
         uint8_t bg_colour;
-        bg_colour = tms9928a_state.cram [16 + (tms9928a_state.regs.background_colour & 0x0f)];
-        video_background = vdp_to_float [bg_colour & colour_mask];
+        bg_colour = context->state.cram [16 + (context->state.regs.background_colour & 0x0f)];
+        video_background = context->vdp_to_float [bg_colour & context->vdp_to_float_mask];
     }
     else
     {
-        video_background = config->palette [tms9928a_state.regs.background_colour & 0x0f];
+        video_background = config->palette [context->state.regs.background_colour & 0x0f];
     }
     /* Note: For now the top/bottom borders just copy the background from the first
      *       and last active lines. Do any games change the value outside of this? */
@@ -744,11 +662,11 @@ void sms_vdp_render_line (const TMS9928A_Config *config, uint16_t line)
     /* Top border */
     if (line == 0)
     {
-        for (uint32_t border_line = 0; border_line < state.render_start_y; border_line++)
+        for (uint32_t border_line = 0; border_line < context->render_start_y; border_line++)
         {
             for (uint32_t x = 0; x < VIDEO_BUFFER_WIDTH; x++)
             {
-                frame_buffer [x + border_line * VIDEO_BUFFER_WIDTH] = video_background;
+                context->frame_buffer [x + border_line * VIDEO_BUFFER_WIDTH] = video_background;
             }
         }
     }
@@ -756,46 +674,46 @@ void sms_vdp_render_line (const TMS9928A_Config *config, uint16_t line)
     /* Side borders */
     for (int x = 0; x < VIDEO_BUFFER_WIDTH; x++)
     {
-        frame_buffer [x + (state.render_start_y + line) * VIDEO_BUFFER_WIDTH] = video_background;
+        context->frame_buffer [x + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = video_background;
     }
 
-    if (state.console == CONSOLE_MASTER_SYSTEM && tms9928a_state.regs.ctrl_0 & SMS_VDP_CTRL_0_MASK_COL_1)
+    if (!context->is_game_gear && context->state.regs.ctrl_0 & SMS_VDP_CTRL_0_MASK_COL_1)
     {
-        state.video_blank_left = 8;
+        context->video_blank_left = 8;
     }
     else
     {
-        state.video_blank_left = 0;
+        context->video_blank_left = 0;
     }
 
     /* Bottom border */
     if (line == config->lines_active - 1)
     {
-        for (uint32_t border_line = state.render_start_y + config->lines_active; border_line < VIDEO_BUFFER_LINES; border_line++)
+        for (uint32_t border_line = context->render_start_y + config->lines_active; border_line < VIDEO_BUFFER_LINES; border_line++)
         {
             for (uint32_t x = 0; x < VIDEO_BUFFER_WIDTH; x++)
             {
-                frame_buffer [x + border_line * VIDEO_BUFFER_WIDTH] = video_background;
+                context->frame_buffer [x + border_line * VIDEO_BUFFER_WIDTH] = video_background;
             }
         }
     }
 
     /* Return without rendering patterns if BLANK is enabled */
-    if (!(tms9928a_state.regs.ctrl_1 & TMS9928A_CTRL_1_BLANK) && !state.disable_blanking)
+    if (!(context->state.regs.ctrl_1 & TMS9928A_CTRL_1_BLANK) && !context->disable_blanking)
     {
         return;
     }
 
-    if (tms9928a_state.regs.ctrl_0 & SMS_VDP_CTRL_0_MODE_4)
+    if (context->state.regs.ctrl_0 & SMS_VDP_CTRL_0_MODE_4)
     {
-        sms_vdp_render_mode4_background_line (config, line, false);
-        sms_vdp_render_mode4_sprites_line (config, line);
-        sms_vdp_render_mode4_background_line (config, line, true);
+        sms_vdp_render_mode4_background_line (context, config, line, false);
+        sms_vdp_render_mode4_sprites_line (context, config, line);
+        sms_vdp_render_mode4_background_line (context, config, line, true);
     }
-    else if (tms9928a_state.regs.ctrl_0 & TMS9928A_CTRL_0_MODE_2)
+    else if (context->state.regs.ctrl_0 & TMS9928A_CTRL_0_MODE_2)
     {
-        tms9928a_render_mode2_background_line (config, line);
-        tms9928a_render_sprites_line (config, line);
+        tms9928a_render_mode2_background_line (context, config, line);
+        tms9928a_render_sprites_line (context, config, line);
     }
 }
 
@@ -803,34 +721,34 @@ void sms_vdp_render_line (const TMS9928A_Config *config, uint16_t line)
 /*
  * Run one scanline on the VDP.
  */
-void sms_vdp_run_one_scanline ()
+void sms_vdp_run_one_scanline (TMS9928A_Context *context)
 {
     const TMS9928A_Config *config;
-    TMS9928A_Mode mode = sms_vdp_mode_get ();
+    TMS9928A_Mode mode = sms_vdp_mode_get (context);
 
     switch (mode)
     {
         case TMS9928A_MODE_0:
-            config = (state.format == VIDEO_FORMAT_NTSC) ? &Mode0_NTSC : &Mode0_PAL;
+            config = (context->format == VIDEO_FORMAT_NTSC) ? &Mode0_NTSC : &Mode0_PAL;
             break;
 
         case TMS9928A_MODE_2: /* Mode 2: 32 × 24 8-byte tiles, sprites enabled, three colour/pattern tables */
-            config = (state.format == VIDEO_FORMAT_NTSC) ? &Mode2_NTSC : &Mode2_PAL;
+            config = (context->format == VIDEO_FORMAT_NTSC) ? &Mode2_NTSC : &Mode2_PAL;
             break;
 
         case SMS_VDP_MODE_4: /* Mode 4, 192 lines */
         case SMS_VDP_MODE_4_2:
         case SMS_VDP_MODE_4_3:
         case SMS_VDP_MODE_4_3_2_1:
-            config = (state.format == VIDEO_FORMAT_NTSC) ? &Mode4_NTSC192 : &Mode4_PAL192;
+            config = (context->format == VIDEO_FORMAT_NTSC) ? &Mode4_NTSC192 : &Mode4_PAL192;
             break;
 
         case SMS_VDP_MODE_4_224:
-            config = (state.format == VIDEO_FORMAT_NTSC) ? &Mode4_NTSC224 : &Mode4_PAL224;
+            config = (context->format == VIDEO_FORMAT_NTSC) ? &Mode4_NTSC224 : &Mode4_PAL224;
             break;
 
         case SMS_VDP_MODE_4_240:
-            config = (state.format == VIDEO_FORMAT_NTSC) ? &Mode4_NTSC240 : &Mode4_PAL240;
+            config = (context->format == VIDEO_FORMAT_NTSC) ? &Mode4_NTSC240 : &Mode4_PAL240;
             break;
 
         default:
@@ -838,51 +756,25 @@ void sms_vdp_run_one_scanline ()
             return;
     }
 
-    /* If this is an active line, render it */
-    if (tms9928a_state.line < config->lines_active)
+    /* The Master System supports multiple resolutions that can be changed on the fly. */
+    if (!context->is_game_gear)
     {
-        sms_vdp_render_line (config, tms9928a_state.line);
+        context->render_start_y = (VIDEO_BUFFER_LINES - config->lines_active) / 2;
+        context->video_start_y  = context->render_start_y;
+        context->video_height   = config->lines_active;
+    }
+
+    /* If this is an active line, render it */
+    if (context->state.line < config->lines_active)
+    {
+        sms_vdp_render_line (context, config, context->state.line);
     }
 
     /* If this the final active line, copy the frame for output to the user */
     /* TODO: This is okay for single-threaded code, but locking may be needed if multi-threading is added */
-    if (tms9928a_state.line == config->lines_active - 1)
+    if (context->state.line == config->lines_active - 1)
     {
-        pthread_mutex_lock (&video_mutex);
-
-        if (state.console == CONSOLE_MASTER_SYSTEM)
-        {
-            state.video_start_y = state.render_start_y;
-            state.video_height = config->lines_active;
-        }
-
-        if (sms_3d_field != SMS_3D_FIELD_NONE)
-        {
-            sms_vdp_process_3d_field ();
-        }
-        else
-        {
-            if (state.console == CONSOLE_GAME_GEAR)
-            {
-                /* Only keep the LCD area */
-                for (uint32_t y = 0; y < VIDEO_BUFFER_LINES; y++)
-                {
-                    for (uint32_t x = 0; x < VIDEO_BUFFER_WIDTH; x++)
-                    {
-                        if ((x >= state.video_start_x) && (x < state.video_start_x + state.video_width) &&
-                            (y >= state.video_start_y) && (y < state.video_start_y + state.video_height))
-                        {
-                            continue;
-                        }
-                        frame_buffer [x + y * VIDEO_BUFFER_WIDTH] = (float_Colour) { .r = 0.0, .g = 0.0, .b = 0.0 };
-                    }
-                }
-            }
-
-            memcpy (state.video_out_data, frame_buffer, sizeof (frame_buffer));
-        }
-
-        pthread_mutex_unlock (&video_mutex);
+        context->frame_done (context->parent);
 
         /* Update statistics (rolling average) */
         static int vdp_previous_completion_time = 0;
@@ -897,14 +789,14 @@ void sms_vdp_run_one_scanline ()
     }
 
     /* Update values for the next line */
-    tms9928a_state.line = (tms9928a_state.line + 1) % config->lines_total;
+    context->state.line = (context->state.line + 1) % config->lines_total;
 
-    uint16_t temp_line = tms9928a_state.line;
+    uint16_t temp_line = context->state.line;
     for (int range = 0; range < 3; range++)
     {
         if (temp_line < config->v_counter_map [range].last - config->v_counter_map [range].first + 1)
         {
-            tms9928a_state.v_counter = temp_line + config->v_counter_map [range].first;
+            context->state.v_counter = temp_line + config->v_counter_map [range].first;
             break;
         }
         else
@@ -914,23 +806,23 @@ void sms_vdp_run_one_scanline ()
     }
 
     /* Propagate register writes that occurred during this line. */
-    tms9928a_state.regs = tms9928a_state.regs_buffer;
+    context->state.regs = context->state.regs_buffer;
 
     /* Check for frame interrupt */
-    if (tms9928a_state.line == config->lines_active + 1)
-        tms9928a_state.status |= TMS9928A_STATUS_INT;
+    if (context->state.line == config->lines_active + 1)
+        context->state.status |= TMS9928A_STATUS_INT;
 
     /* Decrement the line interrupt counter during the active display period.
      * Reset outside of the active display period (but not the first line after) */
-    if (tms9928a_state.line <= config->lines_active)
-        tms9928a_state.line_interrupt_counter--;
+    if (context->state.line <= config->lines_active)
+        context->state.line_interrupt_counter--;
     else
-        tms9928a_state.line_interrupt_counter = tms9928a_state.regs.line_counter_reset;
+        context->state.line_interrupt_counter = context->state.regs.line_counter_reset;
 
     /* Check for line interrupt */
-    if (tms9928a_state.line <= config->lines_active && tms9928a_state.line_interrupt_counter == 0xff)
+    if (context->state.line <= config->lines_active && context->state.line_interrupt_counter == 0xff)
     {
-        tms9928a_state.line_interrupt_counter = tms9928a_state.regs.line_counter_reset;
-        tms9928a_state.line_interrupt = true;
+        context->state.line_interrupt_counter = context->state.regs.line_counter_reset;
+        context->state.line_interrupt = true;
     }
 }

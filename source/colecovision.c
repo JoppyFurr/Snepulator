@@ -26,8 +26,10 @@
 extern Snepulator_State state;
 extern Snepulator_Gamepad gamepad_1;
 extern Snepulator_Gamepad gamepad_2;
+extern pthread_mutex_t video_mutex;
 
 static Z80_Context *z80_context = NULL;
+static TMS9928A_Context *vdp_context = NULL;
 
 #define COLECOVISION_RAM_SIZE (1 << 10)
 
@@ -43,6 +45,18 @@ static ColecoVision_HW_State hw_state = {
 
 
 /*
+ * Declarations.
+ */
+static uint8_t  colecovision_io_read (uint8_t addr);
+static void     colecovision_io_write (uint8_t addr, uint8_t data);
+static uint8_t  colecovision_memory_read (uint16_t addr);
+static void     colecovision_memory_write (uint16_t addr, uint8_t data);
+static void     colecovision_run (uint32_t ms);
+static void     colecovision_state_load (const char *filename);
+static void     colecovision_state_save (const char *filename);
+
+
+/*
  * Clean up any console-specific structures.
  */
 static void colecovision_cleanup (void)
@@ -52,6 +66,29 @@ static void colecovision_cleanup (void)
         free (z80_context);
         z80_context = NULL;
     }
+
+    if (vdp_context != NULL)
+    {
+        free (vdp_context);
+        vdp_context = NULL;
+    }
+}
+
+
+/*
+ * Process a frame completion by the VDP.
+ */
+static void colecovision_frame_done (void *ptr)
+{
+    pthread_mutex_lock (&video_mutex);
+
+    memcpy (state.video_out_data, vdp_context->frame_buffer, sizeof (vdp_context->frame_buffer));
+    state.video_start_x = vdp_context->video_start_x;
+    state.video_start_y = vdp_context->video_start_y;
+    state.video_width   = vdp_context->video_width;
+    state.video_height  = vdp_context->video_height;
+
+    pthread_mutex_unlock (&video_mutex);
 }
 
 
@@ -113,12 +150,12 @@ static uint8_t colecovision_io_read (uint8_t addr)
         if ((addr & 0x01) == 0x00)
         {
             /* tms9928a Data Register */
-            return tms9928a_data_read ();
+            return tms9928a_data_read (vdp_context);
         }
         else
         {
             /* tms9928a Status Flags */
-            return tms9928a_status_read ();
+            return tms9928a_status_read (vdp_context);
         }
     }
 
@@ -229,12 +266,12 @@ static void colecovision_io_write (uint8_t addr, uint8_t data)
         if ((addr & 0x01) == 0x00)
         {
             /* VDP Data Register */
-            tms9928a_data_write (data);
+            tms9928a_data_write (vdp_context, data);
         }
         else
         {
             /* VDP Control Register */
-            tms9928a_control_write (data);
+            tms9928a_control_write (vdp_context, data);
         }
     }
 
@@ -305,7 +342,7 @@ static void colecovision_run (uint32_t ms)
         /* 228 CPU cycles per scanline */
         z80_run_cycles (z80_context, 228 + state.overclock);
         psg_run_cycles (228);
-        tms9928a_run_one_scanline ();
+        tms9928a_run_one_scanline (vdp_context);
     }
 
     pthread_mutex_unlock (&colecovision_state_mutex);
@@ -315,9 +352,18 @@ static void colecovision_run (uint32_t ms)
 /*
  * Maskable interrupt line is not used.
  */
-static bool colecovision_get_int (void)
+static bool colecovision_get_int (void *ptr)
 {
     return false;
+}
+
+
+/*
+ * Returns true if there is a non-maskable interrupt.
+ */
+static bool colecovision_get_nmi (void *ptr)
+{
+    return tms9928a_get_interrupt (vdp_context);
 }
 
 
@@ -336,8 +382,8 @@ static void colecovision_state_save (const char *filename)
     z80_state_save (z80_context);
     save_state_section_add (SECTION_ID_RAM, 1, COLECOVISION_RAM_SIZE, state.ram);
 
-    tms9928a_state_save ();
-    save_state_section_add (SECTION_ID_VRAM, 1, TMS9928A_VRAM_SIZE, state.vram);
+    tms9928a_state_save (vdp_context);
+    save_state_section_add (SECTION_ID_VRAM, 1, TMS9928A_VRAM_SIZE, vdp_context->vram);
 
     sn76489_state_save ();
 
@@ -407,13 +453,13 @@ static void colecovision_state_load (const char *filename)
         }
         else if (!strncmp (section_id, SECTION_ID_VDP, 4))
         {
-            tms9928a_state_load (version, size, data);
+            tms9928a_state_load (vdp_context, version, size, data);
         }
         else if (!strncmp (section_id, SECTION_ID_VRAM, 4))
         {
             if (size == TMS9928A_VRAM_SIZE)
             {
-                memcpy (state.vram, data, TMS9928A_VRAM_SIZE);
+                memcpy (vdp_context->vram, data, TMS9928A_VRAM_SIZE);
             }
             else
             {
@@ -448,14 +494,6 @@ void colecovision_init (void)
         snepulator_error ("Error", "Unable to allocate Colecovision RAM.");
     }
 
-    /* Create VRAM */
-    state.vram = calloc (TMS9928A_VRAM_SIZE, 1);
-    if (state.vram == NULL)
-    {
-        snepulator_error ("Error", "Unable to allocate Colecovision VRAM.");
-        return;
-    }
-
     /* Load BIOS */
     if (state.colecovision_bios_filename)
     {
@@ -478,11 +516,26 @@ void colecovision_init (void)
     }
 
     /* Initialise hardware */
-    z80_context = z80_init (colecovision_memory_read, colecovision_memory_write,
+    z80_context = z80_init (NULL,
+                            colecovision_memory_read, colecovision_memory_write,
                             colecovision_io_read, colecovision_io_write,
-                            colecovision_get_int, tms9928a_get_interrupt);
-    tms9928a_init ();
+                            colecovision_get_int, colecovision_get_nmi);
+
+    vdp_context = tms9928a_init (NULL, colecovision_frame_done);
+    vdp_context->render_start_x = VIDEO_SIDE_BORDER;
+    vdp_context->render_start_y = (VIDEO_BUFFER_LINES - 192) / 2;
+    vdp_context->video_start_x = vdp_context->render_start_x;
+    vdp_context->video_start_y = vdp_context->render_start_y;
+    vdp_context->remove_sprite_limit = state.remove_sprite_limit;
+
     sn76489_init ();
+
+    /* Initial video parameters */
+    state.video_start_x    = vdp_context->video_start_x;
+    state.video_start_y    = vdp_context->video_start_y;
+    state.video_width      = vdp_context->video_width;
+    state.video_height     = vdp_context->video_height;
+    state.video_has_border = true;
 
     /* Hook up the callbacks */
     state.audio_callback = colecovision_audio_callback;
@@ -491,15 +544,6 @@ void colecovision_init (void)
     state.run_callback = colecovision_run;
     state.state_save = colecovision_state_save;
     state.state_load = colecovision_state_load;
-
-    /* Video parameters */
-    state.render_start_x = VIDEO_SIDE_BORDER;
-    state.render_start_y = (VIDEO_BUFFER_LINES - 192) / 2;
-    state.video_width = 256;
-    state.video_height = 192;
-    state.video_start_x = state.render_start_x;
-    state.video_start_y = state.render_start_y;
-    state.video_has_border = true;
 
     /* Begin emulation */
     state.run = RUN_STATE_RUNNING;

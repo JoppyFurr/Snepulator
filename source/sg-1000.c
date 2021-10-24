@@ -24,8 +24,10 @@
 extern Snepulator_State state;
 extern Snepulator_Gamepad gamepad_1;
 extern Snepulator_Gamepad gamepad_2;
+extern pthread_mutex_t video_mutex;
 
 static Z80_Context *z80_context = NULL;
+static TMS9928A_Context *vdp_context = NULL;
 
 #define SG_1000_RAM_SIZE (1 << 10)
 #define SG_1000_SRAM_SIZE (8 << 10)
@@ -46,6 +48,35 @@ static bool sram_used = false;
 
 
 /*
+ * Declarations.
+ */
+static uint8_t  sg_1000_io_read (uint8_t addr);
+static void     sg_1000_io_write (uint8_t addr, uint8_t data);
+static uint8_t  sg_1000_memory_read (uint16_t addr);
+static void     sg_1000_memory_write (uint16_t addr, uint8_t data);
+static void     sg_1000_run (uint32_t ms);
+static void     sg_1000_state_load (const char *filename);
+static void     sg_1000_state_save (const char *filename);
+
+
+/*
+ * Callback to supply SDL with audio frames.
+ */
+static void sg_1000_audio_callback (void *userdata, uint8_t *stream, int len)
+{
+    if (state.run == RUN_STATE_RUNNING)
+    {
+        /* Assuming little-endian host */
+        sn76489_get_samples ((int16_t *)stream, len / 2);
+    }
+    else
+    {
+        memset (stream, 0, len);
+    }
+}
+
+
+/*
  * Clean up any console-specific structures.
  */
 static void sg_1000_cleanup (void)
@@ -54,6 +85,214 @@ static void sg_1000_cleanup (void)
     {
         free (z80_context);
         z80_context = NULL;
+    }
+
+    if (vdp_context != NULL)
+    {
+        free (vdp_context);
+        vdp_context = NULL;
+    }
+}
+
+
+/*
+ * Process a frame completion by the VDP.
+ */
+static void sg_1000_frame_done (void *ptr)
+{
+    pthread_mutex_lock (&video_mutex);
+
+    memcpy (state.video_out_data, vdp_context->frame_buffer, sizeof (vdp_context->frame_buffer));
+    state.video_start_x = vdp_context->video_start_x;
+    state.video_start_y = vdp_context->video_start_y;
+    state.video_width   = vdp_context->video_width;
+    state.video_height  = vdp_context->video_height;
+
+    pthread_mutex_unlock (&video_mutex);
+}
+
+
+/*
+ * Returns the SG-1000 clock-rate in Hz.
+ */
+static uint32_t sg_1000_get_clock_rate ()
+{
+    if (state.format == VIDEO_FORMAT_PAL)
+    {
+        return SG_1000_CLOCK_RATE_PAL;
+    }
+
+    return SG_1000_CLOCK_RATE_NTSC;
+}
+
+
+/*
+ * Returns true if there is an interrupt.
+ */
+static bool sg_1000_get_int (void *ptr)
+{
+    return tms9928a_get_interrupt (vdp_context);
+}
+
+
+/*
+ * Returns true if there is a non-maskable interrupt.
+ */
+static bool sg_1000_get_nmi (void *ptr)
+{
+    return !! gamepad_1.state [GAMEPAD_BUTTON_START];
+}
+
+
+/*
+ * Reset the SG-1000 and load a new cartridge ROM.
+ */
+void sg_1000_init (void)
+{
+    /* Reset the mapper */
+    hw_state.mapper_bank [0] = 0;
+    hw_state.mapper_bank [1] = 1;
+    hw_state.mapper_bank [2] = 2;
+    sram_used = false;
+
+    /* Create RAM */
+    state.ram = calloc (SG_1000_RAM_SIZE, 1);
+    if (state.ram == NULL)
+    {
+        snepulator_error ("Error", "Unable to allocate SG-1000 RAM.");
+        return;
+    }
+
+    /* Create Cartridge SRAM */
+    state.sram = calloc (SG_1000_SRAM_SIZE, 1);
+    if (state.sram == NULL)
+    {
+        snepulator_error ("Error", "Unable to allocate SG-1000 Cartridge RAM.");
+        return;
+    }
+
+    /* Load ROM cart */
+    if (state.cart_filename)
+    {
+        if (snepulator_load_rom (&state.rom, &state.rom_size, state.cart_filename) == -1)
+        {
+            return;
+        }
+        fprintf (stdout, "%d KiB ROM %s loaded.\n", state.rom_size >> 10, state.cart_filename);
+
+        state.rom_mask = round_up (state.rom_size) - 1;
+    }
+
+    /* Initialise hardware */
+    z80_context = z80_init (NULL,
+                            sg_1000_memory_read, sg_1000_memory_write,
+                            sg_1000_io_read, sg_1000_io_write,
+                            sg_1000_get_int, sg_1000_get_nmi);
+
+    vdp_context = tms9928a_init (NULL, sg_1000_frame_done);
+    vdp_context->render_start_x = VIDEO_SIDE_BORDER;
+    vdp_context->render_start_y = (VIDEO_BUFFER_LINES - 192) / 2;
+    vdp_context->video_start_x = vdp_context->render_start_x;
+    vdp_context->video_start_y = vdp_context->render_start_y;
+    vdp_context->remove_sprite_limit = state.remove_sprite_limit;
+
+    sn76489_init ();
+
+    /* Initial video parameters */
+    state.video_start_x    = vdp_context->video_start_x;
+    state.video_start_y    = vdp_context->video_start_y;
+    state.video_width      = vdp_context->video_width;
+    state.video_height     = vdp_context->video_height;
+    state.video_has_border = true;
+
+    /* Hook up the callbacks */
+    state.audio_callback = sg_1000_audio_callback;
+    state.cleanup = sg_1000_cleanup;
+    state.get_clock_rate = sg_1000_get_clock_rate;
+    state.run_callback = sg_1000_run;
+    state.state_save = sg_1000_state_save;
+    state.state_load = sg_1000_state_load;
+
+    /* Begin emulation */
+    state.run = RUN_STATE_RUNNING;
+}
+
+
+/*
+ * Handle SG-1000 I/O reads.
+ */
+static uint8_t sg_1000_io_read (uint8_t addr)
+{
+    /* tms9928a */
+    if (addr >= 0x80 && addr <= 0xbf)
+    {
+        if ((addr & 0x01) == 0x00)
+        {
+            /* tms9928a Data Register */
+            return tms9928a_data_read (vdp_context);
+        }
+        else
+        {
+            /* tms9928a Status Flags */
+            return tms9928a_status_read (vdp_context);
+        }
+    }
+
+    /* A pressed button returns zero */
+    else if (addr >= 0xc0 && addr <= 0xff)
+    {
+        if ((addr & 0x01) == 0x00)
+        {
+            /* I/O Port A/B */
+            return (gamepad_1.state [GAMEPAD_DIRECTION_UP]      ? 0 : BIT_0) |
+                   (gamepad_1.state [GAMEPAD_DIRECTION_DOWN]    ? 0 : BIT_1) |
+                   (gamepad_1.state [GAMEPAD_DIRECTION_LEFT]    ? 0 : BIT_2) |
+                   (gamepad_1.state [GAMEPAD_DIRECTION_RIGHT]   ? 0 : BIT_3) |
+                   (gamepad_1.state [GAMEPAD_BUTTON_1]          ? 0 : BIT_4) |
+                   (gamepad_1.state [GAMEPAD_BUTTON_2]          ? 0 : BIT_5) |
+                   (gamepad_2.state [GAMEPAD_DIRECTION_UP]      ? 0 : BIT_6) |
+                   (gamepad_2.state [GAMEPAD_DIRECTION_DOWN]    ? 0 : BIT_7);
+        }
+        else
+        {
+            /* I/O Port B/misc */
+            return (gamepad_2.state [GAMEPAD_DIRECTION_LEFT]    ? 0 : BIT_0) |
+                   (gamepad_2.state [GAMEPAD_DIRECTION_RIGHT]   ? 0 : BIT_1) |
+                   (gamepad_2.state [GAMEPAD_BUTTON_1]          ? 0 : BIT_2) |
+                   (gamepad_2.state [GAMEPAD_BUTTON_2]          ? 0 : BIT_3) |
+                   (                                                  BIT_4);
+        }
+    }
+
+    /* DEFAULT */
+    return 0xff;
+}
+
+
+/*
+ * Handle SG-1000 I/O writes.
+ */
+static void sg_1000_io_write (uint8_t addr, uint8_t data)
+{
+    /* PSG */
+    if (addr >= 0x40 && addr <= 0x7f)
+    {
+        sn76489_data_write (data);
+    }
+
+    /* VDP */
+    else if (addr >= 0x80 && addr <= 0xbf)
+    {
+        if ((addr & 0x01) == 0x00)
+        {
+            /* VDP Data Register */
+            tms9928a_data_write (vdp_context, data);
+        }
+        else
+        {
+            /* VDP Control Register */
+            tms9928a_control_write (vdp_context, data);
+        }
     }
 }
 
@@ -116,125 +355,6 @@ static void sg_1000_memory_write (uint16_t addr, uint8_t data)
 
 
 /*
- * Handle SG-1000 I/O reads.
- */
-static uint8_t sg_1000_io_read (uint8_t addr)
-{
-    /* tms9928a */
-    if (addr >= 0x80 && addr <= 0xbf)
-    {
-        if ((addr & 0x01) == 0x00)
-        {
-            /* tms9928a Data Register */
-            return tms9928a_data_read ();
-        }
-        else
-        {
-            /* tms9928a Status Flags */
-            return tms9928a_status_read ();
-        }
-    }
-
-    /* A pressed button returns zero */
-    else if (addr >= 0xc0 && addr <= 0xff)
-    {
-        if ((addr & 0x01) == 0x00)
-        {
-            /* I/O Port A/B */
-            return (gamepad_1.state [GAMEPAD_DIRECTION_UP]      ? 0 : BIT_0) |
-                   (gamepad_1.state [GAMEPAD_DIRECTION_DOWN]    ? 0 : BIT_1) |
-                   (gamepad_1.state [GAMEPAD_DIRECTION_LEFT]    ? 0 : BIT_2) |
-                   (gamepad_1.state [GAMEPAD_DIRECTION_RIGHT]   ? 0 : BIT_3) |
-                   (gamepad_1.state [GAMEPAD_BUTTON_1]          ? 0 : BIT_4) |
-                   (gamepad_1.state [GAMEPAD_BUTTON_2]          ? 0 : BIT_5) |
-                   (gamepad_2.state [GAMEPAD_DIRECTION_UP]      ? 0 : BIT_6) |
-                   (gamepad_2.state [GAMEPAD_DIRECTION_DOWN]    ? 0 : BIT_7);
-        }
-        else
-        {
-            /* I/O Port B/misc */
-            return (gamepad_2.state [GAMEPAD_DIRECTION_LEFT]    ? 0 : BIT_0) |
-                   (gamepad_2.state [GAMEPAD_DIRECTION_RIGHT]   ? 0 : BIT_1) |
-                   (gamepad_2.state [GAMEPAD_BUTTON_1]          ? 0 : BIT_2) |
-                   (gamepad_2.state [GAMEPAD_BUTTON_2]          ? 0 : BIT_3) |
-                   (                                                  BIT_4);
-        }
-    }
-
-    /* DEFAULT */
-    return 0xff;
-}
-
-
-/*
- * Handle SG-1000 I/O writes.
- */
-static void sg_1000_io_write (uint8_t addr, uint8_t data)
-{
-    /* PSG */
-    if (addr >= 0x40 && addr <= 0x7f)
-    {
-        sn76489_data_write (data);
-    }
-
-    /* VDP */
-    else if (addr >= 0x80 && addr <= 0xbf)
-    {
-        if ((addr & 0x01) == 0x00)
-        {
-            /* VDP Data Register */
-            tms9928a_data_write (data);
-        }
-        else
-        {
-            /* VDP Control Register */
-            tms9928a_control_write (data);
-        }
-    }
-}
-
-
-/*
- * Returns true if there is a non-maskable interrupt.
- */
-static bool sg_1000_get_nmi ()
-{
-    return !! gamepad_1.state [GAMEPAD_BUTTON_START];
-}
-
-
-/*
- * Callback to supply SDL with audio frames.
- */
-static void sg_1000_audio_callback (void *userdata, uint8_t *stream, int len)
-{
-    if (state.run == RUN_STATE_RUNNING)
-    {
-        /* Assuming little-endian host */
-        sn76489_get_samples ((int16_t *)stream, len / 2);
-    }
-    else
-    {
-        memset (stream, 0, len);
-    }
-}
-
-
-/*
- * Returns the SG-1000 clock-rate in Hz.
- */
-static uint32_t sg_1000_get_clock_rate ()
-{
-    if (state.format == VIDEO_FORMAT_PAL)
-    {
-        return SG_1000_CLOCK_RATE_PAL;
-    }
-
-    return SG_1000_CLOCK_RATE_NTSC;
-}
-
-
-/*
  * Emulate the SG-1000 for the specified length of time.
  */
 static void sg_1000_run (uint32_t ms)
@@ -256,40 +376,10 @@ static void sg_1000_run (uint32_t ms)
         /* 228 CPU cycles per scanline */
         z80_run_cycles (z80_context, 228 + state.overclock);
         psg_run_cycles (228);
-        tms9928a_run_one_scanline ();
+        tms9928a_run_one_scanline (vdp_context);
     }
 
     pthread_mutex_unlock (&sg_1000_state_mutex);
-}
-
-
-/*
- * Export SG-1000 state to a file.
- */
-static void sg_1000_state_save (const char *filename)
-{
-    pthread_mutex_lock (&sg_1000_state_mutex);
-
-    /* Begin creating a new save state. */
-    save_state_begin (CONSOLE_ID_SG_1000);
-
-    save_state_section_add (SECTION_ID_SG_1000_HW, 1, sizeof (hw_state), &hw_state);
-
-    z80_state_save (z80_context);
-    save_state_section_add (SECTION_ID_RAM, 1, SG_1000_RAM_SIZE, state.ram);
-    if (sram_used)
-    {
-        save_state_section_add (SECTION_ID_SRAM, 1, SG_1000_SRAM_SIZE, state.sram);
-    }
-
-    tms9928a_state_save ();
-    save_state_section_add (SECTION_ID_VRAM, 1, TMS9928A_VRAM_SIZE, state.vram);
-
-    sn76489_state_save ();
-
-    pthread_mutex_unlock (&sg_1000_state_mutex);
-
-    save_state_write (filename);
 }
 
 
@@ -367,13 +457,13 @@ static void sg_1000_state_load (const char *filename)
         }
         else if (!strncmp (section_id, SECTION_ID_VDP, 4))
         {
-            tms9928a_state_load (version, size, data);
+            tms9928a_state_load (vdp_context, version, size, data);
         }
         else if (!strncmp (section_id, SECTION_ID_VRAM, 4))
         {
             if (size == TMS9928A_VRAM_SIZE)
             {
-                memcpy (state.vram, data, TMS9928A_VRAM_SIZE);
+                memcpy (vdp_context->vram, data, TMS9928A_VRAM_SIZE);
             }
             else
             {
@@ -397,76 +487,30 @@ static void sg_1000_state_load (const char *filename)
 
 
 /*
- * Reset the SG-1000 and load a new cartridge ROM.
+ * Export SG-1000 state to a file.
  */
-void sg_1000_init (void)
+static void sg_1000_state_save (const char *filename)
 {
-    /* Reset the mapper */
-    hw_state.mapper_bank [0] = 0;
-    hw_state.mapper_bank [1] = 1;
-    hw_state.mapper_bank [2] = 2;
-    sram_used = false;
+    pthread_mutex_lock (&sg_1000_state_mutex);
 
-    /* Create RAM */
-    state.ram = calloc (SG_1000_RAM_SIZE, 1);
-    if (state.ram == NULL)
+    /* Begin creating a new save state. */
+    save_state_begin (CONSOLE_ID_SG_1000);
+
+    save_state_section_add (SECTION_ID_SG_1000_HW, 1, sizeof (hw_state), &hw_state);
+
+    z80_state_save (z80_context);
+    save_state_section_add (SECTION_ID_RAM, 1, SG_1000_RAM_SIZE, state.ram);
+    if (sram_used)
     {
-        snepulator_error ("Error", "Unable to allocate SG-1000 RAM.");
-        return;
+        save_state_section_add (SECTION_ID_SRAM, 1, SG_1000_SRAM_SIZE, state.sram);
     }
 
-    /* Create Cartridge SRAM */
-    state.sram = calloc (SG_1000_SRAM_SIZE, 1);
-    if (state.sram == NULL)
-    {
-        snepulator_error ("Error", "Unable to allocate SG-1000 Cartridge RAM.");
-        return;
-    }
+    tms9928a_state_save (vdp_context);
+    save_state_section_add (SECTION_ID_VRAM, 1, TMS9928A_VRAM_SIZE, vdp_context->vram);
 
-    /* Create VRAM */
-    state.vram = calloc (TMS9928A_VRAM_SIZE, 1);
-    if (state.vram == NULL)
-    {
-        snepulator_error ("Error", "Unable to allocate SG-1000 VRAM.");
-        return;
-    }
+    sn76489_state_save ();
 
-    /* Load ROM cart */
-    if (state.cart_filename)
-    {
-        if (snepulator_load_rom (&state.rom, &state.rom_size, state.cart_filename) == -1)
-        {
-            return;
-        }
-        fprintf (stdout, "%d KiB ROM %s loaded.\n", state.rom_size >> 10, state.cart_filename);
+    pthread_mutex_unlock (&sg_1000_state_mutex);
 
-        state.rom_mask = round_up (state.rom_size) - 1;
-    }
-
-    /* Initialise hardware */
-    z80_context = z80_init (sg_1000_memory_read, sg_1000_memory_write,
-                            sg_1000_io_read, sg_1000_io_write,
-                            tms9928a_get_interrupt, sg_1000_get_nmi);
-    tms9928a_init ();
-    sn76489_init ();
-
-    /* Hook up the callbacks */
-    state.audio_callback = sg_1000_audio_callback;
-    state.cleanup = sg_1000_cleanup;
-    state.get_clock_rate = sg_1000_get_clock_rate;
-    state.run_callback = sg_1000_run;
-    state.state_save = sg_1000_state_save;
-    state.state_load = sg_1000_state_load;
-
-    /* Video parameters */
-    state.render_start_x = VIDEO_SIDE_BORDER;
-    state.render_start_y = (VIDEO_BUFFER_LINES - 192) / 2;
-    state.video_width = 256;
-    state.video_height = 192;
-    state.video_start_x = state.render_start_x;
-    state.video_start_y = state.render_start_y;
-    state.video_has_border = true;
-
-    /* Begin emulation */
-    state.run = RUN_STATE_RUNNING;
+    save_state_write (filename);
 }

@@ -77,7 +77,6 @@ typedef struct Snepulator_State_s {
     /* Console memory */
     uint8_t *ram;
     uint8_t *sram;
-    uint8_t *vram;
     uint8_t *rom;
     uint8_t *bios;
 
@@ -95,8 +94,6 @@ typedef struct Snepulator_State_s {
 
     /* Console video output */
     float_Colour video_out_data [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
-    uint32_t    render_start_x;
-    uint32_t    render_start_y;
     uint32_t    video_start_x;
     uint32_t    video_start_y;
     uint32_t    video_width;

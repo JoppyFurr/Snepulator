@@ -104,6 +104,36 @@ typedef struct TMS9928A_State_s {
     uint8_t cram_latch;
 } TMS9928A_State;
 
+typedef struct TMS9928A_Context_s {
+
+    void *parent;
+    TMS9928A_State state;
+    Video_Format format;
+    bool is_game_gear;
+    bool sms1_vdp_hint;
+
+    /* Hacks */
+    bool remove_sprite_limit;
+    bool disable_blanking;
+
+    /* Video output */
+    uint8_t vram [TMS9928A_VRAM_SIZE];
+    uint32_t render_start_x;
+    uint32_t render_start_y;
+    uint32_t video_start_x;
+    uint32_t video_start_y;
+    uint32_t video_width;
+    uint32_t video_height;
+    uint32_t video_blank_left;
+
+    float_Colour vdp_to_float [4096];
+    uint16_t vdp_to_float_mask;
+
+    float_Colour frame_buffer [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
+    void (* frame_done) (void *);
+
+} TMS9928A_Context;
+
 /* SMS - Range of 8-bit values to map onto the 16-bit v-counter */
 typedef struct SMS_VDP_V_Counter_Range_s {
     uint16_t first;
@@ -136,38 +166,39 @@ typedef struct TMS9928A_Sprite_t {
 const char *tms9928a_mode_name_get (TMS9928A_Mode mode);
 
 /* Read one byte from the tms9928a data port. */
-uint8_t tms9928a_data_read ();
+uint8_t tms9928a_data_read (TMS9928A_Context *context);
 
 /* Write one byte to the tms9928a data port. */
-void tms9928a_data_write (uint8_t value);
+void tms9928a_data_write (TMS9928A_Context *context, uint8_t value);
 
 /* Read one byte from the tms9928a control (status) port. */
-uint8_t tms9928a_status_read ();
+uint8_t tms9928a_status_read (TMS9928A_Context *context);
 
 /* Write one byte to the tms9928a control port. */
-void tms9928a_control_write (uint8_t value);
+void tms9928a_control_write (TMS9928A_Context *context, uint8_t value);
 
 /* Render one line of a mode2 8x8 pattern. */
-void tms9928a_render_mode2_pattern_line (const TMS9928A_Config *config, uint16_t line, TMS9928A_Pattern *pattern_base,
+void tms9928a_render_mode2_pattern_line (TMS9928A_Context *context, const TMS9928A_Config *config,
+                                         uint16_t line, TMS9928A_Pattern *pattern_base,
                                          uint8_t tile_colours, int32_Point_2D offset, bool sprite);
 
 /* Render one line of sprites for mode0 / mode2 / mode3. */
-void tms9928a_render_sprites_line (const TMS9928A_Config *config, uint16_t line);
+void tms9928a_render_sprites_line (TMS9928A_Context *context, const TMS9928A_Config *config, uint16_t line);
 
 /* Render one line of the mode2 background layer. */
-void tms9928a_render_mode2_background_line (const TMS9928A_Config *config, uint16_t line);
+void tms9928a_render_mode2_background_line (TMS9928A_Context *context, const TMS9928A_Config *config, uint16_t line);
 
 /* Run one scanline on the tms9928a. */
-void tms9928a_run_one_scanline (void);
+void tms9928a_run_one_scanline (TMS9928A_Context *context);
 
 /* Check if the tms9928a is currently requesting an interrupt. */
-bool tms9928a_get_interrupt (void);
+bool tms9928a_get_interrupt (TMS9928A_Context *context);
 
 /* Reset the tms9928a registers and memory to power-on defaults. */
-void tms9928a_init (void);
+TMS9928A_Context *tms9928a_init (void *parent, void (* frame_done) (void *));
 
 /* Export tms9928a state. */
-void tms9928a_state_save (void);
+void tms9928a_state_save (TMS9928A_Context *context);
 
 /* Import tms9928a state. */
-void tms9928a_state_load (uint32_t version, uint32_t size, void *data);
+void tms9928a_state_load (TMS9928A_Context *context, uint32_t version, uint32_t size, void *data);
