@@ -314,9 +314,10 @@ void sn76489_get_samples (int16_t *stream, int count)
     static uint32_t clock_rate = 0;
 
     /* Reset the ring buffer if the clock rate changes */
-    if (clock_rate != state.get_clock_rate ())
+    if (state.console_context != NULL &&
+        clock_rate != state.get_clock_rate (state.console_context))
     {
-        clock_rate = state.get_clock_rate ();
+        clock_rate = state.get_clock_rate (state.console_context);
         soundcard_sample_count = 0;
         read_index = 0;
         write_index = 0;

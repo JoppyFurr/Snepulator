@@ -19,6 +19,8 @@ extern "C" {
 #include "config.h"
 
 #include "gamepad.h"
+#include "cpu/z80.h"
+#include "video/tms9928a.h"
 #include "sms.h"
 #include "colecovision.h"
 
@@ -132,7 +134,7 @@ void *main_emulation_loop (void *data)
 
         if (state.run == RUN_STATE_RUNNING)
         {
-            state.run_callback (ticks_current - ticks_previous);
+            state.run_callback (state.console_context, ticks_current - ticks_previous);
         }
 
         ticks_previous = ticks_current;

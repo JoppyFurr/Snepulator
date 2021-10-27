@@ -6,8 +6,6 @@
 #define VIDEO_BUFFER_WIDTH (256 + 2 * VIDEO_SIDE_BORDER)
 #define VIDEO_BUFFER_LINES 240
 
-#define HASH_LENGTH 12
-
 typedef enum Run_State_e {
     RUN_STATE_INIT,     /* No ROM has been loaded. */
     RUN_STATE_RUNNING,  /* A ROM has been loaded and is running. */
@@ -60,37 +58,30 @@ typedef struct Snepulator_State_s {
     /* Files */
     char *sms_bios_filename;
     char *colecovision_bios_filename;
-    char *cart_filename;
-    uint8_t rom_hash [HASH_LENGTH];
-    uint8_t rom_hints;
+    char *cart_filename; /* TODO: Rename to rom_filename */
+
+    /* User emulator settings */
+    bool            disable_blanking;       /* Don't blank the screen when the blank bit is set. */
+    uint32_t        overclock;              /* Extra CPU cycles to run per line. */
+    Video_Format    format;                 /* 50 Hz PAL / 60 Hz NTSC. */
+    bool            format_auto;            /* Automatically select PAL for games that require it. */
+    Console_Region  region;                 /* Japan / World. */
+    bool            remove_sprite_limit;    /* Remove the single line sprite limit. */
+    Video_3D_Mode   video_3d_mode;          /* Left / Right / Anaglyph selection. */
+    float           video_3d_saturation;    /* Colour saturation for anaglyph modes. */
 
     /* Console API */
     Console console;
-    void (*run_callback) (uint32_t ms);
-    void (*audio_callback) (void *userdata, uint8_t *stream, int len);
-    uint32_t (*get_clock_rate) (void);
-    void (*sync) (void);
-    void (*cleanup) (void);
-    void (*state_save) (const char *filename);
-    void (*state_load) (const char *filename);
-
-    /* Console memory */
-    uint8_t *ram;
-    uint8_t *sram;
-    uint8_t *rom;
-    uint8_t *bios;
-
-    uint32_t rom_size;
-    uint32_t rom_mask;
-    uint32_t bios_size;
-
-    /* Console configuration */
-    bool            format_auto;
-    Video_Format    format;                 /* 50 Hz PAL / 60 Hz NTSC. */
-    Console_Region  region;
-    uint32_t        overclock;              /* Extra CPU cycles to run per line. */
-    bool            remove_sprite_limit;    /* Remove the single line sprite limit. */
-    bool            disable_blanking;       /* Don't blank the screen when the blank bit is set. */
+    void *console_context;
+    void      (*audio_callback) (void *userdata, uint8_t *stream, int len);
+    void      (*cleanup) (void *);
+    uint32_t  (*get_clock_rate) (void *);
+    uint8_t * (*get_rom_hash) (void *);
+    void      (*run_callback) (void *, uint32_t ms);
+    void      (*sync) (void *);
+    void      (*state_save) (void *, const char *filename);
+    void      (*state_load) (void *, const char *filename);
+    void      (*update_settings) (void *);
 
     /* Console video output */
     float_Colour video_out_data [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
@@ -110,10 +101,6 @@ typedef struct Snepulator_State_s {
     Video_Filter video_filter;
     int16_t      video_scale;
     bool         video_show_border;
-
-    /* 3D */
-    Video_3D_Mode video_3d_mode;
-    float         video_3d_saturation;
 
     /* Statistics */
     double host_framerate;

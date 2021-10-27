@@ -98,10 +98,10 @@ typedef struct Z80_Context_s {
     uint64_t used_cycles; /* Cycles used by the current instruction */
 
     /* Connections to the rest of the system */
-    uint8_t (* memory_read)  (uint16_t);
-    void    (* memory_write) (uint16_t, uint8_t);
-    uint8_t (* io_read)      (uint8_t);
-    void    (* io_write)     (uint8_t, uint8_t);
+    uint8_t (* memory_read)  (void *, uint16_t);
+    void    (* memory_write) (void *, uint16_t, uint8_t);
+    uint8_t (* io_read)      (void *, uint8_t);
+    void    (* io_write)     (void *, uint8_t, uint8_t);
     bool    (* get_int)      (void *);
     bool    (* get_nmi)      (void *);
 
@@ -121,10 +121,10 @@ typedef struct Z80_Context_s {
 
 /* Create the Z80 context with power-on defaults. */
 Z80_Context *z80_init (void *parent,
-                       uint8_t (* memory_read) (uint16_t),
-                       void    (* memory_write)(uint16_t, uint8_t),
-                       uint8_t (* io_read)     (uint8_t),
-                       void    (* io_write)    (uint8_t, uint8_t),
+                       uint8_t (* memory_read) (void *, uint16_t),
+                       void    (* memory_write)(void *, uint16_t, uint8_t),
+                       uint8_t (* io_read)     (void *, uint8_t),
+                       void    (* io_write)    (void *, uint8_t, uint8_t),
                        bool    (* get_int)     (void *),
                        bool    (* get_nmi)     (void *));
 

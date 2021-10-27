@@ -17,6 +17,8 @@
 #include "config.h"
 #include "database/sms_db.h"
 
+#include "cpu/z80.h"
+#include "video/tms9928a.h"
 #include "sg-1000.h"
 #include "sms.h"
 #include "colecovision.h"
@@ -59,7 +61,7 @@ void snepulator_bios_set (const char *path)
             config_write ();
 
             state.colecovision_bios_filename = strdup (path);
-            colecovision_init ();
+            state.console_context = colecovision_init ();
         case CONSOLE_MASTER_SYSTEM:
         default:
             if (state.sms_bios_filename != NULL)
@@ -71,7 +73,7 @@ void snepulator_bios_set (const char *path)
             config_write ();
 
             state.sms_bios_filename = strdup (path);
-            sms_init ();
+            state.console_context = sms_init ();
             break;
     }
 }
@@ -245,6 +247,11 @@ void snepulator_disable_blanking_set (bool disable_blanking)
     state.disable_blanking = disable_blanking;
     config_uint_set ("hacks", "disable-blanking", disable_blanking);
 
+    if (state.update_settings != NULL)
+    {
+        state.update_settings (state.console_context);
+    }
+
     config_write ();
 }
 
@@ -290,6 +297,11 @@ void snepulator_overclock_set (bool overclock)
     }
 
     config_uint_set ("hacks", "overclock", state.overclock);
+
+    if (state.update_settings != NULL)
+    {
+        state.update_settings (state.console_context);
+    }
 
     config_write ();
 }
@@ -391,6 +403,11 @@ void snepulator_region_set (Console_Region region)
         config_string_set ("sms", "region", "Japan");
     }
 
+    if (state.update_settings != NULL)
+    {
+        state.update_settings (state.console_context);
+    }
+
     config_write ();
 }
 
@@ -402,6 +419,11 @@ void snepulator_remove_sprite_limit_set (bool remove_sprite_limit)
 {
     state.remove_sprite_limit = remove_sprite_limit;
     config_uint_set ("hacks", "remove-sprite-limit", remove_sprite_limit);
+
+    if (state.update_settings != NULL)
+    {
+        state.update_settings (state.console_context);
+    }
 
     config_write ();
 }
@@ -418,7 +440,7 @@ void snepulator_reset (void)
     /* Save any battery-backed memory. */
     if (state.sync != NULL)
     {
-        state.sync ();
+        state.sync (state.console_context);
     }
 
     /* Mark the system as not-ready. */
@@ -427,49 +449,26 @@ void snepulator_reset (void)
     /* Free any console-specific resources */
     if (state.cleanup != NULL)
     {
-        state.cleanup ();
+        state.cleanup (state.console_context);
+        free (state.console_context);
+        state.console_context = NULL;
     }
 
     /* Clear callback functions */
-    state.run_callback = NULL;
     state.audio_callback = NULL;
+    state.cleanup = NULL;
     state.get_clock_rate = NULL;
+    state.get_rom_hash = NULL;
+    state.run_callback = NULL;
+    state.get_rom_hash = NULL;
     state.sync = NULL;
-    state.state_save = NULL;
     state.state_load = NULL;
+    state.state_save = NULL;
+    state.update_settings = NULL;
 
     /* Clear additional video parameters */
     state.video_has_border = false;
     state.video_blank_left = 0;
-
-    /* Clear hash and hints */
-    memset (state.rom_hash, 0, sizeof (state.rom_hash));
-    state.rom_hints = 0x00;
-
-    /* Free memory */
-    if (state.ram != NULL)
-    {
-        free (state.ram);
-        state.ram = NULL;
-    }
-    if (state.sram != NULL)
-    {
-        free (state.sram);
-        state.sram = NULL;
-    }
-    if (state.bios != NULL)
-    {
-        free (state.bios);
-        state.bios = NULL;
-        state.bios_size = 0;
-    }
-    if (state.rom != NULL)
-    {
-        free (state.rom);
-        state.rom = NULL;
-        state.rom_size = 0;
-        state.rom_mask = 0;
-    }
 
     /* Auto format default to NTSC */
     if (state.format_auto)
@@ -507,18 +506,18 @@ void snepulator_system_init (void)
     switch (state.console)
     {
         case CONSOLE_COLECOVISION:
-            colecovision_init ();
+            state.console_context = colecovision_init ();
             break;
 
         case CONSOLE_SG_1000:
-            sg_1000_init ();
+            state.console_context = sg_1000_init ();
             break;
 
         case CONSOLE_MASTER_SYSTEM:
         case CONSOLE_GAME_GEAR:
         default:
             /* Default to Master System */
-            sms_init ();
+            state.console_context = sms_init ();
             break;
     }
 }
@@ -625,18 +624,11 @@ void snepulator_video_format_set (Video_Format format)
     {
         state.format_auto = true;
         config_string_set ("sms", "format", "Auto");
+    }
 
-        if (state.run == RUN_STATE_RUNNING || state.run == RUN_STATE_PAUSED)
-        {
-            if (state.rom_hints & SMS_HINT_PAL_ONLY)
-            {
-                state.format = VIDEO_FORMAT_PAL;
-            }
-            else
-            {
-                state.format = VIDEO_FORMAT_NTSC;
-            }
-        }
+    if (state.update_settings != NULL)
+    {
+        state.update_settings (state.console_context);
     }
 
     config_write ();

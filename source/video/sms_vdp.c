@@ -13,7 +13,6 @@
 
 #include "../util.h"
 #include "../snepulator.h"
-#include "../sms.h"
 #include "../gamepad.h"
 #include "../database/sms_db.h"
 
@@ -777,13 +776,15 @@ void sms_vdp_run_one_scanline (TMS9928A_Context *context)
         context->frame_done (context->parent);
 
         /* Update statistics (rolling average) */
+        /* TODO: Move into a common "frame complete" function */
         static int vdp_previous_completion_time = 0;
         static int vdp_current_time = 0;
         vdp_current_time = snepulator_get_ticks ();
-        if (vdp_previous_completion_time)
+        int frame_time_taken = vdp_current_time - vdp_previous_completion_time;
+        if (frame_time_taken != 0)
         {
             state.vdp_framerate *= 0.95;
-            state.vdp_framerate += 0.05 * (1000.0 / (vdp_current_time - vdp_previous_completion_time));
+            state.vdp_framerate += 0.05 * (1000.0 / frame_time_taken);
         }
         vdp_previous_completion_time = vdp_current_time;
     }

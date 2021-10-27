@@ -43,10 +43,10 @@ static const uint8_t uint8_even_parity [256] = {
  * Create the Z80 context with power-on defaults.
  */
 Z80_Context *z80_init (void *parent,
-                       uint8_t (* memory_read) (uint16_t),
-                       void    (* memory_write)(uint16_t, uint8_t),
-                       uint8_t (* io_read)     (uint8_t),
-                       void    (* io_write)    (uint8_t, uint8_t),
+                       uint8_t (* memory_read) (void *, uint16_t),
+                       void    (* memory_write)(void *, uint16_t, uint8_t),
+                       uint8_t (* io_read)     (void *, uint8_t),
+                       void    (* io_write)    (void *, uint8_t, uint8_t),
                        bool    (* get_int)     (void *),
                        bool    (* get_nmi)     (void *))
 {
@@ -197,8 +197,8 @@ Z80_Context *z80_init (void *parent,
 void z80_ix_iy_bit_instruction (Z80_Context *context, uint16_t reg_ix_iy_w)
 {
     /* Note: The displacement comes first, then the instruction */
-    uint8_t displacement = context->memory_read (context->state.pc++);
-    uint8_t instruction = context->memory_read (context->state.pc++);
+    uint8_t displacement = context->memory_read (context->parent, context->state.pc++);
+    uint8_t instruction = context->memory_read (context->parent, context->state.pc++);
     uint8_t data;
     uint8_t bit;
     bool write_data = true;
@@ -208,7 +208,7 @@ void z80_ix_iy_bit_instruction (Z80_Context *context, uint16_t reg_ix_iy_w)
     /* All IX/IY bit instructions take one parameter */
 
     /* Read data */
-    data = context->memory_read (reg_ix_iy_w + (int8_t) displacement);
+    data = context->memory_read (context->parent, reg_ix_iy_w + (int8_t) displacement);
 
     switch (instruction & 0xf8)
     {
@@ -305,7 +305,7 @@ void z80_ix_iy_bit_instruction (Z80_Context *context, uint16_t reg_ix_iy_w)
     /* Write data */
     if (write_data)
     {
-        context->memory_write (reg_ix_iy_w + (int8_t) displacement, data);
+        context->memory_write (context->parent, reg_ix_iy_w + (int8_t) displacement, data);
 
         switch (instruction & 0x07)
         {
@@ -328,7 +328,7 @@ void z80_ix_iy_bit_instruction (Z80_Context *context, uint16_t reg_ix_iy_w)
 
 static uint16_t z80_ix_iy_fall_through (Z80_Context *context, uint16_t ix)
 {
-    uint8_t instruction = context->memory_read (context->state.pc - 1);
+    uint8_t instruction = context->memory_read (context->parent, context->state.pc - 1);
     z80_instruction [instruction] (context);
     context->used_cycles += 4;
     return ix;
@@ -359,8 +359,8 @@ static uint16_t z80_ix_iy_19_add_ix_de (Z80_Context *context, uint16_t ix)
 static uint16_t z80_ix_iy_21_ld_ix_xx (Z80_Context *context, uint16_t ix)
 {
     uint16_t_Split data;
-    data.l = context->memory_read (context->state.pc++);
-    data.h = context->memory_read (context->state.pc++);
+    data.l = context->memory_read (context->parent, context->state.pc++);
+    data.h = context->memory_read (context->parent, context->state.pc++);
     context->used_cycles += 14;
     return data.w;
 }
@@ -371,10 +371,10 @@ static uint16_t z80_ix_iy_22_ld_xx_ix (Z80_Context *context, uint16_t ix)
 {
     uint16_t_Split _ix = { .w = ix };
     uint16_t_Split addr;
-    addr.l = context->memory_read (context->state.pc++);
-    addr.h = context->memory_read (context->state.pc++);
-    context->memory_write (addr.w,     _ix.l);
-    context->memory_write (addr.w + 1, _ix.h);
+    addr.l = context->memory_read (context->parent, context->state.pc++);
+    addr.h = context->memory_read (context->parent, context->state.pc++);
+    context->memory_write (context->parent, addr.w,     _ix.l);
+    context->memory_write (context->parent, addr.w + 1, _ix.h);
     context->used_cycles += 20;
     return ix;
 }
@@ -415,7 +415,7 @@ static uint16_t z80_ix_iy_25_dec_ixh (Z80_Context *context, uint16_t ix)
 static uint16_t z80_ix_iy_26_ld_ixh_x (Z80_Context *context, uint16_t ix)
 {
     uint16_t_Split _ix = { .w = ix };
-    _ix.h = context->memory_read (context->state.pc++);
+    _ix.h = context->memory_read (context->parent, context->state.pc++);
     context->used_cycles += 11;
     return _ix.w;
 }
@@ -436,10 +436,10 @@ static uint16_t z80_ix_iy_2a_ld_ix_xx (Z80_Context *context, uint16_t ix)
 {
     uint16_t_Split _ix = { .w = ix };
     uint16_t_Split addr;
-    addr.l = context->memory_read (context->state.pc++);
-    addr.h = context->memory_read (context->state.pc++);
-    _ix.l = context->memory_read (addr.w);
-    _ix.h = context->memory_read (addr.w + 1);
+    addr.l = context->memory_read (context->parent, context->state.pc++);
+    addr.h = context->memory_read (context->parent, context->state.pc++);
+    _ix.l = context->memory_read (context->parent, addr.w);
+    _ix.h = context->memory_read (context->parent, addr.w + 1);
     context->used_cycles += 20;
     return _ix.w;
 }
@@ -480,7 +480,7 @@ static uint16_t z80_ix_iy_2d_dec_ixl (Z80_Context *context, uint16_t ix)
 static uint16_t z80_ix_iy_2e_ld_ixl_x (Z80_Context *context, uint16_t ix)
 {
     uint16_t_Split _ix = { .w = ix };
-    _ix.l = context->memory_read (context->state.pc++);
+    _ix.l = context->memory_read (context->parent, context->state.pc++);
     context->used_cycles += 11;
     return _ix.w;
 }
@@ -489,11 +489,11 @@ static uint16_t z80_ix_iy_2e_ld_ixl_x (Z80_Context *context, uint16_t ix)
 /* INC (IX + *) */
 static uint16_t z80_ix_iy_34_inc_ixx (Z80_Context *context, uint16_t ix)
 {
-    int8_t offset = context->memory_read (context->state.pc++);
-    uint8_t data = context->memory_read (ix + offset);
+    int8_t offset = context->memory_read (context->parent, context->state.pc++);
+    uint8_t data = context->memory_read (context->parent, ix + offset);
     data++;
     SET_FLAGS_INC (data);
-    context->memory_write (ix + offset, data);
+    context->memory_write (context->parent, ix + offset, data);
     context->used_cycles += 23;
     return ix;
 }
@@ -502,11 +502,11 @@ static uint16_t z80_ix_iy_34_inc_ixx (Z80_Context *context, uint16_t ix)
 /* DEC (IX + *) */
 static uint16_t z80_ix_iy_35_dec_ixx (Z80_Context *context, uint16_t ix)
 {
-    int8_t offset = context->memory_read (context->state.pc++);
-    uint8_t data = context->memory_read (ix + offset);
+    int8_t offset = context->memory_read (context->parent, context->state.pc++);
+    uint8_t data = context->memory_read (context->parent, ix + offset);
     data--;
     SET_FLAGS_DEC (data);
-    context->memory_write (ix + offset, data);
+    context->memory_write (context->parent, ix + offset, data);
     context->used_cycles += 23;
     return ix;
 }
@@ -515,9 +515,9 @@ static uint16_t z80_ix_iy_35_dec_ixx (Z80_Context *context, uint16_t ix)
 /* LD (IX + *), * */
 static uint16_t z80_ix_iy_36_ld_ixx_x (Z80_Context *context, uint16_t ix)
 {
-    int8_t offset = context->memory_read (context->state.pc++);
-    uint8_t data = context->memory_read (context->state.pc++);
-    context->memory_write (ix + offset, data);
+    int8_t offset = context->memory_read (context->parent, context->state.pc++);
+    uint8_t data = context->memory_read (context->parent, context->state.pc++);
+    context->memory_write (context->parent, ix + offset, data);
     context->used_cycles += 19;
     return ix;
 }
@@ -556,8 +556,8 @@ static uint16_t z80_ix_iy_45_ld_b_ixl (Z80_Context *context, uint16_t ix)
 /* LD B, (IX + *) */
 static uint16_t z80_ix_iy_46_ld_b_ixx (Z80_Context *context, uint16_t ix)
 {
-    int8_t offset = context->memory_read (context->state.pc++);
-    context->state.b = context->memory_read (ix + offset);
+    int8_t offset = context->memory_read (context->parent, context->state.pc++);
+    context->state.b = context->memory_read (context->parent, ix + offset);
     context->used_cycles += 19;
     return ix;
 }
@@ -586,8 +586,8 @@ static uint16_t z80_ix_iy_4d_ld_c_ixl (Z80_Context *context, uint16_t ix)
 /* LD C, (IX + *) */
 static uint16_t z80_ix_iy_4e_ld_c_ixx (Z80_Context *context, uint16_t ix)
 {
-    int8_t offset = context->memory_read (context->state.pc++);
-    context->state.c = context->memory_read (ix + offset);
+    int8_t offset = context->memory_read (context->parent, context->state.pc++);
+    context->state.c = context->memory_read (context->parent, ix + offset);
     context->used_cycles += 19;
     return ix;
 }
@@ -616,8 +616,8 @@ static uint16_t z80_ix_iy_55_ld_d_ixl (Z80_Context *context, uint16_t ix)
 /* LD D, (IX + *) */
 static uint16_t z80_ix_iy_56_ld_d_ixx (Z80_Context *context, uint16_t ix)
 {
-    int8_t offset = context->memory_read (context->state.pc++);
-    context->state.d = context->memory_read (ix + offset);
+    int8_t offset = context->memory_read (context->parent, context->state.pc++);
+    context->state.d = context->memory_read (context->parent, ix + offset);
     context->used_cycles += 19;
     return ix;
 }
@@ -646,8 +646,8 @@ static uint16_t z80_ix_iy_5d_ld_e_ixl (Z80_Context *context, uint16_t ix)
 /* LD E, (IX + *) */
 static uint16_t z80_ix_iy_5e_ld_e_ixx (Z80_Context *context, uint16_t ix)
 {
-    int8_t offset = context->memory_read (context->state.pc++);
-    context->state.e = context->memory_read (ix + offset);
+    int8_t offset = context->memory_read (context->parent, context->state.pc++);
+    context->state.e = context->memory_read (context->parent, ix + offset);
     context->used_cycles += 19;
     return ix;
 }
@@ -714,8 +714,8 @@ static uint16_t z80_ix_iy_65_ld_ixh_ixl (Z80_Context *context, uint16_t ix)
 /* LD H, (IX + *) */
 static uint16_t z80_ix_iy_66_ld_h_ixx (Z80_Context *context, uint16_t ix)
 {
-    int8_t offset = context->memory_read (context->state.pc++);
-    context->state.h = context->memory_read (ix + offset);
+    int8_t offset = context->memory_read (context->parent, context->state.pc++);
+    context->state.h = context->memory_read (context->parent, ix + offset);
     context->used_cycles += 19;
     return ix;
 }
@@ -792,8 +792,8 @@ static uint16_t z80_ix_iy_6d_ld_ixl_ixl (Z80_Context *context, uint16_t ix)
 /* LD L, (IX + *) */
 static uint16_t z80_ix_iy_6e_ld_l_ixx (Z80_Context *context, uint16_t ix)
 {
-    int8_t offset = context->memory_read (context->state.pc++);
-    context->state.l = context->memory_read (ix + offset);
+    int8_t offset = context->memory_read (context->parent, context->state.pc++);
+    context->state.l = context->memory_read (context->parent, ix + offset);
     context->used_cycles += 19;
     return ix;
 }
@@ -812,8 +812,8 @@ static uint16_t z80_ix_iy_6f_ld_ixl_a (Z80_Context *context, uint16_t ix)
 /* LD (IX + *), B */
 static uint16_t z80_ix_iy_70_ld_ixx_b (Z80_Context *context, uint16_t ix)
 {
-    int8_t offset = context->memory_read (context->state.pc++);
-    context->memory_write (ix + offset, context->state.b);
+    int8_t offset = context->memory_read (context->parent, context->state.pc++);
+    context->memory_write (context->parent, ix + offset, context->state.b);
     context->used_cycles += 19;
     return ix;
 }
@@ -822,8 +822,8 @@ static uint16_t z80_ix_iy_70_ld_ixx_b (Z80_Context *context, uint16_t ix)
 /* LD (IX + *), C */
 static uint16_t z80_ix_iy_71_ld_ixx_c (Z80_Context *context, uint16_t ix)
 {
-    int8_t offset = context->memory_read (context->state.pc++);
-    context->memory_write (ix + offset, context->state.c);
+    int8_t offset = context->memory_read (context->parent, context->state.pc++);
+    context->memory_write (context->parent, ix + offset, context->state.c);
     context->used_cycles += 19;
     return ix;
 }
@@ -832,8 +832,8 @@ static uint16_t z80_ix_iy_71_ld_ixx_c (Z80_Context *context, uint16_t ix)
 /* LD (IX + *), D */
 static uint16_t z80_ix_iy_72_ld_ixx_d (Z80_Context *context, uint16_t ix)
 {
-    int8_t offset = context->memory_read (context->state.pc++);
-    context->memory_write (ix + offset, context->state.d);
+    int8_t offset = context->memory_read (context->parent, context->state.pc++);
+    context->memory_write (context->parent, ix + offset, context->state.d);
     context->used_cycles += 19;
     return ix;
 }
@@ -842,8 +842,8 @@ static uint16_t z80_ix_iy_72_ld_ixx_d (Z80_Context *context, uint16_t ix)
 /* LD (IX + *), E */
 static uint16_t z80_ix_iy_73_ld_ixx_e (Z80_Context *context, uint16_t ix)
 {
-    int8_t offset = context->memory_read (context->state.pc++);
-    context->memory_write (ix + offset, context->state.e);
+    int8_t offset = context->memory_read (context->parent, context->state.pc++);
+    context->memory_write (context->parent, ix + offset, context->state.e);
     context->used_cycles += 19;
     return ix;
 }
@@ -852,8 +852,8 @@ static uint16_t z80_ix_iy_73_ld_ixx_e (Z80_Context *context, uint16_t ix)
 /* LD (IX + *), H */
 static uint16_t z80_ix_iy_74_ld_ixx_h (Z80_Context *context, uint16_t ix)
 {
-    int8_t offset = context->memory_read (context->state.pc++);
-    context->memory_write (ix + offset, context->state.h);
+    int8_t offset = context->memory_read (context->parent, context->state.pc++);
+    context->memory_write (context->parent, ix + offset, context->state.h);
     context->used_cycles += 19;
     return ix;
 }
@@ -862,8 +862,8 @@ static uint16_t z80_ix_iy_74_ld_ixx_h (Z80_Context *context, uint16_t ix)
 /* LD (IX + *), L */
 static uint16_t z80_ix_iy_75_ld_ixx_l (Z80_Context *context, uint16_t ix)
 {
-    int8_t offset = context->memory_read (context->state.pc++);
-    context->memory_write (ix + offset, context->state.l);
+    int8_t offset = context->memory_read (context->parent, context->state.pc++);
+    context->memory_write (context->parent, ix + offset, context->state.l);
     context->used_cycles += 19;
     return ix;
 }
@@ -872,8 +872,8 @@ static uint16_t z80_ix_iy_75_ld_ixx_l (Z80_Context *context, uint16_t ix)
 /* LD (IX + *), A */
 static uint16_t z80_ix_iy_77_ld_ixx_a (Z80_Context *context, uint16_t ix)
 {
-    int8_t offset = context->memory_read (context->state.pc++);
-    context->memory_write (ix + offset, context->state.a);
+    int8_t offset = context->memory_read (context->parent, context->state.pc++);
+    context->memory_write (context->parent, ix + offset, context->state.a);
     context->used_cycles += 19;
     return ix;
 }
@@ -902,8 +902,8 @@ static uint16_t z80_ix_iy_7d_ld_a_ixl (Z80_Context *context, uint16_t ix)
 /* LD A, (IX + *) */
 static uint16_t z80_ix_iy_7e_ld_a_ixx (Z80_Context *context, uint16_t ix)
 {
-    int8_t offset = context->memory_read (context->state.pc++);
-    context->state.a = context->memory_read (ix + offset);
+    int8_t offset = context->memory_read (context->parent, context->state.pc++);
+    context->state.a = context->memory_read (context->parent, ix + offset);
     context->used_cycles += 19;
     return ix;
 }
@@ -934,8 +934,8 @@ static uint16_t z80_ix_iy_85_add_a_ixl (Z80_Context *context, uint16_t ix)
 /* ADD A, (IX + *) */
 static uint16_t z80_ix_iy_86_add_a_ixx (Z80_Context *context, uint16_t ix)
 {
-    int8_t offset = context->memory_read (context->state.pc++);
-    uint8_t data = context->memory_read (ix + offset);
+    int8_t offset = context->memory_read (context->parent, context->state.pc++);
+    uint8_t data = context->memory_read (context->parent, ix + offset);
     SET_FLAGS_ADD (context->state.a, data);
     context->state.a += data;
     context->used_cycles += 19;
@@ -970,8 +970,8 @@ static uint16_t z80_ix_iy_8d_adc_a_ixl (Z80_Context *context, uint16_t ix)
 /* ADC A, (IX + *) */
 static uint16_t z80_ix_iy_8e_adc_a_ixx (Z80_Context *context, uint16_t ix)
 {
-    int8_t offset = context->memory_read (context->state.pc++);
-    uint8_t value = context->memory_read (ix + offset);
+    int8_t offset = context->memory_read (context->parent, context->state.pc++);
+    uint8_t value = context->memory_read (context->parent, ix + offset);
     uint8_t carry = context->state.flag_carry;
     SET_FLAGS_ADC (value);
     context->state.a += (value + carry);
@@ -1005,8 +1005,8 @@ static uint16_t z80_ix_iy_95_sub_a_ixl (Z80_Context *context, uint16_t ix)
 /* SUB A, (IX + *) */
 static uint16_t z80_ix_iy_96_sub_a_ixx (Z80_Context *context, uint16_t ix)
 {
-    int8_t offset = context->memory_read (context->state.pc++);
-    uint8_t data = context->memory_read (ix + offset);
+    int8_t offset = context->memory_read (context->parent, context->state.pc++);
+    uint8_t data = context->memory_read (context->parent, ix + offset);
     SET_FLAGS_SUB (context->state.a, data);
     context->state.a -= data;
     context->used_cycles += 19;
@@ -1041,8 +1041,8 @@ static uint16_t z80_ix_iy_9d_sbc_a_ixl (Z80_Context *context, uint16_t ix)
 /* SBC A, (IX + *) */
 static uint16_t z80_ix_iy_9e_sbc_a_ixx (Z80_Context *context, uint16_t ix)
 {
-    int8_t offset = context->memory_read (context->state.pc++);
-    uint8_t value = context->memory_read (ix + offset);
+    int8_t offset = context->memory_read (context->parent, context->state.pc++);
+    uint8_t value = context->memory_read (context->parent, ix + offset);
     uint8_t carry = context->state.flag_carry;
     SET_FLAGS_SBC (value);
     context->state.a -= (value + carry);
@@ -1076,8 +1076,8 @@ static uint16_t z80_ix_iy_a5_and_a_ixl (Z80_Context *context, uint16_t ix)
 /* AND A, (IX + *) */
 static uint16_t z80_ix_iy_a6_and_a_ixx (Z80_Context *context, uint16_t ix)
 {
-    int8_t offset = context->memory_read (context->state.pc++);
-    context->state.a &= context->memory_read (ix + offset);
+    int8_t offset = context->memory_read (context->parent, context->state.pc++);
+    context->state.a &= context->memory_read (context->parent, ix + offset);
     SET_FLAGS_AND;
     context->used_cycles += 19;
     return ix;
@@ -1109,8 +1109,8 @@ static uint16_t z80_ix_iy_ad_xor_a_ixl (Z80_Context *context, uint16_t ix)
 /* XOR A, (IX + *) */
 static uint16_t z80_ix_iy_ae_xor_a_ixx (Z80_Context *context, uint16_t ix)
 {
-    int8_t offset = context->memory_read (context->state.pc++);
-    context->state.a ^= context->memory_read (ix + offset);
+    int8_t offset = context->memory_read (context->parent, context->state.pc++);
+    context->state.a ^= context->memory_read (context->parent, ix + offset);
     SET_FLAGS_OR_XOR;
     context->used_cycles += 19;
     return ix;
@@ -1142,8 +1142,8 @@ static uint16_t z80_ix_iy_b5_or_a_ixl (Z80_Context *context, uint16_t ix)
 /* OR A, (IX + *) */
 static uint16_t z80_ix_iy_b6_or_a_ixx (Z80_Context *context, uint16_t ix)
 {
-    int8_t offset = context->memory_read (context->state.pc++);
-    context->state.a |= context->memory_read (ix + offset);
+    int8_t offset = context->memory_read (context->parent, context->state.pc++);
+    context->state.a |= context->memory_read (context->parent, ix + offset);
     SET_FLAGS_OR_XOR;
     context->used_cycles += 19;
     return ix;
@@ -1173,8 +1173,8 @@ static uint16_t z80_ix_iy_bd_cp_a_ixl (Z80_Context *context, uint16_t ix)
 /* CP A, (IX + *) */
 static uint16_t z80_ix_iy_be_cp_a_ixx (Z80_Context *context, uint16_t ix)
 {
-    int8_t offset = context->memory_read (context->state.pc++);
-    uint8_t data = context->memory_read (ix + offset);
+    int8_t offset = context->memory_read (context->parent, context->state.pc++);
+    uint8_t data = context->memory_read (context->parent, ix + offset);
     SET_FLAGS_SUB (context->state.a, data);
     context->used_cycles += 19;
     return ix;
@@ -1193,8 +1193,8 @@ static uint16_t z80_ix_iy_cb_prefix (Z80_Context *context, uint16_t ix)
 static uint16_t z80_ix_iy_e1_pop_ix (Z80_Context *context, uint16_t ix)
 {
     uint16_t_Split _ix = { .w = ix };
-    _ix.l = context->memory_read (context->state.sp++);
-    _ix.h = context->memory_read (context->state.sp++);
+    _ix.l = context->memory_read (context->parent, context->state.sp++);
+    _ix.h = context->memory_read (context->parent, context->state.sp++);
     context->used_cycles += 14;
     return _ix.w;
 }
@@ -1204,10 +1204,10 @@ static uint16_t z80_ix_iy_e1_pop_ix (Z80_Context *context, uint16_t ix)
 static uint16_t z80_ix_iy_e3_ex_sp_ix (Z80_Context *context, uint16_t ix)
 {
     uint16_t_Split _ix = { .w = ix };
-    _ix.l = context->memory_read (context->state.sp);
-    _ix.h = context->memory_read (context->state.sp + 1);
-    context->memory_write (context->state.sp,     _ix.l);
-    context->memory_write (context->state.sp + 1, _ix.h);
+    _ix.l = context->memory_read (context->parent, context->state.sp);
+    _ix.h = context->memory_read (context->parent, context->state.sp + 1);
+    context->memory_write (context->parent, context->state.sp,     _ix.l);
+    context->memory_write (context->parent, context->state.sp + 1, _ix.h);
     context->used_cycles += 23;
     return _ix.w;
 }
@@ -1217,8 +1217,8 @@ static uint16_t z80_ix_iy_e3_ex_sp_ix (Z80_Context *context, uint16_t ix)
 static uint16_t z80_ix_iy_e5_push_ix (Z80_Context *context, uint16_t ix)
 {
     uint16_t_Split _ix = { .w = ix };
-    context->memory_write (--context->state.sp, _ix.h);
-    context->memory_write (--context->state.sp, _ix.l);
+    context->memory_write (context->parent, --context->state.sp, _ix.h);
+    context->memory_write (context->parent, --context->state.sp, _ix.l);
     context->used_cycles += 15;
     return ix;
 }
@@ -1626,7 +1626,7 @@ uint8_t (*z80_cb_instruction [32]) (Z80_Context *, uint8_t) = {
 /* IN B, (C) */
 static void z80_ed_40_in_b_c (Z80_Context *context)
 {
-    context->state.b = context->io_read (context->state.c);
+    context->state.b = context->io_read (context->parent, context->state.c);
     SET_FLAGS_ED_IN (context->state.b);
     context->used_cycles += 12;
 }
@@ -1635,7 +1635,7 @@ static void z80_ed_40_in_b_c (Z80_Context *context)
 /* OUT (C), B */
 static void z80_ed_41_out_c_b (Z80_Context *context)
 {
-    context->io_write (context->state.c, context->state.b);
+    context->io_write (context->parent, context->state.c, context->state.b);
     context->used_cycles += 12;
 }
 
@@ -1655,11 +1655,11 @@ static void z80_ed_42_sbc_hl_bc (Z80_Context *context)
 static void z80_ed_43_ld_xx_bc (Z80_Context *context)
 {
     uint16_t_Split addr;
-    addr.l = context->memory_read (context->state.pc++);
-    addr.h = context->memory_read (context->state.pc++);
+    addr.l = context->memory_read (context->parent, context->state.pc++);
+    addr.h = context->memory_read (context->parent, context->state.pc++);
 
-    context->memory_write (addr.w,     context->state.c);
-    context->memory_write (addr.w + 1, context->state.b);
+    context->memory_write (context->parent, addr.w,     context->state.c);
+    context->memory_write (context->parent, addr.w + 1, context->state.b);
     context->used_cycles += 20;
 }
 
@@ -1685,8 +1685,8 @@ static void z80_ed_44_neg (Z80_Context *context)
 /* RETN */
 static void z80_ed_45_retn (Z80_Context *context)
 {
-    context->state.pc_l = context->memory_read (context->state.sp++);
-    context->state.pc_h = context->memory_read (context->state.sp++);
+    context->state.pc_l = context->memory_read (context->parent, context->state.sp++);
+    context->state.pc_h = context->memory_read (context->parent, context->state.sp++);
     context->state.iff1 = context->state.iff2;
     context->used_cycles += 14;
 }
@@ -1711,7 +1711,7 @@ static void z80_ed_47_ld_i_a (Z80_Context *context)
 /* IN C, (C) */
 static void z80_ed_48_in_c_c (Z80_Context *context)
 {
-    context->state.c = context->io_read (context->state.c);
+    context->state.c = context->io_read (context->parent, context->state.c);
     SET_FLAGS_ED_IN (context->state.c);
     context->used_cycles += 12;
 }
@@ -1720,7 +1720,7 @@ static void z80_ed_48_in_c_c (Z80_Context *context)
 /* OUT (C), C */
 static void z80_ed_49_out_c_c (Z80_Context *context)
 {
-    context->io_write (context->state.c, context->state.c);
+    context->io_write (context->parent, context->state.c, context->state.c);
     context->used_cycles += 12;
 }
 
@@ -1740,11 +1740,11 @@ static void z80_ed_4a_adc_hl_bc (Z80_Context *context)
 static void z80_ed_4b_ld_bc_xx (Z80_Context *context)
 {
     uint16_t_Split addr;
-    addr.l = context->memory_read (context->state.pc++);
-    addr.h = context->memory_read (context->state.pc++);
+    addr.l = context->memory_read (context->parent, context->state.pc++);
+    addr.h = context->memory_read (context->parent, context->state.pc++);
 
-    context->state.c = context->memory_read (addr.w);
-    context->state.b = context->memory_read (addr.w + 1);
+    context->state.c = context->memory_read (context->parent, addr.w);
+    context->state.b = context->memory_read (context->parent, addr.w + 1);
     context->used_cycles += 20;
 }
 
@@ -1759,8 +1759,8 @@ static void z80_ed_4c_neg (Z80_Context *context)
 /* RETI */
 static void z80_ed_4d_reti (Z80_Context *context)
 {
-    context->state.pc_l = context->memory_read (context->state.sp++);
-    context->state.pc_h = context->memory_read (context->state.sp++);
+    context->state.pc_l = context->memory_read (context->parent, context->state.sp++);
+    context->state.pc_h = context->memory_read (context->parent, context->state.sp++);
     context->used_cycles += 14;
 }
 
@@ -1783,7 +1783,7 @@ static void z80_ed_4f_ld_r_a (Z80_Context *context)
 /* IN D, (C) */
 static void z80_ed_50_in_d_c (Z80_Context *context)
 {
-    context->state.d = context->io_read (context->state.c);
+    context->state.d = context->io_read (context->parent, context->state.c);
     SET_FLAGS_ED_IN (context->state.d);
     context->used_cycles += 12;
 }
@@ -1792,7 +1792,7 @@ static void z80_ed_50_in_d_c (Z80_Context *context)
 /* OUT (C), D */
 static void z80_ed_51_out_c_d (Z80_Context *context)
 {
-    context->io_write (context->state.c, context->state.d);
+    context->io_write (context->parent, context->state.c, context->state.d);
     context->used_cycles += 12;
 }
 
@@ -1812,11 +1812,11 @@ static void z80_ed_52_sbc_hl_de (Z80_Context *context)
 static void z80_ed_53_ld_xx_de (Z80_Context *context)
 {
     uint16_t_Split addr;
-    addr.l = context->memory_read (context->state.pc++);
-    addr.h = context->memory_read (context->state.pc++);
+    addr.l = context->memory_read (context->parent, context->state.pc++);
+    addr.h = context->memory_read (context->parent, context->state.pc++);
 
-    context->memory_write (addr.w,     context->state.e);
-    context->memory_write (addr.w + 1, context->state.d);
+    context->memory_write (context->parent, addr.w,     context->state.e);
+    context->memory_write (context->parent, addr.w + 1, context->state.d);
     context->used_cycles += 20;
 }
 
@@ -1859,7 +1859,7 @@ static void z80_ed_57_ld_a_i (Z80_Context *context)
 /* IN E, (C) */
 static void z80_ed_58_in_e_c (Z80_Context *context)
 {
-    context->state.e = context->io_read (context->state.c);
+    context->state.e = context->io_read (context->parent, context->state.c);
     SET_FLAGS_ED_IN (context->state.e);
     context->used_cycles += 12;
 }
@@ -1868,7 +1868,7 @@ static void z80_ed_58_in_e_c (Z80_Context *context)
 /* OUT (C), E */
 static void z80_ed_59_out_c_e (Z80_Context *context)
 {
-    context->io_write (context->state.c, context->state.e);
+    context->io_write (context->parent, context->state.c, context->state.e);
     context->used_cycles += 12;
 }
 
@@ -1887,11 +1887,11 @@ static void z80_ed_5a_adc_hl_de (Z80_Context *context)
 static void z80_ed_5b_ld_de_xx (Z80_Context *context)
 {
     uint16_t_Split addr;
-    addr.l = context->memory_read (context->state.pc++);
-    addr.h = context->memory_read (context->state.pc++);
+    addr.l = context->memory_read (context->parent, context->state.pc++);
+    addr.h = context->memory_read (context->parent, context->state.pc++);
 
-    context->state.e = context->memory_read (addr.w);
-    context->state.d = context->memory_read (addr.w + 1);
+    context->state.e = context->memory_read (context->parent, addr.w);
+    context->state.d = context->memory_read (context->parent, addr.w + 1);
     context->used_cycles += 20;
 }
 
@@ -1934,7 +1934,7 @@ static void z80_ed_5f_ld_a_r (Z80_Context *context)
 /* IN H, (C) */
 static void z80_ed_60_in_h_c (Z80_Context *context)
 {
-    context->state.h = context->io_read (context->state.c);
+    context->state.h = context->io_read (context->parent, context->state.c);
     SET_FLAGS_ED_IN (context->state.h);
     context->used_cycles += 12;
 }
@@ -1943,7 +1943,7 @@ static void z80_ed_60_in_h_c (Z80_Context *context)
 /* OUT (C), H */
 static void z80_ed_61_out_c_h (Z80_Context *context)
 {
-    context->io_write (context->state.c, context->state.h);
+    context->io_write (context->parent, context->state.c, context->state.h);
     context->used_cycles += 12;
 }
 
@@ -1962,11 +1962,11 @@ static void z80_ed_62_sbc_hl_hl (Z80_Context *context)
 static void z80_ed_63_ld_xx_hl (Z80_Context *context)
 {
     uint16_t_Split addr;
-    addr.l = context->memory_read (context->state.pc++);
-    addr.h = context->memory_read (context->state.pc++);
+    addr.l = context->memory_read (context->parent, context->state.pc++);
+    addr.h = context->memory_read (context->parent, context->state.pc++);
 
-    context->memory_write (addr.w,     context->state.l);
-    context->memory_write (addr.w + 1, context->state.h);
+    context->memory_write (context->parent, addr.w,     context->state.l);
+    context->memory_write (context->parent, addr.w + 1, context->state.h);
     context->used_cycles += 20;
 }
 
@@ -1998,12 +1998,12 @@ static void z80_ed_67_rrd (Z80_Context *context)
     uint16_t_Split shifted;
 
     /* Calculate 12-bit value */
-    shifted.l = context->memory_read (context->state.hl);
+    shifted.l = context->memory_read (context->parent, context->state.hl);
     shifted.h = context->state.a & 0x0f;
     shifted.w = (shifted.w >> 4) | ((shifted.w & 0x000f) << 8);
 
     /* Lower 8 bits go to memory */
-    context->memory_write (context->state.hl, shifted.l);
+    context->memory_write (context->parent, context->state.hl, shifted.l);
 
     /* Upper 4 bits go to A */
     context->state.a = (context->state.a & 0xf0) | shifted.h;
@@ -2016,7 +2016,7 @@ static void z80_ed_67_rrd (Z80_Context *context)
 /* IN L, (C) */
 static void z80_ed_68_in_l_c (Z80_Context *context)
 {
-    context->state.l = context->io_read (context->state.c);
+    context->state.l = context->io_read (context->parent, context->state.c);
     SET_FLAGS_ED_IN (context->state.l);
     context->used_cycles += 12;
 }
@@ -2025,7 +2025,7 @@ static void z80_ed_68_in_l_c (Z80_Context *context)
 /* OUT (C), L */
 static void z80_ed_69_out_c_l (Z80_Context *context)
 {
-    context->io_write (context->state.c, context->state.l);
+    context->io_write (context->parent, context->state.c, context->state.l);
     context->used_cycles += 12;
 }
 
@@ -2044,11 +2044,11 @@ static void z80_ed_6a_adc_hl_hl (Z80_Context *context)
 static void z80_ed_6b_ld_hl_xx (Z80_Context *context)
 {
     uint16_t_Split addr;
-    addr.l = context->memory_read (context->state.pc++);
-    addr.h = context->memory_read (context->state.pc++);
+    addr.l = context->memory_read (context->parent, context->state.pc++);
+    addr.h = context->memory_read (context->parent, context->state.pc++);
 
-    context->state.l = context->memory_read (addr.w);
-    context->state.h = context->memory_read (addr.w + 1);
+    context->state.l = context->memory_read (context->parent, addr.w);
+    context->state.h = context->memory_read (context->parent, addr.w + 1);
     context->used_cycles += 20;
 }
 
@@ -2080,10 +2080,10 @@ static void z80_ed_6f_rld (Z80_Context *context)
     uint16_t_Split shifted;
 
     /* Calculate 12-bit value */
-    shifted.w = ((uint16_t) context->memory_read (context->state.hl) << 4) | (context->state.a & 0x0f);
+    shifted.w = ((uint16_t) context->memory_read (context->parent, context->state.hl) << 4) | (context->state.a & 0x0f);
 
     /* Lower 8 bits go to memory */
-    context->memory_write (context->state.hl, shifted.l);
+    context->memory_write (context->parent, context->state.hl, shifted.l);
 
     /* Upper 4 bits go to A */
     context->state.a = (context->state.a & 0xf0) | shifted.h;
@@ -2097,7 +2097,7 @@ static void z80_ed_6f_rld (Z80_Context *context)
 static void z80_ed_70_in_c (Z80_Context *context)
 {
     uint8_t throwaway;
-    throwaway = context->io_read (context->state.c);
+    throwaway = context->io_read (context->parent, context->state.c);
     SET_FLAGS_ED_IN (throwaway);
     context->used_cycles += 12;
 }
@@ -2106,7 +2106,7 @@ static void z80_ed_70_in_c (Z80_Context *context)
 /* OUT (C), 0 (undocumented) */
 static void z80_ed_71_out_c_0 (Z80_Context *context)
 {
-    context->io_write (context->state.c, 0);
+    context->io_write (context->parent, context->state.c, 0);
     context->used_cycles += 12;
 }
 
@@ -2125,11 +2125,11 @@ static void z80_ed_72_sbc_hl_sp (Z80_Context *context)
 static void z80_ed_73_ld_xx_sp (Z80_Context *context)
 {
     uint16_t_Split addr;
-    addr.l = context->memory_read (context->state.pc++);
-    addr.h = context->memory_read (context->state.pc++);
+    addr.l = context->memory_read (context->parent, context->state.pc++);
+    addr.h = context->memory_read (context->parent, context->state.pc++);
 
-    context->memory_write (addr.w,     context->state.sp_l);
-    context->memory_write (addr.w + 1, context->state.sp_h);
+    context->memory_write (context->parent, addr.w,     context->state.sp_l);
+    context->memory_write (context->parent, addr.w + 1, context->state.sp_h);
     context->used_cycles += 20;
 }
 
@@ -2158,7 +2158,7 @@ static void z80_ed_76_im_1 (Z80_Context *context)
 /* IN A, (C) */
 static void z80_ed_78_in_a_c (Z80_Context *context)
 {
-    context->state.a = context->io_read (context->state.c);
+    context->state.a = context->io_read (context->parent, context->state.c);
     SET_FLAGS_ED_IN (context->state.a);
     context->used_cycles += 12;
 }
@@ -2167,7 +2167,7 @@ static void z80_ed_78_in_a_c (Z80_Context *context)
 /* OUT (C), A */
 static void z80_ed_79_out_c_a (Z80_Context *context)
 {
-    context->io_write (context->state.c, context->state.a);
+    context->io_write (context->parent, context->state.c, context->state.a);
     context->used_cycles += 12;
 }
 
@@ -2186,11 +2186,11 @@ static void z80_ed_7a_adc_hl_sp (Z80_Context *context)
 static void z80_ed_7b_ld_sp_xx (Z80_Context *context)
 {
     uint16_t_Split addr;
-    addr.l = context->memory_read (context->state.pc++);
-    addr.h = context->memory_read (context->state.pc++);
+    addr.l = context->memory_read (context->parent, context->state.pc++);
+    addr.h = context->memory_read (context->parent, context->state.pc++);
 
-    context->state.sp_l = context->memory_read (addr.w);
-    context->state.sp_h = context->memory_read (addr.w + 1);
+    context->state.sp_l = context->memory_read (context->parent, addr.w);
+    context->state.sp_h = context->memory_read (context->parent, addr.w + 1);
     context->used_cycles += 20;
 }
 
@@ -2219,7 +2219,7 @@ static void z80_ed_7e_im_2 (Z80_Context *context)
 /* LDI */
 static void z80_ed_a0_ldi (Z80_Context *context)
 {
-    context->memory_write (context->state.de, context->memory_read (context->state.hl));
+    context->memory_write (context->parent, context->state.de, context->memory_read (context->parent, context->state.hl));
     context->state.hl++;
     context->state.de++;
     context->state.bc--;
@@ -2233,7 +2233,7 @@ static void z80_ed_a0_ldi (Z80_Context *context)
 /* CPI */
 static void z80_ed_a1_cpi (Z80_Context *context)
 {
-    uint8_t temp = context->memory_read (context->state.hl);
+    uint8_t temp = context->memory_read (context->parent, context->state.hl);
     context->state.hl++;
     context->state.bc--;
     SET_FLAGS_CPI_CPD (temp);
@@ -2244,7 +2244,7 @@ static void z80_ed_a1_cpi (Z80_Context *context)
 /* INI */
 static void z80_ed_a2_ini (Z80_Context *context)
 {
-    context->memory_write (context->state.hl, context->io_read (context->state.c));
+    context->memory_write (context->parent, context->state.hl, context->io_read (context->parent, context->state.c));
     context->state.hl++;
     context->state.b--;
     context->state.flag_sub = 1;
@@ -2260,7 +2260,7 @@ static void z80_ed_a2_ini (Z80_Context *context)
 /* OUTI */
 static void z80_ed_a3_outi (Z80_Context *context)
 {
-    context->io_write (context->state.c, context->memory_read (context->state.hl));
+    context->io_write (context->parent, context->state.c, context->memory_read (context->parent, context->state.hl));
     context->state.hl++;
     context->state.b--;
     context->state.flag_sub = 1;
@@ -2275,7 +2275,7 @@ static void z80_ed_a3_outi (Z80_Context *context)
 /* LDD */
 static void z80_ed_a8_ldd (Z80_Context *context)
 {
-    context->memory_write (context->state.de, context->memory_read (context->state.hl));
+    context->memory_write (context->parent, context->state.de, context->memory_read (context->parent, context->state.hl));
     context->state.hl--;
     context->state.de--;
     context->state.bc--;
@@ -2289,7 +2289,7 @@ static void z80_ed_a8_ldd (Z80_Context *context)
 /* CPD */
 static void z80_ed_a9_cpd (Z80_Context *context)
 {
-    uint8_t temp = context->memory_read (context->state.hl);
+    uint8_t temp = context->memory_read (context->parent, context->state.hl);
     context->state.hl--;
     context->state.bc--;
     SET_FLAGS_CPI_CPD (temp);
@@ -2300,7 +2300,7 @@ static void z80_ed_a9_cpd (Z80_Context *context)
 /* IND */
 static void z80_ed_aa_ind (Z80_Context *context)
 {
-    context->memory_write (context->state.hl, context->io_read (context->state.c));
+    context->memory_write (context->parent, context->state.hl, context->io_read (context->parent, context->state.c));
     context->state.hl--;
     context->state.b--;
     context->state.flag_sub = 1;
@@ -2317,9 +2317,9 @@ static void z80_ed_ab_outd (Z80_Context *context)
 {
     /* TODO: Implement 'unknown' flag behaviour.
      *       Described in 'The Undocumented Z80 Documented'. */
-    uint8_t temp = context->memory_read (context->state.hl);
+    uint8_t temp = context->memory_read (context->parent, context->state.hl);
     context->state.b--;
-    context->io_write (context->state.c, temp);
+    context->io_write (context->parent, context->state.c, temp);
     context->state.hl--;
     context->state.flag_sub = 1;
     context->state.flag_zero = (context->state.b == 0);
@@ -2330,7 +2330,7 @@ static void z80_ed_ab_outd (Z80_Context *context)
 /* LDIR */
 static void z80_ed_b0_ldir (Z80_Context *context)
 {
-    context->memory_write (context->state.de, context->memory_read (context->state.hl));
+    context->memory_write (context->parent, context->state.de, context->memory_read (context->parent, context->state.hl));
     context->state.hl++;
     context->state.de++;
     context->state.bc--;
@@ -2352,7 +2352,7 @@ static void z80_ed_b0_ldir (Z80_Context *context)
 /* CPIR */
 static void z80_ed_b1_cpir (Z80_Context *context)
 {
-    uint8_t temp = context->memory_read (context->state.hl);
+    uint8_t temp = context->memory_read (context->parent, context->state.hl);
     context->state.hl++;
     context->state.bc--;
     if (context->state.bc != 0 && context->state.a != temp)
@@ -2371,7 +2371,7 @@ static void z80_ed_b1_cpir (Z80_Context *context)
 /* INIR */
 static void z80_ed_b2_inir (Z80_Context *context)
 {
-    context->memory_write (context->state.hl, context->io_read (context->state.c));
+    context->memory_write (context->parent, context->state.hl, context->io_read (context->parent, context->state.c));
     context->state.hl++;
     context->state.b--;
     context->state.flag_sub = 1;
@@ -2394,7 +2394,7 @@ static void z80_ed_b2_inir (Z80_Context *context)
 /* OTIR */
 static void z80_ed_b3_otir (Z80_Context *context)
 {
-    context->io_write (context->state.c, context->memory_read (context->state.hl));
+    context->io_write (context->parent, context->state.c, context->memory_read (context->parent, context->state.hl));
     context->state.hl++;
     context->state.b--;
     context->state.flag_sub = 1;
@@ -2417,7 +2417,7 @@ static void z80_ed_b3_otir (Z80_Context *context)
 /* LDDR */
 static void z80_ed_b8_lddr (Z80_Context *context)
 {
-    context->memory_write (context->state.de, context->memory_read (context->state.hl));
+    context->memory_write (context->parent, context->state.de, context->memory_read (context->parent, context->state.hl));
     context->state.hl--;
     context->state.de--;
     context->state.bc--;
@@ -2439,7 +2439,7 @@ static void z80_ed_b8_lddr (Z80_Context *context)
 /* CPDR */
 static void z80_ed_b9_cpdr (Z80_Context *context)
 {
-    uint8_t temp = context->memory_read (context->state.hl);
+    uint8_t temp = context->memory_read (context->parent, context->state.hl);
     context->state.hl--;
     context->state.bc--;
     SET_FLAGS_CPI_CPD (temp);
@@ -2458,7 +2458,7 @@ static void z80_ed_b9_cpdr (Z80_Context *context)
 /* INDR */
 static void z80_ed_ba_indr (Z80_Context *context)
 {
-    context->memory_write (context->state.hl, context->io_read (context->state.c));
+    context->memory_write (context->parent, context->state.hl, context->io_read (context->parent, context->state.c));
     context->state.hl--;
     context->state.b--;
     context->state.flag_sub = 1;
@@ -2481,7 +2481,7 @@ static void z80_ed_ba_indr (Z80_Context *context)
 /* OTDR */
 static void z80_ed_bb_otdr (Z80_Context *context)
 {
-    context->io_write (context->state.c, context->memory_read (context->state.hl));
+    context->io_write (context->parent, context->state.c, context->memory_read (context->parent, context->state.hl));
     context->state.hl--;
     context->state.b--;
     context->state.flag_sub = 1;
@@ -2590,8 +2590,8 @@ static void z80_00_nop (Z80_Context *context)
 /* LD BC, ** */
 static void z80_01_ld_bc_xx (Z80_Context *context)
 {
-    context->state.c = context->memory_read (context->state.pc++);
-    context->state.b = context->memory_read (context->state.pc++);
+    context->state.c = context->memory_read (context->parent, context->state.pc++);
+    context->state.b = context->memory_read (context->parent, context->state.pc++);
     context->used_cycles += 10;
 }
 
@@ -2599,7 +2599,7 @@ static void z80_01_ld_bc_xx (Z80_Context *context)
 /* LD (BC), A */
 static void z80_02_ld_bc_a (Z80_Context *context)
 {
-    context->memory_write (context->state.bc, context->state.a);
+    context->memory_write (context->parent, context->state.bc, context->state.a);
     context->used_cycles += 7;
 }
 
@@ -2633,7 +2633,7 @@ static void z80_05_dec_b (Z80_Context *context)
 /* LD B, * */
 static void z80_06_ld_b_x (Z80_Context *context)
 {
-    context->state.b = context->memory_read (context->state.pc++);
+    context->state.b = context->memory_read (context->parent, context->state.pc++);
     context->used_cycles += 7;
 }
 
@@ -2669,7 +2669,7 @@ static void z80_09_add_hl_bc (Z80_Context *context)
 /* LD A, (BC) */
 static void z80_0a_ld_a_bc (Z80_Context *context)
 {
-    context->state.a = context->memory_read (context->state.bc);
+    context->state.a = context->memory_read (context->parent, context->state.bc);
     context->used_cycles += 7;
 }
 
@@ -2703,7 +2703,7 @@ static void z80_0d_dec_c (Z80_Context *context)
 /* LD C, * */
 static void z80_0e_ld_c_x (Z80_Context *context)
 {
-    context->state.c = context->memory_read (context->state.pc++);
+    context->state.c = context->memory_read (context->parent, context->state.pc++);
     context->used_cycles += 7;
 }
 
@@ -2722,7 +2722,7 @@ static void z80_0f_rrca (Z80_Context *context)
 /* DJNZ */
 static void z80_10_djnz (Z80_Context *context)
 {
-    uint8_t imm = context->memory_read (context->state.pc++);
+    uint8_t imm = context->memory_read (context->parent, context->state.pc++);
 
     if (--context->state.b)
     {
@@ -2739,8 +2739,8 @@ static void z80_10_djnz (Z80_Context *context)
 /* LD DE, ** */
 static void z80_11_ld_de_xx (Z80_Context *context)
 {
-    context->state.e = context->memory_read (context->state.pc++);
-    context->state.d = context->memory_read (context->state.pc++);
+    context->state.e = context->memory_read (context->parent, context->state.pc++);
+    context->state.d = context->memory_read (context->parent, context->state.pc++);
     context->used_cycles += 10;
 }
 
@@ -2748,7 +2748,7 @@ static void z80_11_ld_de_xx (Z80_Context *context)
 /* LD (DE), A */
 static void z80_12_ld_de_a (Z80_Context *context)
 {
-    context->memory_write (context->state.de, context->state.a);
+    context->memory_write (context->parent, context->state.de, context->state.a);
     context->used_cycles += 7;
 }
 
@@ -2782,7 +2782,7 @@ static void z80_15_dec_d (Z80_Context *context)
 /* LD D, * */
 static void z80_16_ld_d_x (Z80_Context *context)
 {
-    context->state.d = context->memory_read (context->state.pc++);
+    context->state.d = context->memory_read (context->parent, context->state.pc++);
     context->used_cycles += 7;
 }
 
@@ -2802,7 +2802,7 @@ static void z80_17_rla (Z80_Context *context)
 /* JR */
 static void z80_18_jr (Z80_Context *context)
 {
-    uint8_t imm = context->memory_read (context->state.pc++);
+    uint8_t imm = context->memory_read (context->parent, context->state.pc++);
     context->state.pc += (int8_t) imm;
     context->used_cycles += 12;
 }
@@ -2820,7 +2820,7 @@ static void z80_19_add_hl_de (Z80_Context *context)
 /* LD A, (DE) */
 static void z80_1a_ld_a_de (Z80_Context *context)
 {
-    context->state.a = context->memory_read (context->state.de);
+    context->state.a = context->memory_read (context->parent, context->state.de);
     context->used_cycles += 7;
 }
 
@@ -2854,7 +2854,7 @@ static void z80_1d_dec_e (Z80_Context *context)
 /* LD E, * */
 static void z80_1e_ld_e_x (Z80_Context *context)
 {
-    context->state.e = context->memory_read (context->state.pc++);
+    context->state.e = context->memory_read (context->parent, context->state.pc++);
     context->used_cycles += 7;
 }
 
@@ -2874,7 +2874,7 @@ static void z80_1f_rra (Z80_Context *context)
 /* JR NZ */
 static void z80_20_jr_nz (Z80_Context *context)
 {
-    uint8_t imm = context->memory_read (context->state.pc++);
+    uint8_t imm = context->memory_read (context->parent, context->state.pc++);
 
     if (context->state.flag_zero)
     {
@@ -2891,8 +2891,8 @@ static void z80_20_jr_nz (Z80_Context *context)
 /* LD HL, ** */
 static void z80_21_ld_hl_xx (Z80_Context *context)
 {
-    context->state.l = context->memory_read (context->state.pc++);
-    context->state.h = context->memory_read (context->state.pc++);
+    context->state.l = context->memory_read (context->parent, context->state.pc++);
+    context->state.h = context->memory_read (context->parent, context->state.pc++);
     context->used_cycles += 10;
 }
 
@@ -2901,10 +2901,10 @@ static void z80_21_ld_hl_xx (Z80_Context *context)
 static void z80_22_ld_xx_hl (Z80_Context *context)
 {
     uint16_t_Split addr;
-    addr.l = context->memory_read (context->state.pc++);
-    addr.h = context->memory_read (context->state.pc++);
-    context->memory_write (addr.w,     context->state.l);
-    context->memory_write (addr.w + 1, context->state.h);
+    addr.l = context->memory_read (context->parent, context->state.pc++);
+    addr.h = context->memory_read (context->parent, context->state.pc++);
+    context->memory_write (context->parent, addr.w,     context->state.l);
+    context->memory_write (context->parent, addr.w + 1, context->state.h);
     context->used_cycles += 16;
 }
 
@@ -2938,7 +2938,7 @@ static void z80_25_dec_h (Z80_Context *context)
 /* LD H, * */
 static void z80_26_ld_h_x (Z80_Context *context)
 {
-    context->state.h = context->memory_read (context->state.pc++);
+    context->state.h = context->memory_read (context->parent, context->state.pc++);
     context->used_cycles += 7;
 }
 
@@ -3012,7 +3012,7 @@ static void z80_27_daa (Z80_Context *context)
 /* JR Z */
 static void z80_28_jr_z (Z80_Context *context)
 {
-    uint8_t imm = context->memory_read (context->state.pc++);
+    uint8_t imm = context->memory_read (context->parent, context->state.pc++);
 
     if (context->state.flag_zero)
     {
@@ -3039,10 +3039,10 @@ static void z80_29_add_hl_hl (Z80_Context *context)
 static void z80_2a_ld_hl_xx (Z80_Context *context)
 {
     uint16_t_Split addr;
-    addr.l = context->memory_read (context->state.pc++);
-    addr.h = context->memory_read (context->state.pc++);
-    context->state.l = context->memory_read (addr.w);
-    context->state.h = context->memory_read (addr.w + 1);
+    addr.l = context->memory_read (context->parent, context->state.pc++);
+    addr.h = context->memory_read (context->parent, context->state.pc++);
+    context->state.l = context->memory_read (context->parent, addr.w);
+    context->state.h = context->memory_read (context->parent, addr.w + 1);
     context->used_cycles += 16;
 }
 
@@ -3076,7 +3076,7 @@ static void z80_2d_dec_l (Z80_Context *context)
 /* LD L, * */
 static void z80_2e_ld_l_x (Z80_Context *context)
 {
-    context->state.l = context->memory_read (context->state.pc++);
+    context->state.l = context->memory_read (context->parent, context->state.pc++);
     context->used_cycles += 7;
 }
 
@@ -3094,7 +3094,7 @@ static void z80_2f_cpl (Z80_Context *context)
 /* JR NC */
 static void z80_30_jr_nc (Z80_Context *context)
 {
-    uint8_t imm = context->memory_read (context->state.pc++);
+    uint8_t imm = context->memory_read (context->parent, context->state.pc++);
 
     if (context->state.flag_carry)
     {
@@ -3111,8 +3111,8 @@ static void z80_30_jr_nc (Z80_Context *context)
 /* LD SP, ** */
 static void z80_31_ld_sp_xx (Z80_Context *context)
 {
-    context->state.sp_l = context->memory_read (context->state.pc++);
-    context->state.sp_h = context->memory_read (context->state.pc++);
+    context->state.sp_l = context->memory_read (context->parent, context->state.pc++);
+    context->state.sp_h = context->memory_read (context->parent, context->state.pc++);
     context->used_cycles += 10;
 }
 
@@ -3121,9 +3121,9 @@ static void z80_31_ld_sp_xx (Z80_Context *context)
 static void z80_32_ld_xx_a (Z80_Context *context)
 {
     uint16_t_Split addr;
-    addr.l = context->memory_read (context->state.pc++);
-    addr.h = context->memory_read (context->state.pc++);
-    context->memory_write (addr.w, context->state.a);
+    addr.l = context->memory_read (context->parent, context->state.pc++);
+    addr.h = context->memory_read (context->parent, context->state.pc++);
+    context->memory_write (context->parent, addr.w, context->state.a);
     context->used_cycles += 13;
 }
 
@@ -3139,9 +3139,9 @@ static void z80_33_inc_sp (Z80_Context *context)
 /* INC (HL) */
 static void z80_34_inc_hl (Z80_Context *context)
 {
-    uint8_t value = context->memory_read (context->state.hl);
+    uint8_t value = context->memory_read (context->parent, context->state.hl);
     value++;
-    context->memory_write (context->state.hl, value);
+    context->memory_write (context->parent, context->state.hl, value);
     SET_FLAGS_INC (value);
     context->used_cycles += 11;
 }
@@ -3150,9 +3150,9 @@ static void z80_34_inc_hl (Z80_Context *context)
 /* DEC (HL) */
 static void z80_35_dec_hl (Z80_Context *context)
 {
-    uint8_t value = context->memory_read (context->state.hl);
+    uint8_t value = context->memory_read (context->parent, context->state.hl);
     value--;
-    context->memory_write (context->state.hl, value);
+    context->memory_write (context->parent, context->state.hl, value);
     SET_FLAGS_DEC (value);
     context->used_cycles += 11;
 }
@@ -3161,7 +3161,7 @@ static void z80_35_dec_hl (Z80_Context *context)
 /* LD (HL), * */
 static void z80_36_ld_hl_x (Z80_Context *context)
 {
-    context->memory_write (context->state.hl, context->memory_read (context->state.pc++));
+    context->memory_write (context->parent, context->state.hl, context->memory_read (context->parent, context->state.pc++));
     context->used_cycles += 10;
 }
 
@@ -3179,7 +3179,7 @@ static void z80_37_scf (Z80_Context *context)
 /* JR C, * */
 static void z80_38_jr_c_x (Z80_Context *context)
 {
-    uint8_t imm = context->memory_read (context->state.pc++);
+    uint8_t imm = context->memory_read (context->parent, context->state.pc++);
 
     if (context->state.flag_carry)
     {
@@ -3206,9 +3206,9 @@ static void z80_39_add_hl_sp (Z80_Context *context)
 static void z80_3a_ld_a_xx (Z80_Context *context)
 {
     uint16_t_Split addr;
-    addr.l = context->memory_read (context->state.pc++);
-    addr.h = context->memory_read (context->state.pc++);
-    context->state.a = context->memory_read (addr.w);
+    addr.l = context->memory_read (context->parent, context->state.pc++);
+    addr.h = context->memory_read (context->parent, context->state.pc++);
+    context->state.a = context->memory_read (context->parent, addr.w);
     context->used_cycles += 13;
 }
 
@@ -3241,7 +3241,7 @@ static void z80_3d_dec_a (Z80_Context *context)
 /* LD A, * */
 static void z80_3e_ld_a_x (Z80_Context *context)
 {
-    context->state.a = context->memory_read (context->state.pc++);
+    context->state.a = context->memory_read (context->parent, context->state.pc++);
     context->used_cycles += 7;
 }
 
@@ -3306,7 +3306,7 @@ static void z80_45_ld_b_l (Z80_Context *context)
 /* LD B, (HL) */
 static void z80_46_ld_b_hl (Z80_Context *context)
 {
-    context->state.b = context->memory_read (context->state.hl);
+    context->state.b = context->memory_read (context->parent, context->state.hl);
     context->used_cycles += 7;
 }
 
@@ -3369,7 +3369,7 @@ static void z80_4d_ld_c_l (Z80_Context *context)
 /* LD C, (HL) */
 static void z80_4e_ld_c_hl (Z80_Context *context)
 {
-    context->state.c = context->memory_read (context->state.hl);
+    context->state.c = context->memory_read (context->parent, context->state.hl);
     context->used_cycles += 7;
 }
 
@@ -3432,7 +3432,7 @@ static void z80_55_ld_d_l (Z80_Context *context)
 /* LD D, (HL) */
 static void z80_56_ld_d_hl (Z80_Context *context)
 {
-    context->state.d = context->memory_read (context->state.hl);
+    context->state.d = context->memory_read (context->parent, context->state.hl);
     context->used_cycles += 7;
 }
 
@@ -3495,7 +3495,7 @@ static void z80_5d_ld_e_l (Z80_Context *context)
 /* LD E, (HL) */
 static void z80_5e_ld_e_hl (Z80_Context *context)
 {
-    context->state.e = context->memory_read (context->state.hl);
+    context->state.e = context->memory_read (context->parent, context->state.hl);
     context->used_cycles += 7;
 }
 
@@ -3558,7 +3558,7 @@ static void z80_65_ld_h_l (Z80_Context *context)
 /* LD H, (HL) */
 static void z80_66_ld_h_hl (Z80_Context *context)
 {
-    context->state.h = context->memory_read (context->state.hl);
+    context->state.h = context->memory_read (context->parent, context->state.hl);
     context->used_cycles += 7;
 }
 
@@ -3621,7 +3621,7 @@ static void z80_6d_ld_l_l (Z80_Context *context)
 /* LD L, (HL) */
 static void z80_6e_ld_l_hl (Z80_Context *context)
 {
-    context->state.l = context->memory_read (context->state.hl);
+    context->state.l = context->memory_read (context->parent, context->state.hl);
     context->used_cycles += 7;
 }
 
@@ -3637,7 +3637,7 @@ static void z80_6f_ld_l_a (Z80_Context *context)
 /* LD (HL), B */
 static void z80_70_ld_hl_b (Z80_Context *context)
 {
-    context->memory_write (context->state.hl, context->state.b);
+    context->memory_write (context->parent, context->state.hl, context->state.b);
     context->used_cycles += 7;
 }
 
@@ -3645,7 +3645,7 @@ static void z80_70_ld_hl_b (Z80_Context *context)
 /* LD (HL), C */
 static void z80_71_ld_hl_c (Z80_Context *context)
 {
-    context->memory_write (context->state.hl, context->state.c);
+    context->memory_write (context->parent, context->state.hl, context->state.c);
     context->used_cycles += 7;
 }
 
@@ -3653,7 +3653,7 @@ static void z80_71_ld_hl_c (Z80_Context *context)
 /* LD (HL), D */
 static void z80_72_ld_hl_d (Z80_Context *context)
 {
-    context->memory_write (context->state.hl, context->state.d);
+    context->memory_write (context->parent, context->state.hl, context->state.d);
     context->used_cycles += 7;
 }
 
@@ -3661,7 +3661,7 @@ static void z80_72_ld_hl_d (Z80_Context *context)
 /* LD (HL), E */
 static void z80_73_ld_hl_e (Z80_Context *context)
 {
-    context->memory_write (context->state.hl, context->state.e);
+    context->memory_write (context->parent, context->state.hl, context->state.e);
     context->used_cycles += 7;
 }
 
@@ -3669,7 +3669,7 @@ static void z80_73_ld_hl_e (Z80_Context *context)
 /* LD (HL), H */
 static void z80_74_ld_hl_h (Z80_Context *context)
 {
-    context->memory_write (context->state.hl, context->state.h);
+    context->memory_write (context->parent, context->state.hl, context->state.h);
     context->used_cycles += 7;
 }
 
@@ -3677,7 +3677,7 @@ static void z80_74_ld_hl_h (Z80_Context *context)
 /* LD (HL), L */
 static void z80_75_ld_hl_l (Z80_Context *context)
 {
-    context->memory_write (context->state.hl, context->state.l);
+    context->memory_write (context->parent, context->state.hl, context->state.l);
     context->used_cycles += 7;
 }
 
@@ -3694,7 +3694,7 @@ static void z80_76_halt (Z80_Context *context)
 /* LD (HL), A */
 static void z80_77_ld_hl_a (Z80_Context *context)
 {
-    context->memory_write (context->state.hl, context->state.a);
+    context->memory_write (context->parent, context->state.hl, context->state.a);
     context->used_cycles += 7;
 }
 
@@ -3750,7 +3750,7 @@ static void z80_7d_ld_a_l (Z80_Context *context)
 /* LD A, (HL) */
 static void z80_7e_ld_a_hl (Z80_Context *context)
 {
-    context->state.a = context->memory_read (context->state.hl);
+    context->state.a = context->memory_read (context->parent, context->state.hl);
     context->used_cycles += 7;
 }
 
@@ -3817,7 +3817,7 @@ static void z80_85_add_a_l (Z80_Context *context)
 /* ADD A, (HL) */
 static void z80_86_add_a_hl (Z80_Context *context)
 {
-    uint8_t value = context->memory_read (context->state.hl);
+    uint8_t value = context->memory_read (context->parent, context->state.hl);
     SET_FLAGS_ADD (context->state.a, value);
     context->state.a += value;
     context->used_cycles += 7;
@@ -3896,7 +3896,7 @@ static void z80_8d_adc_a_l (Z80_Context *context)
 /* ADC A, (HL) */
 static void z80_8e_adc_a_hl (Z80_Context *context)
 {
-    uint8_t value = context->memory_read (context->state.hl);
+    uint8_t value = context->memory_read (context->parent, context->state.hl);
     uint8_t temp = value + context->state.flag_carry;
     SET_FLAGS_ADC (value);
     context->state.a += temp;
@@ -3971,7 +3971,7 @@ static void z80_95_sub_a_l (Z80_Context *context)
 /* SUB A, (HL) */
 static void z80_96_sub_a_hl (Z80_Context *context)
 {
-    uint8_t temp = context->memory_read (context->state.hl);
+    uint8_t temp = context->memory_read (context->parent, context->state.hl);
     SET_FLAGS_SUB (context->state.a, temp);
     context->state.a -= temp;
     context->used_cycles += 7;
@@ -4050,7 +4050,7 @@ static void z80_9d_sbc_a_l (Z80_Context *context)
 /* SBC A, (HL) */
 static void z80_9e_sbc_a_hl (Z80_Context *context)
 {
-    uint8_t value = context->memory_read (context->state.hl);
+    uint8_t value = context->memory_read (context->parent, context->state.hl);
     uint8_t temp = value + context->state.flag_carry;
     SET_FLAGS_SBC (value);
     context->state.a -= temp;
@@ -4124,7 +4124,7 @@ static void z80_a5_and_a_l (Z80_Context *context)
 /* AND A, (HL) */
 static void z80_a6_and_a_hl (Z80_Context *context)
 {
-    context->state.a &= context->memory_read (context->state.hl);
+    context->state.a &= context->memory_read (context->parent, context->state.hl);
     SET_FLAGS_AND;
     context->used_cycles += 7;
 }
@@ -4195,7 +4195,7 @@ static void z80_ad_xor_a_l (Z80_Context *context)
 /* XOR A, (HL) */
 static void z80_ae_xor_a_hl (Z80_Context *context)
 {
-    context->state.a ^= context->memory_read (context->state.hl);
+    context->state.a ^= context->memory_read (context->parent, context->state.hl);
     SET_FLAGS_OR_XOR;
     context->used_cycles += 7;
 }
@@ -4267,7 +4267,7 @@ static void z80_b5_or_a_l (Z80_Context *context)
 /* OR A, (HL) */
 static void z80_b6_or_a_hl (Z80_Context *context)
 {
-    context->state.a |= context->memory_read (context->state.hl);
+    context->state.a |= context->memory_read (context->parent, context->state.hl);
     SET_FLAGS_OR_XOR;
     context->used_cycles += 7;
 }
@@ -4331,7 +4331,7 @@ static void z80_bd_cp_a_l (Z80_Context *context)
 /* CP A, (HL) */
 static void z80_be_cp_a_hl (Z80_Context *context)
 {
-    uint8_t value = context->memory_read (context->state.hl);
+    uint8_t value = context->memory_read (context->parent, context->state.hl);
     SET_FLAGS_SUB (context->state.a, value);
     context->used_cycles += 7;
 }
@@ -4353,8 +4353,8 @@ static void z80_c0_ret_nz (Z80_Context *context)
     }
     else
     {
-        context->state.pc_l = context->memory_read (context->state.sp++);
-        context->state.pc_h = context->memory_read (context->state.sp++);
+        context->state.pc_l = context->memory_read (context->parent, context->state.sp++);
+        context->state.pc_h = context->memory_read (context->parent, context->state.sp++);
         context->used_cycles += 11;
     }
 }
@@ -4363,8 +4363,8 @@ static void z80_c0_ret_nz (Z80_Context *context)
 /* POP BC */
 static void z80_c1_pop_bc (Z80_Context *context)
 {
-    context->state.c = context->memory_read (context->state.sp++);
-    context->state.b = context->memory_read (context->state.sp++);
+    context->state.c = context->memory_read (context->parent, context->state.sp++);
+    context->state.b = context->memory_read (context->parent, context->state.sp++);
     context->used_cycles += 10;
 }
 
@@ -4373,8 +4373,8 @@ static void z80_c1_pop_bc (Z80_Context *context)
 static void z80_c2_jp_nz_xx (Z80_Context *context)
 {
     uint16_t_Split addr;
-    addr.l = context->memory_read (context->state.pc++);
-    addr.h = context->memory_read (context->state.pc++);
+    addr.l = context->memory_read (context->parent, context->state.pc++);
+    addr.h = context->memory_read (context->parent, context->state.pc++);
 
     if (!context->state.flag_zero)
     {
@@ -4388,8 +4388,8 @@ static void z80_c2_jp_nz_xx (Z80_Context *context)
 static void z80_c3_jp_xx (Z80_Context *context)
 {
     uint16_t_Split addr;
-    addr.l = context->memory_read (context->state.pc++);
-    addr.h = context->memory_read (context->state.pc++);
+    addr.l = context->memory_read (context->parent, context->state.pc++);
+    addr.h = context->memory_read (context->parent, context->state.pc++);
     context->state.pc = addr.w;
     context->used_cycles += 10;
 }
@@ -4399,8 +4399,8 @@ static void z80_c3_jp_xx (Z80_Context *context)
 static void z80_c4_call_nz_xx (Z80_Context *context)
 {
     uint16_t_Split addr;
-    addr.l = context->memory_read (context->state.pc++);
-    addr.h = context->memory_read (context->state.pc++);
+    addr.l = context->memory_read (context->parent, context->state.pc++);
+    addr.h = context->memory_read (context->parent, context->state.pc++);
 
     if (context->state.flag_zero)
     {
@@ -4408,8 +4408,8 @@ static void z80_c4_call_nz_xx (Z80_Context *context)
     }
     else
     {
-        context->memory_write (--context->state.sp, context->state.pc_h);
-        context->memory_write (--context->state.sp, context->state.pc_l);
+        context->memory_write (context->parent, --context->state.sp, context->state.pc_h);
+        context->memory_write (context->parent, --context->state.sp, context->state.pc_l);
         context->state.pc = addr.w;
         context->used_cycles += 17;
     }
@@ -4419,8 +4419,8 @@ static void z80_c4_call_nz_xx (Z80_Context *context)
 /* PUSH BC */
 static void z80_c5_push_bc (Z80_Context *context)
 {
-    context->memory_write (--context->state.sp, context->state.b);
-    context->memory_write (--context->state.sp, context->state.c);
+    context->memory_write (context->parent, --context->state.sp, context->state.b);
+    context->memory_write (context->parent, --context->state.sp, context->state.c);
     context->used_cycles += 11;
 }
 
@@ -4428,7 +4428,7 @@ static void z80_c5_push_bc (Z80_Context *context)
 /* ADD A, * */
 static void z80_c6_add_a_x (Z80_Context *context)
 {
-    uint8_t imm = context->memory_read (context->state.pc++);
+    uint8_t imm = context->memory_read (context->parent, context->state.pc++);
     /* ADD A,*    */
     SET_FLAGS_ADD (context->state.a, imm);
     context->state.a += imm;
@@ -4440,8 +4440,8 @@ static void z80_c6_add_a_x (Z80_Context *context)
 static void z80_c7_rst_00 (Z80_Context *context)
 {
     /* RST 00h    */
-    context->memory_write (--context->state.sp, context->state.pc_h);
-    context->memory_write (--context->state.sp, context->state.pc_l);
+    context->memory_write (context->parent, --context->state.sp, context->state.pc_h);
+    context->memory_write (context->parent, --context->state.sp, context->state.pc_l);
     context->state.pc = 0x0000;
     context->used_cycles += 11;
 }
@@ -4453,8 +4453,8 @@ static void z80_c8_ret_z (Z80_Context *context)
     /* RET Z      */
     if (context->state.flag_zero)
     {
-        context->state.pc_l = context->memory_read (context->state.sp++);
-        context->state.pc_h = context->memory_read (context->state.sp++);
+        context->state.pc_l = context->memory_read (context->parent, context->state.sp++);
+        context->state.pc_h = context->memory_read (context->parent, context->state.sp++);
         context->used_cycles += 11;
     }
     else
@@ -4467,8 +4467,8 @@ static void z80_c8_ret_z (Z80_Context *context)
 /* RET */
 static void z80_c9_ret (Z80_Context *context)
 {
-    context->state.pc_l = context->memory_read (context->state.sp++);
-    context->state.pc_h = context->memory_read (context->state.sp++);
+    context->state.pc_l = context->memory_read (context->parent, context->state.sp++);
+    context->state.pc_h = context->memory_read (context->parent, context->state.sp++);
     context->used_cycles += 10;
 }
 
@@ -4477,8 +4477,8 @@ static void z80_c9_ret (Z80_Context *context)
 static void z80_ca_jp_z_xx (Z80_Context *context)
 {
     uint16_t_Split addr;
-    addr.l = context->memory_read (context->state.pc++);
-    addr.h = context->memory_read (context->state.pc++);
+    addr.l = context->memory_read (context->parent, context->state.pc++);
+    addr.h = context->memory_read (context->parent, context->state.pc++);
 
     if (context->state.flag_zero)
     {
@@ -4491,7 +4491,7 @@ static void z80_ca_jp_z_xx (Z80_Context *context)
 /* BIT PREFIX */
 static void z80_cb_prefix (Z80_Context *context)
 {
-    uint8_t instruction = context->memory_read (context->state.pc++);
+    uint8_t instruction = context->memory_read (context->parent, context->state.pc++);
 
     switch (instruction & 0x07)
     {
@@ -4529,12 +4529,12 @@ static void z80_cb_prefix (Z80_Context *context)
             if ((instruction & 0xc0) == 0x40)
             {
                 /* The BIT instruction is read-only */
-                z80_cb_instruction [instruction >> 3] (context, context->memory_read (context->state.hl));
+                z80_cb_instruction [instruction >> 3] (context, context->memory_read (context->parent, context->state.hl));
                 context->used_cycles += 12;
             }
             else
             {
-                context->memory_write (context->state.hl, z80_cb_instruction [instruction >> 3] (context, context->memory_read (context->state.hl)));
+                context->memory_write (context->parent, context->state.hl, z80_cb_instruction [instruction >> 3] (context, context->memory_read (context->parent, context->state.hl)));
                 context->used_cycles += 15;
             }
             break;
@@ -4551,13 +4551,13 @@ static void z80_cb_prefix (Z80_Context *context)
 static void z80_cc_call_z_xx (Z80_Context *context)
 {
     uint16_t_Split addr;
-    addr.l = context->memory_read (context->state.pc++);
-    addr.h = context->memory_read (context->state.pc++);
+    addr.l = context->memory_read (context->parent, context->state.pc++);
+    addr.h = context->memory_read (context->parent, context->state.pc++);
 
     if (context->state.flag_zero)
     {
-        context->memory_write (--context->state.sp, context->state.pc_h);
-        context->memory_write (--context->state.sp, context->state.pc_l);
+        context->memory_write (context->parent, --context->state.sp, context->state.pc_h);
+        context->memory_write (context->parent, --context->state.sp, context->state.pc_l);
         context->state.pc = addr.w;
         context->used_cycles += 17;
     }
@@ -4572,10 +4572,10 @@ static void z80_cc_call_z_xx (Z80_Context *context)
 static void z80_cd_call_xx (Z80_Context *context)
 {
     uint16_t_Split addr;
-    addr.l = context->memory_read (context->state.pc++);
-    addr.h = context->memory_read (context->state.pc++);
-    context->memory_write (--context->state.sp, context->state.pc_h);
-    context->memory_write (--context->state.sp, context->state.pc_l);
+    addr.l = context->memory_read (context->parent, context->state.pc++);
+    addr.h = context->memory_read (context->parent, context->state.pc++);
+    context->memory_write (context->parent, --context->state.sp, context->state.pc_h);
+    context->memory_write (context->parent, --context->state.sp, context->state.pc_l);
     context->state.pc = addr.w;
     context->used_cycles += 17;
 }
@@ -4584,7 +4584,7 @@ static void z80_cd_call_xx (Z80_Context *context)
 /* ADC A, * */
 static void z80_ce_adc_a_x (Z80_Context *context)
 {
-    uint8_t imm = context->memory_read (context->state.pc++);
+    uint8_t imm = context->memory_read (context->parent, context->state.pc++);
     uint8_t temp = imm + context->state.flag_carry;
     SET_FLAGS_ADC (imm);
     context->state.a += temp;
@@ -4595,8 +4595,8 @@ static void z80_ce_adc_a_x (Z80_Context *context)
 /* RST 08h */
 static void z80_cf_rst_08 (Z80_Context *context)
 {
-    context->memory_write (--context->state.sp, context->state.pc_h);
-    context->memory_write (--context->state.sp, context->state.pc_l);
+    context->memory_write (context->parent, --context->state.sp, context->state.pc_h);
+    context->memory_write (context->parent, --context->state.sp, context->state.pc_l);
     context->state.pc = 0x0008;
     context->used_cycles += 11;
 }
@@ -4611,8 +4611,8 @@ static void z80_d0_ret_nc (Z80_Context *context)
     }
     else
     {
-        context->state.pc_l = context->memory_read (context->state.sp++);
-        context->state.pc_h = context->memory_read (context->state.sp++);
+        context->state.pc_l = context->memory_read (context->parent, context->state.sp++);
+        context->state.pc_h = context->memory_read (context->parent, context->state.sp++);
         context->used_cycles += 11;
     }
 }
@@ -4621,8 +4621,8 @@ static void z80_d0_ret_nc (Z80_Context *context)
 /* POP DE */
 static void z80_d1_pop_de (Z80_Context *context)
 {
-    context->state.e = context->memory_read (context->state.sp++);
-    context->state.d = context->memory_read (context->state.sp++);
+    context->state.e = context->memory_read (context->parent, context->state.sp++);
+    context->state.d = context->memory_read (context->parent, context->state.sp++);
     context->used_cycles += 10;
 }
 
@@ -4631,8 +4631,8 @@ static void z80_d1_pop_de (Z80_Context *context)
 static void z80_d2_jp_nc_xx (Z80_Context *context)
 {
     uint16_t_Split addr;
-    addr.l = context->memory_read (context->state.pc++);
-    addr.h = context->memory_read (context->state.pc++);
+    addr.l = context->memory_read (context->parent, context->state.pc++);
+    addr.h = context->memory_read (context->parent, context->state.pc++);
 
     if (!context->state.flag_carry)
     {
@@ -4645,7 +4645,7 @@ static void z80_d2_jp_nc_xx (Z80_Context *context)
 /* OUT (*), A */
 static void z80_d3_out_x_a (Z80_Context *context)
 {
-    context->io_write (context->memory_read (context->state.pc++), context->state.a);
+    context->io_write (context->parent, context->memory_read (context->parent, context->state.pc++), context->state.a);
     context->used_cycles += 11;
 }
 
@@ -4654,8 +4654,8 @@ static void z80_d3_out_x_a (Z80_Context *context)
 static void z80_d4_call_nc_xx (Z80_Context *context)
 {
     uint16_t_Split addr;
-    addr.l = context->memory_read (context->state.pc++);
-    addr.h = context->memory_read (context->state.pc++);
+    addr.l = context->memory_read (context->parent, context->state.pc++);
+    addr.h = context->memory_read (context->parent, context->state.pc++);
 
     /* CALL NC,** */
     if (context->state.flag_carry)
@@ -4664,8 +4664,8 @@ static void z80_d4_call_nc_xx (Z80_Context *context)
     }
     else
     {
-        context->memory_write (--context->state.sp, context->state.pc_h);
-        context->memory_write (--context->state.sp, context->state.pc_l);
+        context->memory_write (context->parent, --context->state.sp, context->state.pc_h);
+        context->memory_write (context->parent, --context->state.sp, context->state.pc_l);
         context->state.pc = addr.w;
         context->used_cycles += 17;
     }
@@ -4675,8 +4675,8 @@ static void z80_d4_call_nc_xx (Z80_Context *context)
 /* PUSH DE */
 static void z80_d5_push_de (Z80_Context *context)
 {
-    context->memory_write (--context->state.sp, context->state.d);
-    context->memory_write (--context->state.sp, context->state.e);
+    context->memory_write (context->parent, --context->state.sp, context->state.d);
+    context->memory_write (context->parent, --context->state.sp, context->state.e);
     context->used_cycles += 11;
 }
 
@@ -4684,7 +4684,7 @@ static void z80_d5_push_de (Z80_Context *context)
 /* SUB A, * */
 static void z80_d6_sub_a_x (Z80_Context *context)
 {
-    uint8_t imm = context->memory_read (context->state.pc++);
+    uint8_t imm = context->memory_read (context->parent, context->state.pc++);
     SET_FLAGS_SUB (context->state.a, imm);
     context->state.a -= imm;
     context->used_cycles += 7;
@@ -4694,8 +4694,8 @@ static void z80_d6_sub_a_x (Z80_Context *context)
 /* RST 10h */
 static void z80_d7_rst_10 (Z80_Context *context)
 {
-    context->memory_write (--context->state.sp, context->state.pc_h);
-    context->memory_write (--context->state.sp, context->state.pc_l);
+    context->memory_write (context->parent, --context->state.sp, context->state.pc_h);
+    context->memory_write (context->parent, --context->state.sp, context->state.pc_l);
     context->state.pc = 0x10;
     context->used_cycles += 11;
 }
@@ -4706,8 +4706,8 @@ static void z80_d8_ret_c (Z80_Context *context)
 {
     if (context->state.flag_carry)
     {
-        context->state.pc_l = context->memory_read (context->state.sp++);
-        context->state.pc_h = context->memory_read (context->state.sp++);
+        context->state.pc_l = context->memory_read (context->parent, context->state.sp++);
+        context->state.pc_h = context->memory_read (context->parent, context->state.sp++);
         context->used_cycles += 11;
     }
     else
@@ -4731,8 +4731,8 @@ static void z80_d9_exx (Z80_Context *context)
 static void z80_da_jp_c_xx (Z80_Context *context)
 {
     uint16_t_Split addr;
-    addr.l = context->memory_read (context->state.pc++);
-    addr.h = context->memory_read (context->state.pc++);
+    addr.l = context->memory_read (context->parent, context->state.pc++);
+    addr.h = context->memory_read (context->parent, context->state.pc++);
 
     if (context->state.flag_carry)
     {
@@ -4745,7 +4745,7 @@ static void z80_da_jp_c_xx (Z80_Context *context)
 /* IN A, (*) */
 static void z80_db_in_a_x (Z80_Context *context)
 {
-    context->state.a = context->io_read (context->memory_read (context->state.pc++));
+    context->state.a = context->io_read (context->parent, context->memory_read (context->parent, context->state.pc++));
     context->used_cycles += 11;
 }
 
@@ -4754,13 +4754,13 @@ static void z80_db_in_a_x (Z80_Context *context)
 static void z80_dc_call_c_xx (Z80_Context *context)
 {
     uint16_t_Split addr;
-    addr.l = context->memory_read (context->state.pc++);
-    addr.h = context->memory_read (context->state.pc++);
+    addr.l = context->memory_read (context->parent, context->state.pc++);
+    addr.h = context->memory_read (context->parent, context->state.pc++);
 
     if (context->state.flag_carry)
     {
-        context->memory_write (--context->state.sp, context->state.pc_h);
-        context->memory_write (--context->state.sp, context->state.pc_l);
+        context->memory_write (context->parent, --context->state.sp, context->state.pc_h);
+        context->memory_write (context->parent, --context->state.sp, context->state.pc_l);
         context->state.pc = addr.w;
         context->used_cycles += 17;
     }
@@ -4775,7 +4775,7 @@ static void z80_dc_call_c_xx (Z80_Context *context)
 static void z80_dd_ix (Z80_Context *context)
 {
     /* Fetch */
-    uint8_t instruction = context->memory_read (context->state.pc++);
+    uint8_t instruction = context->memory_read (context->parent, context->state.pc++);
 
     /* Execute */
     context->state.ix = z80_ix_iy_instruction [instruction] (context, context->state.ix);
@@ -4785,7 +4785,7 @@ static void z80_dd_ix (Z80_Context *context)
 /* SBC A, * */
 static void z80_de_sbc_a_x (Z80_Context *context)
 {
-    uint8_t imm = context->memory_read (context->state.pc++);
+    uint8_t imm = context->memory_read (context->parent, context->state.pc++);
     uint8_t temp = imm + context->state.flag_carry;
     SET_FLAGS_SBC (imm);
     context->state.a -= temp;
@@ -4796,8 +4796,8 @@ static void z80_de_sbc_a_x (Z80_Context *context)
 /* RST 18h */
 static void z80_df_rst_18 (Z80_Context *context)
 {
-    context->memory_write (--context->state.sp, context->state.pc_h);
-    context->memory_write (--context->state.sp, context->state.pc_l);
+    context->memory_write (context->parent, --context->state.sp, context->state.pc_h);
+    context->memory_write (context->parent, --context->state.sp, context->state.pc_l);
     context->state.pc = 0x0018;
     context->used_cycles += 11;
 }
@@ -4812,8 +4812,8 @@ static void z80_e0_ret_po (Z80_Context *context)
     }
     else
     {
-        context->state.pc_l = context->memory_read (context->state.sp++);
-        context->state.pc_h = context->memory_read (context->state.sp++);
+        context->state.pc_l = context->memory_read (context->parent, context->state.sp++);
+        context->state.pc_h = context->memory_read (context->parent, context->state.sp++);
         context->used_cycles += 11;
     }
 }
@@ -4822,8 +4822,8 @@ static void z80_e0_ret_po (Z80_Context *context)
 /* POP HL */
 static void z80_e1_pop_hl (Z80_Context *context)
 {
-    context->state.l = context->memory_read (context->state.sp++);
-    context->state.h = context->memory_read (context->state.sp++);
+    context->state.l = context->memory_read (context->parent, context->state.sp++);
+    context->state.h = context->memory_read (context->parent, context->state.sp++);
     context->used_cycles += 10;
 }
 
@@ -4832,8 +4832,8 @@ static void z80_e1_pop_hl (Z80_Context *context)
 static void z80_e2_jp_po_xx (Z80_Context *context)
 {
     uint16_t_Split addr;
-    addr.l = context->memory_read (context->state.pc++);
-    addr.h = context->memory_read (context->state.pc++);
+    addr.l = context->memory_read (context->parent, context->state.pc++);
+    addr.h = context->memory_read (context->parent, context->state.pc++);
 
     if (!context->state.flag_parity_overflow)
     {
@@ -4847,11 +4847,11 @@ static void z80_e2_jp_po_xx (Z80_Context *context)
 static void z80_e3_ex_sp_hl (Z80_Context *context)
 {
     uint8_t temp = context->state.l;
-    context->state.l = context->memory_read (context->state.sp);
-    context->memory_write (context->state.sp, temp);
+    context->state.l = context->memory_read (context->parent, context->state.sp);
+    context->memory_write (context->parent, context->state.sp, temp);
     temp = context->state.h;
-    context->state.h = context->memory_read (context->state.sp + 1);
-    context->memory_write (context->state.sp + 1, temp);
+    context->state.h = context->memory_read (context->parent, context->state.sp + 1);
+    context->memory_write (context->parent, context->state.sp + 1, temp);
     context->used_cycles += 19;
 }
 
@@ -4860,8 +4860,8 @@ static void z80_e3_ex_sp_hl (Z80_Context *context)
 static void z80_e4_call_po_xx (Z80_Context *context)
 {
     uint16_t_Split addr;
-    addr.l = context->memory_read (context->state.pc++);
-    addr.h = context->memory_read (context->state.pc++);
+    addr.l = context->memory_read (context->parent, context->state.pc++);
+    addr.h = context->memory_read (context->parent, context->state.pc++);
 
     if (context->state.flag_parity_overflow)
     {
@@ -4869,8 +4869,8 @@ static void z80_e4_call_po_xx (Z80_Context *context)
     }
     else
     {
-        context->memory_write (--context->state.sp, context->state.pc_h);
-        context->memory_write (--context->state.sp, context->state.pc_l);
+        context->memory_write (context->parent, --context->state.sp, context->state.pc_h);
+        context->memory_write (context->parent, --context->state.sp, context->state.pc_l);
         context->state.pc = addr.w;
         context->used_cycles += 17;
     }
@@ -4880,8 +4880,8 @@ static void z80_e4_call_po_xx (Z80_Context *context)
 /* PUSH HL */
 static void z80_e5_push_hl (Z80_Context *context)
 {
-    context->memory_write (--context->state.sp, context->state.h);
-    context->memory_write (--context->state.sp, context->state.l);
+    context->memory_write (context->parent, --context->state.sp, context->state.h);
+    context->memory_write (context->parent, --context->state.sp, context->state.l);
     context->used_cycles += 11;
 }
 
@@ -4889,7 +4889,7 @@ static void z80_e5_push_hl (Z80_Context *context)
 /* AND A, * */
 static void z80_e6_and_a_x (Z80_Context *context)
 {
-    context->state.a &= context->memory_read (context->state.pc++);
+    context->state.a &= context->memory_read (context->parent, context->state.pc++);
     SET_FLAGS_AND;
     context->used_cycles += 7;
 }
@@ -4898,8 +4898,8 @@ static void z80_e6_and_a_x (Z80_Context *context)
 /* RST 20h */
 static void z80_e7_rst_20 (Z80_Context *context)
 {
-    context->memory_write (--context->state.sp, context->state.pc_h);
-    context->memory_write (--context->state.sp, context->state.pc_l);
+    context->memory_write (context->parent, --context->state.sp, context->state.pc_h);
+    context->memory_write (context->parent, --context->state.sp, context->state.pc_l);
     context->state.pc = 0x0020;
     context->used_cycles += 11;
 }
@@ -4910,8 +4910,8 @@ static void z80_e8_ret_pe (Z80_Context *context)
 {
     if (context->state.flag_parity_overflow)
     {
-        context->state.pc_l = context->memory_read (context->state.sp++);
-        context->state.pc_h = context->memory_read (context->state.sp++);
+        context->state.pc_l = context->memory_read (context->parent, context->state.sp++);
+        context->state.pc_h = context->memory_read (context->parent, context->state.sp++);
         context->used_cycles += 11;
     }
     else
@@ -4933,8 +4933,8 @@ static void z80_e9_jp_hl (Z80_Context *context)
 static void z80_ea_jp_pe_xx (Z80_Context *context)
 {
     uint16_t_Split addr;
-    addr.l = context->memory_read (context->state.pc++);
-    addr.h = context->memory_read (context->state.pc++);
+    addr.l = context->memory_read (context->parent, context->state.pc++);
+    addr.h = context->memory_read (context->parent, context->state.pc++);
 
     if (context->state.flag_parity_overflow)
     {
@@ -4956,13 +4956,13 @@ static void z80_eb_ex_de_hl (Z80_Context *context)
 static void z80_ec_call_pe_xx (Z80_Context *context)
 {
     uint16_t_Split addr;
-    addr.l = context->memory_read (context->state.pc++);
-    addr.h = context->memory_read (context->state.pc++);
+    addr.l = context->memory_read (context->parent, context->state.pc++);
+    addr.h = context->memory_read (context->parent, context->state.pc++);
 
     if (context->state.flag_parity_overflow)
     {
-        context->memory_write (--context->state.sp, context->state.pc_h);
-        context->memory_write (--context->state.sp, context->state.pc_l);
+        context->memory_write (context->parent, --context->state.sp, context->state.pc_h);
+        context->memory_write (context->parent, --context->state.sp, context->state.pc_l);
         context->state.pc = addr.w;
         context->used_cycles += 17;
     }
@@ -4977,7 +4977,7 @@ static void z80_ec_call_pe_xx (Z80_Context *context)
 static void z80_ed_prefix (Z80_Context *context)
 {
     /* Fetch */
-    uint8_t instruction = context->memory_read (context->state.pc++);
+    uint8_t instruction = context->memory_read (context->parent, context->state.pc++);
 
     /* Execute */
     z80_ed_instruction [instruction] (context);
@@ -4987,7 +4987,7 @@ static void z80_ed_prefix (Z80_Context *context)
 /* XOR A, * */
 static void z80_ee_xor_a_x (Z80_Context *context)
 {
-    context->state.a ^= context->memory_read (context->state.pc++);
+    context->state.a ^= context->memory_read (context->parent, context->state.pc++);
     SET_FLAGS_OR_XOR;
     context->used_cycles += 7;
 }
@@ -4996,8 +4996,8 @@ static void z80_ee_xor_a_x (Z80_Context *context)
 /* RST 28h */
 static void z80_ef_rst_28 (Z80_Context *context)
 {
-    context->memory_write (--context->state.sp, context->state.pc_h);
-    context->memory_write (--context->state.sp, context->state.pc_l);
+    context->memory_write (context->parent, --context->state.sp, context->state.pc_h);
+    context->memory_write (context->parent, --context->state.sp, context->state.pc_l);
     context->state.pc = 0x0028;
     context->used_cycles += 11;
 }
@@ -5012,8 +5012,8 @@ static void z80_f0_ret_p (Z80_Context *context)
     }
     else
     {
-        context->state.pc_l = context->memory_read (context->state.sp++);
-        context->state.pc_h = context->memory_read (context->state.sp++);
+        context->state.pc_l = context->memory_read (context->parent, context->state.sp++);
+        context->state.pc_h = context->memory_read (context->parent, context->state.sp++);
         context->used_cycles += 11;
     }
 }
@@ -5022,8 +5022,8 @@ static void z80_f0_ret_p (Z80_Context *context)
 /* POP AF */
 static void z80_f1_pop_af (Z80_Context *context)
 {
-    context->state.f = context->memory_read (context->state.sp++);
-    context->state.a = context->memory_read (context->state.sp++);
+    context->state.f = context->memory_read (context->parent, context->state.sp++);
+    context->state.a = context->memory_read (context->parent, context->state.sp++);
     context->used_cycles += 10;
 }
 
@@ -5032,8 +5032,8 @@ static void z80_f1_pop_af (Z80_Context *context)
 static void z80_f2_jp_p_xx (Z80_Context *context)
 {
     uint16_t_Split addr;
-    addr.l = context->memory_read (context->state.pc++);
-    addr.h = context->memory_read (context->state.pc++);
+    addr.l = context->memory_read (context->parent, context->state.pc++);
+    addr.h = context->memory_read (context->parent, context->state.pc++);
 
     if (!context->state.flag_sign)
     {
@@ -5056,8 +5056,8 @@ static void z80_f3_di (Z80_Context *context)
 static void z80_f4_call_p_xx (Z80_Context *context)
 {
     uint16_t_Split addr;
-    addr.l = context->memory_read (context->state.pc++);
-    addr.h = context->memory_read (context->state.pc++);
+    addr.l = context->memory_read (context->parent, context->state.pc++);
+    addr.h = context->memory_read (context->parent, context->state.pc++);
 
     if (context->state.flag_sign)
     {
@@ -5065,8 +5065,8 @@ static void z80_f4_call_p_xx (Z80_Context *context)
     }
     else
     {
-        context->memory_write (--context->state.sp, context->state.pc_h);
-        context->memory_write (--context->state.sp, context->state.pc_l);
+        context->memory_write (context->parent, --context->state.sp, context->state.pc_h);
+        context->memory_write (context->parent, --context->state.sp, context->state.pc_l);
         context->state.pc = addr.w;
         context->used_cycles += 17;
     }
@@ -5076,8 +5076,8 @@ static void z80_f4_call_p_xx (Z80_Context *context)
 /* PUSH AF */
 static void z80_f5_push_af (Z80_Context *context)
 {
-    context->memory_write (--context->state.sp, context->state.a);
-    context->memory_write (--context->state.sp, context->state.f);
+    context->memory_write (context->parent, --context->state.sp, context->state.a);
+    context->memory_write (context->parent, --context->state.sp, context->state.f);
     context->used_cycles += 11;
 }
 
@@ -5085,7 +5085,7 @@ static void z80_f5_push_af (Z80_Context *context)
 /* OR A, * */
 static void z80_f6_or_a_x (Z80_Context *context)
 {
-    context->state.a |= context->memory_read (context->state.pc++);
+    context->state.a |= context->memory_read (context->parent, context->state.pc++);
     SET_FLAGS_OR_XOR;
     context->used_cycles += 7;
 }
@@ -5094,8 +5094,8 @@ static void z80_f6_or_a_x (Z80_Context *context)
 /* RST 30h */
 static void z80_f7_rst_30 (Z80_Context *context)
 {
-    context->memory_write (--context->state.sp, context->state.pc_h);
-    context->memory_write (--context->state.sp, context->state.pc_l);
+    context->memory_write (context->parent, --context->state.sp, context->state.pc_h);
+    context->memory_write (context->parent, --context->state.sp, context->state.pc_l);
     context->state.pc = 0x0030;
     context->used_cycles += 11;
 }
@@ -5106,8 +5106,8 @@ static void z80_f8_ret_m (Z80_Context *context)
 {
     if (context->state.flag_sign)
     {
-        context->state.pc_l = context->memory_read (context->state.sp++);
-        context->state.pc_h = context->memory_read (context->state.sp++);
+        context->state.pc_l = context->memory_read (context->parent, context->state.sp++);
+        context->state.pc_h = context->memory_read (context->parent, context->state.sp++);
         context->used_cycles += 11;
     }
     else
@@ -5129,8 +5129,8 @@ static void z80_f9_ld_sp_hl (Z80_Context *context)
 static void z80_fa_jp_m_xx (Z80_Context *context)
 {
     uint16_t_Split addr;
-    addr.l = context->memory_read (context->state.pc++);
-    addr.h = context->memory_read (context->state.pc++);
+    addr.l = context->memory_read (context->parent, context->state.pc++);
+    addr.h = context->memory_read (context->parent, context->state.pc++);
 
     if (context->state.flag_sign)
     {
@@ -5154,13 +5154,13 @@ static void z80_fb_ei (Z80_Context *context)
 static void z80_fc_call_m_xx (Z80_Context *context)
 {
     uint16_t_Split addr;
-    addr.l = context->memory_read (context->state.pc++);
-    addr.h = context->memory_read (context->state.pc++);
+    addr.l = context->memory_read (context->parent, context->state.pc++);
+    addr.h = context->memory_read (context->parent, context->state.pc++);
 
     if (context->state.flag_sign)
     {
-        context->memory_write (--context->state.sp, context->state.pc_h);
-        context->memory_write (--context->state.sp, context->state.pc_l);
+        context->memory_write (context->parent, --context->state.sp, context->state.pc_h);
+        context->memory_write (context->parent, --context->state.sp, context->state.pc_l);
         context->state.pc = addr.w;
         context->used_cycles += 17;
     }
@@ -5175,7 +5175,7 @@ static void z80_fc_call_m_xx (Z80_Context *context)
 static void z80_fd_prefix (Z80_Context *context)
 {
     /* Fetch */
-    uint8_t instruction = context->memory_read (context->state.pc++);
+    uint8_t instruction = context->memory_read (context->parent, context->state.pc++);
 
     /* Execute */
     context->state.iy = z80_ix_iy_instruction [instruction] (context, context->state.iy);
@@ -5185,7 +5185,7 @@ static void z80_fd_prefix (Z80_Context *context)
 /* CP A, * */
 static void z80_fe_cp_a_x (Z80_Context *context)
 {
-    uint8_t imm = context->memory_read (context->state.pc++);
+    uint8_t imm = context->memory_read (context->parent, context->state.pc++);
     SET_FLAGS_SUB (context->state.a, imm);
     context->used_cycles += 7;
 }
@@ -5194,8 +5194,8 @@ static void z80_fe_cp_a_x (Z80_Context *context)
 /* RST 38h */
 static void z80_ff_rst_38 (Z80_Context *context)
 {
-    context->memory_write (--context->state.sp, context->state.pc_h);
-    context->memory_write (--context->state.sp, context->state.pc_l);
+    context->memory_write (context->parent, --context->state.sp, context->state.pc_h);
+    context->memory_write (context->parent, --context->state.sp, context->state.pc_l);
     context->state.pc = 0x0038;
     context->used_cycles += 11;
 }
@@ -5279,7 +5279,7 @@ static void z80_run_instruction (Z80_Context *context)
     context->state.r = (context->state.r & 0x80) |((context->state.r + 1) & 0x7f);
 
     /* Fetch */
-    instruction = context->memory_read (context->state.pc++);
+    instruction = context->memory_read (context->parent, context->state.pc++);
 
     /* Execute */
     z80_instruction [instruction] (context);
@@ -5327,8 +5327,8 @@ void z80_run_cycles (Z80_Context *context, uint64_t cycles)
                     context->state.pc += 1;
                 }
                 context->state.iff1 = false;
-                context->memory_write (--context->state.sp, context->state.pc_h);
-                context->memory_write (--context->state.sp, context->state.pc_l);
+                context->memory_write (context->parent, --context->state.sp, context->state.pc_h);
+                context->memory_write (context->parent, --context->state.sp, context->state.pc_l);
                 context->state.pc = 0x66;
                 context->used_cycles += 11;
             }
@@ -5349,8 +5349,8 @@ void z80_run_cycles (Z80_Context *context, uint64_t cycles)
                 switch (context->state.im)
                 {
                     case 1:
-                        context->memory_write (--context->state.sp, context->state.pc_h);
-                        context->memory_write (--context->state.sp, context->state.pc_l);
+                        context->memory_write (context->parent, --context->state.sp, context->state.pc_h);
+                        context->memory_write (context->parent, --context->state.sp, context->state.pc_l);
                         context->state.pc = 0x38;
                         context->used_cycles += 13;
                         break;

@@ -180,7 +180,7 @@ int32_t snepulator_sram_directory (char **path_ptr)
  *
  * This string needs to be freed.
  */
-char *sram_path (void)
+char *sram_path (uint8_t rom_hash [HASH_LENGTH])
 {
     static char *path;
     char *dir;
@@ -197,9 +197,8 @@ char *sram_path (void)
     /* Create the string */
     path = calloc (len, 1);
     snprintf (path, len, "%s/%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x.sram", dir,
-            state.rom_hash [ 0], state.rom_hash [ 1], state.rom_hash [ 2], state.rom_hash [ 3],
-            state.rom_hash [ 4], state.rom_hash [ 5], state.rom_hash [ 6], state.rom_hash [ 7],
-            state.rom_hash [ 8], state.rom_hash [ 9], state.rom_hash [10], state.rom_hash [11]);
+            rom_hash [ 0], rom_hash [ 1], rom_hash [ 2], rom_hash [ 3], rom_hash [ 4], rom_hash [ 5],
+            rom_hash [ 6], rom_hash [ 7], rom_hash [ 8], rom_hash [ 9], rom_hash [10], rom_hash [11]);
 
     return path;
 }
@@ -260,7 +259,7 @@ int32_t snepulator_state_directory (char **path_ptr)
  *
  * This string needs to be freed.
  */
-char *quicksave_path (void)
+char *quicksave_path (uint8_t rom_hash [HASH_LENGTH])
 {
     static char *path;
     char *dir;
@@ -277,9 +276,8 @@ char *quicksave_path (void)
     /* Create the string */
     path = calloc (len, 1);
     snprintf (path, len, "%s/%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x.quicksave", dir,
-            state.rom_hash [ 0], state.rom_hash [ 1], state.rom_hash [ 2], state.rom_hash [ 3],
-            state.rom_hash [ 4], state.rom_hash [ 5], state.rom_hash [ 6], state.rom_hash [ 7],
-            state.rom_hash [ 8], state.rom_hash [ 9], state.rom_hash [10], state.rom_hash [11]);
+            rom_hash [ 0], rom_hash [ 1], rom_hash [ 2], rom_hash [ 3], rom_hash [ 4], rom_hash [ 5],
+            rom_hash [ 6], rom_hash [ 7], rom_hash [ 8], rom_hash [ 9], rom_hash [10], rom_hash [11]);
 
     return path;
 }
@@ -310,13 +308,13 @@ uint32_t round_up (uint32_t n)
 /*
  * Use BLAKE3 to make a 12-byte hash for the current ROM.
  */
-void snepulator_hash_rom (uint8_t *buffer, uint32_t rom_size)
+void snepulator_hash_rom (const uint8_t *rom, uint32_t rom_size, uint8_t rom_hash [HASH_LENGTH])
 {
     blake3_hasher hasher;
 
     blake3_hasher_init (&hasher);
-    blake3_hasher_update (&hasher, buffer, rom_size);
-    blake3_hasher_finalize (&hasher, state.rom_hash, HASH_LENGTH);
+    blake3_hasher_update (&hasher, rom, rom_size);
+    blake3_hasher_finalize (&hasher, rom_hash, HASH_LENGTH);
 }
 
 
@@ -377,10 +375,6 @@ int32_t snepulator_load_rom (uint8_t **buffer, uint32_t *rom_size, char *filenam
     }
 
     fclose (rom_file);
-
-    /* Only the hash of the most recently loaded ROM is held on to,
-     * so any BIOS should be loaded first, saving the ROM for last. */
-    snepulator_hash_rom (*buffer, *rom_size);
 
     return EXIT_SUCCESS;
 }

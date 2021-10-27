@@ -214,7 +214,7 @@ void snepulator_render_menubar (void)
                 uint32_t end_time;
                 snepulator_pause_set (true);
                 start_time = snepulator_get_ticks ();
-                state.run_callback (5 * 60000); /* Simulate five minutes */
+                state.run_callback (state.console_context, 5 * 60000); /* Simulate five minutes */
                 end_time = snepulator_get_ticks ();
                 snepulator_pause_set (false);
 
@@ -230,16 +230,16 @@ void snepulator_render_menubar (void)
             if (ImGui::MenuItem ("Quick Save", NULL)) {
                 if ((state.run == RUN_STATE_RUNNING || state.run == RUN_STATE_PAUSED) && state.state_save)
                 {
-                    char *path = quicksave_path ();
-                    state.state_save (path);
+                    char *path = quicksave_path (state.get_rom_hash (state.console_context));
+                    state.state_save (state.console_context, path);
                     free (path);
                 }
             }
             if (ImGui::MenuItem ("Quick Load", NULL)) {
                 if ((state.run == RUN_STATE_RUNNING || state.run == RUN_STATE_PAUSED) && state.state_load)
                 {
-                    char *path = quicksave_path ();
-                    state.state_load (path);
+                    char *path = quicksave_path (state.get_rom_hash (state.console_context));
+                    state.state_load (state.console_context, path);
                     free (path);
                     snepulator_pause_set (false);
                 }

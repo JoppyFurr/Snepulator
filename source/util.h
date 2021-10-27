@@ -28,6 +28,8 @@
 #define SIZE_16K    (16 << 10)
 #define SIZE_32K    (32 << 10)
 
+#define HASH_LENGTH 12
+
 typedef union uint16_t_Split_u {
     uint16_t w;
     struct {
@@ -56,14 +58,17 @@ void snepulator_delay (uint32_t ticks);
 /* Get the directory that the snepulator files reside in. */
 int32_t snepulator_directory (char **path_ptr);
 
+/* Use BLAKE3 to make a 12-byte hash for the current ROM. */
+void snepulator_hash_rom (const uint8_t *rom, uint32_t rom_size, uint8_t rom_hash [HASH_LENGTH]);
+
 /* Get the directory that the SRAM files reside in. */
 int32_t snepulator_sram_directory (char **path_ptr);
 
 /* Generate the SRAM backup path for the current rom. Needs to be freed. */
-char *sram_path (void);
+char *sram_path (uint8_t rom_hash [HASH_LENGTH]);
 
 /* Generate the quick-save path for the current rom. Needs to be freed. */
-char *quicksave_path (void);
+char *quicksave_path (uint8_t rom_hash [HASH_LENGTH]);
 
 /* Load a rom file into a buffer. The buffer should be freed when no-longer needed. */
 int32_t snepulator_load_rom (uint8_t **buffer, uint32_t *rom_size, char *filename);

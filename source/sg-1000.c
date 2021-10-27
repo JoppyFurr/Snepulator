@@ -26,37 +26,20 @@ extern Snepulator_Gamepad gamepad_1;
 extern Snepulator_Gamepad gamepad_2;
 extern pthread_mutex_t video_mutex;
 
-static Z80_Context *z80_context = NULL;
-static TMS9928A_Context *vdp_context = NULL;
-
-#define SG_1000_RAM_SIZE (1 << 10)
-#define SG_1000_SRAM_SIZE (8 << 10)
-
 static pthread_mutex_t sg_1000_state_mutex = PTHREAD_MUTEX_INITIALIZER;
-
-/* Console hardware state */
-typedef struct SG_1000_HW_State_s {
-    uint8_t mapper;
-    uint8_t mapper_bank [3];
-} SG_1000_HW_State;
-
-static SG_1000_HW_State hw_state = {
-    .mapper_bank = { 0x00, 0x01, 0x02 },
-};
-
-static bool sram_used = false;
 
 
 /*
  * Declarations.
  */
-static uint8_t  sg_1000_io_read (uint8_t addr);
-static void     sg_1000_io_write (uint8_t addr, uint8_t data);
-static uint8_t  sg_1000_memory_read (uint16_t addr);
-static void     sg_1000_memory_write (uint16_t addr, uint8_t data);
-static void     sg_1000_run (uint32_t ms);
-static void     sg_1000_state_load (const char *filename);
-static void     sg_1000_state_save (const char *filename);
+static uint8_t  sg_1000_io_read (void *context_ptr, uint8_t addr);
+static void     sg_1000_io_write (void *context_ptr, uint8_t addr, uint8_t data);
+static uint8_t  sg_1000_memory_read (void *context_ptr, uint16_t addr);
+static void     sg_1000_memory_write (void *context_ptr, uint16_t addr, uint8_t data);
+static void     sg_1000_run (void *context_ptr, uint32_t ms);
+static void     sg_1000_state_load (void *context_ptr, const char *filename);
+static void     sg_1000_state_save (void *context_ptr, const char *filename);
+static void     sg_1000_update_settings (void *context_ptr);
 
 
 /*
@@ -79,18 +62,26 @@ static void sg_1000_audio_callback (void *userdata, uint8_t *stream, int len)
 /*
  * Clean up any console-specific structures.
  */
-static void sg_1000_cleanup (void)
+static void sg_1000_cleanup (void *context_ptr)
 {
-    if (z80_context != NULL)
+    SG_1000_Context *context = (SG_1000_Context *) context_ptr;
+
+    if (context->z80_context != NULL)
     {
-        free (z80_context);
-        z80_context = NULL;
+        free (context->z80_context);
+        context->z80_context = NULL;
     }
 
-    if (vdp_context != NULL)
+    if (context->vdp_context != NULL)
     {
-        free (vdp_context);
-        vdp_context = NULL;
+        free (context->vdp_context);
+        context->vdp_context = NULL;
+    }
+
+    if (context->rom != NULL)
+    {
+        free (context->rom);
+        context->rom = NULL;
     }
 }
 
@@ -98,8 +89,11 @@ static void sg_1000_cleanup (void)
 /*
  * Process a frame completion by the VDP.
  */
-static void sg_1000_frame_done (void *ptr)
+static void sg_1000_frame_done (void *context_ptr)
 {
+    SG_1000_Context *context = (SG_1000_Context *) context_ptr;
+    TMS9928A_Context *vdp_context = context->vdp_context;
+
     pthread_mutex_lock (&video_mutex);
 
     memcpy (state.video_out_data, vdp_context->frame_buffer, sizeof (vdp_context->frame_buffer));
@@ -115,9 +109,11 @@ static void sg_1000_frame_done (void *ptr)
 /*
  * Returns the SG-1000 clock-rate in Hz.
  */
-static uint32_t sg_1000_get_clock_rate ()
+static uint32_t sg_1000_get_clock_rate (void *context_ptr)
 {
-    if (state.format == VIDEO_FORMAT_PAL)
+    SG_1000_Context *context = (SG_1000_Context *) context_ptr;
+
+    if (context->format == VIDEO_FORMAT_PAL)
     {
         return SG_1000_CLOCK_RATE_PAL;
     }
@@ -129,74 +125,89 @@ static uint32_t sg_1000_get_clock_rate ()
 /*
  * Returns true if there is an interrupt.
  */
-static bool sg_1000_get_int (void *ptr)
+static bool sg_1000_get_int (void *context_ptr)
 {
-    return tms9928a_get_interrupt (vdp_context);
+    SG_1000_Context *context = (SG_1000_Context *) context_ptr;
+
+    return tms9928a_get_interrupt (context->vdp_context);
 }
 
 
 /*
  * Returns true if there is a non-maskable interrupt.
  */
-static bool sg_1000_get_nmi (void *ptr)
+static bool sg_1000_get_nmi (void *context_ptr)
 {
     return !! gamepad_1.state [GAMEPAD_BUTTON_START];
 }
 
 
 /*
+ * Returns a pointer to the rom hash.
+ */
+static uint8_t *sg_1000_get_rom_hash (void *context_ptr)
+{
+    SG_1000_Context *context = (SG_1000_Context *) context_ptr;
+
+    return context->rom_hash;
+}
+
+
+/*
  * Reset the SG-1000 and load a new cartridge ROM.
  */
-void sg_1000_init (void)
+SG_1000_Context *sg_1000_init (void)
 {
+    SG_1000_Context *context;
+    Z80_Context *z80_context;
+    TMS9928A_Context *vdp_context;
+
+    context = calloc (1, sizeof (SG_1000_Context));
+    if (context == NULL)
+    {
+        snepulator_error ("Error", "Unable to allocate memory for SG_1000_Context");
+        return NULL;
+    }
+
+    /* Initialise CPU */
+    z80_context = z80_init (context,
+                            sg_1000_memory_read, sg_1000_memory_write,
+                            sg_1000_io_read, sg_1000_io_write,
+                            sg_1000_get_int, sg_1000_get_nmi);
+    context->z80_context = z80_context;
+
+    /* Initialize VDP */
+    vdp_context = tms9928a_init (context, sg_1000_frame_done);
+    vdp_context->render_start_x = VIDEO_SIDE_BORDER;
+    vdp_context->render_start_y = (VIDEO_BUFFER_LINES - 192) / 2;
+    vdp_context->video_start_x  = vdp_context->render_start_x;
+    vdp_context->video_start_y  = vdp_context->render_start_y;
+    context->vdp_context = vdp_context;
+
+    /* Initialise PSG */
+    sn76489_init ();
+
+    /* Pull in the settings */
+    sg_1000_update_settings (context);
+
     /* Reset the mapper */
-    hw_state.mapper_bank [0] = 0;
-    hw_state.mapper_bank [1] = 1;
-    hw_state.mapper_bank [2] = 2;
-    sram_used = false;
-
-    /* Create RAM */
-    state.ram = calloc (SG_1000_RAM_SIZE, 1);
-    if (state.ram == NULL)
-    {
-        snepulator_error ("Error", "Unable to allocate SG-1000 RAM.");
-        return;
-    }
-
-    /* Create Cartridge SRAM */
-    state.sram = calloc (SG_1000_SRAM_SIZE, 1);
-    if (state.sram == NULL)
-    {
-        snepulator_error ("Error", "Unable to allocate SG-1000 Cartridge RAM.");
-        return;
-    }
+    context->hw_state.mapper_bank [0] = 0;
+    context->hw_state.mapper_bank [1] = 1;
+    context->hw_state.mapper_bank [2] = 2;
+    context->sram_used = false;
 
     /* Load ROM cart */
     if (state.cart_filename)
     {
-        if (snepulator_load_rom (&state.rom, &state.rom_size, state.cart_filename) == -1)
+        if (snepulator_load_rom (&context->rom, &context->rom_size, state.cart_filename) == -1)
         {
-            return;
+            sg_1000_cleanup (context);
+            return NULL;
         }
-        fprintf (stdout, "%d KiB ROM %s loaded.\n", state.rom_size >> 10, state.cart_filename);
-
-        state.rom_mask = round_up (state.rom_size) - 1;
+        fprintf (stdout, "%d KiB ROM %s loaded.\n", context->rom_size >> 10, state.cart_filename);
+        context->rom_mask = round_up (context->rom_size) - 1;
+        snepulator_hash_rom (context->rom, context->rom_size, context->rom_hash);
     }
-
-    /* Initialise hardware */
-    z80_context = z80_init (NULL,
-                            sg_1000_memory_read, sg_1000_memory_write,
-                            sg_1000_io_read, sg_1000_io_write,
-                            sg_1000_get_int, sg_1000_get_nmi);
-
-    vdp_context = tms9928a_init (NULL, sg_1000_frame_done);
-    vdp_context->render_start_x = VIDEO_SIDE_BORDER;
-    vdp_context->render_start_y = (VIDEO_BUFFER_LINES - 192) / 2;
-    vdp_context->video_start_x = vdp_context->render_start_x;
-    vdp_context->video_start_y = vdp_context->render_start_y;
-    vdp_context->remove_sprite_limit = state.remove_sprite_limit;
-
-    sn76489_init ();
 
     /* Initial video parameters */
     state.video_start_x    = vdp_context->video_start_x;
@@ -209,32 +220,38 @@ void sg_1000_init (void)
     state.audio_callback = sg_1000_audio_callback;
     state.cleanup = sg_1000_cleanup;
     state.get_clock_rate = sg_1000_get_clock_rate;
+    state.get_rom_hash = sg_1000_get_rom_hash;
     state.run_callback = sg_1000_run;
-    state.state_save = sg_1000_state_save;
     state.state_load = sg_1000_state_load;
+    state.state_save = sg_1000_state_save;
+    state.update_settings = sg_1000_update_settings;
 
     /* Begin emulation */
     state.run = RUN_STATE_RUNNING;
+
+    return context;
 }
 
 
 /*
  * Handle SG-1000 I/O reads.
  */
-static uint8_t sg_1000_io_read (uint8_t addr)
+static uint8_t sg_1000_io_read (void *context_ptr, uint8_t addr)
 {
+    SG_1000_Context *context = (SG_1000_Context *) context_ptr;
+
     /* tms9928a */
     if (addr >= 0x80 && addr <= 0xbf)
     {
         if ((addr & 0x01) == 0x00)
         {
             /* tms9928a Data Register */
-            return tms9928a_data_read (vdp_context);
+            return tms9928a_data_read (context->vdp_context);
         }
         else
         {
             /* tms9928a Status Flags */
-            return tms9928a_status_read (vdp_context);
+            return tms9928a_status_read (context->vdp_context);
         }
     }
 
@@ -272,8 +289,10 @@ static uint8_t sg_1000_io_read (uint8_t addr)
 /*
  * Handle SG-1000 I/O writes.
  */
-static void sg_1000_io_write (uint8_t addr, uint8_t data)
+static void sg_1000_io_write (void *context_ptr, uint8_t addr, uint8_t data)
 {
+    SG_1000_Context *context = (SG_1000_Context *) context_ptr;
+
     /* PSG */
     if (addr >= 0x40 && addr <= 0x7f)
     {
@@ -286,12 +305,12 @@ static void sg_1000_io_write (uint8_t addr, uint8_t data)
         if ((addr & 0x01) == 0x00)
         {
             /* VDP Data Register */
-            tms9928a_data_write (vdp_context, data);
+            tms9928a_data_write (context->vdp_context, data);
         }
         else
         {
             /* VDP Control Register */
-            tms9928a_control_write (vdp_context, data);
+            tms9928a_control_write (context->vdp_context, data);
         }
     }
 }
@@ -300,28 +319,30 @@ static void sg_1000_io_write (uint8_t addr, uint8_t data)
 /*
  * Handle SG-1000 memory reads.
  */
-static uint8_t sg_1000_memory_read (uint16_t addr)
+static uint8_t sg_1000_memory_read (void *context_ptr, uint16_t addr)
 {
+    SG_1000_Context *context = (SG_1000_Context *) context_ptr;
+
     /* Cartridge slot */
-    if (addr >= 0x0000 && addr <= 0xbfff && addr < state.rom_size)
+    if (addr >= 0x0000 && addr <= 0xbfff && addr < context->rom_size)
     {
         uint8_t slot = (addr >> 14);
-        uint32_t bank_base = hw_state.mapper_bank [slot] * ((uint32_t) 16 << 10);
+        uint32_t bank_base = context->hw_state.mapper_bank [slot] * ((uint32_t) 16 << 10);
         uint16_t offset    = addr & 0x3fff;
 
-        return state.rom [(bank_base + offset) & state.rom_mask];
+        return context->rom [(bank_base + offset) & context->rom_mask];
     }
 
     /* Up to 8 KiB of on-cartridge sram */
     if (addr >= 0x8000 && addr <= 0xbfff)
     {
-        return state.sram [addr & (SG_1000_SRAM_SIZE - 1)];
+        return context->sram [addr & (SG_1000_SRAM_SIZE - 1)];
     }
 
     /* 1 KiB RAM (mirrored) */
     if (addr >= 0xc000 && addr <= 0xffff)
     {
-        return state.ram [addr & (SG_1000_RAM_SIZE - 1)];
+        return context->ram [addr & (SG_1000_RAM_SIZE - 1)];
     }
 
     return 0xff;
@@ -331,25 +352,27 @@ static uint8_t sg_1000_memory_read (uint16_t addr)
 /*
  * Handle SG-1000 memory writes.
  */
-static void sg_1000_memory_write (uint16_t addr, uint8_t data)
+static void sg_1000_memory_write (void *context_ptr, uint16_t addr, uint8_t data)
 {
+    SG_1000_Context *context = (SG_1000_Context *) context_ptr;
+
     /* Sega Mapper */
     if (addr == 0xffff)
     {
-        hw_state.mapper_bank [2] = data & 0x3f;
+        context->hw_state.mapper_bank [2] = data & 0x3f;
     }
 
     /* Up to 8 KiB of on-cartridge sram */
     if (addr >= 0x8000 && addr <= 0xbfff)
     {
-        state.sram [addr & (SG_1000_SRAM_SIZE - 1)] = data;
-        sram_used = true;
+        context->sram [addr & (SG_1000_SRAM_SIZE - 1)] = data;
+        context->sram_used = true;
     }
 
     /* 1 KiB RAM (mirrored) */
     if (addr >= 0xc000 && addr <= 0xffff)
     {
-        state.ram [addr & (SG_1000_RAM_SIZE - 1)] = data;
+        context->ram [addr & (SG_1000_RAM_SIZE - 1)] = data;
     }
 }
 
@@ -357,15 +380,17 @@ static void sg_1000_memory_write (uint16_t addr, uint8_t data)
 /*
  * Emulate the SG-1000 for the specified length of time.
  */
-static void sg_1000_run (uint32_t ms)
+static void sg_1000_run (void *context_ptr, uint32_t ms)
 {
+    SG_1000_Context *context = (SG_1000_Context *) context_ptr;
+
     /* TODO: Make these calculations common */
     static uint64_t millicycles = 0;
     uint64_t lines;
 
     pthread_mutex_lock (&sg_1000_state_mutex);
 
-    millicycles += (uint64_t) ms * sg_1000_get_clock_rate ();
+    millicycles += (uint64_t) ms * sg_1000_get_clock_rate (context);
     lines = millicycles / 228000;
     millicycles -= lines * 228000;
 
@@ -374,9 +399,9 @@ static void sg_1000_run (uint32_t ms)
         assert (lines >= 0);
 
         /* 228 CPU cycles per scanline */
-        z80_run_cycles (z80_context, 228 + state.overclock);
+        z80_run_cycles (context->z80_context, 228 + context->overclock);
         psg_run_cycles (228);
-        tms9928a_run_one_scanline (vdp_context);
+        tms9928a_run_one_scanline (context->vdp_context);
     }
 
     pthread_mutex_unlock (&sg_1000_state_mutex);
@@ -386,8 +411,10 @@ static void sg_1000_run (uint32_t ms)
 /*
  * Import SG-1000 state from a file.
  */
-static void sg_1000_state_load (const char *filename)
+static void sg_1000_state_load (void *context_ptr, const char *filename)
 {
+    SG_1000_Context *context = (SG_1000_Context *) context_ptr;
+
     const char *console_id;
     uint32_t sections_loaded;
 
@@ -407,7 +434,7 @@ static void sg_1000_state_load (const char *filename)
         return;
     }
 
-    sram_used = false;
+    context->sram_used = false;
 
     for (uint32_t i = 0; i < sections_loaded; i++)
     {
@@ -419,9 +446,9 @@ static void sg_1000_state_load (const char *filename)
 
         if (!strncmp (section_id, SECTION_ID_SG_1000_HW, 4))
         {
-            if (size == sizeof (hw_state))
+            if (size == sizeof (SG_1000_HW_State))
             {
-                memcpy (&hw_state, data, sizeof (hw_state));
+                memcpy (&context->hw_state, data, sizeof (SG_1000_HW_State));
             }
             else
             {
@@ -430,13 +457,13 @@ static void sg_1000_state_load (const char *filename)
         }
         else if (!strncmp (section_id, SECTION_ID_Z80, 4))
         {
-            z80_state_load (z80_context, version, size, data);
+            z80_state_load (context->z80_context, version, size, data);
         }
         else if (!strncmp (section_id, SECTION_ID_RAM, 4))
         {
             if (size == SG_1000_RAM_SIZE)
             {
-                memcpy (state.ram, data, SG_1000_RAM_SIZE);
+                memcpy (context->ram, data, SG_1000_RAM_SIZE);
             }
             else
             {
@@ -445,10 +472,10 @@ static void sg_1000_state_load (const char *filename)
         }
         else if (!strncmp (section_id, SECTION_ID_SRAM, 4))
         {
-            sram_used = true;
+            context->sram_used = true;
             if (size == SG_1000_SRAM_SIZE)
             {
-                memcpy (state.sram, data, SG_1000_SRAM_SIZE);
+                memcpy (context->sram, data, SG_1000_SRAM_SIZE);
             }
             else
             {
@@ -457,13 +484,13 @@ static void sg_1000_state_load (const char *filename)
         }
         else if (!strncmp (section_id, SECTION_ID_VDP, 4))
         {
-            tms9928a_state_load (vdp_context, version, size, data);
+            tms9928a_state_load (context->vdp_context, version, size, data);
         }
         else if (!strncmp (section_id, SECTION_ID_VRAM, 4))
         {
             if (size == TMS9928A_VRAM_SIZE)
             {
-                memcpy (vdp_context->vram, data, TMS9928A_VRAM_SIZE);
+                memcpy (context->vdp_context->vram, data, TMS9928A_VRAM_SIZE);
             }
             else
             {
@@ -489,28 +516,57 @@ static void sg_1000_state_load (const char *filename)
 /*
  * Export SG-1000 state to a file.
  */
-static void sg_1000_state_save (const char *filename)
+static void sg_1000_state_save (void *context_ptr, const char *filename)
 {
+    SG_1000_Context *context = (SG_1000_Context *) context_ptr;
+
     pthread_mutex_lock (&sg_1000_state_mutex);
 
     /* Begin creating a new save state. */
     save_state_begin (CONSOLE_ID_SG_1000);
 
-    save_state_section_add (SECTION_ID_SG_1000_HW, 1, sizeof (hw_state), &hw_state);
+    save_state_section_add (SECTION_ID_SG_1000_HW, 1, sizeof (SG_1000_HW_State), &context->hw_state);
 
-    z80_state_save (z80_context);
-    save_state_section_add (SECTION_ID_RAM, 1, SG_1000_RAM_SIZE, state.ram);
-    if (sram_used)
+    z80_state_save (context->z80_context);
+    save_state_section_add (SECTION_ID_RAM, 1, SG_1000_RAM_SIZE, context->ram);
+    if (context->sram_used)
     {
-        save_state_section_add (SECTION_ID_SRAM, 1, SG_1000_SRAM_SIZE, state.sram);
+        save_state_section_add (SECTION_ID_SRAM, 1, SG_1000_SRAM_SIZE, context->sram);
     }
 
-    tms9928a_state_save (vdp_context);
-    save_state_section_add (SECTION_ID_VRAM, 1, TMS9928A_VRAM_SIZE, vdp_context->vram);
+    tms9928a_state_save (context->vdp_context);
+    save_state_section_add (SECTION_ID_VRAM, 1, TMS9928A_VRAM_SIZE, context->vdp_context->vram);
 
     sn76489_state_save ();
 
     pthread_mutex_unlock (&sg_1000_state_mutex);
 
     save_state_write (filename);
+}
+
+
+/*
+ * Propagate user settings into the console context.
+ */
+static void sg_1000_update_settings (void *context_ptr)
+{
+    SG_1000_Context *context = (SG_1000_Context *) context_ptr;
+
+    /* Update console */
+    context->overclock = state.overclock;
+
+    if (state.format_auto)
+    {
+        state.format = VIDEO_FORMAT_NTSC;
+        context->format = VIDEO_FORMAT_NTSC;
+    }
+    else
+    {
+        context->format = state.format;
+    }
+
+    /* Update VDP */
+    context->vdp_context->format              = context->format;
+    context->vdp_context->remove_sprite_limit = state.remove_sprite_limit;
+    context->vdp_context->disable_blanking    = state.disable_blanking;
 }

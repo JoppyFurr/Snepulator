@@ -19,8 +19,8 @@
 #include "gamepad.h"
 #include "cpu/z80.h"
 #include "video/tms9928a.h"
-#include "video/sms_vdp.h"
 #include "sound/sn76489.h"
+#include "video/sms_vdp.h"
 #include "sms.h"
 
 extern Snepulator_State state;
@@ -28,13 +28,6 @@ extern Snepulator_Gamepad gamepad_1;
 extern Snepulator_Gamepad gamepad_2;
 extern SN76489_State sn76489_state;
 extern pthread_mutex_t video_mutex;
-
-static Z80_Context *z80_context = NULL;
-static TMS9928A_Context *vdp_context = NULL;
-
-
-#define SMS_RAM_SIZE SIZE_8K
-#define SMS_SRAM_SIZE SIZE_8K
 
 /* 0: Output, 1: Input */
 #define SMS_IO_TR_A_DIRECTION (1 << 0)
@@ -55,40 +48,19 @@ static TMS9928A_Context *vdp_context = NULL;
 static pthread_mutex_t sms_state_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 
-/* Console hardware state */
-typedef struct SMS_HW_State_s {
-    uint8_t memory_control;
-    uint8_t io_control;
-    uint8_t mapper;
-    uint8_t mapper_bank [3];
-    bool sram_enable;
-} SMS_HW_State;
-
-static SMS_HW_State hw_state = {
-    .memory_control = 0x00,
-    .io_control = 0x00,
-    .mapper = SMS_MAPPER_UNKNOWN,
-    .mapper_bank = { 0x00, 0x01, 0x02 },
-    .sram_enable = false
-};
-
-static bool export_paddle = false;
-SMS_3D_Field sms_3d_field = SMS_3D_FIELD_NONE;
-static bool sram_used = false;
-
-
 /*
  * Declarations.
  */
-static uint8_t  sms_io_read (uint8_t addr);
-static void     sms_io_write (uint8_t addr, uint8_t data);
-static uint8_t  sms_memory_read (uint16_t addr);
-static void     sms_memory_write (uint16_t addr, uint8_t data);
-static void     sms_process_3d_field (TMS9928A_Context *context);
-static void     sms_run (uint32_t ms);
-static void     sms_state_load (const char *filename);
-static void     sms_state_save (const char *filename);
-static void     sms_sync (void);
+static uint8_t  sms_io_read (void *context_ptr, uint8_t addr);
+static void     sms_io_write (void *context_ptr, uint8_t addr, uint8_t data);
+static uint8_t  sms_memory_read (void *context_ptr, uint16_t addr);
+static void     sms_memory_write (void *context_ptr, uint16_t addr, uint8_t data);
+static void     sms_process_3d_field (SMS_Context *context);
+static void     sms_run (void *context_ptr, uint32_t ms);
+static void     sms_state_load (void *context_ptr, const char *filename);
+static void     sms_state_save (void *context_ptr, const char *filename);
+static void     sms_sync (void *context_ptr);
+static void     sms_update_settings (void *context_ptr);
 
 /*
  * Callback to supply SDL with audio frames.
@@ -110,18 +82,32 @@ static void sms_audio_callback (void *userdata, uint8_t *stream, int len)
 /*
  * Clean up any console-specific structures.
  */
-static void sms_cleanup (void)
+static void sms_cleanup (void *context_ptr)
 {
-    if (z80_context != NULL)
+    SMS_Context *context = (SMS_Context *) context_ptr;
+
+    if (context->z80_context != NULL)
     {
-        free (z80_context);
-        z80_context = NULL;
+        free (context->z80_context);
+        context->z80_context = NULL;
     }
 
-    if (vdp_context != NULL)
+    if (context->vdp_context != NULL)
     {
-        free (vdp_context);
-        vdp_context = NULL;
+        free (context->vdp_context);
+        context->vdp_context = NULL;
+    }
+
+    if (context->rom != NULL)
+    {
+        free (context->rom);
+        context->rom = NULL;
+    }
+
+    if (context->bios != NULL)
+    {
+        free (context->bios);
+        context->bios = NULL;
     }
 }
 
@@ -129,9 +115,12 @@ static void sms_cleanup (void)
 /*
  * Process a frame completion by the VDP.
  */
-static void sms_frame_done (void *ptr)
+static void sms_frame_done (void *context_ptr)
 {
-    if (state.console == CONSOLE_GAME_GEAR)
+    SMS_Context *context = (SMS_Context *) context_ptr;
+    TMS9928A_Context *vdp_context = context->vdp_context;
+
+    if (context->console == CONSOLE_GAME_GEAR)
     {
         /* Only keep the LCD area */
         for (uint32_t y = 0; y < VIDEO_BUFFER_LINES; y++)
@@ -150,9 +139,9 @@ static void sms_frame_done (void *ptr)
 
     pthread_mutex_lock (&video_mutex);
 
-    if (sms_3d_field != SMS_3D_FIELD_NONE)
+    if (context->video_3d_field != SMS_3D_FIELD_NONE)
     {
-        sms_process_3d_field (vdp_context);
+        sms_process_3d_field (context);
     }
     else
     {
@@ -172,9 +161,11 @@ static void sms_frame_done (void *ptr)
 /*
  * Returns the SMS clock-rate in Hz.
  */
-static uint32_t sms_get_clock_rate ()
+static uint32_t sms_get_clock_rate (void *context_ptr)
 {
-    if (state.format == VIDEO_FORMAT_PAL)
+    SMS_Context *context = (SMS_Context *) context_ptr;
+
+    if (context->format == VIDEO_FORMAT_PAL)
     {
         return SMS_CLOCK_RATE_PAL;
     }
@@ -186,18 +177,22 @@ static uint32_t sms_get_clock_rate ()
 /*
  * Returns true if there is an interrupt.
  */
-static bool sms_get_int (void *ptr)
+static bool sms_get_int (void *context_ptr)
 {
-    return sms_vdp_get_interrupt (vdp_context);
+    SMS_Context *context = (SMS_Context *) context_ptr;
+
+    return sms_vdp_get_interrupt (context->vdp_context);
 }
 
 
 /*
  * Returns true if there is a non-maskable interrupt.
  */
-static bool sms_get_nmi (void *ptr)
+static bool sms_get_nmi (void *context_ptr)
 {
-    if (state.console == CONSOLE_MASTER_SYSTEM)
+    SMS_Context *context = (SMS_Context *) context_ptr;
+
+    if (context->console == CONSOLE_MASTER_SYSTEM)
     {
         return !! gamepad_1.state [GAMEPAD_BUTTON_START];
     }
@@ -207,71 +202,100 @@ static bool sms_get_nmi (void *ptr)
 
 
 /*
+ * Returns a pointer to the rom hash.
+ */
+static uint8_t *sms_get_rom_hash (void *context_ptr)
+{
+    SMS_Context *context = (SMS_Context *) context_ptr;
+
+    return context->rom_hash;
+}
+
+
+/*
  * Reset the SMS and load a new BIOS and/or cartridge ROM.
  */
-void sms_init (void)
+SMS_Context *sms_init (void)
 {
+    SMS_Context *context;
+    Z80_Context *z80_context;
+    TMS9928A_Context *vdp_context;
+
+    context = calloc (1, sizeof (SMS_Context));
+    if (context == NULL)
+    {
+        snepulator_error ("Error", "Unable to allocate memory for SMS_Context");
+        return NULL;
+    }
+    context->console = state.console;
+
+    /* Initialise CPU */
+    z80_context = z80_init (context,
+                            sms_memory_read, sms_memory_write,
+                            sms_io_read, sms_io_write,
+                            sms_get_int, sms_get_nmi);
+    context->z80_context = z80_context;
+
+    /* Initialise VDP */
+    vdp_context = sms_vdp_init (context, sms_frame_done, state.console);
+    vdp_context->render_start_x = VIDEO_SIDE_BORDER;
+    vdp_context->render_start_y = (VIDEO_BUFFER_LINES - 192) / 2;
+    vdp_context->video_start_x  = vdp_context->render_start_x;
+    vdp_context->video_start_y  = vdp_context->render_start_y;
+    context->vdp_context = vdp_context;
+
+    /* Initialise PSG */
+    sn76489_init ();
+
+    /* Defaults */
+    context->export_paddle = false;
+    context->sram_used = false;
+    context->video_3d_field = SMS_3D_FIELD_NONE;
+
     /* Reset the mapper */
-    hw_state.mapper = SMS_MAPPER_UNKNOWN;
-    hw_state.mapper_bank [0] = 0;
-    hw_state.mapper_bank [1] = 1;
-    hw_state.mapper_bank [2] = 2;
-    hw_state.sram_enable = false;
-    sram_used = false;
-
-    /* Create RAM */
-    state.ram = calloc (SMS_RAM_SIZE, 1);
-    if (state.ram == NULL)
-    {
-        snepulator_error ("Error", "Unable to allocate SMS RAM.");
-        return;
-    }
-
-    /* Create Cartridge SRAM */
-    state.sram = calloc (SMS_SRAM_SIZE, 1);
-    if (state.sram == NULL)
-    {
-        snepulator_error ("Error", "Unable to allocate SMS Cartridge RAM.");
-        return;
-    }
+    context->hw_state.mapper = SMS_MAPPER_UNKNOWN;
+    context->hw_state.mapper_bank [0] = 0;
+    context->hw_state.mapper_bank [1] = 1;
+    context->hw_state.mapper_bank [2] = 2;
+    context->hw_state.sram_enable = false;
 
     /* Load BIOS */
     if (state.console == CONSOLE_MASTER_SYSTEM && state.sms_bios_filename)
     {
-        if (snepulator_load_rom (&state.bios, &state.bios_size, state.sms_bios_filename) == -1)
+        if (snepulator_load_rom (&context->bios, &context->bios_size, state.sms_bios_filename) == -1)
         {
-            return;
+            sms_cleanup (context);
+            return NULL;
         }
-        fprintf (stdout, "%d KiB BIOS %s loaded.\n", state.bios_size >> 10, state.sms_bios_filename);
+        fprintf (stdout, "%d KiB BIOS %s loaded.\n", context->bios_size >> 10, state.sms_bios_filename);
+        context->bios_mask = round_up (context->bios_size) - 1;
     }
 
     /* Load ROM cart */
     if (state.cart_filename)
     {
-        if (snepulator_load_rom (&state.rom, &state.rom_size, state.cart_filename) == -1)
+        if (snepulator_load_rom (&context->rom, &context->rom_size, state.cart_filename) == -1)
         {
-            return;
+            sms_cleanup (context);
+            return NULL;
         }
-        fprintf (stdout, "%d KiB ROM %s loaded.\n", state.rom_size >> 10, state.cart_filename);
-
-        state.rom_mask = round_up (state.rom_size) - 1;
-        state.rom_hints = sms_db_get_hints (state.rom_hash);
+        fprintf (stdout, "%d KiB ROM %s loaded.\n", context->rom_size >> 10, state.cart_filename);
+        context->rom_mask = round_up (context->rom_size) - 1;
+        snepulator_hash_rom (context->rom, context->rom_size, context->rom_hash);
+        context->rom_hints = sms_db_get_hints (context->rom_hash);
     }
 
-    /* Automatic video format */
-    if (state.format_auto && (state.rom_hints & SMS_HINT_PAL_ONLY))
-    {
-        state.format = VIDEO_FORMAT_PAL;
-    }
+    /* Pull in the settings - Done after the ROM is loaded for auto-region. */
+    sms_update_settings (context);
 
     /* Automatic controller type */
     if (gamepad_1.type_auto)
     {
-        if (state.rom_hints & SMS_HINT_PADDLE_ONLY)
+        if (context->rom_hints & SMS_HINT_PADDLE_ONLY)
         {
             gamepad_1.type = GAMEPAD_TYPE_SMS_PADDLE;
         }
-        else if (state.rom_hints & SMS_HINT_LIGHT_PHASER)
+        else if (context->rom_hints & SMS_HINT_LIGHT_PHASER)
         {
             gamepad_1.type = GAMEPAD_TYPE_SMS_PHASER;
         }
@@ -282,7 +306,7 @@ void sms_init (void)
     }
 
     /* Load SRAM if it exists */
-    char *_sram_path = sram_path ();
+    char *_sram_path = sram_path (context->rom_hash);
     FILE *sram_file = fopen (_sram_path, "rb");
     if (sram_file != NULL)
     {
@@ -290,45 +314,24 @@ void sms_init (void)
 
         while (bytes_read < SMS_SRAM_SIZE)
         {
-            bytes_read += fread (state.sram + bytes_read, 1, SMS_SRAM_SIZE - bytes_read, sram_file);
+            bytes_read += fread (context->sram + bytes_read, 1, SMS_SRAM_SIZE - bytes_read, sram_file);
         }
 
         fclose (sram_file);
     }
     free (_sram_path);
 
-    export_paddle = false;
-    sms_3d_field = SMS_3D_FIELD_NONE;
-
-    /* Initialise CPU and VDP */
-    z80_context = z80_init (NULL,
-                            sms_memory_read, sms_memory_write,
-                            sms_io_read, sms_io_write,
-                            sms_get_int, sms_get_nmi);
-
-    vdp_context = sms_vdp_init (NULL, sms_frame_done, state.console);
-    vdp_context->render_start_x = VIDEO_SIDE_BORDER;
-    vdp_context->render_start_y = (VIDEO_BUFFER_LINES - 192) / 2;
-    vdp_context->remove_sprite_limit = state.remove_sprite_limit; /* TODO: Update the value when the setting is changed. */
-    vdp_context->disable_blanking = state.disable_blanking;
 
     if (state.console == CONSOLE_GAME_GEAR)
     {
-        vdp_context->video_start_x = vdp_context->render_start_x + 48;
-        vdp_context->video_start_y = vdp_context->render_start_y + 24;
-    }
-    else
-    {
-        vdp_context->video_start_x = vdp_context->render_start_x;
-        vdp_context->video_start_y = vdp_context->render_start_y;
+        vdp_context->video_start_x += 48;
+        vdp_context->video_start_y += 24;
     }
 
-    if (state.rom_hints & SMS_HINT_SMS1_VDP)
+    if (context->rom_hints & SMS_HINT_SMS1_VDP)
     {
         vdp_context->sms1_vdp_hint = true;
     }
-
-    sn76489_init ();
 
     /* Initial video parameters */
     state.video_start_x = vdp_context->video_start_x;
@@ -348,19 +351,21 @@ void sms_init (void)
     state.audio_callback = sms_audio_callback;
     state.cleanup = sms_cleanup;
     state.get_clock_rate = sms_get_clock_rate;
-    state.sync = sms_sync;
+    state.get_rom_hash = sms_get_rom_hash;
     state.run_callback = sms_run;
-    state.state_save = sms_state_save;
+    state.sync = sms_sync;
     state.state_load = sms_state_load;
+    state.state_save = sms_state_save;
+    state.update_settings = sms_update_settings;
 
     /* Minimal alternative to the BIOS */
-    if (state.bios == NULL)
+    if (context->bios == NULL)
     {
         /* Z80 interrupt mode and stack pointer */
         z80_context->state.im = 1;
         z80_context->state.sp = 0xdff0;
 
-        hw_state.memory_control |= SMS_MEMORY_CTRL_BIOS_DISABLE;
+        context->hw_state.memory_control |= SMS_MEMORY_CTRL_BIOS_DISABLE;
 
         /* Leave the VDP in Mode4 */
         sms_vdp_control_write (vdp_context, SMS_VDP_CTRL_0_MODE_4);
@@ -373,16 +378,20 @@ void sms_init (void)
 
     /* Begin emulation */
     state.run = RUN_STATE_RUNNING;
+
+    return context;
 }
 
 
 /*
  * Handle SMS I/O reads.
  */
-static uint8_t sms_io_read (uint8_t addr)
+static uint8_t sms_io_read (void *context_ptr, uint8_t addr)
 {
+    SMS_Context *context = (SMS_Context *) context_ptr;
+
     /* Game Gear specific registers */
-    if (addr <= 0x06 && state.console == CONSOLE_GAME_GEAR)
+    if (addr <= 0x06 && context->console == CONSOLE_GAME_GEAR)
     {
         if (addr == 0x00)
         {
@@ -395,13 +404,13 @@ static uint8_t sms_io_read (uint8_t addr)
             }
 
             /* NJAP */
-            if (state.region == REGION_WORLD)
+            if (context->region == REGION_WORLD)
             {
                 value |= BIT_6;
             }
 
             /* NNTS */
-            if (state.format == VIDEO_FORMAT_PAL)
+            if (context->format == VIDEO_FORMAT_PAL)
             {
                 value |= BIT_5;
             }
@@ -421,12 +430,12 @@ static uint8_t sms_io_read (uint8_t addr)
         if ((addr & 0x01) == 0x00)
         {
             /* V Counter */
-            return sms_vdp_get_v_counter (vdp_context);
+            return sms_vdp_get_v_counter (context->vdp_context);
         }
         else
         {
             /* H Counter */
-            return sms_vdp_get_h_counter (vdp_context);
+            return sms_vdp_get_h_counter (context->vdp_context);
         }
     }
 
@@ -436,12 +445,12 @@ static uint8_t sms_io_read (uint8_t addr)
         if ((addr & 0x01) == 0x00)
         {
             /* VDP Data Register */
-            return sms_vdp_data_read (vdp_context);
+            return sms_vdp_data_read (context->vdp_context);
         }
         else
         {
             /* VDP Status Flags */
-            return sms_vdp_status_read (vdp_context);
+            return sms_vdp_status_read (context->vdp_context);
         }
     }
 
@@ -458,9 +467,9 @@ static uint8_t sms_io_read (uint8_t addr)
                 static uint8_t paddle_clock = 0;
 
                 /* The "export paddle" uses the TH pin for a clock signal */
-                if (export_paddle)
+                if (context->export_paddle)
                 {
-                    if ((hw_state.io_control & SMS_IO_TH_A_DIRECTION) == 0 && (hw_state.io_control & SMS_IO_TH_A_LEVEL))
+                    if ((context->hw_state.io_control & SMS_IO_TH_A_DIRECTION) == 0 && (context->hw_state.io_control & SMS_IO_TH_A_LEVEL))
                     {
                         paddle_clock = 1;
                     }
@@ -504,28 +513,28 @@ static uint8_t sms_io_read (uint8_t addr)
             bool port_1_th = false;
             bool port_2_th = false;
 
-            if (state.region == REGION_WORLD)
+            if (context->region == REGION_WORLD)
             {
-                if ((hw_state.io_control & SMS_IO_TH_A_DIRECTION) == 0)
+                if ((context->hw_state.io_control & SMS_IO_TH_A_DIRECTION) == 0)
                 {
-                    port_1_th = !(hw_state.io_control & SMS_IO_TH_A_LEVEL);
+                    port_1_th = !(context->hw_state.io_control & SMS_IO_TH_A_LEVEL);
 
                     if (gamepad_1.type == GAMEPAD_TYPE_SMS_PADDLE)
                     {
-                        export_paddle = true;
+                        context->export_paddle = true;
                     }
 
                 }
 
-                if ((hw_state.io_control & SMS_IO_TH_B_DIRECTION) == 0)
+                if ((context->hw_state.io_control & SMS_IO_TH_B_DIRECTION) == 0)
                 {
-                    port_2_th = !(hw_state.io_control & SMS_IO_TH_B_LEVEL);
+                    port_2_th = !(context->hw_state.io_control & SMS_IO_TH_B_LEVEL);
                 }
             }
 
             if (gamepad_1.type == GAMEPAD_TYPE_SMS_PHASER)
             {
-                port_1_th |= sms_vdp_get_phaser_th (vdp_context, z80_context->cycle_count);
+                port_1_th |= sms_vdp_get_phaser_th (context->vdp_context, context->z80_context->cycle_count);
             }
 
             /* I/O Port B/misc */
@@ -547,9 +556,11 @@ static uint8_t sms_io_read (uint8_t addr)
 /*
  * Handle SMS I/O writes.
  */
-static void sms_io_write (uint8_t addr, uint8_t data)
+static void sms_io_write (void *context_ptr, uint8_t addr, uint8_t data)
 {
-    if (addr <= 0x06 && state.console == CONSOLE_GAME_GEAR)
+    SMS_Context *context = (SMS_Context *) context_ptr;
+
+    if (addr <= 0x06 && context->console == CONSOLE_GAME_GEAR)
     {
         if (addr == 0x06)
         {
@@ -563,12 +574,12 @@ static void sms_io_write (uint8_t addr, uint8_t data)
         if ((addr & 0x01) == 0x00)
         {
             /* Memory Control Register */
-            hw_state.memory_control = data;
+            context->hw_state.memory_control = data;
         }
         else
         {
             /* I/O Control Register */
-            hw_state.io_control = data;
+            context->hw_state.io_control = data;
         }
 
     }
@@ -585,17 +596,17 @@ static void sms_io_write (uint8_t addr, uint8_t data)
         if ((addr & 0x01) == 0x00)
         {
             /* VDP Data Register */
-            sms_vdp_data_write (vdp_context, data);
+            sms_vdp_data_write (context->vdp_context, data);
         }
         else
         {
             /* VDP Control Register */
-            sms_vdp_control_write (vdp_context, data);
+            sms_vdp_control_write (context->vdp_context, data);
         }
     }
 
     /* Minimal SDSC Debug Console */
-    if (addr == 0xfd && (hw_state.memory_control & 0x04))
+    if (addr == 0xfd && (context->hw_state.memory_control & 0x04))
     {
         fprintf (stdout, "%c", data);
         fflush (stdout);
@@ -606,13 +617,15 @@ static void sms_io_write (uint8_t addr, uint8_t data)
 /*
  * Handle SMS memory reads.
  */
-static uint8_t sms_memory_read (uint16_t addr)
+static uint8_t sms_memory_read (void *context_ptr, uint16_t addr)
 {
+    SMS_Context *context = (SMS_Context *) context_ptr;
+
     /* Cartridge, card, BIOS, expansion slot */
     if (addr >= 0x0000 && addr <= 0xbfff)
     {
         uint8_t slot = (addr >> 14);
-        uint32_t bank_base = hw_state.mapper_bank [slot] * ((uint32_t) 16 << 10);
+        uint32_t bank_base = context->hw_state.mapper_bank [slot] * ((uint32_t) 16 << 10);
         uint16_t offset    = addr & 0x3fff;
 
         /* The first 1 KiB of slot 0 is not affected by mapping */
@@ -622,29 +635,29 @@ static uint8_t sms_memory_read (uint16_t addr)
         }
 
         /* BIOS */
-        if (state.bios != NULL && !(hw_state.memory_control & SMS_MEMORY_CTRL_BIOS_DISABLE))
+        if (context->bios != NULL && !(context->hw_state.memory_control & SMS_MEMORY_CTRL_BIOS_DISABLE))
         {
             /* Assumes a power-of-two BIOS size */
-            return state.bios [(bank_base + offset) & (state.bios_size - 1)];
+            return context->bios [(bank_base + offset) & context->bios_mask];
         }
 
         /* On-cartridge SRAM */
-        if (hw_state.sram_enable && slot == 2)
+        if (context->hw_state.sram_enable && slot == 2)
         {
-            return state.sram [offset & (SMS_SRAM_SIZE - 1)];
+            return context->sram [offset & (SMS_SRAM_SIZE - 1)];
         }
 
         /* Cartridge ROM */
-        if (state.rom != NULL && !(hw_state.memory_control & SMS_MEMORY_CTRL_CART_DISABLE))
+        if (context->rom != NULL && !(context->hw_state.memory_control & SMS_MEMORY_CTRL_CART_DISABLE))
         {
-            return state.rom [(bank_base + offset) & state.rom_mask];
+            return context->rom [(bank_base + offset) & context->rom_mask];
         }
     }
 
     /* 8 KiB RAM + mirror */
     if (addr >= 0xc000 && addr <= 0xffff)
     {
-        return state.ram [addr & (SMS_RAM_SIZE - 1)];
+        return context->ram [addr & (SMS_RAM_SIZE - 1)];
     }
 
     return 0xff;
@@ -654,8 +667,10 @@ static uint8_t sms_memory_read (uint16_t addr)
 /*
  * Handle SMS memory writes.
  */
-static void sms_memory_write (uint16_t addr, uint8_t data)
+static void sms_memory_write (void *context_ptr, uint16_t addr, uint8_t data)
 {
+    SMS_Context *context = (SMS_Context *) context_ptr;
+
     /* No early breaks - Register writes also affect RAM */
 
     /* 3D glasses */
@@ -663,38 +678,38 @@ static void sms_memory_write (uint16_t addr, uint8_t data)
     {
         if (data & 0x01)
         {
-            sms_3d_field = SMS_3D_FIELD_LEFT;
+            context->video_3d_field = SMS_3D_FIELD_LEFT;
         }
         /* Only accept a right-eye field if we have first seen a left-eye field.
          * This avoids a false-positive if games initialise the register to zero. */
-        else if (sms_3d_field == SMS_3D_FIELD_LEFT)
+        else if (context->video_3d_field == SMS_3D_FIELD_LEFT)
         {
-            sms_3d_field = SMS_3D_FIELD_RIGHT;
+            context->video_3d_field = SMS_3D_FIELD_RIGHT;
         }
     }
 
-    if (hw_state.mapper == SMS_MAPPER_UNKNOWN)
+    if (context->hw_state.mapper == SMS_MAPPER_UNKNOWN)
     {
         if (addr == 0xfffc || addr == 0xfffd ||
             addr == 0xfffe || addr == 0xffff)
         {
-            hw_state.mapper = SMS_MAPPER_SEGA;
+            context->hw_state.mapper = SMS_MAPPER_SEGA;
         }
         else if (addr == 0x4000 || addr == 0x8000)
         {
-            hw_state.mapper = SMS_MAPPER_CODEMASTERS;
+            context->hw_state.mapper = SMS_MAPPER_CODEMASTERS;
         }
         else if (addr == 0xa000)
         {
-            hw_state.mapper = SMS_MAPPER_KOREAN;
+            context->hw_state.mapper = SMS_MAPPER_KOREAN;
         }
     }
 
-    if (hw_state.mapper == SMS_MAPPER_SEGA)
+    if (context->hw_state.mapper == SMS_MAPPER_SEGA)
     {
         if (addr == 0xfffc)
         {
-            hw_state.sram_enable = (data & BIT_3) ? true : false;
+            context->hw_state.sram_enable = (data & BIT_3) ? true : false;
 
             if (data & (BIT_0 | BIT_1))
             {
@@ -707,19 +722,19 @@ static void sms_memory_write (uint16_t addr, uint8_t data)
         }
         else if (addr == 0xfffd)
         {
-            hw_state.mapper_bank [0] = data & 0x3f;
+            context->hw_state.mapper_bank [0] = data & 0x3f;
         }
         else if (addr == 0xfffe)
         {
-            hw_state.mapper_bank [1] = data & 0x3f;
+            context->hw_state.mapper_bank [1] = data & 0x3f;
         }
         else if (addr == 0xffff)
         {
-            hw_state.mapper_bank [2] = data & 0x3f;
+            context->hw_state.mapper_bank [2] = data & 0x3f;
         }
     }
 
-    if (hw_state.mapper == SMS_MAPPER_CODEMASTERS)
+    if (context->hw_state.mapper == SMS_MAPPER_CODEMASTERS)
     {
         /* TODO: There are differences from the Sega mapper. Do any games rely on them?
          *  1. Initial banks are different (0, 1, 0) instead of (0, 1, 2).
@@ -727,15 +742,15 @@ static void sms_memory_write (uint16_t addr, uint8_t data)
          */
         if (addr == 0x0000)
         {
-            hw_state.mapper_bank [0] = data & 0x3f;
+            context->hw_state.mapper_bank [0] = data & 0x3f;
         }
         else if (addr == 0x4000)
         {
-            hw_state.mapper_bank [1] = data & 0x3f;
+            context->hw_state.mapper_bank [1] = data & 0x3f;
         }
         else if (addr == 0x8000)
         {
-            hw_state.mapper_bank [2] = data & 0x3f;
+            context->hw_state.mapper_bank [2] = data & 0x3f;
 
             if (data & BIT_7)
             {
@@ -744,25 +759,25 @@ static void sms_memory_write (uint16_t addr, uint8_t data)
         }
     }
 
-    if (hw_state.mapper == SMS_MAPPER_KOREAN)
+    if (context->hw_state.mapper == SMS_MAPPER_KOREAN)
     {
         if (addr == 0xa000)
         {
-            hw_state.mapper_bank [2] = data & 0x3f;
+            context->hw_state.mapper_bank [2] = data & 0x3f;
         }
     }
 
     /* On-cartridge SRAM */
-    if (hw_state.sram_enable && addr >= 0x8000 && addr <= 0xbfff)
+    if (context->hw_state.sram_enable && addr >= 0x8000 && addr <= 0xbfff)
     {
-        state.sram [addr & (SMS_SRAM_SIZE - 1)] = data;
-        sram_used = true;
+        context->sram [addr & (SMS_SRAM_SIZE - 1)] = data;
+        context->sram_used = true;
     }
 
     /* RAM + mirror */
     if (addr >= 0xc000 && addr <= 0xffff)
     {
-        state.ram [addr & (SMS_RAM_SIZE - 1)] = data;
+        context->ram [addr & (SMS_RAM_SIZE - 1)] = data;
     }
 }
 
@@ -770,8 +785,10 @@ static void sms_memory_write (uint16_t addr, uint8_t data)
 /*
  * Process the new 3d field to update the anaglyph output image.
  */
-static void sms_process_3d_field (TMS9928A_Context *context)
+static void sms_process_3d_field (SMS_Context *context)
 {
+    TMS9928A_Context *vdp_context = context->vdp_context;
+
     bool update_red = false;
     bool update_green = false;
     bool update_blue = false;
@@ -780,7 +797,7 @@ static void sms_process_3d_field (TMS9928A_Context *context)
     switch (state.video_3d_mode)
     {
         case VIDEO_3D_LEFT_ONLY:
-            if (sms_3d_field == SMS_3D_FIELD_LEFT)
+            if (context->video_3d_field == SMS_3D_FIELD_LEFT)
             {
                 update_red = true;
                 update_green = true;
@@ -789,7 +806,7 @@ static void sms_process_3d_field (TMS9928A_Context *context)
             break;
 
         case VIDEO_3D_RIGHT_ONLY:
-            if (sms_3d_field == SMS_3D_FIELD_RIGHT)
+            if (context->video_3d_field == SMS_3D_FIELD_RIGHT)
             {
                 update_red = true;
                 update_green = true;
@@ -798,7 +815,7 @@ static void sms_process_3d_field (TMS9928A_Context *context)
             break;
 
         case VIDEO_3D_RED_CYAN:
-            if (sms_3d_field == SMS_3D_FIELD_LEFT)
+            if (context->video_3d_field == SMS_3D_FIELD_LEFT)
             {
                 update_red = true;
             }
@@ -810,7 +827,7 @@ static void sms_process_3d_field (TMS9928A_Context *context)
             break;
 
         case VIDEO_3D_RED_GREEN:
-            if (sms_3d_field == SMS_3D_FIELD_LEFT)
+            if (context->video_3d_field == SMS_3D_FIELD_LEFT)
             {
                 update_red = true;
             }
@@ -821,7 +838,7 @@ static void sms_process_3d_field (TMS9928A_Context *context)
             break;
 
         case VIDEO_3D_MAGENTA_GREEN:
-            if (sms_3d_field == SMS_3D_FIELD_LEFT)
+            if (context->video_3d_field == SMS_3D_FIELD_LEFT)
             {
                 update_red = true;
                 update_blue = true;
@@ -835,7 +852,7 @@ static void sms_process_3d_field (TMS9928A_Context *context)
 
     for (uint32_t i = 0; i < (VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES); i++)
     {
-        pixel = colour_saturation (context->frame_buffer [i], state.video_3d_saturation);
+        pixel = colour_saturation (vdp_context->frame_buffer [i], state.video_3d_saturation);
 
         if (update_red)
         {
@@ -864,8 +881,10 @@ static void sms_process_3d_field (TMS9928A_Context *context)
  *
  * TODO: Something better than millicycles.
  */
-static void sms_run (uint32_t ms)
+static void sms_run (void *context_ptr, uint32_t ms)
 {
+    SMS_Context *context = (SMS_Context *) context_ptr;
+
     static uint64_t millicycles = 0;
     uint64_t lines;
 
@@ -876,7 +895,7 @@ static void sms_run (uint32_t ms)
         gamepad_paddle_tick (ms);
     }
 
-    millicycles += (uint64_t) ms * sms_get_clock_rate ();
+    millicycles += (uint64_t) ms * sms_get_clock_rate (context);
     lines = millicycles / 228000;
     millicycles -= lines * 228000;
 
@@ -885,9 +904,9 @@ static void sms_run (uint32_t ms)
         assert (lines >= 0);
 
         /* 228 CPU cycles per scanline */
-        z80_run_cycles (z80_context, 228 + state.overclock);
+        z80_run_cycles (context->z80_context, 228 + context->overclock);
         psg_run_cycles (228);
-        sms_vdp_run_one_scanline (vdp_context);
+        sms_vdp_run_one_scanline (context->vdp_context);
     }
 
     pthread_mutex_unlock (&sms_state_mutex);
@@ -897,8 +916,10 @@ static void sms_run (uint32_t ms)
 /*
  * Import SMS state from a file.
  */
-static void sms_state_load (const char *filename)
+static void sms_state_load (void *context_ptr, const char *filename)
 {
+    SMS_Context *context = (SMS_Context *) context_ptr;
+
     const char *console_id;
     uint32_t sections_loaded;
 
@@ -922,7 +943,7 @@ static void sms_state_load (const char *filename)
         return;
     }
 
-    sram_used = false;
+    context->sram_used = false;
 
     for (uint32_t i = 0; i < sections_loaded; i++)
     {
@@ -934,9 +955,9 @@ static void sms_state_load (const char *filename)
 
         if (!strncmp (section_id, SECTION_ID_SMS_HW, 4))
         {
-            if (size == sizeof (hw_state))
+            if (size == sizeof (SMS_HW_State))
             {
-                memcpy (&hw_state, data, sizeof (hw_state));
+                memcpy (&context->hw_state, data, sizeof (SMS_HW_State));
             }
             else
             {
@@ -945,13 +966,13 @@ static void sms_state_load (const char *filename)
         }
         else if (!strncmp (section_id, SECTION_ID_Z80, 4))
         {
-            z80_state_load (z80_context, version, size, data);
+            z80_state_load (context->z80_context, version, size, data);
         }
         else if (!strncmp (section_id, SECTION_ID_RAM, 4))
         {
             if (size == SMS_RAM_SIZE)
             {
-                memcpy (state.ram, data, SMS_RAM_SIZE);
+                memcpy (context->ram, data, SMS_RAM_SIZE);
             }
             else
             {
@@ -960,10 +981,10 @@ static void sms_state_load (const char *filename)
         }
         else if (!strncmp (section_id, SECTION_ID_SRAM, 4))
         {
-            sram_used = true;
+            context->sram_used = true;
             if (size == SMS_SRAM_SIZE)
             {
-                memcpy (state.sram, data, SMS_SRAM_SIZE);
+                memcpy (context->sram, data, SMS_SRAM_SIZE);
             }
             else
             {
@@ -972,13 +993,13 @@ static void sms_state_load (const char *filename)
         }
         else if (!strncmp (section_id, SECTION_ID_VDP, 4))
         {
-            tms9928a_state_load (vdp_context, version, size, data);
+            tms9928a_state_load (context->vdp_context, version, size, data);
         }
         else if (!strncmp (section_id, SECTION_ID_VRAM, 4))
         {
             if (size == TMS9928A_VRAM_SIZE)
             {
-                memcpy (vdp_context->vram, data, TMS9928A_VRAM_SIZE);
+                memcpy (context->vdp_context->vram, data, TMS9928A_VRAM_SIZE);
             }
             else
             {
@@ -1004,8 +1025,10 @@ static void sms_state_load (const char *filename)
 /*
  * Export SMS state to a file.
  */
-static void sms_state_save (const char *filename)
+static void sms_state_save (void *context_ptr, const char *filename)
 {
+    SMS_Context *context = (SMS_Context *) context_ptr;
+
     pthread_mutex_lock (&sms_state_mutex);
 
     /* Begin creating a new save state. */
@@ -1018,17 +1041,17 @@ static void sms_state_save (const char *filename)
         save_state_begin (CONSOLE_ID_SMS);
     }
 
-    save_state_section_add (SECTION_ID_SMS_HW, 1, sizeof (hw_state), &hw_state);
+    save_state_section_add (SECTION_ID_SMS_HW, 1, sizeof (SMS_HW_State), &context->hw_state);
 
-    z80_state_save (z80_context);
-    save_state_section_add (SECTION_ID_RAM, 1, SMS_RAM_SIZE, state.ram);
-    if (sram_used)
+    z80_state_save (context->z80_context);
+    save_state_section_add (SECTION_ID_RAM, 1, SMS_RAM_SIZE, context->ram);
+    if (context->sram_used)
     {
-        save_state_section_add (SECTION_ID_SRAM, 1, SMS_SRAM_SIZE, state.sram);
+        save_state_section_add (SECTION_ID_SRAM, 1, SMS_SRAM_SIZE, context->sram);
     }
 
-    tms9928a_state_save (vdp_context);
-    save_state_section_add (SECTION_ID_VRAM, 1, TMS9928A_VRAM_SIZE, vdp_context->vram);
+    tms9928a_state_save (context->vdp_context);
+    save_state_section_add (SECTION_ID_VRAM, 1, TMS9928A_VRAM_SIZE, context->vdp_context->vram);
 
     sn76489_state_save ();
 
@@ -1041,19 +1064,21 @@ static void sms_state_save (const char *filename)
 /*
  * Backup the on-cartridge SRAM.
  */
-static void sms_sync (void)
+static void sms_sync (void *context_ptr)
 {
-    if (sram_used)
+    SMS_Context *context = (SMS_Context *) context_ptr;
+
+    if (context->sram_used)
     {
         uint32_t bytes_written = 0;
-        char *path = sram_path ();
+        char *path = sram_path (context->rom_hash);
         FILE *sram_file = fopen (path, "wb");
 
         if (sram_file != NULL)
         {
             while (bytes_written < SMS_SRAM_SIZE)
             {
-                bytes_written += fwrite (state.sram + bytes_written, 1, SMS_SRAM_SIZE - bytes_written, sram_file);
+                bytes_written += fwrite (context->sram + bytes_written, 1, SMS_SRAM_SIZE - bytes_written, sram_file);
             }
 
             fclose (sram_file);
@@ -1061,4 +1086,40 @@ static void sms_sync (void)
 
         free (path);
     }
+}
+
+
+/*
+ * Propagate user settings into the console context.
+ */
+static void sms_update_settings (void *context_ptr)
+{
+    SMS_Context *context = (SMS_Context *) context_ptr;
+
+    /* Update console */
+    context->overclock           = state.overclock;
+    context->region              = state.region;
+
+    if (state.format_auto)
+    {
+        if (context->rom_hints & SMS_HINT_PAL_ONLY)
+        {
+            state.format = VIDEO_FORMAT_PAL;
+            context->format = VIDEO_FORMAT_PAL;
+        }
+        else
+        {
+            state.format = VIDEO_FORMAT_NTSC;
+            context->format = VIDEO_FORMAT_NTSC;
+        }
+    }
+    else
+    {
+        context->format = state.format;
+    }
+
+    /* Update VDP */
+    context->vdp_context->format              = context->format;
+    context->vdp_context->remove_sprite_limit = state.remove_sprite_limit;
+    context->vdp_context->disable_blanking    = state.disable_blanking;
 }

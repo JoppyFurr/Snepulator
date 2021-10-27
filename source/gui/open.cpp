@@ -24,7 +24,6 @@ extern "C" {
 #include "util.h"
 #include "snepulator.h"
 #include "config.h"
-#include "sms.h"
 }
 
 #include "open.h"
