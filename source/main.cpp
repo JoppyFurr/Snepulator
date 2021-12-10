@@ -247,11 +247,11 @@ int main_gui_loop (void)
             }
 
             /* Use the mouse coordinates for the light phaser target */
-            if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT)
+            if (event.type == SDL_MOUSEMOTION)
             {
-                int32_t phaser_x = (event.button.x - (state.host_width  / 2 - (VIDEO_BUFFER_WIDTH * state.video_scale) / 2))
+                int32_t phaser_x = (event.motion.x - (state.host_width  / 2 - (VIDEO_BUFFER_WIDTH * state.video_scale) / 2))
                                    / state.video_scale - VIDEO_SIDE_BORDER;
-                int32_t phaser_y = (event.button.y - (state.host_height / 2 - (VIDEO_BUFFER_LINES * state.video_scale) / 2))
+                int32_t phaser_y = (event.motion.y - (state.host_height / 2 - (VIDEO_BUFFER_LINES * state.video_scale) / 2))
                                    / state.video_scale - state.video_start_y;
 
                 state.phaser_x = phaser_x;
