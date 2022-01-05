@@ -457,6 +457,7 @@ void snepulator_reset (void)
     /* Clear callback functions */
     state.audio_callback = NULL;
     state.cleanup = NULL;
+    state.diagnostics_show = NULL;
     state.get_clock_rate = NULL;
     state.get_rom_hash = NULL;
     state.run_callback = NULL;

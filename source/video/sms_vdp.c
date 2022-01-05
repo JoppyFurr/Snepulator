@@ -295,7 +295,7 @@ void sms_vdp_control_write (TMS9928A_Context *context, uint8_t value)
 /*
  * Assemble the four mode-bits.
  */
-uint8_t sms_vdp_mode_get (TMS9928A_Context *context)
+uint8_t sms_vdp_get_mode (TMS9928A_Context *context)
 {
     return ((context->state.regs.ctrl_1 & TMS9928A_CTRL_1_MODE_1) ? BIT_0 : 0) +
            ((context->state.regs.ctrl_0 & TMS9928A_CTRL_0_MODE_2) ? BIT_1 : 0) +
@@ -723,7 +723,7 @@ static void sms_vdp_render_line (TMS9928A_Context *context, const TMS9928A_Confi
 void sms_vdp_run_one_scanline (TMS9928A_Context *context)
 {
     const TMS9928A_Config *config;
-    TMS9928A_Mode mode = sms_vdp_mode_get (context);
+    TMS9928A_Mode mode = sms_vdp_get_mode (context);
 
     switch (mode)
     {

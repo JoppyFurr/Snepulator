@@ -75,6 +75,8 @@ typedef struct Snepulator_State_s {
     void *console_context;
     void      (*audio_callback) (void *userdata, uint8_t *stream, int len);
     void      (*cleanup) (void *);
+    void      (*diagnostics_print) (const char *, ...);
+    void      (*diagnostics_show) (void);
     uint32_t  (*get_clock_rate) (void *);
     uint8_t * (*get_rom_hash) (void *);
     void      (*run_callback) (void *, uint32_t ms);

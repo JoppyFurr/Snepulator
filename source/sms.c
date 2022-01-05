@@ -113,6 +113,29 @@ static void sms_cleanup (void *context_ptr)
 
 
 /*
+ * Display diagnostic information.
+ */
+static void sms_diagnostics_show (void)
+{
+    SMS_Context *context = state.console_context;
+    Z80_Context *z80_context = context->z80_context;
+
+    state.diagnostics_print ("Master System");
+
+    state.diagnostics_print ("---");
+    state.diagnostics_print ("CPU");
+    state.diagnostics_print ("PC : %04x    SP : %04x", z80_context->state.pc, z80_context->state.sp);
+    state.diagnostics_print ("AF : %04x    BC : %04x", z80_context->state.af, z80_context->state.bc);
+    state.diagnostics_print ("DE : %04x    HL : %04x", z80_context->state.de, z80_context->state.hl);
+    state.diagnostics_print ("IX : %04x    IY : %04x", z80_context->state.ix, z80_context->state.iy);
+    state.diagnostics_print ("IM :  %3u    IFF: %d,%d", z80_context->state.im, z80_context->state.iff1, z80_context->state.iff2);
+
+    state.diagnostics_print ("---");
+    state.diagnostics_print ("Video");
+    state.diagnostics_print ("Mode : %s", tms9928a_mode_name_get (sms_vdp_get_mode (context->vdp_context)));
+}
+
+/*
  * Process a frame completion by the VDP.
  */
 static void sms_frame_done (void *context_ptr)
@@ -350,6 +373,7 @@ SMS_Context *sms_init (void)
     /* Hook up callbacks */
     state.audio_callback = sms_audio_callback;
     state.cleanup = sms_cleanup;
+    state.diagnostics_show = sms_diagnostics_show;
     state.get_clock_rate = sms_get_clock_rate;
     state.get_rom_hash = sms_get_rom_hash;
     state.run_callback = sms_run;

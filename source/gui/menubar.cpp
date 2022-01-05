@@ -30,7 +30,7 @@ extern "C" {
 extern TMS9928A_Mode sms_vdp_mode_get (void);
 
 /* TODO: Access through a function instead of accessing the array */
-extern Gamepad_Instance gamepad_list[128];
+extern Gamepad_Instance gamepad_list [128];
 extern uint32_t gamepad_list_count;
 extern Snepulator_Gamepad gamepad_1;
 extern Snepulator_Gamepad gamepad_2;
@@ -44,6 +44,28 @@ extern File_Open_State open_state;
 extern bool config_capture_events; /* TODO: Move into state */
 
 void snepulator_audio_device_open (const char *device);
+
+/*
+ * C-friendly wrapper for ImGui::Text
+ */
+#include <stdarg.h>
+static void menubar_diagnostics_print (const char *format, ...)
+{
+    va_list args;
+    va_start (args, format);
+
+    if (strcmp ("---", format) == 0)
+    {
+        ImGui::Separator ();
+    }
+    else
+    {
+        ImGui::TextV (format, args);
+    }
+
+    va_end (args);
+}
+
 
 /*
  * Render the menubar.
@@ -170,31 +192,17 @@ void snepulator_render_menubar (void)
             }
             ImGui::Separator ();
 
-            if (ImGui::BeginMenu ("Info"))
+            if (ImGui::BeginMenu ("Diagnostics"))
             {
-                ImGui::Text ("%s", state.console == CONSOLE_MASTER_SYSTEM ? "Master System" :
-                                   state.console == CONSOLE_GAME_GEAR     ? "Game Gear" :
-                                   state.console == CONSOLE_SG_1000       ? "SG-1000" :
-                                   state.console == CONSOLE_COLECOVISION  ? "ColecoVision" :
-                                   "N/A");
-
-                ImGui::Separator ();
-
-#if 0
-                /* TODO: Re-enable */
-                ImGui::Text ("CPU");
-                ImGui::Text ("PC : %04x    SP : %04x", z80_state.pc, z80_state.sp);
-                ImGui::Text ("AF : %04x    BC : %04x", z80_state.af, z80_state.bc);
-                ImGui::Text ("DE : %04x    HL : %04x", z80_state.de, z80_state.hl);
-                ImGui::Text ("IX : %04x    IY : %04x", z80_state.ix, z80_state.iy);
-                ImGui::Text ("IM : %d       IFF: %d/%d", z80_state.im, z80_state.iff1, z80_state.iff2);
-
-                ImGui::Separator ();
-
-                ImGui::Text ("Video");
-                ImGui::Text ("Mode : %s", tms9928a_mode_name_get (sms_vdp_mode_get ()));
-#endif
-
+                if (state.diagnostics_show == NULL)
+                {
+                    ImGui::Text ("No diagnostics available.");
+                }
+                else
+                {
+                    state.diagnostics_print = menubar_diagnostics_print;
+                    state.diagnostics_show ();
+                }
                 ImGui::EndMenu ();
             }
             if (ImGui::BeginMenu ("Statistics"))

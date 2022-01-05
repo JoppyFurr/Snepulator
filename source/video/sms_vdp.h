@@ -24,20 +24,26 @@ typedef struct SMS_VDP_Mode4_Pattern_t {
     uint8_t data[32];
 } SMS_VDP_Mode4_Pattern;
 
+/* Write one byte to the VDP control port. */
+void sms_vdp_control_write (TMS9928A_Context *context, uint8_t value);
+
 /* Read one byte from the VDP data port. */
 uint8_t sms_vdp_data_read (TMS9928A_Context *context);
 
 /* Write one byte to the VDP data port. */
 void sms_vdp_data_write (TMS9928A_Context *context, uint8_t value);
 
-/* Read one byte from the VDP control (status) port. */
-uint8_t sms_vdp_status_read (TMS9928A_Context *context);
-
-/* Write one byte to the VDP control port. */
-void sms_vdp_control_write (TMS9928A_Context *context, uint8_t value);
-
 /* Read the 8-bit h-counter. */
 uint8_t sms_vdp_get_h_counter (TMS9928A_Context *context);
+
+/* Check if the VDP is currently requesting an interrupt. */
+bool sms_vdp_get_interrupt (TMS9928A_Context *context);
+
+/* Assemble the four mode-bits. */
+uint8_t sms_vdp_get_mode (TMS9928A_Context *context);
+
+/* Check if the light phaser is receiving light */
+bool sms_vdp_get_phaser_th (TMS9928A_Context *context, uint64_t z80_cycle);
 
 /* Read the 8-bit v-counter. */
 uint8_t sms_vdp_get_v_counter (TMS9928A_Context *context);
@@ -45,11 +51,9 @@ uint8_t sms_vdp_get_v_counter (TMS9928A_Context *context);
 /* Create a SMS VDP context with power-on defaults. */
 TMS9928A_Context *sms_vdp_init (void *parent, void (* frame_done) (void *), Console console);
 
+/* Read one byte from the VDP control (status) port. */
+uint8_t sms_vdp_status_read (TMS9928A_Context *context);
+
 /* Run one scanline on the VDP. */
 void sms_vdp_run_one_scanline (TMS9928A_Context *context);
 
-/* Check if the VDP is currently requesting an interrupt. */
-bool sms_vdp_get_interrupt (TMS9928A_Context *context);
-
-/* Check if the light phaser is receiving light */
-bool sms_vdp_get_phaser_th (TMS9928A_Context *context, uint64_t z80_cycle);
