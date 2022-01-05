@@ -69,6 +69,8 @@ static void menubar_diagnostics_print (const char *format, ...)
 
 /*
  * Render the menubar.
+ *
+ * Updates mouse_time so that the menu won't disappear while open.
  */
 void snepulator_render_menubar (void)
 {
@@ -79,6 +81,8 @@ void snepulator_render_menubar (void)
     {
         if (ImGui::BeginMenu ("File"))
         {
+            state.mouse_time = snepulator_get_ticks ();
+
             if (ImGui::MenuItem ("Open ROM...", NULL))
             {
                 snepulator_pause_set (true);
@@ -153,6 +157,8 @@ void snepulator_render_menubar (void)
 
         if (ImGui::BeginMenu ("Console"))
         {
+            state.mouse_time = snepulator_get_ticks ();
+
             if (ImGui::MenuItem ("Hard Reset"))
             {
                 snepulator_system_init ();
@@ -235,6 +241,8 @@ void snepulator_render_menubar (void)
 
         if (ImGui::BeginMenu ("State"))
         {
+            state.mouse_time = snepulator_get_ticks ();
+
             if (ImGui::MenuItem ("Quick Save", NULL)) {
                 if ((state.run == RUN_STATE_RUNNING || state.run == RUN_STATE_PAUSED) && state.state_save)
                 {
@@ -258,6 +266,7 @@ void snepulator_render_menubar (void)
 
         if (ImGui::BeginMenu ("Input"))
         {
+            state.mouse_time = snepulator_get_ticks ();
 
             if (ImGui::BeginMenu ("Player 1"))
             {
@@ -318,6 +327,8 @@ void snepulator_render_menubar (void)
 
         if (ImGui::BeginMenu ("Audio"))
         {
+            state.mouse_time = snepulator_get_ticks ();
+
             if (ImGui::BeginMenu ("Device"))
             {
                 static char current_device[80] = { '\0' };
@@ -342,6 +353,8 @@ void snepulator_render_menubar (void)
 
         if (ImGui::BeginMenu ("Video"))
         {
+            state.mouse_time = snepulator_get_ticks ();
+
             if (ImGui::BeginMenu ("Filter"))
             {
                 if (ImGui::MenuItem ("Nearest Neighbour", NULL, state.video_filter == VIDEO_FILTER_NEAREST))
