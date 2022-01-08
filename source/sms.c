@@ -271,6 +271,7 @@ SMS_Context *sms_init (void)
     sn76489_init ();
 
     /* Defaults */
+    context->hw_state.io_control = 0x0f;
     context->export_paddle = false;
     context->sram_used = false;
     context->video_3d_field = SMS_3D_FIELD_NONE;
