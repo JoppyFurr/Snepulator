@@ -59,25 +59,33 @@ static const TMS9928A_Config Mode0_PAL = {
     .mode = TMS9928A_MODE_0,
     .lines_active = 192,
     .lines_total = 313,
-    .palette = SMS_VDP_LEGACY_PALETTE
+    .palette = SMS_VDP_LEGACY_PALETTE,
+    .v_counter_map = { { .first = 0x00, .last = 0xf2 },
+                       { .first = 0xba, .last = 0xff } }
 };
 static const TMS9928A_Config Mode0_NTSC = {
     .mode = TMS9928A_MODE_0,
     .lines_active = 192,
     .lines_total = 262,
-    .palette = SMS_VDP_LEGACY_PALETTE
+    .palette = SMS_VDP_LEGACY_PALETTE,
+    .v_counter_map = { { .first = 0x00, .last = 0xda },
+                       { .first = 0xd5, .last = 0xff } }
 };
 static const TMS9928A_Config Mode2_PAL = {
     .mode = TMS9928A_MODE_2,
     .lines_active = 192,
     .lines_total = 313,
-    .palette = SMS_VDP_LEGACY_PALETTE
+    .palette = SMS_VDP_LEGACY_PALETTE,
+    .v_counter_map = { { .first = 0x00, .last = 0xf2 },
+                       { .first = 0xba, .last = 0xff } }
 };
 static const TMS9928A_Config Mode2_NTSC = {
     .mode = TMS9928A_MODE_2,
     .lines_active = 192,
     .lines_total = 262,
-    .palette = SMS_VDP_LEGACY_PALETTE
+    .palette = SMS_VDP_LEGACY_PALETTE,
+    .v_counter_map = { { .first = 0x00, .last = 0xda },
+                       { .first = 0xd5, .last = 0xff } }
 };
 static const TMS9928A_Config Mode4_PAL192 = {
     .mode = SMS_VDP_MODE_4,
