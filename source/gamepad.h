@@ -15,9 +15,6 @@
 #define INSTANCE_ID_NONE     -1
 #define INSTANCE_ID_KEYBOARD -2
 
-#define GUID_NONE     (SDL_JoystickGUID) { .data = { 0x00 } }
-#define GUID_KEYBOARD (SDL_JoystickGUID) { .data = { 0xce, 0xee, 0xb0, 0xad } }
-
 /*
  * Common indexes, valid both in the config list and in the gamepad list.
  */
@@ -59,15 +56,14 @@ typedef struct Gamepad_Mapping_s {
     };
 } Gamepad_Mapping;
 
-#ifdef SDL_h_
+
 /*
  * Stored gamepad configuration.
  */
 typedef struct Gamepad_Config_s {
-    SDL_JoystickGUID guid;
+    uint8_t uuid [UUID_SIZE];
     Gamepad_Mapping mapping [GAMEPAD_BUTTON_COUNT];
 } Gamepad_Config;
-#endif /* SDL_h_ */
 
 
 /*

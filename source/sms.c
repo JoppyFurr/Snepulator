@@ -135,6 +135,7 @@ static void sms_diagnostics_show (void)
     state.diagnostics_print ("Mode : %s", tms9928a_mode_name_get (sms_vdp_get_mode (context->vdp_context)));
 }
 
+
 /*
  * Process a frame completion by the VDP.
  */

@@ -11,6 +11,7 @@
 
 #include <SDL2/SDL.h>
 
+#include "util.h"
 #include "gamepad.h"
 #include "config.h"
 
@@ -36,6 +37,17 @@ Gamepad_Config *gamepad_3_config;
 Snepulator_Gamepad gamepad_1;
 Snepulator_Gamepad gamepad_2;
 Snepulator_Gamepad gamepad_3; /* Used for the 'configure' dialogue */
+
+
+/*
+ * SDL implementation for getting gamepad UUID.
+ */
+void gamepad_get_uuid (int32_t device_id, uint8_t *uuid)
+{
+    SDL_JoystickGUID sdl_guid = SDL_JoystickGetDeviceGUID (device_id);
+    memcpy (uuid, sdl_guid.data, UUID_SIZE);
+}
+
 
 /*
  * Process an SDL_Event.
@@ -191,8 +203,7 @@ void gamepad_paddle_tick (uint32_t ms)
 static uint32_t gamepad_config_create (int32_t device_id)
 {
     Gamepad_Config new_config = { };
-
-    new_config.guid = SDL_JoystickGetDeviceGUID (device_id);
+    gamepad_get_uuid (device_id, new_config.uuid);
 
     /* If we can, pull the config from the SDL_GameController interface */
     if (SDL_IsGameController (device_id))
@@ -261,12 +272,14 @@ void gamepad_list_update (void)
     {
         int32_t instance_id = SDL_JoystickGetDeviceInstanceID (device_id);
         int32_t config_index = GAMEPAD_INDEX_NONE;
-        SDL_JoystickGUID guid = SDL_JoystickGetDeviceGUID (device_id);
+        uint8_t uuid [UUID_SIZE] = { };
+
+        gamepad_get_uuid (device_id, uuid);
 
         /* Find config for device */
         for (uint32_t i = 0; i < gamepad_config_count; i++)
         {
-            if (memcmp (&gamepad_config [i].guid, &guid, sizeof (SDL_JoystickGUID)) == 0)
+            if (memcmp (&gamepad_config [i].uuid, &uuid, UUID_SIZE) == 0)
             {
                 config_index = i;
                 break;
@@ -293,7 +306,7 @@ void gamepad_config_import (void);
  */
 void gamepad_init (void)
 {
-    Gamepad_Config no_gamepad = { .guid = GUID_NONE };
+    Gamepad_Config no_gamepad = { };
 
     /* Add entry for GAMEPAD_INDEX_NONE */
     gamepad_config [gamepad_config_count++] = no_gamepad;
@@ -315,7 +328,8 @@ void gamepad_init (void)
     gamepad_3_config = &gamepad_config [GAMEPAD_INDEX_NONE];
 
     /* Add entry for GAMEPAD_INDEX_KEYBOARD */
-    Gamepad_Config default_keyboard = { .guid = GUID_KEYBOARD };
+    Gamepad_Config default_keyboard = { };
+    memcpy (default_keyboard.uuid, "KEYBOARD", 8);
 
     /* Different default keyboard mappings for different layouts */
     switch (SDL_GetKeyFromScancode (SDL_SCANCODE_S))
@@ -373,11 +387,9 @@ void gamepad_init (void)
  */
 void gamepad_update_mapping (Gamepad_Config new_config)
 {
-    char guid_string [33];
-
     for (uint32_t i = 0; i < gamepad_config_count; i++)
     {
-        if (memcmp (&gamepad_config [i].guid, &new_config.guid, sizeof (SDL_JoystickGUID)) == 0)
+        if (memcmp (&gamepad_config [i].uuid, &new_config.uuid, UUID_SIZE) == 0)
         {
             /* Replace the old entry with the new one */
             gamepad_config [i] = new_config;
@@ -385,9 +397,7 @@ void gamepad_update_mapping (Gamepad_Config new_config)
         }
     }
 
-    /* TODO: Instead of printing an error, create a new entry */
-    SDL_JoystickGetGUIDString (new_config.guid, guid_string, 33);
-    fprintf (stderr, "Warning: Unable to find device %s.\n", guid_string);
+    fprintf (stderr, "Warning: Unable to find device.\n");
 }
 
 
@@ -534,12 +544,12 @@ void gamepad_config_export (void)
     {
         /* Section name */
         snprintf (section_name, 1023, "gamepad-%02x%02x.%02x%02x.%02x%02x.%02x%02x.%02x%02x.%02x%02x.%02x%02x.%02x%02x",
-                gamepad_config [i].guid.data [ 0], gamepad_config [i].guid.data [ 1], gamepad_config [i].guid.data [ 2],
-                gamepad_config [i].guid.data [ 3], gamepad_config [i].guid.data [ 4], gamepad_config [i].guid.data [ 5],
-                gamepad_config [i].guid.data [ 6], gamepad_config [i].guid.data [ 7], gamepad_config [i].guid.data [ 8],
-                gamepad_config [i].guid.data [ 9], gamepad_config [i].guid.data [10], gamepad_config [i].guid.data [11],
-                gamepad_config [i].guid.data [12], gamepad_config [i].guid.data [13], gamepad_config [i].guid.data [14],
-                gamepad_config [i].guid.data [15]);
+                gamepad_config [i].uuid [ 0], gamepad_config [i].uuid [ 1], gamepad_config [i].uuid [ 2],
+                gamepad_config [i].uuid [ 3], gamepad_config [i].uuid [ 4], gamepad_config [i].uuid [ 5],
+                gamepad_config [i].uuid [ 6], gamepad_config [i].uuid [ 7], gamepad_config [i].uuid [ 8],
+                gamepad_config [i].uuid [ 9], gamepad_config [i].uuid [10], gamepad_config [i].uuid [11],
+                gamepad_config [i].uuid [12], gamepad_config [i].uuid [13], gamepad_config [i].uuid [14],
+                gamepad_config [i].uuid [15]);
 
         for (uint32_t button = 0; button < GAMEPAD_BUTTON_COUNT; button++)
         {
@@ -560,7 +570,7 @@ void gamepad_config_export (void)
  */
 void gamepad_config_import (void)
 {
-    unsigned int guid_buffer [16] = { 0x00 };
+    unsigned int uuid_buffer [16] = { 0x00 };
     Gamepad_Config new_config = { };
 
     for (uint32_t i = 0; config_get_section_name (i) != NULL; i++)
@@ -569,21 +579,21 @@ void gamepad_config_import (void)
 
         if (strncmp (section_name, "gamepad-", 8) == 0)
         {
-            SDL_JoystickGUID guid = { 0x00 };
+            uint8_t uuid [UUID_SIZE] = { };
 
             sscanf (section_name, "gamepad-%02x%02x.%02x%02x.%02x%02x.%02x%02x.%02x%02x.%02x%02x.%02x%02x.%02x%02x",
-                    &guid_buffer [ 0], &guid_buffer [ 1], &guid_buffer [ 2], &guid_buffer [ 3], &guid_buffer [ 4],
-                    &guid_buffer [ 5], &guid_buffer [ 6], &guid_buffer [ 7], &guid_buffer [ 8], &guid_buffer [ 9],
-                    &guid_buffer [10], &guid_buffer [11], &guid_buffer [12], &guid_buffer [13], &guid_buffer [14],
-                    &guid_buffer [15]);
+                    &uuid_buffer [ 0], &uuid_buffer [ 1], &uuid_buffer [ 2], &uuid_buffer [ 3], &uuid_buffer [ 4],
+                    &uuid_buffer [ 5], &uuid_buffer [ 6], &uuid_buffer [ 7], &uuid_buffer [ 8], &uuid_buffer [ 9],
+                    &uuid_buffer [10], &uuid_buffer [11], &uuid_buffer [12], &uuid_buffer [13], &uuid_buffer [14],
+                    &uuid_buffer [15]);
 
             for (uint32_t j = 0; j < 16; j++)
             {
-                guid.data [j] = guid_buffer [j];
+                uuid [j] = uuid_buffer [j];
             }
 
             /* Skip the 'None' device */
-            if (memcmp (&guid, &gamepad_config [GAMEPAD_INDEX_NONE].guid, sizeof (SDL_JoystickGUID)) == 0)
+            if (memcmp (uuid, &gamepad_config [GAMEPAD_INDEX_NONE].uuid, UUID_SIZE) == 0)
             {
                 continue;
             }
@@ -603,11 +613,11 @@ void gamepad_config_import (void)
                     new_config.mapping [button].direction = direction;
                 }
 
-                new_config.guid = guid;
+                memcpy (new_config.uuid, uuid, sizeof (new_config.uuid));
             }
 
             /* Keyboard has fixed index */
-            if (memcmp (&guid, &gamepad_config [GAMEPAD_INDEX_KEYBOARD].guid, sizeof (SDL_JoystickGUID)) == 0)
+            if (memcmp (&uuid, &gamepad_config [GAMEPAD_INDEX_KEYBOARD].uuid, UUID_SIZE) == 0)
             {
                 gamepad_config [GAMEPAD_INDEX_KEYBOARD] = new_config;
             }

@@ -29,6 +29,9 @@
 #define SIZE_32K    (32 << 10)
 
 #define HASH_LENGTH 12
+#define UUID_SIZE 16
+
+/* TODO: Split into types.h */
 
 typedef union uint16_t_Split_u {
     uint16_t w;
