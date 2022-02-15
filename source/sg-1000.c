@@ -22,8 +22,7 @@
 #include "sg-1000.h"
 
 extern Snepulator_State state;
-extern Snepulator_Gamepad gamepad_1;
-extern Snepulator_Gamepad gamepad_2;
+extern Snepulator_Gamepad gamepad [3];
 extern pthread_mutex_t video_mutex;
 
 static pthread_mutex_t sg_1000_state_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -138,7 +137,7 @@ static bool sg_1000_get_int (void *context_ptr)
  */
 static bool sg_1000_get_nmi (void *context_ptr)
 {
-    return !! gamepad_1.state [GAMEPAD_BUTTON_START];
+    return !! gamepad [1].state [GAMEPAD_BUTTON_START];
 }
 
 
@@ -261,22 +260,22 @@ static uint8_t sg_1000_io_read (void *context_ptr, uint8_t addr)
         if ((addr & 0x01) == 0x00)
         {
             /* I/O Port A/B */
-            return (gamepad_1.state [GAMEPAD_DIRECTION_UP]      ? 0 : BIT_0) |
-                   (gamepad_1.state [GAMEPAD_DIRECTION_DOWN]    ? 0 : BIT_1) |
-                   (gamepad_1.state [GAMEPAD_DIRECTION_LEFT]    ? 0 : BIT_2) |
-                   (gamepad_1.state [GAMEPAD_DIRECTION_RIGHT]   ? 0 : BIT_3) |
-                   (gamepad_1.state [GAMEPAD_BUTTON_1]          ? 0 : BIT_4) |
-                   (gamepad_1.state [GAMEPAD_BUTTON_2]          ? 0 : BIT_5) |
-                   (gamepad_2.state [GAMEPAD_DIRECTION_UP]      ? 0 : BIT_6) |
-                   (gamepad_2.state [GAMEPAD_DIRECTION_DOWN]    ? 0 : BIT_7);
+            return (gamepad [1].state [GAMEPAD_DIRECTION_UP]    ? 0 : BIT_0) |
+                   (gamepad [1].state [GAMEPAD_DIRECTION_DOWN]  ? 0 : BIT_1) |
+                   (gamepad [1].state [GAMEPAD_DIRECTION_LEFT]  ? 0 : BIT_2) |
+                   (gamepad [1].state [GAMEPAD_DIRECTION_RIGHT] ? 0 : BIT_3) |
+                   (gamepad [1].state [GAMEPAD_BUTTON_1]        ? 0 : BIT_4) |
+                   (gamepad [1].state [GAMEPAD_BUTTON_2]        ? 0 : BIT_5) |
+                   (gamepad [2].state [GAMEPAD_DIRECTION_UP]    ? 0 : BIT_6) |
+                   (gamepad [2].state [GAMEPAD_DIRECTION_DOWN]  ? 0 : BIT_7);
         }
         else
         {
             /* I/O Port B/misc */
-            return (gamepad_2.state [GAMEPAD_DIRECTION_LEFT]    ? 0 : BIT_0) |
-                   (gamepad_2.state [GAMEPAD_DIRECTION_RIGHT]   ? 0 : BIT_1) |
-                   (gamepad_2.state [GAMEPAD_BUTTON_1]          ? 0 : BIT_2) |
-                   (gamepad_2.state [GAMEPAD_BUTTON_2]          ? 0 : BIT_3) |
+            return (gamepad [2].state [GAMEPAD_DIRECTION_LEFT]  ? 0 : BIT_0) |
+                   (gamepad [2].state [GAMEPAD_DIRECTION_RIGHT] ? 0 : BIT_1) |
+                   (gamepad [2].state [GAMEPAD_BUTTON_1]        ? 0 : BIT_2) |
+                   (gamepad [2].state [GAMEPAD_BUTTON_2]        ? 0 : BIT_3) |
                    (                                                  BIT_4);
         }
     }

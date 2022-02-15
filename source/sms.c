@@ -24,8 +24,7 @@
 #include "sms.h"
 
 extern Snepulator_State state;
-extern Snepulator_Gamepad gamepad_1;
-extern Snepulator_Gamepad gamepad_2;
+extern Snepulator_Gamepad gamepad [3];
 extern SN76489_State sn76489_state;
 extern pthread_mutex_t video_mutex;
 
@@ -218,7 +217,7 @@ static bool sms_get_nmi (void *context_ptr)
 
     if (context->console == CONSOLE_MASTER_SYSTEM)
     {
-        return !! gamepad_1.state [GAMEPAD_BUTTON_START];
+        return !! gamepad [1].state [GAMEPAD_BUTTON_START];
     }
 
     return false;
@@ -314,19 +313,19 @@ SMS_Context *sms_init (void)
     sms_update_settings (context);
 
     /* Automatic controller type */
-    if (gamepad_1.type_auto)
+    if (gamepad [1].type_auto)
     {
         if (context->rom_hints & SMS_HINT_PADDLE_ONLY)
         {
-            gamepad_1.type = GAMEPAD_TYPE_SMS_PADDLE;
+            gamepad [1].type = GAMEPAD_TYPE_SMS_PADDLE;
         }
         else if (context->rom_hints & SMS_HINT_LIGHT_PHASER)
         {
-            gamepad_1.type = GAMEPAD_TYPE_SMS_PHASER;
+            gamepad [1].type = GAMEPAD_TYPE_SMS_PHASER;
         }
         else
         {
-            gamepad_1.type = GAMEPAD_TYPE_SMS;
+            gamepad [1].type = GAMEPAD_TYPE_SMS;
         }
     }
 
@@ -424,7 +423,7 @@ static uint8_t sms_io_read (void *context_ptr, uint8_t addr)
             uint8_t value = 0;
 
             /* STT */
-            if (!gamepad_1.state [GAMEPAD_BUTTON_START])
+            if (!gamepad [1].state [GAMEPAD_BUTTON_START])
             {
                 value |= BIT_7;
             }
@@ -488,7 +487,7 @@ static uint8_t sms_io_read (void *context_ptr, uint8_t addr)
             /* I/O Port A/B */
             uint8_t port_value = 0;
 
-            if (gamepad_1.type == GAMEPAD_TYPE_SMS_PADDLE)
+            if (gamepad [1].type == GAMEPAD_TYPE_SMS_PADDLE)
             {
                 static uint8_t paddle_clock = 0;
 
@@ -512,27 +511,27 @@ static uint8_t sms_io_read (void *context_ptr, uint8_t addr)
 
                 if ((paddle_clock & 0x01) == 0x00)
                 {
-                    port_value = (gamepad_1.paddle_position & 0x0f) |
-                                 ((gamepad_1.state [GAMEPAD_BUTTON_1] || gamepad_1.state [GAMEPAD_BUTTON_2]) ? 0 : BIT_4);
+                    port_value = (gamepad [1].paddle_position & 0x0f) |
+                                 ((gamepad [1].state [GAMEPAD_BUTTON_1] || gamepad [1].state [GAMEPAD_BUTTON_2]) ? 0 : BIT_4);
                 }
                 else
                 {
-                    port_value = (gamepad_1.paddle_position >> 0x04) |
-                                 ((gamepad_1.state [GAMEPAD_BUTTON_1] || gamepad_1.state [GAMEPAD_BUTTON_2]) ? 0 : BIT_4) | BIT_5;
+                    port_value = (gamepad [1].paddle_position >> 0x04) |
+                                 ((gamepad [1].state [GAMEPAD_BUTTON_1] || gamepad [1].state [GAMEPAD_BUTTON_2]) ? 0 : BIT_4) | BIT_5;
                 }
             }
             else
             {
-                port_value = (gamepad_1.state [GAMEPAD_DIRECTION_UP]        ? 0 : BIT_0) |
-                             (gamepad_1.state [GAMEPAD_DIRECTION_DOWN]      ? 0 : BIT_1) |
-                             (gamepad_1.state [GAMEPAD_DIRECTION_LEFT]      ? 0 : BIT_2) |
-                             (gamepad_1.state [GAMEPAD_DIRECTION_RIGHT]     ? 0 : BIT_3) |
-                             (gamepad_1.state [GAMEPAD_BUTTON_1]            ? 0 : BIT_4) |
-                             (gamepad_1.state [GAMEPAD_BUTTON_2]            ? 0 : BIT_5);
+                port_value = (gamepad [1].state [GAMEPAD_DIRECTION_UP]      ? 0 : BIT_0) |
+                             (gamepad [1].state [GAMEPAD_DIRECTION_DOWN]    ? 0 : BIT_1) |
+                             (gamepad [1].state [GAMEPAD_DIRECTION_LEFT]    ? 0 : BIT_2) |
+                             (gamepad [1].state [GAMEPAD_DIRECTION_RIGHT]   ? 0 : BIT_3) |
+                             (gamepad [1].state [GAMEPAD_BUTTON_1]          ? 0 : BIT_4) |
+                             (gamepad [1].state [GAMEPAD_BUTTON_2]          ? 0 : BIT_5);
             }
 
-            return port_value | (gamepad_2.state [GAMEPAD_DIRECTION_UP]     ? 0 : BIT_6) |
-                                (gamepad_2.state [GAMEPAD_DIRECTION_DOWN]   ? 0 : BIT_7);
+            return port_value | (gamepad [2].state [GAMEPAD_DIRECTION_UP]   ? 0 : BIT_6) |
+                                (gamepad [2].state [GAMEPAD_DIRECTION_DOWN] ? 0 : BIT_7);
         }
         else
         {
@@ -545,7 +544,7 @@ static uint8_t sms_io_read (void *context_ptr, uint8_t addr)
                 {
                     port_1_th = !(context->hw_state.io_control & SMS_IO_TH_A_LEVEL);
 
-                    if (gamepad_1.type == GAMEPAD_TYPE_SMS_PADDLE)
+                    if (gamepad [1].type == GAMEPAD_TYPE_SMS_PADDLE)
                     {
                         context->export_paddle = true;
                     }
@@ -558,16 +557,16 @@ static uint8_t sms_io_read (void *context_ptr, uint8_t addr)
                 }
             }
 
-            if (gamepad_1.type == GAMEPAD_TYPE_SMS_PHASER)
+            if (gamepad [1].type == GAMEPAD_TYPE_SMS_PHASER)
             {
                 port_1_th |= sms_vdp_get_phaser_th (context->vdp_context, context->z80_context->cycle_count);
             }
 
             /* I/O Port B/misc */
-            return (gamepad_2.state [GAMEPAD_DIRECTION_LEFT]    ? 0 : BIT_0) |
-                   (gamepad_2.state [GAMEPAD_DIRECTION_RIGHT]   ? 0 : BIT_1) |
-                   (gamepad_2.state [GAMEPAD_BUTTON_1]          ? 0 : BIT_2) |
-                   (gamepad_2.state [GAMEPAD_BUTTON_2]          ? 0 : BIT_3) |
+            return (gamepad [2].state [GAMEPAD_DIRECTION_LEFT]  ? 0 : BIT_0) |
+                   (gamepad [2].state [GAMEPAD_DIRECTION_RIGHT] ? 0 : BIT_1) |
+                   (gamepad [2].state [GAMEPAD_BUTTON_1]        ? 0 : BIT_2) |
+                   (gamepad [2].state [GAMEPAD_BUTTON_2]        ? 0 : BIT_3) |
                    (/* TODO: RESET */                         0 ? 0 : BIT_4) |
                    (port_1_th                                   ? 0 : BIT_6) |
                    (port_2_th                                   ? 0 : BIT_7);
@@ -916,7 +915,7 @@ static void sms_run (void *context_ptr, uint32_t ms)
 
     pthread_mutex_lock (&sms_state_mutex);
 
-    if (gamepad_1.type == GAMEPAD_TYPE_SMS_PADDLE)
+    if (gamepad [1].type == GAMEPAD_TYPE_SMS_PADDLE)
     {
         gamepad_paddle_tick (ms);
     }

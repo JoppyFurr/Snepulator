@@ -28,15 +28,14 @@ uint32_t gamepad_config_count = 0;
 Gamepad_Instance gamepad_list [128];
 uint32_t gamepad_list_count = 0;
 
-/* Current gamepad configuration */
-Gamepad_Config *gamepad_1_config;
-Gamepad_Config *gamepad_2_config;
-Gamepad_Config *gamepad_3_config;
-
-/* Current gamepad state */
-Snepulator_Gamepad gamepad_1;
-Snepulator_Gamepad gamepad_2;
-Snepulator_Gamepad gamepad_3; /* Used for the 'configure' dialogue */
+/*
+ * Gamepad State
+ *
+ *   gamepad [0]: Utility, used during remapping.
+ *   gamepad [1]: Player 1.
+ *   gamepad [2]: Player 2.
+ */
+Snepulator_Gamepad gamepad [3];
 
 
 /*
@@ -50,96 +49,101 @@ void gamepad_get_uuid (int32_t device_id, uint8_t *uuid)
 
 
 /*
- * Process an SDL_Event.
+ * Handle an axis event.
  */
-void gamepad_process_event (SDL_Event *event)
+void gamepad_process_axis_event (int32_t id, int32_t axis, int32_t value)
 {
-    Gamepad_Config *config;
-    Snepulator_Gamepad *gamepad;
-
-    for (uint32_t player = 1; player <= 3; player++)
+    for (uint32_t player = 0; player < 3; player++)
     {
-        switch (player)
+        if (gamepad [player].id != id)
         {
-            case 1:
-                config = gamepad_1_config;
-                gamepad = &gamepad_1;
-                break;
-            case 2:
-                config = gamepad_2_config;
-                gamepad = &gamepad_2;
-                break;
-            case 3:
-                config = gamepad_3_config;
-                gamepad = &gamepad_3;
-                break;
-            default:
-                return;
+            continue;
         }
 
-        /* Keyboard */
-        if ((event->type == SDL_KEYDOWN || event->type == SDL_KEYUP) && gamepad->instance_id == INSTANCE_ID_KEYBOARD)
+        for (uint32_t button = 0; button < GAMEPAD_BUTTON_COUNT; button++)
         {
-            for (int i = 0; i < GAMEPAD_BUTTON_COUNT; i++)
+            if (gamepad [player].config->mapping [button].type == GAMEPAD_MAPPING_TYPE_AXIS)
             {
-                if (config->mapping [i].type == SDL_KEYDOWN)
+                if (gamepad [player].config->mapping [button].axis == axis)
                 {
-                    if (event->key.keysym.sym == config->mapping [i].key)
-                    {
-                        gamepad->state [i] = (event->type == SDL_KEYDOWN);
-                    }
-                }
-            }
-        }
-
-        /* Joystick Axis */
-        else if ((event->type == SDL_JOYAXISMOTION) && event->jaxis.which == gamepad->instance_id)
-        {
-            for (int i = 0; i < GAMEPAD_BUTTON_COUNT; i++)
-            {
-                if ((config->mapping [i].type == SDL_JOYAXISMOTION) && (event->jaxis.axis == config->mapping [i].axis))
-                {
-                    /* TODO: Make the deadzone configurable */
-                    gamepad->state [i] = ((event->jaxis.value * config->mapping [i].sign ) > 16000) ? 1 : 0;
-                }
-            }
-        }
-
-        /* Joystick Hat */
-        else if ((event->type == SDL_JOYHATMOTION) && event->jhat.which == gamepad->instance_id)
-        {
-            for (int i = 0; i < GAMEPAD_BUTTON_COUNT; i++)
-            {
-                if ((config->mapping [i].type == SDL_JOYHATMOTION) && (event->jhat.hat == config->mapping [i].hat))
-                {
-                    gamepad->state [i] = (event->jhat.value & config->mapping [i].direction) ? 1 : 0;
-                }
-            }
-        }
-
-        /* Joystick Button */
-        else if ((event->type == SDL_JOYBUTTONDOWN || event->type == SDL_JOYBUTTONUP) && event->jbutton.which == gamepad->instance_id)
-        {
-            for (int i = 0; i < GAMEPAD_BUTTON_COUNT; i++)
-            {
-                if ((config->mapping [i].type == SDL_JOYBUTTONDOWN) && (event->jbutton.button == config->mapping [i].button))
-                {
-                    gamepad->state [i] = (event->type == SDL_JOYBUTTONDOWN);
+                    gamepad [player].state [button] = (value * gamepad [player].config->mapping [button].sign) > 16000 ? 1 : 0;
                 }
             }
         }
     }
+}
 
-    /* Special case for Light Phaser (mouse) */
-    if (gamepad_1.type == GAMEPAD_TYPE_SMS_PHASER)
+
+/*
+ * Handle a button event.
+ *
+ * Expected axis-range is -32768 through +32767
+ */
+void gamepad_process_button_event (int32_t id, int32_t device_button, bool button_down)
+{
+    for (uint32_t player = 0; player < 3; player++)
     {
-        if (event->type == SDL_MOUSEBUTTONDOWN && event->button.button == SDL_BUTTON_LEFT)
+        if (gamepad [player].id != id)
         {
-            gamepad_1.state [GAMEPAD_BUTTON_1] = true;
+            continue;
         }
-        else if (event->type == SDL_MOUSEBUTTONUP && event->button.button == SDL_BUTTON_LEFT)
+
+        for (uint32_t button = 0; button < GAMEPAD_BUTTON_COUNT; button++)
         {
-            gamepad_1.state [GAMEPAD_BUTTON_1] = false;
+            if (gamepad [player].config->mapping [button].type == GAMEPAD_MAPPING_TYPE_BUTTON)
+            {
+                if (gamepad [player].config->mapping [button].button == device_button)
+                {
+                    gamepad [player].state [button] = button_down;
+                }
+            }
+        }
+    }
+}
+
+
+/*
+ * Handle a hat event.
+ */
+void gamepad_process_hat_event (int32_t id, int32_t hat, int32_t direction)
+{
+    for (uint32_t player = 0; player < 3; player++)
+    {
+        if (gamepad [player].id != id)
+        {
+            continue;
+        }
+
+        for (uint32_t button = 0; button < GAMEPAD_BUTTON_COUNT; button++)
+        {
+            if (gamepad [player].config->mapping [button].type == GAMEPAD_MAPPING_TYPE_HAT)
+            {
+                if (gamepad [player].config->mapping [button].hat == hat)
+                {
+                    gamepad [player].state [button] = (gamepad [player].config->mapping [button].direction & direction) ? 1 : 0;
+                }
+            }
+        }
+    }
+}
+
+
+/*
+ * Handle a keyboard event.
+ */
+void gamepad_process_key_event (int32_t key, bool key_down)
+{
+    for (uint32_t player = 0; player < 3; player++)
+    {
+        for (uint32_t button = 0; button < GAMEPAD_BUTTON_COUNT; button++)
+        {
+            if (gamepad [player].config->mapping [button].type == GAMEPAD_MAPPING_TYPE_KEY)
+            {
+                if (gamepad [player].config->mapping [button].key == key)
+                {
+                    gamepad [player].state [button] = key_down;
+                }
+            }
         }
     }
 }
@@ -158,24 +162,24 @@ void gamepad_paddle_tick (uint32_t ms)
     static float remainder = 0.0;
     float paddle_speed = 250.0;
     float delta;
-    int16_t new_position = gamepad_1.paddle_position;
+    int16_t new_position = gamepad [1].paddle_position;
 
     /* Temporary™ digital-only support */
-    if (gamepad_1.state [GAMEPAD_DIRECTION_LEFT])
+    if (gamepad [1].state [GAMEPAD_DIRECTION_LEFT])
     {
-        gamepad_1.paddle_velocity = -1.0;
+        gamepad [1].paddle_velocity = -1.0;
     }
-    else if (gamepad_1.state [GAMEPAD_DIRECTION_RIGHT])
+    else if (gamepad [1].state [GAMEPAD_DIRECTION_RIGHT])
     {
-        gamepad_1.paddle_velocity = 1.0;
+        gamepad [1].paddle_velocity = 1.0;
     }
     else
     {
-        gamepad_1.paddle_velocity = 0.0;
+        gamepad [1].paddle_velocity = 0.0;
     }
 
     /* Calculate and apply movement */
-    delta = gamepad_1.paddle_velocity * paddle_speed * (ms * 0.001) + remainder;
+    delta = gamepad [1].paddle_velocity * paddle_speed * (ms * 0.001) + remainder;
     new_position += (int16_t) delta;
     remainder = fmodf (delta, 1.0);
 
@@ -189,7 +193,7 @@ void gamepad_paddle_tick (uint32_t ms)
         new_position = 0;
     }
 
-    gamepad_1.paddle_position = new_position;
+    gamepad [1].paddle_position = new_position;
 }
 
 
@@ -224,13 +228,13 @@ static uint32_t gamepad_config_create (int32_t device_id)
             switch (bind.bindType)
             {
                 case SDL_CONTROLLER_BINDTYPE_BUTTON:
-                    new_config.mapping [i] = (Gamepad_Mapping) { .type = SDL_JOYBUTTONDOWN, .button = bind.value.button };
+                    new_config.mapping [i] = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_BUTTON, .button = bind.value.button };
                     break;
                 case SDL_CONTROLLER_BINDTYPE_AXIS:
-                    new_config.mapping [i] = (Gamepad_Mapping) { .type = SDL_JOYAXISMOTION, .axis = bind.value.axis, .sign = axis_sign [i] };
+                    new_config.mapping [i] = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_AXIS, .axis = bind.value.axis, .sign = axis_sign [i] };
                     break;
                 case SDL_CONTROLLER_BINDTYPE_HAT:
-                    new_config.mapping [i] = (Gamepad_Mapping) { .type = SDL_JOYHATMOTION, .hat = bind.value.hat.hat, .direction = bind.value.hat.hat_mask };
+                    new_config.mapping [i] = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_HAT, .hat = bind.value.hat.hat, .direction = bind.value.hat.hat_mask };
                     break;
                 default:
                     /* Do nothing */
@@ -243,13 +247,13 @@ static uint32_t gamepad_config_create (int32_t device_id)
     else
     {
         /* Default config if this is not an identified game controller */
-        new_config.mapping [GAMEPAD_DIRECTION_UP]       = (Gamepad_Mapping) { .type = SDL_JOYAXISMOTION, .axis = 1, .sign = -1 };
-        new_config.mapping [GAMEPAD_DIRECTION_DOWN]     = (Gamepad_Mapping) { .type = SDL_JOYAXISMOTION, .axis = 1, .sign =  1 };
-        new_config.mapping [GAMEPAD_DIRECTION_LEFT]     = (Gamepad_Mapping) { .type = SDL_JOYAXISMOTION, .axis = 0, .sign = -1 };
-        new_config.mapping [GAMEPAD_DIRECTION_RIGHT]    = (Gamepad_Mapping) { .type = SDL_JOYAXISMOTION, .axis = 0, .sign =  1 };
-        new_config.mapping [GAMEPAD_BUTTON_1]           = (Gamepad_Mapping) { .type = SDL_JOYBUTTONDOWN, .button = 2 };
-        new_config.mapping [GAMEPAD_BUTTON_2]           = (Gamepad_Mapping) { .type = SDL_JOYBUTTONDOWN, .button = 1 };
-        new_config.mapping [GAMEPAD_BUTTON_START]       = (Gamepad_Mapping) { .type = SDL_JOYBUTTONDOWN, .button = 9 };
+        new_config.mapping [GAMEPAD_DIRECTION_UP]       = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_AXIS, .axis = 1, .sign = -1 };
+        new_config.mapping [GAMEPAD_DIRECTION_DOWN]     = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_AXIS, .axis = 1, .sign =  1 };
+        new_config.mapping [GAMEPAD_DIRECTION_LEFT]     = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_AXIS, .axis = 0, .sign = -1 };
+        new_config.mapping [GAMEPAD_DIRECTION_RIGHT]    = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_AXIS, .axis = 0, .sign =  1 };
+        new_config.mapping [GAMEPAD_BUTTON_1]           = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_BUTTON, .button = 2 };
+        new_config.mapping [GAMEPAD_BUTTON_2]           = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_BUTTON, .button = 1 };
+        new_config.mapping [GAMEPAD_BUTTON_START]       = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_BUTTON, .button = 9 };
     }
 
     gamepad_config [gamepad_config_count] = new_config;
@@ -265,8 +269,8 @@ void gamepad_list_update (void)
 {
     gamepad_list_count = 0;
 
-    gamepad_list [gamepad_list_count++] = (Gamepad_Instance) { .instance_id = INSTANCE_ID_NONE, .config_index = GAMEPAD_INDEX_NONE };
-    gamepad_list [gamepad_list_count++] = (Gamepad_Instance) { .instance_id = INSTANCE_ID_KEYBOARD, .config_index = GAMEPAD_INDEX_KEYBOARD };
+    gamepad_list [gamepad_list_count++] = (Gamepad_Instance) { .instance_id = GAMEPAD_ID_NONE, .config_index = GAMEPAD_INDEX_NONE };
+    gamepad_list [gamepad_list_count++] = (Gamepad_Instance) { .instance_id = GAMEPAD_ID_KEYBOARD, .config_index = GAMEPAD_INDEX_KEYBOARD };
 
     for (int device_id = 0; device_id < SDL_NumJoysticks (); device_id++)
     {
@@ -311,21 +315,23 @@ void gamepad_init (void)
     /* Add entry for GAMEPAD_INDEX_NONE */
     gamepad_config [gamepad_config_count++] = no_gamepad;
 
-    /* Initialise both players to GAMEPAD_INDEX_NONE */
-    gamepad_1.instance_id = INSTANCE_ID_NONE;
-    gamepad_1.type = GAMEPAD_TYPE_SMS;
-    gamepad_1.type_auto = true;
-    gamepad_1_config = &gamepad_config [GAMEPAD_INDEX_NONE];
-    gamepad_1.paddle_velocity = 0;
-    gamepad_1.paddle_position = 128;
+    /* Initialise all gamepads to GAMEPAD_INDEX_NONE */
+    gamepad [0].id = GAMEPAD_ID_NONE;
+    gamepad [0].type = GAMEPAD_TYPE_SMS;
+    gamepad [0].config = &gamepad_config [GAMEPAD_INDEX_NONE];
 
-    gamepad_2.instance_id = INSTANCE_ID_NONE;
-    gamepad_2.type = GAMEPAD_TYPE_SMS;
-    gamepad_2_config = &gamepad_config [GAMEPAD_INDEX_NONE];
+    gamepad [1].id = GAMEPAD_ID_NONE;
+    gamepad [1].type = GAMEPAD_TYPE_SMS;
+    gamepad [1].type_auto = true;
+    gamepad [1].config = &gamepad_config [GAMEPAD_INDEX_NONE];
+    gamepad [1].paddle_velocity = 0;
+    gamepad [1].paddle_position = 128;
 
-    gamepad_3.instance_id = INSTANCE_ID_NONE;
-    gamepad_3.type = GAMEPAD_TYPE_SMS;
-    gamepad_3_config = &gamepad_config [GAMEPAD_INDEX_NONE];
+    gamepad [2].id = GAMEPAD_ID_NONE;
+    gamepad [2].type = GAMEPAD_TYPE_SMS;
+    gamepad [2].config = &gamepad_config [GAMEPAD_INDEX_NONE];
+
+    /* TODO: Break out default keyboard setup to OS-specific function */
 
     /* Add entry for GAMEPAD_INDEX_KEYBOARD */
     Gamepad_Config default_keyboard = { };
@@ -336,49 +342,50 @@ void gamepad_init (void)
     {
         /* Dvorak */
         case SDLK_o:
-            default_keyboard.mapping [GAMEPAD_DIRECTION_UP]     = (Gamepad_Mapping) { .type = SDL_KEYDOWN, .key = SDLK_COMMA };
-            default_keyboard.mapping [GAMEPAD_DIRECTION_DOWN]   = (Gamepad_Mapping) { .type = SDL_KEYDOWN, .key = SDLK_o };
-            default_keyboard.mapping [GAMEPAD_DIRECTION_LEFT]   = (Gamepad_Mapping) { .type = SDL_KEYDOWN, .key = SDLK_a };
-            default_keyboard.mapping [GAMEPAD_DIRECTION_RIGHT]  = (Gamepad_Mapping) { .type = SDL_KEYDOWN, .key = SDLK_e };
-            default_keyboard.mapping [GAMEPAD_BUTTON_1]         = (Gamepad_Mapping) { .type = SDL_KEYDOWN, .key = SDLK_v };
-            default_keyboard.mapping [GAMEPAD_BUTTON_2]         = (Gamepad_Mapping) { .type = SDL_KEYDOWN, .key = SDLK_z };
-            default_keyboard.mapping [GAMEPAD_BUTTON_START]     = (Gamepad_Mapping) { .type = SDL_KEYDOWN, .key = SDLK_RETURN };
+            default_keyboard.mapping [GAMEPAD_DIRECTION_UP]     = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_COMMA };
+            default_keyboard.mapping [GAMEPAD_DIRECTION_DOWN]   = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_o };
+            default_keyboard.mapping [GAMEPAD_DIRECTION_LEFT]   = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_a };
+            default_keyboard.mapping [GAMEPAD_DIRECTION_RIGHT]  = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_e };
+            default_keyboard.mapping [GAMEPAD_BUTTON_1]         = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_v };
+            default_keyboard.mapping [GAMEPAD_BUTTON_2]         = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_z };
+            default_keyboard.mapping [GAMEPAD_BUTTON_START]     = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_RETURN };
             break;
 
         /* Colemak */
         case SDLK_r:
-            default_keyboard.mapping [GAMEPAD_DIRECTION_UP]     = (Gamepad_Mapping) { .type = SDL_KEYDOWN, .key = SDLK_w };
-            default_keyboard.mapping [GAMEPAD_DIRECTION_DOWN]   = (Gamepad_Mapping) { .type = SDL_KEYDOWN, .key = SDLK_r };
-            default_keyboard.mapping [GAMEPAD_DIRECTION_LEFT]   = (Gamepad_Mapping) { .type = SDL_KEYDOWN, .key = SDLK_a };
-            default_keyboard.mapping [GAMEPAD_DIRECTION_RIGHT]  = (Gamepad_Mapping) { .type = SDL_KEYDOWN, .key = SDLK_s };
-            default_keyboard.mapping [GAMEPAD_BUTTON_1]         = (Gamepad_Mapping) { .type = SDL_KEYDOWN, .key = SDLK_PERIOD };
-            default_keyboard.mapping [GAMEPAD_BUTTON_2]         = (Gamepad_Mapping) { .type = SDL_KEYDOWN, .key = SDLK_SLASH };
-            default_keyboard.mapping [GAMEPAD_BUTTON_START]     = (Gamepad_Mapping) { .type = SDL_KEYDOWN, .key = SDLK_RETURN };
+            default_keyboard.mapping [GAMEPAD_DIRECTION_UP]     = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_w };
+            default_keyboard.mapping [GAMEPAD_DIRECTION_DOWN]   = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_r };
+            default_keyboard.mapping [GAMEPAD_DIRECTION_LEFT]   = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_a };
+            default_keyboard.mapping [GAMEPAD_DIRECTION_RIGHT]  = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_s };
+            default_keyboard.mapping [GAMEPAD_BUTTON_1]         = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_PERIOD };
+            default_keyboard.mapping [GAMEPAD_BUTTON_2]         = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_SLASH };
+            default_keyboard.mapping [GAMEPAD_BUTTON_START]     = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_RETURN };
             break;
 
         /* Qwerty */
         case SDLK_s:
         default:
-            default_keyboard.mapping [GAMEPAD_DIRECTION_UP]     = (Gamepad_Mapping) { .type = SDL_KEYDOWN, .key = SDLK_w };
-            default_keyboard.mapping [GAMEPAD_DIRECTION_DOWN]   = (Gamepad_Mapping) { .type = SDL_KEYDOWN, .key = SDLK_s };
-            default_keyboard.mapping [GAMEPAD_DIRECTION_LEFT]   = (Gamepad_Mapping) { .type = SDL_KEYDOWN, .key = SDLK_a };
-            default_keyboard.mapping [GAMEPAD_DIRECTION_RIGHT]  = (Gamepad_Mapping) { .type = SDL_KEYDOWN, .key = SDLK_d };
-            default_keyboard.mapping [GAMEPAD_BUTTON_1]         = (Gamepad_Mapping) { .type = SDL_KEYDOWN, .key = SDLK_PERIOD };
-            default_keyboard.mapping [GAMEPAD_BUTTON_2]         = (Gamepad_Mapping) { .type = SDL_KEYDOWN, .key = SDLK_SLASH };
-            default_keyboard.mapping [GAMEPAD_BUTTON_START]     = (Gamepad_Mapping) { .type = SDL_KEYDOWN, .key = SDLK_RETURN };
+            default_keyboard.mapping [GAMEPAD_DIRECTION_UP]     = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_w };
+            default_keyboard.mapping [GAMEPAD_DIRECTION_DOWN]   = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_s };
+            default_keyboard.mapping [GAMEPAD_DIRECTION_LEFT]   = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_a };
+            default_keyboard.mapping [GAMEPAD_DIRECTION_RIGHT]  = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_d };
+            default_keyboard.mapping [GAMEPAD_BUTTON_1]         = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_PERIOD };
+            default_keyboard.mapping [GAMEPAD_BUTTON_2]         = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_SLASH };
+            default_keyboard.mapping [GAMEPAD_BUTTON_START]     = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_RETURN };
             break;
     }
     gamepad_config [gamepad_config_count++] = default_keyboard;
 
     /* Read saved config from file */
     gamepad_config_import ();
+
     /* Populate the gamepad list */
     gamepad_list_update ();
 
     /* Set default devices for players */
+    gamepad_change_device (0, GAMEPAD_INDEX_NONE);
     gamepad_change_device (1, GAMEPAD_INDEX_KEYBOARD);
     gamepad_change_device (2, GAMEPAD_INDEX_NONE);
-    gamepad_change_device (3, GAMEPAD_INDEX_NONE);
 }
 
 
@@ -445,20 +452,19 @@ const char *gamepad_get_name (uint32_t index)
 
 
 /*
- * Return the number of players using the specified joystick instance_id.
+ * Return the number of players using the specified joystick id.
  */
-uint32_t gamepad_joystick_user_count (uint32_t instance_id)
+uint32_t gamepad_joystick_user_count (uint32_t id)
 {
     uint32_t count = 0;
 
-    if (gamepad_1.instance_id == instance_id)
-        count++;
-
-    if (gamepad_2.instance_id == instance_id)
-        count++;
-
-    if (gamepad_3.instance_id == instance_id)
-        count++;
+    for (uint32_t player = 0; player < 3; player++)
+    {
+        if (gamepad [player].id == id)
+        {
+            count++;
+        }
+    }
 
     return count;
 }
@@ -472,35 +478,15 @@ uint32_t gamepad_joystick_user_count (uint32_t instance_id)
 void gamepad_change_device (uint32_t player, int32_t index)
 {
     SDL_Joystick *joystick;
-    Gamepad_Config **config;
-    Snepulator_Gamepad *gamepad;
-
-    switch (player)
-    {
-        case 1:
-            config = &gamepad_1_config;
-            gamepad = &gamepad_1;
-            break;
-        case 2:
-            config = &gamepad_2_config;
-            gamepad = &gamepad_2;
-            break;
-        case 3:
-            config = &gamepad_3_config;
-            gamepad = &gamepad_3;
-            break;
-        default:
-            return;
-    }
 
     /* Close the previous joystick if we are the only user */
-    if (gamepad->instance_id > INSTANCE_ID_NONE && gamepad_joystick_user_count (gamepad->instance_id) == 1)
+    if (gamepad [player].id > GAMEPAD_ID_NONE && gamepad_joystick_user_count (gamepad [player].id) == 1)
     {
-        joystick = SDL_JoystickFromInstanceID (gamepad->instance_id);
+        joystick = SDL_JoystickFromInstanceID (gamepad [player].id);
         SDL_JoystickClose (joystick);
     }
-    gamepad->instance_id = INSTANCE_ID_NONE;
-    *config = &gamepad_config [GAMEPAD_INDEX_NONE];
+    gamepad [player].id = GAMEPAD_ID_NONE;
+    gamepad [player].config = &gamepad_config [GAMEPAD_INDEX_NONE];
 
     if (index == GAMEPAD_INDEX_NONE)
     {
@@ -510,8 +496,8 @@ void gamepad_change_device (uint32_t player, int32_t index)
     /* Open the new device */
     if (index == GAMEPAD_INDEX_KEYBOARD)
     {
-        *config = &gamepad_config [GAMEPAD_INDEX_KEYBOARD];
-        gamepad->instance_id = INSTANCE_ID_KEYBOARD;
+        gamepad [player].config = &gamepad_config [GAMEPAD_INDEX_KEYBOARD];
+        gamepad [player].id = GAMEPAD_ID_KEYBOARD;
     }
     else
     {
@@ -525,8 +511,8 @@ void gamepad_change_device (uint32_t player, int32_t index)
 
         if (joystick)
         {
-            *config = &gamepad_config [gamepad_list [index].config_index];
-            gamepad->instance_id = SDL_JoystickInstanceID (joystick);
+            gamepad [player].config = &gamepad_config [gamepad_list [index].config_index];
+            gamepad [player].id = SDL_JoystickInstanceID (joystick);
         }
     }
 }
@@ -540,7 +526,7 @@ void gamepad_config_export (void)
     char section_name [MAX_STRING_SIZE] = { '\0' };
     char mapping_data [MAX_STRING_SIZE] = { '\0' };
 
-    for (uint32_t i = 0; i < gamepad_config_count; i++)
+    for (uint32_t i = GAMEPAD_INDEX_KEYBOARD; i < gamepad_config_count; i++)
     {
         /* Section name */
         snprintf (section_name, 1023, "gamepad-%02x%02x.%02x%02x.%02x%02x.%02x%02x.%02x%02x.%02x%02x.%02x%02x.%02x%02x",

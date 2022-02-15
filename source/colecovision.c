@@ -24,8 +24,7 @@
 #include "colecovision.h"
 
 extern Snepulator_State state;
-extern Snepulator_Gamepad gamepad_1;
-extern Snepulator_Gamepad gamepad_2;
+extern Snepulator_Gamepad gamepad [3];
 extern pthread_mutex_t video_mutex;
 
 static pthread_mutex_t colecovision_state_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -279,13 +278,13 @@ static uint8_t colecovision_io_read (void *context_ptr, uint8_t addr)
         {
             if (context->hw_state.input_mode == COLECOVISION_INPUT_MODE_JOYSTICK)
             {
-                return (gamepad_1.state [GAMEPAD_DIRECTION_UP]      ? 0 : BIT_0) |
-                       (gamepad_1.state [GAMEPAD_DIRECTION_RIGHT]   ? 0 : BIT_1) |
-                       (gamepad_1.state [GAMEPAD_DIRECTION_DOWN]    ? 0 : BIT_2) |
-                       (gamepad_1.state [GAMEPAD_DIRECTION_LEFT]    ? 0 : BIT_3) |
+                return (gamepad [1].state [GAMEPAD_DIRECTION_UP]    ? 0 : BIT_0) |
+                       (gamepad [1].state [GAMEPAD_DIRECTION_RIGHT] ? 0 : BIT_1) |
+                       (gamepad [1].state [GAMEPAD_DIRECTION_DOWN]  ? 0 : BIT_2) |
+                       (gamepad [1].state [GAMEPAD_DIRECTION_LEFT]  ? 0 : BIT_3) |
                        (                                                  BIT_4) |
                        (                                                  BIT_5) |
-                       (gamepad_1.state [GAMEPAD_BUTTON_1]          ? 0 : BIT_6);
+                       (gamepad [1].state [GAMEPAD_BUTTON_1]        ? 0 : BIT_6);
             }
             else
             {
@@ -348,7 +347,7 @@ static uint8_t colecovision_io_read (void *context_ptr, uint8_t addr)
                     key = 0x0f;
                 }
 
-                return key | BIT_4 | BIT_5 | (gamepad_1.state [GAMEPAD_BUTTON_2] ? 0 : BIT_6);
+                return key | BIT_4 | BIT_5 | (gamepad [1].state [GAMEPAD_BUTTON_2] ? 0 : BIT_6);
             }
         }
         else

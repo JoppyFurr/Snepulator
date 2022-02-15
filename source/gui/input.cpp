@@ -31,9 +31,7 @@ extern Snepulator_State state;
 extern Gamepad_Instance gamepad_list [128];
 extern uint32_t gamepad_list_count;
 
-extern Gamepad_Config *gamepad_3_config;
-extern Snepulator_Gamepad gamepad_3;
-extern Snepulator_Gamepad gamepad_1;
+extern Snepulator_Gamepad gamepad [3];
 }
 
 /* Global state */
@@ -57,51 +55,8 @@ bool input_modal_consume_event (SDL_Event event)
         consumed = false;
     }
 
-    /* For now, hard-code that we are only interested in the keyboard */
-    else if (event.type == SDL_KEYDOWN && gamepad_3.instance_id == INSTANCE_ID_KEYBOARD)
-    {
-        map_to_edit.mapping [remap_button].key = event.key.keysym.sym;
-        remap_button++;
-        consumed = true;
-    }
-
-    else if (event.type == SDL_JOYBUTTONDOWN && event.jbutton.which == gamepad_3.instance_id)
-    {
-        map_to_edit.mapping [remap_button].type = SDL_JOYBUTTONDOWN;
-        map_to_edit.mapping [remap_button].button = event.jbutton.button;
-        remap_button++;
-        consumed = true;
-    }
-
-    else if (event.type == SDL_JOYHATMOTION && event.jhat.which == gamepad_3.instance_id)
-    {
-        /* If a hat is triggered, ignore all hat motion while it returns to the centre */
-        static bool waiting = false;
-        static uint8_t waiting_hat;
-
-        if (waiting)
-        {
-            if (event.jhat.hat == waiting_hat && event.jhat.value == SDL_HAT_CENTERED)
-            {
-                waiting = false;
-            }
-        }
-        else if (event.jhat.value == SDL_HAT_UP || event.jhat.value == SDL_HAT_DOWN ||
-                 event.jhat.value == SDL_HAT_LEFT || event.jhat.value == SDL_HAT_RIGHT)
-        {
-            waiting = true;
-            waiting_hat = event.jhat.hat;
-
-            map_to_edit.mapping [remap_button].type = SDL_JOYHATMOTION;
-            map_to_edit.mapping [remap_button].hat = event.jhat.hat;
-            map_to_edit.mapping [remap_button].direction = event.jhat.value;
-            remap_button++;
-        }
-
-        consumed = true;
-    }
-
-    else if (event.type == SDL_JOYAXISMOTION && event.jaxis.which == gamepad_3.instance_id)
+    /* Axis */
+    else if (event.type == SDL_JOYAXISMOTION && event.jaxis.which == gamepad [0].id)
     {
         /* If an axis is triggered, ignore all axis motions while it returns to the centre */
         static bool waiting = false;
@@ -121,7 +76,7 @@ bool input_modal_consume_event (SDL_Event event)
             waiting = true;
             waiting_axis = event.jaxis.axis;
 
-            map_to_edit.mapping [remap_button].type = SDL_JOYAXISMOTION;
+            map_to_edit.mapping [remap_button].type = GAMEPAD_MAPPING_TYPE_AXIS;
             map_to_edit.mapping [remap_button].axis = event.jaxis.axis;
             map_to_edit.mapping [remap_button].sign = sign;
             remap_button++;
@@ -129,6 +84,54 @@ bool input_modal_consume_event (SDL_Event event)
 
         consumed = true;
     }
+
+    /* Button */
+    else if (event.type == SDL_JOYBUTTONDOWN && event.jbutton.which == gamepad [0].id)
+    {
+        map_to_edit.mapping [remap_button].type = GAMEPAD_MAPPING_TYPE_BUTTON;
+        map_to_edit.mapping [remap_button].button = event.jbutton.button;
+        remap_button++;
+        consumed = true;
+    }
+
+    /* Hat */
+    else if (event.type == SDL_JOYHATMOTION && event.jhat.which == gamepad [0].id)
+    {
+        /* If a hat is triggered, ignore all hat motion while it returns to the centre */
+        static bool waiting = false;
+        static uint8_t waiting_hat;
+
+        if (waiting)
+        {
+            if (event.jhat.hat == waiting_hat && event.jhat.value == SDL_HAT_CENTERED)
+            {
+                waiting = false;
+            }
+        }
+        else if (event.jhat.value == SDL_HAT_UP || event.jhat.value == SDL_HAT_DOWN ||
+                 event.jhat.value == SDL_HAT_LEFT || event.jhat.value == SDL_HAT_RIGHT)
+        {
+            waiting = true;
+            waiting_hat = event.jhat.hat;
+
+            map_to_edit.mapping [remap_button].type = GAMEPAD_MAPPING_TYPE_HAT;
+            map_to_edit.mapping [remap_button].hat = event.jhat.hat;
+            map_to_edit.mapping [remap_button].direction = event.jhat.value;
+            remap_button++;
+        }
+
+        consumed = true;
+    }
+
+    /* Keyboard */
+    else if (event.type == SDL_KEYDOWN && gamepad [0].id == GAMEPAD_ID_KEYBOARD)
+    {
+        map_to_edit.mapping [remap_button].type = GAMEPAD_MAPPING_TYPE_KEY;
+        map_to_edit.mapping [remap_button].key = event.key.keysym.sym;
+        remap_button++;
+        consumed = true;
+    }
+
 
     if (consumed == true && remap_button == GAMEPAD_BUTTON_COUNT)
     {
@@ -151,10 +154,10 @@ void input_start (void)
     /* Initially selected device is player-1's device */
     for (uint32_t i = 0; i < gamepad_list_count; i++)
     {
-        if (gamepad_list [i].instance_id == gamepad_1.instance_id)
+        if (gamepad_list [i].instance_id == gamepad [1].id)
         {
-            gamepad_change_device (3, i);
-            map_to_edit = *gamepad_3_config;
+            gamepad_change_device (0, i);
+            map_to_edit = *gamepad [0].config;
             remap_button = GAMEPAD_BUTTON_COUNT;
             input_combo_index = i;
             break;
@@ -177,21 +180,21 @@ const char *button_mapping_to_string (Gamepad_Mapping b)
 
     switch (b.type)
     {
-        case SDL_KEYDOWN:
-            return SDL_GetKeyName (b.key);
-        case SDL_JOYAXISMOTION:
+        case GAMEPAD_MAPPING_TYPE_AXIS:
             sprintf (buff, "Axis %d %s", b.axis, (b.sign < 0.0) ? "-" : "+");
             break;
-        case SDL_JOYHATMOTION:
+        case GAMEPAD_MAPPING_TYPE_BUTTON:
+            sprintf (buff, "Button %d", b.button);
+            break;
+        case GAMEPAD_MAPPING_TYPE_HAT:
             sprintf (buff, "Hat %d %s", b.hat, (b.direction == SDL_HAT_UP)    ? "Up"
                                              : (b.direction == SDL_HAT_DOWN)  ? "Down"
                                              : (b.direction == SDL_HAT_LEFT)  ? "Left"
                                              : (b.direction == SDL_HAT_RIGHT) ? "Right"
                                              : "Unknown");
             break;
-        case SDL_JOYBUTTONDOWN:
-            sprintf (buff, "Button %d", b.button);
-            break;
+        case GAMEPAD_MAPPING_TYPE_KEY:
+            return SDL_GetKeyName (b.key);
         default:
             return "Unknown";
     }
@@ -224,16 +227,16 @@ void snepulator_render_input_modal (void)
         ImGui::PushItemWidth (width - 16);
         if (ImGui::BeginCombo ("##Device", gamepad_get_name (input_combo_index)))
         {
-            for (uint32_t i = 0; i < gamepad_list_count; i++)
+            for (uint32_t i = GAMEPAD_INDEX_KEYBOARD; i < gamepad_list_count; i++)
             {
                 if (ImGui::Selectable (gamepad_get_name (i), i == input_combo_index))
                 {
-                    gamepad_change_device (3, i);
-                    map_to_edit = *gamepad_3_config;
+                    gamepad_change_device (0, i);
+                    map_to_edit = *gamepad [0].config;
                     remap_button = GAMEPAD_BUTTON_COUNT;
                     input_combo_index = i;
                 }
-                if (i == 0)
+                if (i == 1)
                 {
                     ImGui::SetItemDefaultFocus ();
                 }
@@ -322,35 +325,35 @@ void snepulator_render_input_modal (void)
             /* If we're not currently remapping, show the current gamepad state */
             else
             {
-                if (gamepad_3.state[GAMEPAD_DIRECTION_UP])
+                if (gamepad [0].state[GAMEPAD_DIRECTION_UP])
                 {
                 draw_list->AddRectFilled (ImVec2 (origin.x + scale * 0.16, origin.y + scale * 0.08),
                                           ImVec2 (origin.x + scale * 0.38, origin.y + scale * 0.20), ButtonPressed, scale * 0.06);
                 }
-                if (gamepad_3.state[GAMEPAD_DIRECTION_DOWN])
+                if (gamepad [0].state[GAMEPAD_DIRECTION_DOWN])
                 {
                     draw_list->AddRectFilled (ImVec2 (origin.x + scale * 0.16, origin.y + scale * 0.20),
                                               ImVec2 (origin.x + scale * 0.38, origin.y + scale * 0.32), ButtonPressed, scale * 0.06);
                 }
-                if (gamepad_3.state[GAMEPAD_DIRECTION_LEFT])
+                if (gamepad [0].state[GAMEPAD_DIRECTION_LEFT])
                 {
                     draw_list->AddRectFilled (ImVec2 (origin.x + scale * 0.16, origin.y + scale * 0.08),
                                               ImVec2 (origin.x + scale * 0.27, origin.y + scale * 0.32), ButtonPressed, scale * 0.06);
                 }
-                if (gamepad_3.state[GAMEPAD_DIRECTION_RIGHT])
+                if (gamepad [0].state[GAMEPAD_DIRECTION_RIGHT])
                 {
                     draw_list->AddRectFilled (ImVec2 (origin.x + scale * 0.27, origin.y + scale * 0.08),
                                               ImVec2 (origin.x + scale * 0.38, origin.y + scale * 0.32), ButtonPressed, scale * 0.06);
                 }
-                if (gamepad_3.state[GAMEPAD_BUTTON_1])
+                if (gamepad [0].state[GAMEPAD_BUTTON_1])
                 {
                     draw_list->AddCircleFilled (ImVec2 ( origin.x + scale * 0.70, origin.y + scale * 0.25), scale * 0.06, ButtonPressed, 32);
                 }
-                if (gamepad_3.state[GAMEPAD_BUTTON_2])
+                if (gamepad [0].state[GAMEPAD_BUTTON_2])
                 {
                     draw_list->AddCircleFilled (ImVec2 (origin.x + scale * 0.87, origin.y + scale * 0.25), scale * 0.06, ButtonPressed, 32);
                 }
-                if (gamepad_3.state[GAMEPAD_BUTTON_START])
+                if (gamepad [0].state[GAMEPAD_BUTTON_START])
                 {
                     /* Nothing to highlight for the pause button yet */
                 }
@@ -394,7 +397,7 @@ void snepulator_render_input_modal (void)
             /* TODO: Re-load the saved configuration */
 
             remap_button = GAMEPAD_BUTTON_COUNT;
-            gamepad_change_device (3, GAMEPAD_INDEX_NONE);
+            gamepad_change_device (0, GAMEPAD_INDEX_NONE);
             config_capture_events = false;
             ImGui::CloseCurrentPopup ();
 
@@ -414,7 +417,7 @@ void snepulator_render_input_modal (void)
         ImGui::SameLine ();
         if (ImGui::Button ("OK", ImVec2 (120,0))) {
             remap_button = GAMEPAD_BUTTON_COUNT;
-            gamepad_change_device (3, GAMEPAD_INDEX_NONE);
+            gamepad_change_device (0, GAMEPAD_INDEX_NONE);
             config_capture_events = false;
             ImGui::CloseCurrentPopup ();
             gamepad_config_export ();

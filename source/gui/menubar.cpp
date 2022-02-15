@@ -32,8 +32,7 @@ extern TMS9928A_Mode sms_vdp_mode_get (void);
 /* TODO: Access through a function instead of accessing the array */
 extern Gamepad_Instance gamepad_list [128];
 extern uint32_t gamepad_list_count;
-extern Snepulator_Gamepad gamepad_1;
-extern Snepulator_Gamepad gamepad_2;
+extern Snepulator_Gamepad gamepad [3];
 }
 
 #include "gui/input.h"
@@ -272,24 +271,24 @@ void snepulator_render_menubar (void)
             {
                 if (ImGui::BeginMenu ("Type"))
                 {
-                    if (ImGui::MenuItem ("Auto", NULL, gamepad_1.type_auto))
+                    if (ImGui::MenuItem ("Auto", NULL, gamepad [1].type_auto))
                     {
-                        gamepad_1.type_auto = true;
+                        gamepad [1].type_auto = true;
                     }
-                    if (ImGui::MenuItem ("SMS Gamepad", NULL, gamepad_1.type == GAMEPAD_TYPE_SMS))
+                    if (ImGui::MenuItem ("SMS Gamepad", NULL, gamepad [1].type == GAMEPAD_TYPE_SMS))
                     {
-                        gamepad_1.type = GAMEPAD_TYPE_SMS;
-                        gamepad_1.type_auto = false;
+                        gamepad [1].type = GAMEPAD_TYPE_SMS;
+                        gamepad [1].type_auto = false;
                     }
-                    if (ImGui::MenuItem ("SMS Light Phaser", NULL, gamepad_1.type == GAMEPAD_TYPE_SMS_PHASER))
+                    if (ImGui::MenuItem ("SMS Light Phaser", NULL, gamepad [1].type == GAMEPAD_TYPE_SMS_PHASER))
                     {
-                        gamepad_1.type = GAMEPAD_TYPE_SMS_PHASER;
-                        gamepad_1.type_auto = false;
+                        gamepad [1].type = GAMEPAD_TYPE_SMS_PHASER;
+                        gamepad [1].type_auto = false;
                     }
-                    if (ImGui::MenuItem ("SMS Paddle", NULL, gamepad_1.type == GAMEPAD_TYPE_SMS_PADDLE))
+                    if (ImGui::MenuItem ("SMS Paddle", NULL, gamepad [1].type == GAMEPAD_TYPE_SMS_PADDLE))
                     {
-                        gamepad_1.type = GAMEPAD_TYPE_SMS_PADDLE;
-                        gamepad_1.type_auto = false;
+                        gamepad [1].type = GAMEPAD_TYPE_SMS_PADDLE;
+                        gamepad [1].type_auto = false;
                     }
                     ImGui::EndMenu ();
                 }
@@ -298,7 +297,7 @@ void snepulator_render_menubar (void)
 
                 for (uint32_t i = 0; i < gamepad_list_count; i++)
                 {
-                    if (ImGui::MenuItem (gamepad_get_name (i), NULL, gamepad_list [i].instance_id == gamepad_1.instance_id))
+                    if (ImGui::MenuItem (gamepad_get_name (i), NULL, gamepad_list [i].instance_id == gamepad [1].id))
                     {
                         gamepad_change_device (1, i);
                     }
@@ -309,7 +308,7 @@ void snepulator_render_menubar (void)
             {
                 for (uint32_t i = 0; i < gamepad_list_count; i++)
                 {
-                    if (ImGui::MenuItem (gamepad_get_name (i), NULL, gamepad_list [i].instance_id == gamepad_2.instance_id))
+                    if (ImGui::MenuItem (gamepad_get_name (i), NULL, gamepad_list [i].instance_id == gamepad [2].id))
                     {
                         gamepad_change_device (2, i);
                     }

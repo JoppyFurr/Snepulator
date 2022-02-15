@@ -17,7 +17,7 @@
 #include "../database/sms_db.h"
 
 extern Snepulator_State state;
-extern Snepulator_Gamepad gamepad_1;
+extern Snepulator_Gamepad gamepad [3];
 
 #include "tms9928a.h"
 #include "sms_vdp.h"
@@ -344,7 +344,7 @@ bool sms_vdp_get_phaser_th (TMS9928A_Context *context, uint64_t z80_cycle)
  */
 uint8_t sms_vdp_get_h_counter (TMS9928A_Context *context)
 {
-    if (gamepad_1.type == GAMEPAD_TYPE_SMS_PHASER &&
+    if (gamepad [1].type == GAMEPAD_TYPE_SMS_PHASER &&
         context->state.line >= (state.phaser_y - SMS_PHASER_RADIUS) &&
         context->state.line <= (state.phaser_y + SMS_PHASER_RADIUS))
     {
