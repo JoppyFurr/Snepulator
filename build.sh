@@ -32,6 +32,7 @@ eval $CC $CFLAGS -c source/video/sms_vdp.c   -o work/sms_vdp.o
 eval $CC $CFLAGS -c source/colecovision.c    -o work/colecovision.o
 eval $CC $CFLAGS -c source/config.c          -o work/config.o
 eval $CC $CFLAGS -c source/gamepad.c         -o work/gamepad.o
+eval $CC $CFLAGS -c source/gamepad_sdl.c     -o work/gamepad_sdl.o
 eval $CC $CFLAGS -c source/sg-1000.c         -o work/sg-1000.o
 eval $CC $CFLAGS -c source/save_state.c      -o work/save_state.o
 eval $CC $CFLAGS -c source/sms.c             -o work/sms.o
