@@ -17,7 +17,7 @@
 
 #include <SDL2/SDL.h>
 
-#include "util.h"
+#include "snepulator_types.h"
 #include "snepulator.h"
 
 #include "../libraries/BLAKE3/blake3.h"
@@ -32,7 +32,7 @@ extern Snepulator_State state;
  * Based on SDL_GetTicks ()
  * Assumes that monotonic time is supported.
  */
-uint32_t snepulator_get_ticks (void)
+uint32_t util_get_ticks (void)
 {
     static struct timespec start;
     static bool ticks_started = false;
@@ -57,7 +57,7 @@ uint32_t snepulator_get_ticks (void)
  *
  * Based on SDL_Delay ()
  */
-void snepulator_delay (uint32_t ticks)
+void util_delay (uint32_t ticks)
 {
     struct timespec request;
     struct timespec remaining;
@@ -79,7 +79,8 @@ void snepulator_delay (uint32_t ticks)
 /*
  * Get the directory that the snepulator files reside in.
  */
-int32_t snepulator_directory (char **path_ptr)
+/* TODO: Move directory code to its own file */
+int32_t util_snepulator_directory (char **path_ptr)
 {
     static char *path = NULL;
 
@@ -139,7 +140,7 @@ int32_t snepulator_sram_directory (char **path_ptr)
         char *base;
         int len;
 
-        if (snepulator_directory (&base) == -1)
+        if (util_snepulator_directory (&base) == -1)
         {
             return -1;
         }
@@ -218,7 +219,7 @@ int32_t snepulator_state_directory (char **path_ptr)
         char *base;
         int len;
 
-        if (snepulator_directory (&base) == -1)
+        if (util_snepulator_directory (&base) == -1)
         {
             return -1;
         }
@@ -286,7 +287,7 @@ char *quicksave_path (uint8_t rom_hash [HASH_LENGTH])
 /*
  * Round up to the next power-of-two
  */
-uint32_t round_up (uint32_t n)
+uint32_t util_round_up (uint32_t n)
 {
     uint32_t result = 1;
 
@@ -308,7 +309,7 @@ uint32_t round_up (uint32_t n)
 /*
  * Use BLAKE3 to make a 12-byte hash for the current ROM.
  */
-void snepulator_hash_rom (const uint8_t *rom, uint32_t rom_size, uint8_t rom_hash [HASH_LENGTH])
+void util_hash_rom (const uint8_t *rom, uint32_t rom_size, uint8_t rom_hash [HASH_LENGTH])
 {
     blake3_hasher hasher;
 
@@ -323,7 +324,7 @@ void snepulator_hash_rom (const uint8_t *rom, uint32_t rom_size, uint8_t rom_has
  * If the rom is not a power-of-two size, the buffer will be rounded up and
  * padded with zeros. The buffer should be freed when no-longer needed.
  */
-int32_t snepulator_load_rom (uint8_t **buffer, uint32_t *rom_size, char *filename)
+int32_t util_load_rom (uint8_t **buffer, uint32_t *rom_size, char *filename)
 {
     uint32_t bytes_read = 0;
     uint32_t skip = 0;
@@ -361,7 +362,7 @@ int32_t snepulator_load_rom (uint8_t **buffer, uint32_t *rom_size, char *filenam
     *rom_size = file_size - skip;
 
     /* Allocate memory, rounded to a power-of-two */
-    *buffer = (uint8_t *) calloc (round_up (*rom_size), 1);
+    *buffer = (uint8_t *) calloc (util_round_up (*rom_size), 1);
     if (!*buffer)
     {
         snepulator_error ("Load Error", strerror (errno));
@@ -383,7 +384,7 @@ int32_t snepulator_load_rom (uint8_t **buffer, uint32_t *rom_size, char *filenam
 /*
  * Take a screenshot.
  */
-void snepulator_take_screenshot (void)
+void util_take_screenshot (void)
 {
     uint32_t width = state.video_width;
     uint32_t height = state.video_height;
@@ -446,7 +447,7 @@ void snepulator_take_screenshot (void)
 /*
  * Convert a float_Colour to greyscale.
  */
-float_Colour to_greyscale (float_Colour c)
+float_Colour util_to_greyscale (float_Colour c)
 {
     /* Convert to linear colour */
     c.r = (c.r < 0.04045) ? (c.r / 12.92) : pow ((c.r + 0.055) / 1.055, 2.4);
@@ -468,7 +469,7 @@ float_Colour to_greyscale (float_Colour c)
 /*
  * Reduce saturation of a float_Colour.
  */
-float_Colour colour_saturation (float_Colour c, float saturation)
+float_Colour util_colour_saturation (float_Colour c, float saturation)
 {
     float_Colour mix;
 

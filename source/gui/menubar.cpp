@@ -12,20 +12,18 @@
 #include "imgui.h"
 
 extern "C" {
-
-#include "util.h"
+#include "snepulator_types.h"
 #include "snepulator.h"
+#include "util.h"
 #include "config.h"
 #include "database/sms_db.h"
-
 #include "gamepad.h"
 #include "video/tms9928a.h"
 #include "video/sms_vdp.h"
 #include "cpu/z80.h"
-
+#include "colecovision.h"
 #include "sg-1000.h"
 #include "sms.h"
-#include "colecovision.h"
 
 extern TMS9928A_Mode sms_vdp_mode_get (void);
 
@@ -80,7 +78,7 @@ void snepulator_render_menubar (void)
     {
         if (ImGui::BeginMenu ("File"))
         {
-            state.mouse_time = snepulator_get_ticks ();
+            state.mouse_time = util_get_ticks ();
 
             if (ImGui::MenuItem ("Open ROM...", NULL))
             {
@@ -156,7 +154,7 @@ void snepulator_render_menubar (void)
 
         if (ImGui::BeginMenu ("Console"))
         {
-            state.mouse_time = snepulator_get_ticks ();
+            state.mouse_time = util_get_ticks ();
 
             if (ImGui::MenuItem ("Hard Reset"))
             {
@@ -226,9 +224,9 @@ void snepulator_render_menubar (void)
                 uint32_t start_time;
                 uint32_t end_time;
                 snepulator_pause_set (true);
-                start_time = snepulator_get_ticks ();
+                start_time = util_get_ticks ();
                 state.run_callback (state.console_context, 5 * 60000); /* Simulate five minutes */
-                end_time = snepulator_get_ticks ();
+                end_time = util_get_ticks ();
                 snepulator_pause_set (false);
 
                 fprintf (stdout, "[DEBUG] Took %d ms to emulate five minutes. (%fx speed-up)\n",
@@ -240,7 +238,7 @@ void snepulator_render_menubar (void)
 
         if (ImGui::BeginMenu ("State"))
         {
-            state.mouse_time = snepulator_get_ticks ();
+            state.mouse_time = util_get_ticks ();
 
             if (ImGui::MenuItem ("Quick Save", NULL)) {
                 if ((state.run == RUN_STATE_RUNNING || state.run == RUN_STATE_PAUSED) && state.state_save)
@@ -265,7 +263,7 @@ void snepulator_render_menubar (void)
 
         if (ImGui::BeginMenu ("Input"))
         {
-            state.mouse_time = snepulator_get_ticks ();
+            state.mouse_time = util_get_ticks ();
 
             if (ImGui::BeginMenu ("Player 1"))
             {
@@ -326,7 +324,7 @@ void snepulator_render_menubar (void)
 
         if (ImGui::BeginMenu ("Audio"))
         {
-            state.mouse_time = snepulator_get_ticks ();
+            state.mouse_time = util_get_ticks ();
 
             if (ImGui::BeginMenu ("Device"))
             {
@@ -352,7 +350,7 @@ void snepulator_render_menubar (void)
 
         if (ImGui::BeginMenu ("Video"))
         {
-            state.mouse_time = snepulator_get_ticks ();
+            state.mouse_time = util_get_ticks ();
 
             if (ImGui::BeginMenu ("Filter"))
             {
@@ -430,7 +428,7 @@ void snepulator_render_menubar (void)
 
             if (ImGui::MenuItem ("Take Screenshot"))
             {
-                snepulator_take_screenshot ();
+                util_take_screenshot ();
             }
 
             ImGui::EndMenu ();

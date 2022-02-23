@@ -20,10 +20,8 @@
 #include "imgui.h"
 
 extern "C" {
-
-#include "util.h"
+#include "snepulator_types.h"
 #include "snepulator.h"
-
 }
 
 /* Shader source code */

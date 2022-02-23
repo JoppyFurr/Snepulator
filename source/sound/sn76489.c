@@ -7,7 +7,7 @@
 #include <pthread.h>
 #include <arpa/inet.h>
 
-#include "../util.h"
+#include "../snepulator_types.h"
 #include "../snepulator.h"
 #include "../save_state.h"
 #include "sn76489.h"

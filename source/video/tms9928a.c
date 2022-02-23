@@ -10,8 +10,9 @@
 #include <pthread.h>
 #include <arpa/inet.h>
 
-#include "../util.h"
+#include "../snepulator_types.h"
 #include "../snepulator.h"
+#include "../util.h"
 #include "../save_state.h"
 
 #include "tms9928a.h"
@@ -559,7 +560,7 @@ void tms9928a_run_one_scanline (TMS9928A_Context *context)
         /* Update statistics (rolling average) */
         static int vdp_previous_completion_time = 0;
         static int vdp_current_time = 0;
-        vdp_current_time = snepulator_get_ticks ();
+        vdp_current_time = util_get_ticks ();
         if (vdp_previous_completion_time)
         {
             state.vdp_framerate *= 0.95;

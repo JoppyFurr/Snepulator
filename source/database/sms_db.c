@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "../util.h"
+#include "../snepulator_types.h"
 #include "../snepulator.h"
 #include "sms_db.h"
 

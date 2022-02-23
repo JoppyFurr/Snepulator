@@ -21,16 +21,14 @@
 #include "imgui.h"
 
 extern "C" {
-#include "util.h"
+#include "snepulator_types.h"
 #include "snepulator.h"
 #include "gamepad.h"
+
 extern bool config_capture_events;
-
 extern Snepulator_State state;
-
 extern Gamepad_Instance gamepad_list [128];
 extern uint32_t gamepad_list_count;
-
 extern Snepulator_Gamepad gamepad [3];
 }
 

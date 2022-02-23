@@ -13,11 +13,10 @@
 #include "imgui_impl_opengl3.h"
 
 extern "C" {
-
-#include "util.h"
+#include "snepulator_types.h"
 #include "snepulator.h"
+#include "util.h"
 #include "config.h"
-
 #include "gamepad.h"
 #include "gamepad_sdl.h"
 #include "cpu/z80.h"
@@ -26,7 +25,6 @@ extern "C" {
 #include "colecovision.h"
 
 extern Snepulator_Gamepad gamepad [3];
-
 }
 
 #include "gui/input.h"
@@ -124,16 +122,16 @@ void snepulator_audio_callback (void *userdata, uint8_t *stream, int len)
 /*
  * Thread to run the actual console emulation.
  *
- * Completely separated from the GUI, time is kept using snepulator_get_ticks ().
+ * Completely separated from the GUI, time is kept using util_get_ticks ().
  */
 void *main_emulation_loop (void *data)
 {
-    static uint32_t ticks_previous = snepulator_get_ticks ();
+    static uint32_t ticks_previous = util_get_ticks ();
     uint32_t ticks_current;
 
     while (state.run != RUN_STATE_EXIT)
     {
-        ticks_current = snepulator_get_ticks ();
+        ticks_current = util_get_ticks ();
 
         if (state.run == RUN_STATE_RUNNING)
         {
@@ -143,7 +141,7 @@ void *main_emulation_loop (void *data)
         ticks_previous = ticks_current;
 
         /* Sleep */
-        snepulator_delay (1);
+        util_delay (1);
     }
 
     pthread_exit (NULL);
@@ -244,7 +242,7 @@ int main_gui_loop (void)
             /* Use mouse motion to show / hide the menubar */
             if (event.type == SDL_MOUSEMOTION)
             {
-                state.mouse_time = snepulator_get_ticks ();
+                state.mouse_time = util_get_ticks ();
                 state.show_gui = true;
                 SDL_ShowCursor (SDL_ENABLE);
             }
@@ -320,7 +318,7 @@ int main_gui_loop (void)
         }
 
         /* Hide the GUI and cursor if the mouse is not being moved. */
-        if (snepulator_get_ticks() > (state.mouse_time + 3000))
+        if (util_get_ticks () > (state.mouse_time + 3000))
         {
             if (state.run == RUN_STATE_RUNNING)
             {
@@ -368,7 +366,7 @@ int main_gui_loop (void)
         /* Update statistics (rolling average) */
         static int host_previous_completion_time = 0;
         static int host_current_time = 0;
-        host_current_time = snepulator_get_ticks ();
+        host_current_time = util_get_ticks ();
         if (host_previous_completion_time)
         {
             state.host_framerate *= 0.95;

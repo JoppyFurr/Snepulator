@@ -11,8 +11,9 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "util.h"
+#include "snepulator_types.h"
 #include "snepulator.h"
+#include "util.h"
 #include "database/sms_db.h"
 #include "save_state.h"
 
@@ -286,26 +287,26 @@ SMS_Context *sms_init (void)
     /* Load BIOS */
     if (state.console == CONSOLE_MASTER_SYSTEM && state.sms_bios_filename)
     {
-        if (snepulator_load_rom (&context->bios, &context->bios_size, state.sms_bios_filename) == -1)
+        if (util_load_rom (&context->bios, &context->bios_size, state.sms_bios_filename) == -1)
         {
             sms_cleanup (context);
             return NULL;
         }
         fprintf (stdout, "%d KiB BIOS %s loaded.\n", context->bios_size >> 10, state.sms_bios_filename);
-        context->bios_mask = round_up (context->bios_size) - 1;
+        context->bios_mask = util_round_up (context->bios_size) - 1;
     }
 
     /* Load ROM cart */
     if (state.cart_filename)
     {
-        if (snepulator_load_rom (&context->rom, &context->rom_size, state.cart_filename) == -1)
+        if (util_load_rom (&context->rom, &context->rom_size, state.cart_filename) == -1)
         {
             sms_cleanup (context);
             return NULL;
         }
         fprintf (stdout, "%d KiB ROM %s loaded.\n", context->rom_size >> 10, state.cart_filename);
-        context->rom_mask = round_up (context->rom_size) - 1;
-        snepulator_hash_rom (context->rom, context->rom_size, context->rom_hash);
+        context->rom_mask = util_round_up (context->rom_size) - 1;
+        util_hash_rom (context->rom, context->rom_size, context->rom_hash);
         context->rom_hints = sms_db_get_hints (context->rom_hash);
     }
 
@@ -877,7 +878,7 @@ static void sms_process_3d_field (SMS_Context *context)
 
     for (uint32_t i = 0; i < (VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES); i++)
     {
-        pixel = colour_saturation (vdp_context->frame_buffer [i], state.video_3d_saturation);
+        pixel = util_colour_saturation (vdp_context->frame_buffer [i], state.video_3d_saturation);
 
         if (update_red)
         {

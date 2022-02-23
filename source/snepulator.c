@@ -12,8 +12,9 @@
 #include <string.h>
 #include <pthread.h>
 
-#include "util.h"
+#include "snepulator_types.h"
 #include "snepulator.h"
+#include "util.h"
 #include "config.h"
 #include "database/sms_db.h"
 
@@ -322,7 +323,7 @@ void snepulator_pause_animate (void)
     /* Draw over a greyscale copy of the last-drawn frame */
     memcpy (state.video_out_data, state.video_pause_data, sizeof (state.video_out_data));
 
-    uint32_t frame_time = snepulator_get_ticks ();
+    uint32_t frame_time = util_get_ticks ();
     for (uint32_t letter = 0; letter < 6; letter++)
     {
         uint32_t letter_start = letter_position [letter];
@@ -371,7 +372,7 @@ void snepulator_pause_set (bool pause)
         /* Convert the screen to black and white, and sore in the pause buffer */
         for (int x = 0; x < (VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES); x++)
         {
-            state.video_pause_data [x] = to_greyscale (state.video_out_data [x]);
+            state.video_pause_data [x] = util_to_greyscale (state.video_out_data [x]);
         }
 
         memcpy (state.video_out_data, state.video_pause_data, sizeof (state.video_out_data));

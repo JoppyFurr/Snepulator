@@ -11,8 +11,9 @@
 #include <string.h>
 #include <pthread.h>
 
-#include "../util.h"
+#include "../snepulator_types.h"
 #include "../snepulator.h"
+#include "../util.h"
 #include "../gamepad.h"
 #include "../database/sms_db.h"
 
@@ -787,7 +788,7 @@ void sms_vdp_run_one_scanline (TMS9928A_Context *context)
         /* TODO: Move into a common "frame complete" function */
         static int vdp_previous_completion_time = 0;
         static int vdp_current_time = 0;
-        vdp_current_time = snepulator_get_ticks ();
+        vdp_current_time = util_get_ticks ();
         int frame_time_taken = vdp_current_time - vdp_previous_completion_time;
         if (frame_time_taken != 0)
         {

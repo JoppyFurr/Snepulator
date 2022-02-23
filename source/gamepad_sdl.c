@@ -5,7 +5,7 @@
 
 #include <SDL2/SDL.h>
 
-#include "util.h"
+#include "snepulator_types.h"
 #include "gamepad.h"
 
 extern Snepulator_Gamepad gamepad [3];

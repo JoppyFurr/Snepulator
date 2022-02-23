@@ -10,8 +10,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "util.h"
+#include "snepulator_types.h"
 #include "snepulator.h"
+#include "util.h"
 #include "save_state.h"
 
 #include "gamepad.h"
@@ -198,14 +199,14 @@ SG_1000_Context *sg_1000_init (void)
     /* Load ROM cart */
     if (state.cart_filename)
     {
-        if (snepulator_load_rom (&context->rom, &context->rom_size, state.cart_filename) == -1)
+        if (util_load_rom (&context->rom, &context->rom_size, state.cart_filename) == -1)
         {
             sg_1000_cleanup (context);
             return NULL;
         }
         fprintf (stdout, "%d KiB ROM %s loaded.\n", context->rom_size >> 10, state.cart_filename);
-        context->rom_mask = round_up (context->rom_size) - 1;
-        snepulator_hash_rom (context->rom, context->rom_size, context->rom_hash);
+        context->rom_mask = util_round_up (context->rom_size) - 1;
+        util_hash_rom (context->rom, context->rom_size, context->rom_hash);
     }
 
     /* Initial video parameters */

@@ -6,7 +6,7 @@
 #include <string.h>
 #include <arpa/inet.h>
 
-#include "util.h"
+#include "snepulator_types.h"
 #include "snepulator.h"
 #include "save_state.h"
 

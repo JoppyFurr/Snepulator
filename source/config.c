@@ -10,6 +10,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include "snepulator_types.h"
 #include "util.h"
 
 #define MAX_STRING_SIZE 1024
@@ -334,7 +335,7 @@ static int32_t config_path (char **path_ptr)
         char *dir;
         int len;
 
-        if (snepulator_directory (&dir) == -1)
+        if (util_snepulator_directory (&dir) == -1)
         {
             return -1;
         }
@@ -362,7 +363,7 @@ static int32_t config_open (FILE **config_file, char *mode)
     char        *path;
     struct stat  stat_buf;
 
-    if (snepulator_directory (&directory) == -1)
+    if (util_snepulator_directory (&directory) == -1)
     {
         return -1;
     }
