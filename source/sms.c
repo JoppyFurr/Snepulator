@@ -13,6 +13,7 @@
 
 #include "snepulator_types.h"
 #include "snepulator.h"
+#include "path.h"
 #include "util.h"
 #include "database/sms_db.h"
 #include "save_state.h"
@@ -331,8 +332,8 @@ SMS_Context *sms_init (void)
     }
 
     /* Load SRAM if it exists */
-    char *_sram_path = sram_path (context->rom_hash);
-    FILE *sram_file = fopen (_sram_path, "rb");
+    char *sram_path = path_sram (context->rom_hash);
+    FILE *sram_file = fopen (sram_path, "rb");
     if (sram_file != NULL)
     {
         uint32_t bytes_read = 0;
@@ -344,8 +345,7 @@ SMS_Context *sms_init (void)
 
         fclose (sram_file);
     }
-    free (_sram_path);
-
+    free (sram_path);
 
     if (state.console == CONSOLE_GAME_GEAR)
     {
@@ -1097,7 +1097,7 @@ static void sms_sync (void *context_ptr)
     if (context->sram_used)
     {
         uint32_t bytes_written = 0;
-        char *path = sram_path (context->rom_hash);
+        char *path = path_sram (context->rom_hash);
         FILE *sram_file = fopen (path, "wb");
 
         if (sram_file != NULL)

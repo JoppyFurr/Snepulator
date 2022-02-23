@@ -14,6 +14,7 @@
 extern "C" {
 #include "snepulator_types.h"
 #include "snepulator.h"
+#include "path.h"
 #include "util.h"
 #include "config.h"
 #include "database/sms_db.h"
@@ -243,7 +244,7 @@ void snepulator_render_menubar (void)
             if (ImGui::MenuItem ("Quick Save", NULL)) {
                 if ((state.run == RUN_STATE_RUNNING || state.run == RUN_STATE_PAUSED) && state.state_save)
                 {
-                    char *path = quicksave_path (state.get_rom_hash (state.console_context));
+                    char *path = path_quicksave (state.get_rom_hash (state.console_context));
                     state.state_save (state.console_context, path);
                     free (path);
                 }
@@ -251,7 +252,7 @@ void snepulator_render_menubar (void)
             if (ImGui::MenuItem ("Quick Load", NULL)) {
                 if ((state.run == RUN_STATE_RUNNING || state.run == RUN_STATE_PAUSED) && state.state_load)
                 {
-                    char *path = quicksave_path (state.get_rom_hash (state.console_context));
+                    char *path = path_quicksave (state.get_rom_hash (state.console_context));
                     state.state_load (state.console_context, path);
                     free (path);
                     snepulator_pause_set (false);
