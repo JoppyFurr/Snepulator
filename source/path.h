@@ -1,3 +1,6 @@
+/*
+ * Path handling.
+ */
 
 /* Get the directory that the snepulator files reside in. */
 int32_t path_base (char **path_ptr);

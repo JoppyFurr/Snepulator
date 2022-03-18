@@ -1,3 +1,7 @@
+/*
+ * Configuration file implementation.
+ */
+
 #define _DEFAULT_SOURCE
 #include <ctype.h>
 #include <errno.h>

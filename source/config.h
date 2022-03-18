@@ -1,5 +1,5 @@
 /*
- * Basic configuration file API.
+ * Configuration file API.
  */
 
 /* Get an unsigned integer from the config data structure. */

@@ -1,3 +1,6 @@
+/*
+ * Path handling.
+ */
 
 #include <errno.h>
 #include <stdio.h>
