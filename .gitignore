@@ -1,5 +1,7 @@
 # Ignore build files
 work/
+Snepulator
 
-# Ignore OS files
+# Ignore OS & Tool files
+tags
 .DS_Store
