@@ -571,6 +571,7 @@ int main (int argc, char **argv)
     snepulator_audio_device_open (NULL);
 
     /* Initialise gamepad support */
+    gamepad_sdl_init ();
     gamepad_init ();
 
     /* If we have a valid ROM to run, start emulation */

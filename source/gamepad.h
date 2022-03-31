@@ -2,16 +2,6 @@
  * Gamepad input.
  */
 
-/* TODO: Make better use of the API:
- *
- *   device_id - Index from 0 to SDL_NumJoysticks (). Changes as joysticks are added / removed.
- *
- *   instance_id - Identifier of the current instance of the joystick. Increments if the joystick is reconnected.
- *
- *   GUID - Stable identifier for a model of joystick. Two joysticks with the same vendor / product / version may have the same GUID.
- *
- */
-
 #define GAMEPAD_ID_NONE     -1
 #define GAMEPAD_ID_KEYBOARD -2
 
@@ -84,7 +74,7 @@ typedef struct Gamepad_Config_s {
 typedef struct Gamepad_Instance_s {
     int32_t instance_id;    /* ID associated with events from the device. */
     uint32_t config_index;  /* Index into the configuration library. */
-    int32_t device_id;      /* Index into array of detected devices (SDL). */
+    int32_t device_index;   /* Index into array of detected devices (SDL). */
 } Gamepad_Instance;
 
 /*

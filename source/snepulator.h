@@ -70,6 +70,11 @@ typedef struct Snepulator_State_s {
     Video_3D_Mode   video_3d_mode;          /* Left / Right / Anaglyph selection. */
     float           video_3d_saturation;    /* Colour saturation for anaglyph modes. */
 
+    /* Host API */
+    uint32_t     (*os_gamepad_create_default_config) (int32_t device_index);
+    const char * (*os_gamepad_get_name) (uint32_t device_index);
+    void         (*os_gamepad_get_uuid) (int32_t device_index, uint8_t *uuid);
+
     /* Console API */
     Console console;
     void *console_context;
