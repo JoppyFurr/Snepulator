@@ -68,8 +68,6 @@ typedef struct Gamepad_Config_s {
  * Details for a detected gamepad.
  *
  * TODO: Recreate this structure each time a gamepad is connected / disconnected.
- *
- * TODO: Move to SDL-only code?
  */
 typedef struct Gamepad_Instance_s {
     int32_t instance_id;    /* ID associated with events from the device. */
@@ -119,10 +117,10 @@ void gamepad_paddle_tick (uint32_t ms);
 uint32_t gamepad_joystick_user_count (uint32_t id);
 
 /* Get the name of a gamepad in our config array. */
-const char *gamepad_get_name (uint32_t index);
+const char *gamepad_get_name (uint32_t list_index);
 
 /* Change input device for a player's gamepad. */
-void gamepad_change_device (uint32_t player, int32_t index);
+void gamepad_change_device (uint32_t player, int32_t list_index);
 
 /* Store the gamepad configuration to the configuration file. */
 void gamepad_config_export (void);

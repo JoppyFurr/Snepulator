@@ -18,6 +18,52 @@ extern uint32_t gamepad_config_count;
 
 
 /*
+ * Open an SDL Joystick by index, if it is not already open.
+ */
+static int32_t gamepad_sdl_os_gamepad_open (uint32_t device_index)
+{
+    uint32_t id = SDL_JoystickGetDeviceInstanceID (device_index);
+    SDL_Joystick *joystick = SDL_JoystickFromInstanceID (id);
+
+    /* Open the joystick if needed */
+    if (joystick == NULL || SDL_JoystickGetAttached (joystick) == false)
+    {
+        joystick = SDL_JoystickOpen (device_index);
+    }
+
+    return SDL_JoystickInstanceID (joystick);
+}
+
+
+/*
+ * Close an SDL Joystick by id.
+ */
+static void gamepad_sdl_os_gamepad_close (uint32_t id)
+{
+    SDL_Joystick *joystick = SDL_JoystickFromInstanceID (id);
+    SDL_JoystickClose (joystick);
+}
+
+
+/*
+ * Get the number of gamepads attached to the system.
+ */
+static uint32_t gamepad_sdl_os_gamepad_get_count (void)
+{
+    return SDL_NumJoysticks ();
+}
+
+
+/*
+ * Get the number of gamepads attached to the system.
+ */
+static uint32_t gamepad_sdl_os_gamepad_get_id (uint32_t device_index)
+{
+    return SDL_JoystickGetDeviceInstanceID (device_index);
+}
+
+
+/*
  * Generate a default configuration for an input device.
  */
 static uint32_t gamepad_sdl_os_gamepad_create_default_config (int32_t device_index)
@@ -208,6 +254,10 @@ void gamepad_sdl_process_event (SDL_Event *event)
 void gamepad_sdl_init (void)
 {
     state.os_gamepad_create_default_config = gamepad_sdl_os_gamepad_create_default_config;
+    state.os_gamepad_open = gamepad_sdl_os_gamepad_open;
+    state.os_gamepad_close = gamepad_sdl_os_gamepad_close;
+    state.os_gamepad_get_count = gamepad_sdl_os_gamepad_get_count;
+    state.os_gamepad_get_id = gamepad_sdl_os_gamepad_get_id;
     state.os_gamepad_get_name = gamepad_sdl_os_gamepad_get_name;
     state.os_gamepad_get_uuid = gamepad_sdl_os_gamepad_get_uuid;
 }

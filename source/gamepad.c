@@ -1,16 +1,15 @@
 /*
  * Gamepad input implementation.
  *
- * This file deals with taking SDL_Event inputs, and provides an abstract
+ * This file deals with taking input inputs, and provides an abstract
  * Snepulator_Gamepad interface to be used in the emulated consoles.
  */
 
+#include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
-
-/* TODO: De-SDL */
-#include <SDL2/SDL.h>
 
 #include "snepulator_types.h"
 #include "snepulator.h"
@@ -201,14 +200,16 @@ void gamepad_list_update (void)
     gamepad_list [gamepad_list_count++] = (Gamepad_Instance) { .instance_id = GAMEPAD_ID_NONE, .config_index = GAMEPAD_INDEX_NONE };
     gamepad_list [gamepad_list_count++] = (Gamepad_Instance) { .instance_id = GAMEPAD_ID_KEYBOARD, .config_index = GAMEPAD_INDEX_KEYBOARD };
 
-    if (state.os_gamepad_get_uuid == NULL)
+    if (state.os_gamepad_get_uuid == NULL ||
+        state.os_gamepad_get_count == NULL ||
+        state.os_gamepad_get_id == NULL)
     {
         return;
     }
 
-    for (int device_index = 0; device_index < SDL_NumJoysticks (); device_index++)
+    for (int device_index = 0; device_index < state.os_gamepad_get_count (); device_index++)
     {
-        int32_t instance_id = SDL_JoystickGetDeviceInstanceID (device_index);
+        int32_t instance_id = state.os_gamepad_get_id (device_index);
         int32_t config_index = GAMEPAD_INDEX_NONE;
         uint8_t uuid [UUID_SIZE] = { };
 
@@ -302,22 +303,22 @@ void gamepad_update_mapping (Gamepad_Config new_config)
 /*
  * Get the name of a gamepad in our gamepad_list array.
  */
-const char *gamepad_get_name (uint32_t index)
+const char *gamepad_get_name (uint32_t list_index)
 {
     static char name_data [128] [MAX_STRING_SIZE];
     const char *name = NULL;
 
-    if (index == GAMEPAD_INDEX_NONE)
+    if (list_index == GAMEPAD_INDEX_NONE)
     {
         name = "None";
     }
-    else if (index == GAMEPAD_INDEX_KEYBOARD)
+    else if (list_index == GAMEPAD_INDEX_KEYBOARD)
     {
         name = "Keyboard";
     }
     else if (state.os_gamepad_get_name != NULL)
     {
-        name = state.os_gamepad_get_name (gamepad_list [index].device_index);
+        name = state.os_gamepad_get_name (gamepad_list [list_index].device_index);
     }
 
     /* Fallback if no name was found */
@@ -327,9 +328,9 @@ const char *gamepad_get_name (uint32_t index)
     }
 
     /* Finally, store the name, along with a unique tag */
-    sprintf (name_data [index], "%s##%d", name, index);
+    sprintf (name_data [list_index], "%s##%d", name, list_index);
 
-    return name_data [index];
+    return name_data [list_index];
 }
 
 
@@ -354,49 +355,43 @@ uint32_t gamepad_joystick_user_count (uint32_t id)
 
 /*
  * Change input device for a player's gamepad.
- *
- * Index is into the gamepad_list.
- *
- * TODO: De-SDL
  */
-void gamepad_change_device (uint32_t player, int32_t index)
+void gamepad_change_device (uint32_t player, int32_t list_index)
 {
-    SDL_Joystick *joystick;
+    if (list_index > GAMEPAD_INDEX_KEYBOARD &&
+        (state.os_gamepad_open == NULL ||
+         state.os_gamepad_close == NULL))
+    {
+        return;
+    }
 
     /* Close the previous joystick if we are the only user */
     if (gamepad [player].id > GAMEPAD_ID_NONE && gamepad_joystick_user_count (gamepad [player].id) == 1)
     {
-        joystick = SDL_JoystickFromInstanceID (gamepad [player].id);
-        SDL_JoystickClose (joystick);
+        state.os_gamepad_close (gamepad [player].id);
     }
     gamepad [player].id = GAMEPAD_ID_NONE;
     gamepad [player].config = &gamepad_config [GAMEPAD_INDEX_NONE];
 
-    if (index == GAMEPAD_INDEX_NONE)
+    if (list_index == GAMEPAD_INDEX_NONE)
     {
         return;
     }
 
     /* Open the new device */
-    if (index == GAMEPAD_INDEX_KEYBOARD)
+    if (list_index == GAMEPAD_INDEX_KEYBOARD)
     {
         gamepad [player].config = &gamepad_config [GAMEPAD_INDEX_KEYBOARD];
         gamepad [player].id = GAMEPAD_ID_KEYBOARD;
     }
     else
     {
-        joystick = SDL_JoystickFromInstanceID (gamepad_list [index].instance_id);
+        uint32_t id = state.os_gamepad_open (gamepad_list [list_index].device_index);
 
-        /* Open the joystick if needed */
-        if (joystick == NULL || SDL_JoystickGetAttached (joystick) == false)
+        if (id >= 0)
         {
-            joystick = SDL_JoystickOpen (gamepad_list [index].device_index);
-        }
-
-        if (joystick)
-        {
-            gamepad [player].config = &gamepad_config [gamepad_list [index].config_index];
-            gamepad [player].id = SDL_JoystickInstanceID (joystick);
+            gamepad [player].config = &gamepad_config [gamepad_list [list_index].config_index];
+            gamepad [player].id = id;
         }
     }
 }
