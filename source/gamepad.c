@@ -27,6 +27,9 @@ const char *button_names [] = { "up", "down", "left", "right", "button_1", "butt
 Gamepad_Config gamepad_config [128];
 uint32_t gamepad_config_count = 0;
 
+Gamepad_Config remap_config;
+uint32_t gamepad_remap_step = GAMEPAD_BUTTON_COUNT;
+
 /* List of detected gamepads */
 Gamepad_Instance gamepad_list [128];
 uint32_t gamepad_list_count = 0;
@@ -34,18 +37,64 @@ uint32_t gamepad_list_count = 0;
 /*
  * Gamepad State
  *
- *   gamepad [0]: Utility, used during remapping.
+ *   gamepad [0]: Gamepad selected in settings menu.
  *   gamepad [1]: Player 1.
  *   gamepad [2]: Player 2.
+ *   remap_config: Uncommitted remap
  */
 Snepulator_Gamepad gamepad [3];
 
 
 /*
+ * Use an axis-input to set a gamepad mapping.
+ */
+static void gamepad_process_axis_event_remap (int32_t axis, int32_t value)
+{
+    /* If an axis is triggered, ignore all axis motions while it returns to the centre */
+    static bool waiting = false;
+    static uint32_t waiting_axis;
+
+    if (waiting)
+    {
+        if (axis == waiting_axis && value < 4000 && value > -4000)
+        {
+            waiting = false;
+        }
+    }
+    else if (value > 16000 || value < -16000)
+    {
+        int32_t sign = (value < 0) ? -1 : 1;
+
+        waiting = true;
+        waiting_axis = axis;
+
+        remap_config.mapping [gamepad_remap_step].type = GAMEPAD_MAPPING_TYPE_AXIS;
+        remap_config.mapping [gamepad_remap_step].axis = axis;
+        remap_config.mapping [gamepad_remap_step].sign = sign;
+        gamepad_remap_step++;
+    }
+
+    /* If this was the last button, commit the remap */
+    if (gamepad_remap_step == GAMEPAD_BUTTON_COUNT)
+    {
+        gamepad_update_mapping (remap_config);
+    }
+}
+
+
+/*
  * Handle an axis event.
+ *
+ * Expected axis-range is -32768 through +32767
  */
 void gamepad_process_axis_event (int32_t id, int32_t axis, int32_t value)
 {
+    if (gamepad_remap_step < GAMEPAD_BUTTON_COUNT && id == gamepad [0].id)
+    {
+        gamepad_process_axis_event_remap (axis, value);
+        return;
+    }
+
     for (uint32_t player = 0; player < 3; player++)
     {
         if (gamepad [player].id != id)
@@ -68,12 +117,33 @@ void gamepad_process_axis_event (int32_t id, int32_t axis, int32_t value)
 
 
 /*
+ * Use a button-input to set a gamepad mapping.
+ */
+static void gamepad_process_button_event_remap (int32_t device_button)
+{
+    remap_config.mapping [gamepad_remap_step].type = GAMEPAD_MAPPING_TYPE_BUTTON;
+    remap_config.mapping [gamepad_remap_step].button = device_button;
+    gamepad_remap_step++;
+
+    /* If this was the last button, commit the remap */
+    if (gamepad_remap_step == GAMEPAD_BUTTON_COUNT)
+    {
+        gamepad_update_mapping (remap_config);
+    }
+}
+
+
+/*
  * Handle a button event.
- *
- * Expected axis-range is -32768 through +32767
  */
 void gamepad_process_button_event (int32_t id, int32_t device_button, bool button_down)
 {
+    if (gamepad_remap_step < GAMEPAD_BUTTON_COUNT && id == gamepad [0].id && button_down)
+    {
+        gamepad_process_button_event_remap (device_button);
+        return;
+    }
+
     for (uint32_t player = 0; player < 3; player++)
     {
         if (gamepad [player].id != id)
@@ -96,10 +166,52 @@ void gamepad_process_button_event (int32_t id, int32_t device_button, bool butto
 
 
 /*
+ * Use a hat-input to set a gamepad mapping.
+ */
+static void gamepad_process_hat_event_remap (int32_t hat, int32_t direction)
+{
+    /* If a hat is triggered, ignore all hat motion while it returns to the centre */
+    static bool waiting = false;
+    static uint8_t waiting_hat;
+
+    if (waiting)
+    {
+        if (hat == waiting_hat && direction == GAMEPAD_HAT_CENTERED)
+        {
+            waiting = false;
+        }
+    }
+    else if (direction == GAMEPAD_HAT_UP || direction == GAMEPAD_HAT_DOWN ||
+             direction == GAMEPAD_HAT_LEFT || direction == GAMEPAD_HAT_RIGHT)
+    {
+        waiting = true;
+        waiting_hat = hat;
+
+        remap_config.mapping [gamepad_remap_step].type = GAMEPAD_MAPPING_TYPE_HAT;
+        remap_config.mapping [gamepad_remap_step].hat = hat;
+        remap_config.mapping [gamepad_remap_step].direction = direction;
+        gamepad_remap_step++;
+    }
+
+    /* If this was the last button, commit the remap */
+    if (gamepad_remap_step == GAMEPAD_BUTTON_COUNT)
+    {
+        gamepad_update_mapping (remap_config);
+    }
+}
+
+
+/*
  * Handle a hat event.
  */
 void gamepad_process_hat_event (int32_t id, int32_t hat, int32_t direction)
 {
+    if (gamepad_remap_step < GAMEPAD_BUTTON_COUNT && id == gamepad [0].id)
+    {
+        gamepad_process_hat_event_remap (hat, direction);
+        return;
+    }
+
     for (uint32_t player = 0; player < 3; player++)
     {
         if (gamepad [player].id != id)
@@ -122,10 +234,33 @@ void gamepad_process_hat_event (int32_t id, int32_t hat, int32_t direction)
 
 
 /*
+ * Use a keyboard-input to set a gamepad mapping.
+ */
+static void gamepad_process_key_event_remap (int32_t key)
+{
+    remap_config.mapping [gamepad_remap_step].type = GAMEPAD_MAPPING_TYPE_KEY;
+    remap_config.mapping [gamepad_remap_step].key = key;
+    gamepad_remap_step++;
+
+    /* If this was the last button, commit the remap */
+    if (gamepad_remap_step == GAMEPAD_BUTTON_COUNT)
+    {
+        gamepad_update_mapping (remap_config);
+    }
+}
+
+
+/*
  * Handle a keyboard event.
  */
 void gamepad_process_key_event (int32_t key, bool key_down)
 {
+    if (gamepad_remap_step < GAMEPAD_BUTTON_COUNT && gamepad [0].id == GAMEPAD_ID_KEYBOARD && key_down)
+    {
+        gamepad_process_key_event_remap (key);
+        return;
+    }
+
     for (uint32_t player = 0; player < 3; player++)
     {
         for (uint32_t button = 0; button < GAMEPAD_BUTTON_COUNT; button++)

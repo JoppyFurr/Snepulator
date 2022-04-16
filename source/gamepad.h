@@ -5,6 +5,13 @@
 #define GAMEPAD_ID_NONE     -1
 #define GAMEPAD_ID_KEYBOARD -2
 
+#define GAMEPAD_HAT_CENTERED    0x00
+#define GAMEPAD_HAT_UP          0x01
+#define GAMEPAD_HAT_RIGHT       0x02
+#define GAMEPAD_HAT_DOWN        0x04
+#define GAMEPAD_HAT_LEFT        0x08
+
+
 /*
  * Common indexes, valid both in the config list and in the gamepad list.
  */

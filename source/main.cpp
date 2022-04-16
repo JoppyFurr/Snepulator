@@ -49,7 +49,6 @@ GLuint video_out_texture = 0;
 ImFont *font;
 
 /* Implementation in input.cpp */
-bool input_modal_consume_event (SDL_Event event);
 void snepulator_render_input_modal (void);
 
 
@@ -229,15 +228,6 @@ int main_gui_loop (void)
             }
 
             gamepad_sdl_process_event (&event);
-
-            /* Allow the input configuration dialogue to sample input */
-            if (config_capture_events)
-            {
-                if (input_modal_consume_event (event))
-                {
-                    continue;
-                }
-            }
 
             /* Use mouse motion to show / hide the menubar */
             if (event.type == SDL_MOUSEMOTION)
