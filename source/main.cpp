@@ -238,7 +238,7 @@ int main_gui_loop (void)
             }
 
             /* Use the mouse coordinates for the light phaser target */
-            if (event.type == SDL_MOUSEMOTION)
+            if (event.type == SDL_MOUSEMOTION && state.video_scale >= 1)
             {
                 int32_t phaser_x = (event.motion.x - (state.host_width  / 2 - (VIDEO_BUFFER_WIDTH * state.video_scale) / 2))
                                    / state.video_scale - VIDEO_SIDE_BORDER;
