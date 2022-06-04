@@ -198,8 +198,7 @@ void tms9928a_control_write (TMS9928A_Context *context, uint8_t value)
                     ((uint8_t *) &context->state.regs_buffer) [value & 0x0f] = context->state.address & 0x00ff;
 
                     /* Enabling interrupts should take affect immediately */
-                    context->state.regs.ctrl_1 &= ~TMS9928A_CTRL_1_FRAME_INT_EN;
-                    context->state.regs.ctrl_1 |= context->state.regs_buffer.ctrl_1 & TMS9928A_CTRL_1_FRAME_INT_EN;
+                    context->state.regs.ctrl_1_frame_int_en = context->state.regs_buffer.ctrl_1_frame_int_en;
                 }
                 break;
             default:
@@ -217,7 +216,7 @@ bool tms9928a_get_interrupt (TMS9928A_Context *context)
     bool interrupt = false;
 
     /* Frame interrupt */
-    if ((context->state.regs.ctrl_1 & TMS9928A_CTRL_1_FRAME_INT_EN) && (context->state.status & TMS9928A_STATUS_INT))
+    if (context->state.regs.ctrl_1_frame_int_en && (context->state.status & TMS9928A_STATUS_INT))
     {
         interrupt = true;
     }
@@ -274,7 +273,7 @@ void tms9928a_render_sprites_line (TMS9928A_Context *context, const TMS9928A_Con
 {
     uint16_t sprite_attribute_table_base = (((uint16_t) context->state.regs.sprite_attr_table_base) << 7) & 0x3f80;
     uint16_t pattern_generator_base = (((uint16_t) context->state.regs.sprite_pg_base) << 11) & 0x3800;
-    uint8_t sprite_size = (context->state.regs.ctrl_1 & TMS9928A_CTRL_1_SPRITE_SIZE) ? 16 : 8;
+    uint8_t sprite_size = context->state.regs.ctrl_1_sprite_size ? 16 : 8;
     TMS9928A_Sprite *line_sprite_buffer [32];
     uint8_t line_sprite_count = 0;
     TMS9928A_Pattern *pattern;
@@ -282,7 +281,7 @@ void tms9928a_render_sprites_line (TMS9928A_Context *context, const TMS9928A_Con
     bool magnify = false;
 
     /* Sprite magnification */
-    if (context->state.regs.ctrl_1 & TMS9928A_CTRL_1_SPRITE_MAG)
+    if (context->state.regs.ctrl_1_sprite_mag)
     {
         magnify = true;
     }
@@ -345,7 +344,7 @@ void tms9928a_render_sprites_line (TMS9928A_Context *context, const TMS9928A_Con
 
         /* TODO: Sprite collisions */
 
-        if (context->state.regs.ctrl_1 & TMS9928A_CTRL_1_SPRITE_SIZE)
+        if (context->state.regs.ctrl_1_sprite_size)
         {
             pattern_index &= 0xfc;
             pattern = (TMS9928A_Pattern *) &context->vram [pattern_generator_base + (pattern_index * sizeof (TMS9928A_Pattern))];
@@ -447,9 +446,9 @@ void tms9928a_render_mode2_background_line (TMS9928A_Context *context, const TMS
  */
 static uint8_t tms9928a_mode_get (TMS9928A_Context *context)
 {
-    return ((context->state.regs.ctrl_1 & TMS9928A_CTRL_1_MODE_1) ? BIT_0 : 0) +
-           ((context->state.regs.ctrl_0 & TMS9928A_CTRL_0_MODE_2) ? BIT_1 : 0) +
-           ((context->state.regs.ctrl_1 & TMS9928A_CTRL_1_MODE_3) ? BIT_2 : 0);
+    return (context->state.regs.ctrl_1_mode_1 ? BIT_0 : 0) +
+           (context->state.regs.ctrl_0_mode_2 ? BIT_1 : 0) +
+           (context->state.regs.ctrl_1_mode_3 ? BIT_2 : 0);
 }
 
 
@@ -463,7 +462,7 @@ void tms9928a_render_line (TMS9928A_Context *context, const TMS9928A_Config *con
     context->render_start_y = (VIDEO_BUFFER_LINES - config->lines_active) / 2;
 
     /* Background */
-    if (!(context->state.regs.ctrl_1 & TMS9928A_CTRL_1_BLANK) && !context->disable_blanking)
+    if (!context->state.regs.ctrl_1_blank && !context->disable_blanking)
     {
         /* Display is blank */
     }
@@ -505,7 +504,7 @@ void tms9928a_render_line (TMS9928A_Context *context, const TMS9928A_Config *con
     }
 
     /* Return without rendering patterns if BLANK is enabled */
-    if (!(context->state.regs.ctrl_1 & TMS9928A_CTRL_1_BLANK) && !context->disable_blanking)
+    if (!context->state.regs.ctrl_1_blank && !context->disable_blanking)
     {
         return;
     }

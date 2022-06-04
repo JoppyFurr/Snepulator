@@ -288,8 +288,7 @@ void sms_vdp_control_write (TMS9928A_Context *context, uint8_t value)
                     ((uint8_t *) &context->state.regs_buffer) [value & 0x0f] = context->state.address & 0x00ff;
 
                     /* Enabling interrupts should take affect immediately */
-                    context->state.regs.ctrl_1 &= ~TMS9928A_CTRL_1_FRAME_INT_EN;
-                    context->state.regs.ctrl_1 |= context->state.regs_buffer.ctrl_1 & TMS9928A_CTRL_1_FRAME_INT_EN;
+                    context->state.regs.ctrl_1_frame_int_en = context->state.regs_buffer.ctrl_1_frame_int_en;
                 }
                 break;
             case SMS_VDP_CODE_CRAM_WRITE:
@@ -306,10 +305,10 @@ void sms_vdp_control_write (TMS9928A_Context *context, uint8_t value)
  */
 uint8_t sms_vdp_get_mode (TMS9928A_Context *context)
 {
-    return ((context->state.regs.ctrl_1 & TMS9928A_CTRL_1_MODE_1) ? BIT_0 : 0) +
-           ((context->state.regs.ctrl_0 & TMS9928A_CTRL_0_MODE_2) ? BIT_1 : 0) +
-           ((context->state.regs.ctrl_1 & TMS9928A_CTRL_1_MODE_3) ? BIT_2 : 0) +
-           ((context->state.regs.ctrl_0 & SMS_VDP_CTRL_0_MODE_4)  ? BIT_3 : 0);
+    return ((context->state.regs.ctrl_1_mode_1) ? BIT_0 : 0) +
+           ((context->state.regs.ctrl_0_mode_2) ? BIT_1 : 0) +
+           ((context->state.regs.ctrl_1_mode_3) ? BIT_2 : 0) +
+           ((context->state.regs.ctrl_0_mode_4) ? BIT_3 : 0);
 }
 
 
@@ -388,13 +387,13 @@ bool sms_vdp_get_interrupt (TMS9928A_Context *context)
     bool interrupt = false;
 
     /* Frame interrupt */
-    if ((context->state.regs.ctrl_1 & TMS9928A_CTRL_1_FRAME_INT_EN) && (context->state.status & TMS9928A_STATUS_INT))
+    if (context->state.regs.ctrl_1_frame_int_en && (context->state.status & TMS9928A_STATUS_INT))
     {
         interrupt = true;
     }
 
     /* Line interrupt */
-    if ((context->state.regs.ctrl_0 & SMS_VDP_CTRL_0_LINE_INT_EN) && context->state.line_interrupt)
+    if (context->state.regs.ctrl_0_line_int_en && context->state.line_interrupt)
     {
         interrupt = true;
     }
@@ -431,7 +430,7 @@ static void sms_vdp_render_mode4_pattern_line (TMS9928A_Context *context, const 
             continue;
 
         /* Don't draw the left-most eight pixels if BIT_5 of CTRL_1 is set */
-        if (context->state.regs.ctrl_0 & SMS_VDP_CTRL_0_MASK_COL_1 && x + offset.x < 8)
+        if (context->state.regs.ctrl_0_mask_col_1 && x + offset.x < 8)
             continue;
 
         int shift;
@@ -497,7 +496,7 @@ static void sms_vdp_render_mode4_background_line (TMS9928A_Context *context, con
     }
 
     /* Bit 6 in ctrl_0 can disable horizontal scrolling for the first two rows */
-    if (context->state.regs.ctrl_0 & SMS_VDP_CTRL_0_LOCK_ROW_0_1 && line < 16)
+    if (context->state.regs.ctrl_0_lock_row_0_1 && line < 16)
     {
         start_column = 0;
         fine_scroll_x = 0;
@@ -508,7 +507,7 @@ static void sms_vdp_render_mode4_background_line (TMS9928A_Context *context, con
         pattern_flags = priority ? PATTERN_TRANSPARENCY : 0;
 
         /* Bit 7 in ctrl_0 can disable vertical scrolling for the rightmost eight columns */
-        if (tile_x == 24 && (context->state.regs.ctrl_0 & SMS_VDP_CTRL_0_LOCK_COL_24_31))
+        if (tile_x == 24 && context->state.regs.ctrl_0_lock_col_24_31)
         {
             start_row = 0;
             fine_scroll_y = 0;
@@ -558,8 +557,8 @@ static void sms_vdp_render_mode4_sprites_line (TMS9928A_Context *context, const 
 {
     uint16_t sprite_attribute_table_base = (((uint16_t) context->state.regs.sprite_attr_table_base) << 7) & 0x3f00;
     uint16_t sprite_pattern_offset = (context->state.regs.sprite_pg_base & 0x04) ? 256 : 0;
-    uint8_t pattern_height = (context->state.regs.ctrl_1 & TMS9928A_CTRL_1_SPRITE_MAG) ? 16 : 8;
-    uint8_t sprite_height = (context->state.regs.ctrl_1 & TMS9928A_CTRL_1_SPRITE_SIZE) ? (pattern_height << 1) : pattern_height;
+    uint8_t pattern_height = context->state.regs.ctrl_1_sprite_mag ? 16 : 8;
+    uint8_t sprite_height = context->state.regs.ctrl_1_sprite_size ? (pattern_height << 1) : pattern_height;
     uint8_t line_sprite_buffer [64];
     uint8_t line_sprite_count = 0;
     SMS_VDP_Mode4_Pattern *pattern;
@@ -567,7 +566,7 @@ static void sms_vdp_render_mode4_sprites_line (TMS9928A_Context *context, const 
     uint8_t pattern_flags = PATTERN_TRANSPARENCY | PATTERN_COLLISIONS;
 
     /* Sprite magnification */
-    if (context->state.regs.ctrl_1 & TMS9928A_CTRL_1_SPRITE_MAG)
+    if (context->state.regs.ctrl_1_sprite_mag)
     {
         pattern_flags |= PATTERN_MAGNIFY;
     }
@@ -615,7 +614,7 @@ static void sms_vdp_render_mode4_sprites_line (TMS9928A_Context *context, const 
         position.x = x;
 
         /* Bit 3 in ctrl_0 shifts all sprites eight pixels to the left */
-        if (context->state.regs.ctrl_0 & SMS_VDP_CTRL_0_EC)
+        if (context->state.regs.ctrl_0_ec)
         {
             position.x -= 8;
         }
@@ -626,13 +625,13 @@ static void sms_vdp_render_mode4_sprites_line (TMS9928A_Context *context, const 
         else
             position.y = y + 1;
 
-        if (context->state.regs.ctrl_1 & TMS9928A_CTRL_1_SPRITE_SIZE)
+        if (context->state.regs.ctrl_1_sprite_size)
             pattern_index &= 0xfe;
 
         pattern = (SMS_VDP_Mode4_Pattern *) &context->vram [(sprite_pattern_offset + pattern_index) * sizeof (SMS_VDP_Mode4_Pattern)];
         sms_vdp_render_mode4_pattern_line (context, mode, line, pattern, SMS_VDP_PALETTE_SPRITE, position, pattern_flags);
 
-        if (context->state.regs.ctrl_1 & TMS9928A_CTRL_1_SPRITE_SIZE)
+        if (context->state.regs.ctrl_1_sprite_size)
         {
             position.y += pattern_height;
             pattern = (SMS_VDP_Mode4_Pattern *) &context->vram [(sprite_pattern_offset + pattern_index + 1) * sizeof (SMS_VDP_Mode4_Pattern)];
@@ -650,7 +649,7 @@ static void sms_vdp_render_line (TMS9928A_Context *context, const TMS9928A_Confi
     float_Colour video_background =     { .r = 0.0f, .g = 0.0f, .b = 0.0f };
 
     /* Background */
-    if (!(context->state.regs.ctrl_1 & TMS9928A_CTRL_1_BLANK) && !context->disable_blanking)
+    if (!context->state.regs.ctrl_1_blank && !context->disable_blanking)
     {
         /* Display is blank */
     }
@@ -685,7 +684,7 @@ static void sms_vdp_render_line (TMS9928A_Context *context, const TMS9928A_Confi
         context->frame_buffer [x + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = video_background;
     }
 
-    if (!context->is_game_gear && context->state.regs.ctrl_0 & SMS_VDP_CTRL_0_MASK_COL_1)
+    if (!context->is_game_gear && context->state.regs.ctrl_0_mask_col_1)
     {
         context->video_blank_left = 8;
     }
@@ -707,18 +706,18 @@ static void sms_vdp_render_line (TMS9928A_Context *context, const TMS9928A_Confi
     }
 
     /* Return without rendering patterns if BLANK is enabled */
-    if (!(context->state.regs.ctrl_1 & TMS9928A_CTRL_1_BLANK) && !context->disable_blanking)
+    if (!context->state.regs.ctrl_1_blank && !context->disable_blanking)
     {
         return;
     }
 
-    if (context->state.regs.ctrl_0 & SMS_VDP_CTRL_0_MODE_4)
+    if (context->state.regs.ctrl_0_mode_4)
     {
         sms_vdp_render_mode4_background_line (context, config, line, false);
         sms_vdp_render_mode4_sprites_line (context, config, line);
         sms_vdp_render_mode4_background_line (context, config, line, true);
     }
-    else if (context->state.regs.ctrl_0 & TMS9928A_CTRL_0_MODE_2)
+    else if (context->state.regs.ctrl_0_mode_2)
     {
         tms9928a_render_mode2_background_line (context, config, line);
         tms9928a_render_sprites_line (context, config, line);

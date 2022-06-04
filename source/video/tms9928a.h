@@ -23,12 +23,17 @@ enum {
     TMS9928A_COLOUR_WHITE = 15
 };
 
+/* Note:
+ * The TI 9900 datasheet labels the mode bit in register 0 as 'M3', with 'M2' in register 1.
+ * Most other (unofficial) documents label the mode bit in register 0 as 'M2', with 'M3' in register 1.
+ * It is this second naming scheme that is used in Snepulator. */
+
 typedef enum TMS9928A_Mode_e {
     TMS9928A_MODE_0      =  0, /* Graphics I Mode  */
-    TMS9928A_MODE_1      =  1, /* Text Mode        */
+    TMS9928A_MODE_1      =  1, /* Text Mode (not implemented) */
     TMS9928A_MODE_2      =  2, /* Graphics II Mode */
     TMS9928A_MODE_2_1    =  3,
-    TMS9928A_MODE_3      =  4, /* Multicolour Mode */
+    TMS9928A_MODE_3      =  4, /* Multicolour Mode (not implemented) */
     TMS9928A_MODE_3_1    =  5,
     TMS9928A_MODE_3_2    =  6,
     TMS9928A_MODE_3_2_1  =  7,
@@ -50,7 +55,7 @@ typedef enum TMS9928A_Code_e {
 } TMS9928A_Code;
 
 /* Bits of control register 0 */
-#define TMS9928A_CTRL_0_NO_SYNC         BIT_0
+#define TMS9928A_CTRL_0_EXTERNAL_SYNC   BIT_0
 #define TMS9928A_CTRL_0_MODE_2          BIT_1
 
 /* Bits of control register 1 */
@@ -67,8 +72,32 @@ typedef enum TMS9928A_Code_e {
 #define TMS9928A_STATUS_INT             BIT_7
 
 typedef struct TMS9928A_Registers_s {
-    uint8_t ctrl_0;
-    uint8_t ctrl_1;
+    union {
+        uint8_t ctrl_0;
+        struct {
+            uint8_t ctrl_0_external_sync:1;  /* External sync for overlaying video */
+            uint8_t ctrl_0_mode_2:1;         /* 'Graphics II' mode */
+            uint8_t ctrl_0_mode_4:1;         /* SMS - Enable Mode 4 */
+            uint8_t ctrl_0_ec:1;             /* SMS - Shifts all sprites eight pixels left */
+            uint8_t ctrl_0_line_int_en:1;    /* SMS - Line interrupts */
+            uint8_t ctrl_0_mask_col_1:1;     /* SMS - Blank the leftmost column of background tiles */
+            uint8_t ctrl_0_lock_row_0_1:1;   /* SMS - Disable scrolling for the top two rows */
+            uint8_t ctrl_0_lock_col_24_31:1; /* SMS - Disable scrolling for the rightmost eight columns */
+        };
+    };
+    union {
+        uint8_t ctrl_1;
+        struct {
+            uint8_t ctrl_1_sprite_mag:1;    /* Draw sprite pixels at double size */
+            uint8_t ctrl_1_sprite_size:1;   /* Use 8×16 sprites */
+            uint8_t ctrl_1_bit_2:1;         /* Unused */
+            uint8_t ctrl_1_mode_3:1;        /* 'Multicolour' mode */
+            uint8_t ctrl_1_mode_1:1;        /* 'Text' mode */
+            uint8_t ctrl_1_frame_int_en:1;  /* Enable frame interrupt */
+            uint8_t ctrl_1_blank:1;         /* Output a blank screen */
+            uint8_t ctrl_1_bit_7:1;         /* Unused */
+        };
+    };
     uint8_t name_table_base;        /* Bits [0:3] select bits [10:13] of the name table base address */
     uint8_t colour_table_base;      /* Bits [0:7] select bits [ 6:13] of the colour table base address */
     uint8_t background_pg_base;     /* Bits [0:2] select bits [11:13] of the background pattern-generator table base address */
