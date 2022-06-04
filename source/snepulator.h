@@ -75,7 +75,7 @@ typedef struct Snepulator_State_s {
     int32_t      (*os_gamepad_open) (uint32_t device_index);
     void         (*os_gamepad_close) (uint32_t id);
     uint32_t     (*os_gamepad_get_count) (void);
-    uint32_t     (*os_gamepad_get_id) (uint32_t device_index);
+    int32_t      (*os_gamepad_get_id) (uint32_t device_index);
     const char * (*os_gamepad_get_name) (uint32_t device_index);
     void         (*os_gamepad_get_uuid) (int32_t device_index, uint8_t *uuid);
 

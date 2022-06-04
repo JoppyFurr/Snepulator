@@ -47,6 +47,7 @@ typedef enum Gamepad_Mapping_Type_e {
     GAMEPAD_MAPPING_TYPE_KEY
 } Gamepad_Mapping_Type;
 
+
 typedef struct Gamepad_Mapping_s {
     uint32_t type;
     union {

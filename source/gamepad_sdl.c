@@ -57,7 +57,7 @@ static uint32_t gamepad_sdl_os_gamepad_get_count (void)
 /*
  * Get the number of gamepads attached to the system.
  */
-static uint32_t gamepad_sdl_os_gamepad_get_id (uint32_t device_index)
+static int32_t gamepad_sdl_os_gamepad_get_id (uint32_t device_index)
 {
     return SDL_JoystickGetDeviceInstanceID (device_index);
 }
