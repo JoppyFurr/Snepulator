@@ -21,9 +21,9 @@
 #include "imgui.h"
 
 extern "C" {
-#include "snepulator_types.h"
-#include "snepulator.h"
-#include "gamepad.h"
+#include "../snepulator_types.h"
+#include "../snepulator.h"
+#include "../gamepad.h"
 
 extern bool config_capture_events;
 extern Snepulator_State state;

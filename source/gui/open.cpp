@@ -21,9 +21,9 @@
 #include "imgui.h"
 
 extern "C" {
-#include "snepulator_types.h"
-#include "snepulator.h"
-#include "config.h"
+#include "../snepulator_types.h"
+#include "../snepulator.h"
+#include "../config.h"
 }
 
 #include "open.h"

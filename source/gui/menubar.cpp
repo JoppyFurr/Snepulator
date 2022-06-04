@@ -12,19 +12,19 @@
 #include "imgui.h"
 
 extern "C" {
-#include "snepulator_types.h"
-#include "snepulator.h"
-#include "path.h"
-#include "util.h"
-#include "config.h"
-#include "database/sms_db.h"
-#include "gamepad.h"
-#include "video/tms9928a.h"
-#include "video/sms_vdp.h"
-#include "cpu/z80.h"
-#include "colecovision.h"
-#include "sg-1000.h"
-#include "sms.h"
+#include "../snepulator_types.h"
+#include "../snepulator.h"
+#include "../path.h"
+#include "../util.h"
+#include "../config.h"
+#include "../database/sms_db.h"
+#include "../gamepad.h"
+#include "../video/tms9928a.h"
+#include "../video/sms_vdp.h"
+#include "../cpu/z80.h"
+#include "../colecovision.h"
+#include "../sg-1000.h"
+#include "../sms.h"
 
 extern TMS9928A_Mode sms_vdp_mode_get (void);
 
@@ -34,9 +34,9 @@ extern uint32_t gamepad_list_count;
 extern Snepulator_Gamepad gamepad [3];
 }
 
-#include "gui/input.h"
-#include "gui/menubar.h"
-#include "gui/open.h"
+#include "input.h"
+#include "menubar.h"
+#include "open.h"
 extern Snepulator_State state;
 extern File_Open_State open_state;
 extern bool config_capture_events; /* TODO: Move into state */
