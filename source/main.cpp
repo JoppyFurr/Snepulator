@@ -48,8 +48,10 @@ SDL_GLContext glcontext = NULL;
 GLuint video_out_texture = 0;
 ImFont *font;
 
-/* Implementation in input.cpp */
-void snepulator_render_input_modal (void);
+/* Modal windows */
+extern File_Open_State open_state;
+bool open_modal_create = false;
+bool input_modal_create = false;
 
 
 /*
@@ -299,8 +301,23 @@ int main_gui_loop (void)
         if (state.show_gui)
         {
             snepulator_render_menubar ();
-            snepulator_render_open_modal ();
-            snepulator_render_input_modal ();
+
+            if (open_modal_create)
+            {
+                open_modal_create = false;
+                ImGui::OpenPopup (open_state.title);
+            }
+            if (input_modal_create)
+            {
+                input_modal_create = false;
+                config_capture_events = true;
+                input_start ();
+                ImGui::OpenPopup ("Configure device...");
+            }
+
+            snepulator_open_modal_render ();
+            snepulator_input_modal_render ();
+
             if (state.error_title != NULL)
             {
                 snepulator_render_error ();

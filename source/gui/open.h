@@ -13,5 +13,5 @@ typedef struct File_Open_State_s {
 void snepulator_set_open_regex (const char *regex);
 
 /* Rendering function for the open modal */
-void snepulator_render_open_modal (void);
+void snepulator_open_modal_render (void);
 

@@ -38,7 +38,7 @@ static uint32_t input_combo_index = 0;
 
 
 /*
- * Open the input dialogue.
+ * Initialise the input dialogue.
  */
 void input_start (void)
 {
@@ -99,7 +99,7 @@ const char *button_mapping_to_string (Gamepad_Mapping b)
 /*
  * Render the input configuration modal.
  */
-void snepulator_render_input_modal (void)
+void snepulator_input_modal_render (void)
 {
     /* Layout calculations */
     uint32_t width = state.host_width - 64;

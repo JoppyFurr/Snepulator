@@ -53,7 +53,7 @@ void snepulator_set_open_regex (const char *regex)
 /*
  * Render the file-open modal.
  */
-void snepulator_render_open_modal (void)
+void snepulator_open_modal_render (void)
 {
     /* Layout calculations */
     uint32_t width = state.host_width - 64;
