@@ -11,6 +11,6 @@ int32_t path_get_dir (char **path_ptr, char *name);
 /* Generate the SRAM backup path for the current rom. Needs to be freed. */
 char *path_sram (uint8_t rom_hash [HASH_LENGTH]);
 
-/* Generate the quick-save path for the current rom. Needs to be freed. */
-char *path_quicksave (uint8_t rom_hash [HASH_LENGTH]);
+/* Generate the path for a save slot. Needs to be freed. */
+char *path_save_slot (uint32_t slot, uint8_t rom_hash [HASH_LENGTH]);
 

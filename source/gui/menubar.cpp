@@ -235,7 +235,6 @@ static void snepulator_console_menu ()
             fprintf (stdout, "[DEBUG] Took %d ms to emulate five minutes. (%fx speed-up)\n",
                      end_time - start_time, (5.0 * 60000.0) / (end_time - start_time));
         }
-
         ImGui::EndMenu ();
     }
 }
@@ -250,24 +249,60 @@ static void snepulator_state_menu (void)
     {
         state.mouse_time = util_get_ticks ();
 
-        if (ImGui::MenuItem ("Quick Save", NULL)) {
-            if ((state.run == RUN_STATE_RUNNING || state.run == RUN_STATE_PAUSED) && state.state_save)
+        if (ImGui::BeginMenu ("Save State"))
+        {
+            if (state.run == RUN_STATE_RUNNING || state.run == RUN_STATE_PAUSED)
             {
-                char *path = path_quicksave (state.get_rom_hash (state.console_context));
-                state.state_save (state.console_context, path);
-                free (path);
+                if (ImGui::MenuItem ("Save to Slot 1", NULL))
+                {
+                    char *path = path_save_slot (1, state.get_rom_hash (state.console_context));
+                    state.state_save (state.console_context, path);
+                    free (path);
+                }
+                if (ImGui::MenuItem ("Save to Slot 2", NULL))
+                {
+                    char *path = path_save_slot (2, state.get_rom_hash (state.console_context));
+                    state.state_save (state.console_context, path);
+                    free (path);
+                }
+                if (ImGui::MenuItem ("Save to Slot 3", NULL))
+                {
+                    char *path = path_save_slot (3, state.get_rom_hash (state.console_context));
+                    state.state_save (state.console_context, path);
+                    free (path);
+                }
             }
-        }
-        if (ImGui::MenuItem ("Quick Load", NULL)) {
-            if ((state.run == RUN_STATE_RUNNING || state.run == RUN_STATE_PAUSED) && state.state_load)
-            {
-                char *path = path_quicksave (state.get_rom_hash (state.console_context));
-                state.state_load (state.console_context, path);
-                free (path);
-                snepulator_pause_set (false);
-            }
+            ImGui::EndMenu ();
         }
 
+        if (ImGui::BeginMenu ("Load State"))
+        {
+            if (state.run == RUN_STATE_RUNNING || state.run == RUN_STATE_PAUSED)
+            {
+                if (ImGui::MenuItem ("Load from Slot 1", NULL))
+                {
+                    char *path = path_save_slot (1, state.get_rom_hash (state.console_context));
+                    state.state_load (state.console_context, path);
+                    free (path);
+                    snepulator_pause_set (false);
+                }
+                if (ImGui::MenuItem ("Load from Slot 2", NULL))
+                {
+                    char *path = path_save_slot (2, state.get_rom_hash (state.console_context));
+                    state.state_load (state.console_context, path);
+                    free (path);
+                    snepulator_pause_set (false);
+                }
+                if (ImGui::MenuItem ("Load from Slot 3", NULL))
+                {
+                    char *path = path_save_slot (3, state.get_rom_hash (state.console_context));
+                    state.state_load (state.console_context, path);
+                    free (path);
+                    snepulator_pause_set (false);
+                }
+            }
+            ImGui::EndMenu ();
+        }
         ImGui::EndMenu ();
     }
 }

@@ -143,13 +143,13 @@ char *path_sram (uint8_t rom_hash [HASH_LENGTH])
 
 
 /*
- * Generate the quick-save path.
+ * Generate the path for a save slot.
  *
  * This string needs to be freed.
  */
-char *path_quicksave (uint8_t rom_hash [HASH_LENGTH])
+char *path_save_slot (uint32_t slot, uint8_t rom_hash [HASH_LENGTH])
 {
-    static char *path;
+    char *path;
     char *dir;
     int len;
 
@@ -159,13 +159,14 @@ char *path_quicksave (uint8_t rom_hash [HASH_LENGTH])
     }
 
     /* Get the path length */
-    len = snprintf (NULL, 0, "%s/000000000000000000000000.quicksave", dir) + 1;
+    len = snprintf (NULL, 0, "%s/000000000000000000000000.save%02d", dir, slot) + 1;
 
     /* Create the string */
     path = calloc (len, 1);
-    snprintf (path, len, "%s/%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x.quicksave", dir,
-            rom_hash [ 0], rom_hash [ 1], rom_hash [ 2], rom_hash [ 3], rom_hash [ 4], rom_hash [ 5],
-            rom_hash [ 6], rom_hash [ 7], rom_hash [ 8], rom_hash [ 9], rom_hash [10], rom_hash [11]);
+    snprintf (path, len, "%s/%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x.save%02d", dir,
+            rom_hash [ 0], rom_hash [ 1], rom_hash [ 2], rom_hash [ 3],
+            rom_hash [ 4], rom_hash [ 5], rom_hash [ 6], rom_hash [ 7],
+            rom_hash [ 8], rom_hash [ 9], rom_hash [10], rom_hash [11], slot);
 
     return path;
 }
