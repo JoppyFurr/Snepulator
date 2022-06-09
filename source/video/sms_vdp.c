@@ -402,79 +402,77 @@ bool sms_vdp_get_interrupt (TMS9928A_Context *context)
 }
 
 
-#define PATTERN_FLIP_H          0x01
-#define PATTERN_FLIP_V          0x02
-#define PATTERN_TRANSPARENCY    0x04
-#define PATTERN_COLLISIONS      0x08
-#define PATTERN_MAGNIFY         0x10
-
-/*
- * Render one line of an 8x8 pattern.
- */
-static void sms_vdp_render_mode4_pattern_line (TMS9928A_Context *context, const TMS9928A_Config *mode, uint16_t line, SMS_VDP_Mode4_Pattern *pattern_base,
-                                               SMS_VDP_Palette palette, int32_Point_2D offset, uint8_t flags)
-{
-    char *line_base;
-
-    uint8_t draw_width = (flags & PATTERN_MAGNIFY) ? 16 : 8;
-
-    if (flags & PATTERN_FLIP_V)
-        line_base = (char *)(&pattern_base->data [(offset.y - line + 7) * 4]);
-    else
-        line_base = (char *)(&pattern_base->data [((line - offset.y) >> !!(flags & PATTERN_MAGNIFY)) * 4]);
-
-    for (uint32_t x = 0; x < draw_width; x++)
-    {
-        /* Don't draw texture pixels that fall outside of the screen */
-        if (x + offset.x >= 256)
-            continue;
-
-        /* Don't draw the left-most eight pixels if BIT_5 of CTRL_1 is set */
-        if (context->state.regs.ctrl_0_mask_col_1 && x + offset.x < 8)
-            continue;
-
-        int shift;
-
-        if (flags & PATTERN_FLIP_H)
-            shift = x;
-        else
-            shift = 7 - (x >> !!(flags & PATTERN_MAGNIFY));
-
-        uint8_t colour_index = (((line_base [0] >> shift) & 0x01)     ) |
-                               (((line_base [1] >> shift) & 0x01) << 1) |
-                               (((line_base [2] >> shift) & 0x01) << 2) |
-                               (((line_base [3] >> shift) & 0x01) << 3);
-
-        if ((flags & PATTERN_TRANSPARENCY) && colour_index == 0)
-            continue;
-
-        /* Sprite collision detection */
-        if (flags & PATTERN_COLLISIONS)
-        {
-            if (context->state.collision_buffer [x + offset.x])
-            {
-                context->state.status |= TMS9928A_SPRITE_COLLISION;
-            }
-
-            context->state.collision_buffer [x + offset.x] = true;
-        }
-
-        uint16_t pixel = context->state.cram [palette + colour_index];
-
-        context->frame_buffer [(offset.x + x + VIDEO_SIDE_BORDER) +
-                               (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = context->vdp_to_float [pixel & context->vdp_to_float_mask];
-    }
-}
-
-
 #define SMS_VDP_PATTERN_HORIZONTAL_FLIP     BIT_9
 #define SMS_VDP_PATTERN_VERTICAL_FLIP       BIT_10
 
 
 /*
+ * Render one line of an 8×8 pattern.
+ * Background version.
+ * Supports vertical and horizontal mirroring.
+ */
+static void sms_vdp_mode4_draw_pattern_background (TMS9928A_Context *context, uint16_t line, SMS_VDP_Mode4_Pattern *pattern_base,
+                                                   SMS_VDP_Palette palette, int32_Point_2D position, bool flip_h, bool flip_v, bool priority)
+{
+    uint32_t pattern_line;
+    uint32_t pixel_bit;
+
+    /* Get the line within the pattern */
+    if (flip_v)
+    {
+        pattern_line = ((uint32_t *) pattern_base) [position.y - line + 7];
+    }
+    else
+    {
+        pattern_line = ((uint32_t *) pattern_base) [line - position.y];
+    }
+
+    for (uint32_t x = 0; x < 8; x++)
+    {
+        /* Nothing to do off the right side of the screen */
+        if (x + position.x >= 256)
+        {
+            return;
+        }
+
+        /* Don't draw the left-most eight pixels if BIT_5 of CTRL_1 is set */
+        if (context->state.regs.ctrl_0_mask_col_1 && x + position.x < 8)
+        {
+            continue;
+        }
+
+        if (flip_h)
+        {
+            pixel_bit = x;
+        }
+        else
+        {
+            pixel_bit = 7 - x;
+        }
+
+        uint8_t colour_index = ((pattern_line >> (pixel_bit     )) & 0x01) |
+                               ((pattern_line >> (pixel_bit +  7)) & 0x02) |
+                               ((pattern_line >> (pixel_bit + 14)) & 0x04) |
+                               ((pattern_line >> (pixel_bit + 21)) & 0x08);
+
+        /* Colour 0 is transparency */
+        if (colour_index == 0 && priority)
+        {
+            continue;
+        }
+
+        uint16_t pixel = context->state.cram [palette + colour_index];
+
+        context->frame_buffer [(position.x + x + VIDEO_SIDE_BORDER) +
+                               (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = context->vdp_to_float [pixel & context->vdp_to_float_mask];
+    }
+}
+
+
+/*
  * Render one line of the background layer.
  */
-static void sms_vdp_render_mode4_background_line (TMS9928A_Context *context, const TMS9928A_Config *mode, uint16_t line, bool priority)
+static void sms_vdp_mode4_draw_background (TMS9928A_Context *context, const TMS9928A_Config *mode, uint16_t line, bool priority)
 {
     uint16_t name_table_base;
     uint8_t num_rows = (mode->lines_active == 192) ? 28 : 32;
@@ -484,7 +482,6 @@ static void sms_vdp_render_mode4_background_line (TMS9928A_Context *context, con
     uint8_t fine_scroll_y = (context->state.regs.bg_scroll_y % (8 * num_rows)) & 0x07;
     uint32_t tile_y = (line + fine_scroll_y) / 8;
     int32_Point_2D position;
-    uint8_t pattern_flags;
 
     if (mode->lines_active == 192)
     {
@@ -504,8 +501,6 @@ static void sms_vdp_render_mode4_background_line (TMS9928A_Context *context, con
 
     for (uint32_t tile_x = 0; tile_x < 32; tile_x++)
     {
-        pattern_flags = priority ? PATTERN_TRANSPARENCY : 0;
-
         /* Bit 7 in ctrl_0 can disable vertical scrolling for the rightmost eight columns */
         if (tile_x == 24 && context->state.regs.ctrl_0_lock_col_24_31)
         {
@@ -527,17 +522,12 @@ static void sms_vdp_render_mode4_background_line (TMS9928A_Context *context, con
 
         /* If we are rendering the "priority" layer, skip any non-priority tiles */
         if (priority && !(tile & 0x1000))
+        {
             continue;
-
-        if (tile & SMS_VDP_PATTERN_HORIZONTAL_FLIP)
-        {
-            pattern_flags |= PATTERN_FLIP_H;
         }
 
-        if (tile & SMS_VDP_PATTERN_VERTICAL_FLIP)
-        {
-            pattern_flags |= PATTERN_FLIP_V;
-        }
+        bool flip_h = !!(tile & SMS_VDP_PATTERN_HORIZONTAL_FLIP);
+        bool flip_v = !!(tile & SMS_VDP_PATTERN_VERTICAL_FLIP);
 
         SMS_VDP_Mode4_Pattern *pattern = (SMS_VDP_Mode4_Pattern *) &context->vram [(tile & 0x1ff) * sizeof (SMS_VDP_Mode4_Pattern)];
 
@@ -545,7 +535,61 @@ static void sms_vdp_render_mode4_background_line (TMS9928A_Context *context, con
 
         position.x = 8 * tile_x + fine_scroll_x;
         position.y = 8 * tile_y - fine_scroll_y;
-        sms_vdp_render_mode4_pattern_line (context, mode, line, pattern, palette, position, pattern_flags);
+        sms_vdp_mode4_draw_pattern_background (context, line, pattern, palette, position, flip_h, flip_v, priority);
+    }
+}
+
+
+/*
+ * Render one line of an 8×8 pattern.
+ * Sprite version.
+ * Supports magnification.
+ */
+static void sms_vdp_mode4_draw_pattern_sprite (TMS9928A_Context *context, uint16_t line, SMS_VDP_Mode4_Pattern *pattern_base,
+                                                      int32_Point_2D position, bool magnify)
+{
+    uint32_t draw_width = (magnify) ? 16 : 8;
+    uint32_t pattern_line = ((uint32_t *) pattern_base) [(line - position.y) >> magnify];
+    uint32_t pixel_bit;
+
+    for (uint32_t x = 0; x < draw_width; x++)
+    {
+        /* Nothing to do off the right side of the screen */
+        if (x + position.x >= 256)
+        {
+            return;
+        }
+
+        /* Don't draw the left-most eight pixels if BIT_5 of CTRL_1 is set */
+        if (context->state.regs.ctrl_0_mask_col_1 && x + position.x < 8)
+        {
+            continue;
+        }
+
+        pixel_bit = 7 - (x >> magnify);
+
+        uint8_t colour_index = ((pattern_line >> (pixel_bit     )) & 0x01) |
+                               ((pattern_line >> (pixel_bit +  7)) & 0x02) |
+                               ((pattern_line >> (pixel_bit + 14)) & 0x04) |
+                               ((pattern_line >> (pixel_bit + 21)) & 0x08);
+
+        /* Colour 0 is transparency */
+        if (colour_index == 0)
+        {
+            continue;
+        }
+
+        /* Sprite collision detection */
+        if (context->state.collision_buffer [x + position.x])
+        {
+            context->state.status |= TMS9928A_SPRITE_COLLISION;
+        }
+        context->state.collision_buffer [x + position.x] = true;
+
+        uint16_t pixel = context->state.cram [SMS_VDP_PALETTE_SPRITE + colour_index];
+
+        context->frame_buffer [(position.x + x + VIDEO_SIDE_BORDER) +
+                               (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = context->vdp_to_float [pixel & context->vdp_to_float_mask];
     }
 }
 
@@ -553,7 +597,7 @@ static void sms_vdp_render_mode4_background_line (TMS9928A_Context *context, con
 /*
  * Render one line of the sprite layer.
  */
-static void sms_vdp_render_mode4_sprites_line (TMS9928A_Context *context, const TMS9928A_Config *mode, uint16_t line)
+static void sms_vdp_mode4_draw_sprites (TMS9928A_Context *context, const TMS9928A_Config *mode, uint16_t line)
 {
     uint16_t sprite_attribute_table_base = (((uint16_t) context->state.regs.sprite_attr_table_base) << 7) & 0x3f00;
     uint16_t sprite_pattern_offset = (context->state.regs.sprite_pg_base & 0x04) ? 256 : 0;
@@ -563,12 +607,12 @@ static void sms_vdp_render_mode4_sprites_line (TMS9928A_Context *context, const 
     uint8_t line_sprite_count = 0;
     SMS_VDP_Mode4_Pattern *pattern;
     int32_Point_2D position;
-    uint8_t pattern_flags = PATTERN_TRANSPARENCY | PATTERN_COLLISIONS;
+    bool magnify = false;
 
     /* Sprite magnification */
     if (context->state.regs.ctrl_1_sprite_mag)
     {
-        pattern_flags |= PATTERN_MAGNIFY;
+        magnify = true;
     }
 
     /* Traverse the sprite list, filling the line sprite buffer */
@@ -629,13 +673,13 @@ static void sms_vdp_render_mode4_sprites_line (TMS9928A_Context *context, const 
             pattern_index &= 0xfe;
 
         pattern = (SMS_VDP_Mode4_Pattern *) &context->vram [(sprite_pattern_offset + pattern_index) * sizeof (SMS_VDP_Mode4_Pattern)];
-        sms_vdp_render_mode4_pattern_line (context, mode, line, pattern, SMS_VDP_PALETTE_SPRITE, position, pattern_flags);
+        sms_vdp_mode4_draw_pattern_sprite (context, line, pattern, position, magnify);
 
         if (context->state.regs.ctrl_1_sprite_size)
         {
             position.y += pattern_height;
             pattern = (SMS_VDP_Mode4_Pattern *) &context->vram [(sprite_pattern_offset + pattern_index + 1) * sizeof (SMS_VDP_Mode4_Pattern)];
-            sms_vdp_render_mode4_pattern_line (context, mode, line, pattern, SMS_VDP_PALETTE_SPRITE, position, pattern_flags);
+            sms_vdp_mode4_draw_pattern_sprite (context, line, pattern, position, magnify);
         }
     }
 }
@@ -713,9 +757,9 @@ static void sms_vdp_render_line (TMS9928A_Context *context, const TMS9928A_Confi
 
     if (context->state.regs.ctrl_0_mode_4)
     {
-        sms_vdp_render_mode4_background_line (context, config, line, false);
-        sms_vdp_render_mode4_sprites_line (context, config, line);
-        sms_vdp_render_mode4_background_line (context, config, line, true);
+        sms_vdp_mode4_draw_background (context, config, line, false);
+        sms_vdp_mode4_draw_sprites (context, config, line);
+        sms_vdp_mode4_draw_background (context, config, line, true);
     }
     else if (context->state.regs.ctrl_0_mode_2)
     {
