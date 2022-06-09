@@ -206,16 +206,11 @@ uint8_t tms9928a_status_read (TMS9928A_Context *context);
 /* Write one byte to the tms9928a control port. */
 void tms9928a_control_write (TMS9928A_Context *context, uint8_t value);
 
-/* Render one line of a mode2 8x8 pattern. */
-void tms9928a_render_mode2_pattern_line (TMS9928A_Context *context, const TMS9928A_Config *config,
-                                         uint16_t line, TMS9928A_Pattern *pattern_base,
-                                         uint8_t tile_colours, int32_Point_2D offset, bool sprite);
-
 /* Render one line of sprites for mode0 / mode2 / mode3. */
-void tms9928a_render_sprites_line (TMS9928A_Context *context, const TMS9928A_Config *config, uint16_t line);
+void tms9928a_draw_sprites (TMS9928A_Context *context, const TMS9928A_Config *config, uint16_t line);
 
 /* Render one line of the mode2 background layer. */
-void tms9928a_render_mode2_background_line (TMS9928A_Context *context, const TMS9928A_Config *config, uint16_t line);
+void tms9928a_mode2_draw_background (TMS9928A_Context *context, const TMS9928A_Config *config, uint16_t line);
 
 /* Run one scanline on the tms9928a. */
 void tms9928a_run_one_scanline (TMS9928A_Context *context);

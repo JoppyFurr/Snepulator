@@ -763,8 +763,8 @@ static void sms_vdp_render_line (TMS9928A_Context *context, const TMS9928A_Confi
     }
     else if (context->state.regs.ctrl_0_mode_2)
     {
-        tms9928a_render_mode2_background_line (context, config, line);
-        tms9928a_render_sprites_line (context, config, line);
+        tms9928a_mode2_draw_background (context, config, line);
+        tms9928a_draw_sprites (context, config, line);
     }
 }
 

@@ -228,9 +228,9 @@ bool tms9928a_get_interrupt (TMS9928A_Context *context)
 /*
  * Render one line of an 8x8 pattern.
  */
-static void tms9928a_render_pattern_line (TMS9928A_Context *context, const TMS9928A_Config *config, uint16_t line,
-                                          TMS9928A_Pattern *pattern_base, uint8_t tile_colours, int32_Point_2D offset,
-                                          bool sprite, bool magnify)
+static void tms9928a_draw_pattern (TMS9928A_Context *context, const TMS9928A_Config *config, uint16_t line,
+                                   TMS9928A_Pattern *pattern_base, uint8_t tile_colours, int32_Point_2D offset,
+                                   bool sprite, bool magnify)
 {
     uint8_t line_data;
 
@@ -266,10 +266,10 @@ static void tms9928a_render_pattern_line (TMS9928A_Context *context, const TMS99
 
 
 /*
- * Render this line's sprites for modes with sprite support.
+ * Render one line of the sprite layer.
  * Sprites can be either 8×8 pixels, or 16×16.
  */
-void tms9928a_render_sprites_line (TMS9928A_Context *context, const TMS9928A_Config *config, uint16_t line)
+void tms9928a_draw_sprites (TMS9928A_Context *context, const TMS9928A_Config *config, uint16_t line)
 {
     uint16_t sprite_attribute_table_base = (((uint16_t) context->state.regs.sprite_attr_table_base) << 7) & 0x3f80;
     uint16_t pattern_generator_base = (((uint16_t) context->state.regs.sprite_pg_base) << 11) & 0x3800;
@@ -354,13 +354,13 @@ void tms9928a_render_sprites_line (TMS9928A_Context *context, const TMS9928A_Con
             {
                 sub_position.x = position.x + ((i & 2) ? (8 << magnify) : 0);
                 sub_position.y = position.y + ((i & 1) ? (8 << magnify) : 0);
-                tms9928a_render_pattern_line (context, config, line, pattern + i, sprite->colour_ec << 4, sub_position, true, magnify);
+                tms9928a_draw_pattern (context, config, line, pattern + i, sprite->colour_ec << 4, sub_position, true, magnify);
             }
         }
         else
         {
             pattern = (TMS9928A_Pattern *) &context->vram [pattern_generator_base + (pattern_index * sizeof (TMS9928A_Pattern))];
-            tms9928a_render_pattern_line (context, config, line, pattern, sprite->colour_ec << 4, position, true, magnify);
+            tms9928a_draw_pattern (context, config, line, pattern, sprite->colour_ec << 4, position, true, magnify);
         }
     }
 }
@@ -369,7 +369,7 @@ void tms9928a_render_sprites_line (TMS9928A_Context *context, const TMS9928A_Con
 /*
  * Render one line of the mode0 background layer.
  */
-void tms9928a_render_mode0_background_line (TMS9928A_Context *context, const TMS9928A_Config *config, uint16_t line)
+void tms9928a_mode0_draw_background (TMS9928A_Context *context, const TMS9928A_Config *config, uint16_t line)
 {
     uint16_t name_table_base;
     uint16_t pattern_generator_base;
@@ -392,7 +392,7 @@ void tms9928a_render_mode0_background_line (TMS9928A_Context *context, const TMS
 
         position.x = 8 * tile_x;
         position.y = 8 * tile_y;
-        tms9928a_render_pattern_line (context, config, line, pattern, colours, position, false, false);
+        tms9928a_draw_pattern (context, config, line, pattern, colours, position, false, false);
     }
 }
 
@@ -400,7 +400,7 @@ void tms9928a_render_mode0_background_line (TMS9928A_Context *context, const TMS
 /*
  * Render one line of the mode2 background layer.
  */
-void tms9928a_render_mode2_background_line (TMS9928A_Context *context, const TMS9928A_Config *config, uint16_t line)
+void tms9928a_mode2_draw_background (TMS9928A_Context *context, const TMS9928A_Config *config, uint16_t line)
 {
     uint16_t name_table_base;
     uint16_t pattern_generator_base;
@@ -436,7 +436,7 @@ void tms9928a_render_mode2_background_line (TMS9928A_Context *context, const TMS
 
         position.x = 8 * tile_x;
         position.y = 8 * tile_y;
-        tms9928a_render_pattern_line (context, config, line, pattern, colours, position, false, false);
+        tms9928a_draw_pattern (context, config, line, pattern, colours, position, false, false);
     }
 }
 
@@ -511,13 +511,13 @@ void tms9928a_render_line (TMS9928A_Context *context, const TMS9928A_Config *con
 
     if (config->mode == TMS9928A_MODE_0)
     {
-        tms9928a_render_mode0_background_line (context, config, line);
-        tms9928a_render_sprites_line (context, config, line);
+        tms9928a_mode0_draw_background (context, config, line);
+        tms9928a_draw_sprites (context, config, line);
     }
     else if (config->mode & TMS9928A_MODE_2)
     {
-        tms9928a_render_mode2_background_line (context, config, line);
-        tms9928a_render_sprites_line (context, config, line);
+        tms9928a_mode2_draw_background (context, config, line);
+        tms9928a_draw_sprites (context, config, line);
     }
 }
 
