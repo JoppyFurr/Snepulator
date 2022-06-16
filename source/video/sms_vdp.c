@@ -476,12 +476,16 @@ static void sms_vdp_mode4_draw_background (TMS9928A_Context *context, const TMS9
 {
     uint16_t name_table_base;
     uint8_t num_rows = (mode->lines_active == 192) ? 28 : 32;
-    uint8_t start_column = 32 - ((context->state.regs.bg_scroll_x & 0xf8) >> 3);
+
+    /* Name-table row and starting-column for this line */
+    uint8_t table_row = ((context->state.regs.bg_scroll_y + line) >> 3) % num_rows;
+    uint8_t table_col = 32 - (context->state.regs.bg_scroll_x >> 3);
+
     uint8_t fine_scroll_x = context->state.regs.bg_scroll_x & 0x07;
-    uint8_t start_row = ((context->state.regs.bg_scroll_y % (8 * num_rows)) & 0xf8) >> 3;
-    uint8_t fine_scroll_y = (context->state.regs.bg_scroll_y % (8 * num_rows)) & 0x07;
-    uint32_t tile_y = (line + fine_scroll_y) / 8;
-    int32_Point_2D position;
+    uint8_t fine_scroll_y = context->state.regs.bg_scroll_y & 0x07;
+    uint32_t tile_y = (line + fine_scroll_y) >> 3;
+
+    int32_Point_2D position; /* Position of the pattern on the display */
 
     if (mode->lines_active == 192)
     {
@@ -495,7 +499,7 @@ static void sms_vdp_mode4_draw_background (TMS9928A_Context *context, const TMS9
     /* Bit 6 in ctrl_0 can disable horizontal scrolling for the first two rows */
     if (context->state.regs.ctrl_0_lock_row_0_1 && line < 16)
     {
-        start_column = 0;
+        table_col = 0;
         fine_scroll_x = 0;
     }
 
@@ -504,12 +508,12 @@ static void sms_vdp_mode4_draw_background (TMS9928A_Context *context, const TMS9
         /* Bit 7 in ctrl_0 can disable vertical scrolling for the rightmost eight columns */
         if (tile_x == 24 && context->state.regs.ctrl_0_lock_col_24_31)
         {
-            start_row = 0;
-            fine_scroll_y = 0;
+            table_row = line / 8;
             tile_y = line / 8;
+            fine_scroll_y = 0;
         }
 
-        uint16_t tile_address = name_table_base + ((((tile_y + start_row) % num_rows) << 6) | ((tile_x + start_column) % 32 << 1));
+        uint16_t tile_address = name_table_base + ((table_row << 6) | ((table_col + tile_x) % 32 << 1));
 
         /* SMS1 VDP name-table mirroring */
         if (context->sms1_vdp_hint && !(context->state.regs.name_table_base & 0x01))
@@ -520,8 +524,9 @@ static void sms_vdp_mode4_draw_background (TMS9928A_Context *context, const TMS9
         uint16_t tile = ((uint16_t)(context->vram [tile_address])) +
                         (((uint16_t)(context->vram [tile_address + 1])) << 8);
 
-        /* If we are rendering the "priority" layer, skip any non-priority tiles */
-        if (priority && !(tile & 0x1000))
+        /* Only draw priority tiles for the priority layer, and only
+         * draw non-priority tiles for the non-priority layer. */
+        if (priority != !!(tile & 0x1000))
         {
             continue;
         }
@@ -531,7 +536,7 @@ static void sms_vdp_mode4_draw_background (TMS9928A_Context *context, const TMS9
 
         SMS_VDP_Mode4_Pattern *pattern = (SMS_VDP_Mode4_Pattern *) &context->vram [(tile & 0x1ff) * sizeof (SMS_VDP_Mode4_Pattern)];
 
-        SMS_VDP_Palette palette = (tile & (1 << 11)) ? SMS_VDP_PALETTE_SPRITE : SMS_VDP_PALETTE_BACKGROUND;
+        SMS_VDP_Palette palette = (tile & BIT_11) ? SMS_VDP_PALETTE_SPRITE : SMS_VDP_PALETTE_BACKGROUND;
 
         position.x = 8 * tile_x + fine_scroll_x;
         position.y = 8 * tile_y - fine_scroll_y;
