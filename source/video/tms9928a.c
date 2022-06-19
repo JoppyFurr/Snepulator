@@ -486,9 +486,10 @@ void tms9928a_render_line (TMS9928A_Context *context, const TMS9928A_Config *con
     }
 
     /* Side borders */
-    for (int x = 0; x < VIDEO_BUFFER_WIDTH; x++)
+    for (int x = 0; x < VIDEO_SIDE_BORDER; x++)
     {
         context->frame_buffer [x + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = video_background;
+        context->frame_buffer [x + (VIDEO_BUFFER_WIDTH - VIDEO_SIDE_BORDER) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = video_background;
     }
 
     /* Bottom border */

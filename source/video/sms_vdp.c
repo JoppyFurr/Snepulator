@@ -728,9 +728,11 @@ static void sms_vdp_render_line (TMS9928A_Context *context, const TMS9928A_Confi
     }
 
     /* Side borders */
-    for (int x = 0; x < VIDEO_BUFFER_WIDTH; x++)
+    for (int x = 0; x < VIDEO_SIDE_BORDER; x++)
     {
         context->frame_buffer [x + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = video_background;
+        context->frame_buffer [x + 8 + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = video_background; /* Assumes VIDEO_SIDE_BOARDER is 8px */
+        context->frame_buffer [x + (VIDEO_BUFFER_WIDTH - VIDEO_SIDE_BORDER) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = video_background;
     }
 
     if (!context->is_game_gear && context->state.regs.ctrl_0_mask_col_1)
