@@ -16,6 +16,7 @@
 
 /*
  * Get the directory that the snepulator files reside in.
+ * TODO: Check that callers free...
  */
 int32_t path_base (char **path_ptr)
 {
