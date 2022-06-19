@@ -74,13 +74,11 @@ typedef struct Gamepad_Config_s {
 
 /*
  * Details for a detected gamepad.
- *
- * TODO: Recreate this structure each time a gamepad is connected / disconnected.
  */
 typedef struct Gamepad_Instance_s {
     int32_t instance_id;    /* ID associated with events from the device. */
     uint32_t config_index;  /* Index into the configuration library. */
-    int32_t device_index;   /* Index into array of detected devices (SDL). */
+    int32_t device_index;   /* Index into array of detected input devices. */
 } Gamepad_Instance;
 
 /*
