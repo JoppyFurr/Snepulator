@@ -524,9 +524,10 @@ static void sms_vdp_mode4_draw_background (TMS9928A_Context *context, const TMS9
         uint16_t tile = ((uint16_t)(context->vram [tile_address])) +
                         (((uint16_t)(context->vram [tile_address + 1])) << 8);
 
-        /* Only draw priority tiles for the priority layer, and only
-         * draw non-priority tiles for the non-priority layer. */
-        if (priority != !!(tile & 0x1000))
+        /* Don't redraw a non-priority tile on the priority layer.
+         * A priority tile, or at least its background colour, needs to be drawn on
+         * the non-priority layer in case there is no sprite to be transparent to. */
+        if (priority && !(tile & 0x1000))
         {
             continue;
         }
