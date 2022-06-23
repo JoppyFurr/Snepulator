@@ -696,23 +696,19 @@ static void sms_vdp_mode4_draw_sprites (TMS9928A_Context *context, const TMS9928
  */
 static void sms_vdp_render_line (TMS9928A_Context *context, const TMS9928A_Config *config, uint16_t line)
 {
-    float_Colour video_background =     { .r = 0.0f, .g = 0.0f, .b = 0.0f };
+    float_Colour video_backdrop;
 
-    /* Background */
-    if (!context->state.regs.ctrl_1_blank && !context->disable_blanking)
-    {
-        /* Display is blank */
-    }
-    else if (config->mode & SMS_VDP_MODE_4)
+    if (config->mode & SMS_VDP_MODE_4)
     {
         uint8_t bg_colour;
         bg_colour = context->state.cram [16 + (context->state.regs.background_colour & 0x0f)];
-        video_background = context->vdp_to_float [bg_colour & context->vdp_to_float_mask];
+        video_backdrop = context->vdp_to_float [bg_colour & context->vdp_to_float_mask];
     }
     else
     {
-        video_background = config->palette [context->state.regs.background_colour & 0x0f];
+        video_backdrop = config->palette [context->state.regs.background_colour & 0x0f];
     }
+
     /* Note: For now the top/bottom borders just copy the background from the first
      *       and last active lines. Do any games change the value outside of this? */
 
@@ -723,17 +719,29 @@ static void sms_vdp_render_line (TMS9928A_Context *context, const TMS9928A_Confi
         {
             for (uint32_t x = 0; x < VIDEO_BUFFER_WIDTH; x++)
             {
-                context->frame_buffer [x + border_line * VIDEO_BUFFER_WIDTH] = video_background;
+                context->frame_buffer [x + border_line * VIDEO_BUFFER_WIDTH] = video_backdrop;
             }
         }
     }
 
-    /* Side borders */
-    for (int x = 0; x < VIDEO_SIDE_BORDER; x++)
+    /* If blanking is enabled, fill the whole screen with the backdrop colour.
+     * Otherwise, fill only the border.
+     * Note, the left border is drawn an extra 8px to account for left column blanking. */
+    if (!context->state.regs.ctrl_1_blank && !context->disable_blanking)
     {
-        context->frame_buffer [x + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = video_background;
-        context->frame_buffer [x + 8 + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = video_background; /* Assumes VIDEO_SIDE_BOARDER is 8px */
-        context->frame_buffer [x + (VIDEO_BUFFER_WIDTH - VIDEO_SIDE_BORDER) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = video_background;
+        for (int x = 0; x < VIDEO_BUFFER_WIDTH; x++)
+        {
+            context->frame_buffer [x + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = video_backdrop;
+        }
+    }
+    else
+    {
+        for (int x = 0; x < VIDEO_SIDE_BORDER; x++)
+        {
+            context->frame_buffer [x + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = video_backdrop;
+            context->frame_buffer [x + 8 + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = video_backdrop;
+            context->frame_buffer [x + (VIDEO_BUFFER_WIDTH - VIDEO_SIDE_BORDER) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = video_backdrop;
+        }
     }
 
     if (!context->is_game_gear && context->state.regs.ctrl_0_mask_col_1)
@@ -752,7 +760,7 @@ static void sms_vdp_render_line (TMS9928A_Context *context, const TMS9928A_Confi
         {
             for (uint32_t x = 0; x < VIDEO_BUFFER_WIDTH; x++)
             {
-                context->frame_buffer [x + border_line * VIDEO_BUFFER_WIDTH] = video_background;
+                context->frame_buffer [x + border_line * VIDEO_BUFFER_WIDTH] = video_backdrop;
             }
         }
     }
