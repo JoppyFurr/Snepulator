@@ -457,19 +457,12 @@ static uint8_t tms9928a_mode_get (TMS9928A_Context *context)
  */
 void tms9928a_render_line (TMS9928A_Context *context, const TMS9928A_Config *config, uint16_t line)
 {
-    float_Colour video_background =     { .r = 0.0f, .g = 0.0f, .b = 0.0f };
+    float_Colour video_backdrop;
 
     context->render_start_y = (VIDEO_BUFFER_LINES - config->lines_active) / 2;
 
     /* Background */
-    if (!context->state.regs.ctrl_1_blank && !context->disable_blanking)
-    {
-        /* Display is blank */
-    }
-    else
-    {
-        video_background = config->palette [context->state.regs.background_colour & 0x0f];
-    }
+    video_backdrop = config->palette [context->state.regs.background_colour & 0x0f];
 
     /* Note: The top/bottom borders use the background colour of the first and last active lines. */
 
@@ -480,16 +473,27 @@ void tms9928a_render_line (TMS9928A_Context *context, const TMS9928A_Config *con
         {
             for (uint32_t x = 0; x < VIDEO_BUFFER_WIDTH; x++)
             {
-                context->frame_buffer [x + border_line * VIDEO_BUFFER_WIDTH] = video_background;
+                context->frame_buffer [x + border_line * VIDEO_BUFFER_WIDTH] = video_backdrop;
             }
         }
     }
 
-    /* Side borders */
-    for (int x = 0; x < VIDEO_SIDE_BORDER; x++)
+    /* If blanking is enabled, fill the whole screen with the backdrop colour.
+     * Otherwise, fill only the border. */
+    if (!context->state.regs.ctrl_1_blank && !context->disable_blanking)
     {
-        context->frame_buffer [x + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = video_background;
-        context->frame_buffer [x + (VIDEO_BUFFER_WIDTH - VIDEO_SIDE_BORDER) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = video_background;
+        for (int x = 0; x < VIDEO_BUFFER_WIDTH; x++)
+        {
+            context->frame_buffer [x + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = video_backdrop;
+        }
+    }
+    else
+    {
+        for (int x = 0; x < VIDEO_SIDE_BORDER; x++)
+        {
+            context->frame_buffer [x + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = video_backdrop;
+            context->frame_buffer [x + (VIDEO_BUFFER_WIDTH - VIDEO_SIDE_BORDER) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = video_backdrop;
+        }
     }
 
     /* Bottom border */
@@ -499,7 +503,7 @@ void tms9928a_render_line (TMS9928A_Context *context, const TMS9928A_Config *con
         {
             for (uint32_t x = 0; x < VIDEO_BUFFER_WIDTH; x++)
             {
-                context->frame_buffer [x + border_line * VIDEO_BUFFER_WIDTH] = video_background;
+                context->frame_buffer [x + border_line * VIDEO_BUFFER_WIDTH] = video_backdrop;
             }
         }
     }
