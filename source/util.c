@@ -202,14 +202,14 @@ void util_take_screenshot (void)
     /* 24-bits per pixel */
     buffer = malloc (state.video_width * state.video_height * 3);
 
-    /* Convert from float to uint8_t */
+    /* Crop video_data_out to remove borders */
     for (uint32_t y = 0; y < height; y++)
     {
         for (uint32_t x = 0; x < width; x++)
         {
-            buffer [(x + y * width) * 3 + 0] = state.video_out_data [start_x + x + (start_y + y) * stride].r * 255.0;
-            buffer [(x + y * width) * 3 + 1] = state.video_out_data [start_x + x + (start_y + y) * stride].g * 255.0;
-            buffer [(x + y * width) * 3 + 2] = state.video_out_data [start_x + x + (start_y + y) * stride].b * 255.0;
+            buffer [(x + y * width) * 3 + 0] = state.video_out_data [start_x + x + (start_y + y) * stride].r;
+            buffer [(x + y * width) * 3 + 1] = state.video_out_data [start_x + x + (start_y + y) * stride].g;
+            buffer [(x + y * width) * 3 + 2] = state.video_out_data [start_x + x + (start_y + y) * stride].b;
         }
     }
 
