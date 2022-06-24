@@ -95,7 +95,7 @@ typedef struct Snepulator_State_s {
     void      (*update_settings) (void *);
 
     /* Console video output */
-    float_Colour video_out_data [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
+    uint_pixel  video_out_data [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
     uint32_t    video_start_x;
     uint32_t    video_start_y;
     uint32_t    video_width;
@@ -106,7 +106,7 @@ typedef struct Snepulator_State_s {
     int16_t     phaser_y;
 
     /* Host video output */
-    float_Colour video_pause_data [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
+    uint_pixel   video_pause_data [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
     int          host_width;
     int          host_height;
     Video_Filter video_filter;

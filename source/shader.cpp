@@ -140,13 +140,14 @@ void snepulator_shader_callback (const ImDrawList *parent_list, const ImDrawCmd 
 
     /* Copy the most recent frame into video_out_texture */
     /* TODO: Should this happen when the frame is complete instead of here? */
+
+    /* Note, video_out_data uses four bytes per pixel to simplify alignment. */
     glBindTexture (GL_TEXTURE_2D, video_out_texture);
     pthread_mutex_lock (&video_mutex);
     glTexImage2D (GL_TEXTURE_2D, 0, GL_RGB,
                   VIDEO_BUFFER_WIDTH, VIDEO_BUFFER_LINES,
-                  0, GL_RGB, GL_FLOAT, state.video_out_data);
+                  0, GL_RGBA, GL_UNSIGNED_BYTE, state.video_out_data);
     pthread_mutex_unlock (&video_mutex);
-
 
     /* Set the uniforms */
     location = glGetUniformLocation (shader_program, "video_resolution");

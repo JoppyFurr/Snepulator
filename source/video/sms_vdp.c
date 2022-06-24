@@ -27,31 +27,31 @@ extern Snepulator_Gamepad gamepad [3];
 #define SMS_VDP_CRAM_SIZE (32)
 
 /* Macros */
-#define SMS_VDP_TO_FLOAT(C) { .r = ((0xff / 3) * (((C) & 0x03) >> 0)) / 255.0f, \
-                              .g = ((0xff / 3) * (((C) & 0x0c) >> 2)) / 255.0f, \
-                              .b = ((0xff / 3) * (((C) & 0x30) >> 4)) / 255.0f }
+#define SMS_VDP_TO_UINT_PIXEL(C) { .r = ((0xff / 3) * (((C) & 0x03) >> 0)), \
+                              .g = ((0xff / 3) * (((C) & 0x0c) >> 2)), \
+                              .b = ((0xff / 3) * (((C) & 0x30) >> 4)) }
 
-#define GG_VDP_TO_FLOAT(C) { .r = ((0xff / 15) * (((C) & 0x000f) >> 0)) / 255.0f, \
-                             .g = ((0xff / 15) * (((C) & 0x00f0) >> 4)) / 255.0f, \
-                             .b = ((0xff / 15) * (((C) & 0x0f00) >> 8)) / 255.0f }
+#define GG_VDP_TO_UINT_PIXEL(C) { .r = ((0xff / 15) * (((C) & 0x000f) >> 0)), \
+                             .g = ((0xff / 15) * (((C) & 0x00f0) >> 4)), \
+                             .b = ((0xff / 15) * (((C) & 0x0f00) >> 8)) }
 
 #define SMS_VDP_LEGACY_PALETTE { \
-    SMS_VDP_TO_FLOAT (0x00), /* Transparent */ \
-    SMS_VDP_TO_FLOAT (0x00), /* Black */ \
-    SMS_VDP_TO_FLOAT (0x08), /* Medium Green */ \
-    SMS_VDP_TO_FLOAT (0x0c), /* Light Green */ \
-    SMS_VDP_TO_FLOAT (0x10), /* Dark Blue */ \
-    SMS_VDP_TO_FLOAT (0x30), /* Light blue */ \
-    SMS_VDP_TO_FLOAT (0x01), /* Dark Red */ \
-    SMS_VDP_TO_FLOAT (0x3c), /* Cyan */ \
-    SMS_VDP_TO_FLOAT (0x02), /* Medium Red */ \
-    SMS_VDP_TO_FLOAT (0x03), /* Light Red */ \
-    SMS_VDP_TO_FLOAT (0x05), /* Dark Yellow */ \
-    SMS_VDP_TO_FLOAT (0x0f), /* Light Yellow */ \
-    SMS_VDP_TO_FLOAT (0x04), /* Dark Green */ \
-    SMS_VDP_TO_FLOAT (0x33), /* Magenta */ \
-    SMS_VDP_TO_FLOAT (0x15), /* Grey */ \
-    SMS_VDP_TO_FLOAT (0x3f)  /* White */ \
+    SMS_VDP_TO_UINT_PIXEL (0x00), /* Transparent */ \
+    SMS_VDP_TO_UINT_PIXEL (0x00), /* Black */ \
+    SMS_VDP_TO_UINT_PIXEL (0x08), /* Medium Green */ \
+    SMS_VDP_TO_UINT_PIXEL (0x0c), /* Light Green */ \
+    SMS_VDP_TO_UINT_PIXEL (0x10), /* Dark Blue */ \
+    SMS_VDP_TO_UINT_PIXEL (0x30), /* Light blue */ \
+    SMS_VDP_TO_UINT_PIXEL (0x01), /* Dark Red */ \
+    SMS_VDP_TO_UINT_PIXEL (0x3c), /* Cyan */ \
+    SMS_VDP_TO_UINT_PIXEL (0x02), /* Medium Red */ \
+    SMS_VDP_TO_UINT_PIXEL (0x03), /* Light Red */ \
+    SMS_VDP_TO_UINT_PIXEL (0x05), /* Dark Yellow */ \
+    SMS_VDP_TO_UINT_PIXEL (0x0f), /* Light Yellow */ \
+    SMS_VDP_TO_UINT_PIXEL (0x04), /* Dark Green */ \
+    SMS_VDP_TO_UINT_PIXEL (0x33), /* Magenta */ \
+    SMS_VDP_TO_UINT_PIXEL (0x15), /* Grey */ \
+    SMS_VDP_TO_UINT_PIXEL (0x3f)  /* White */ \
 }
 
 
@@ -151,7 +151,7 @@ TMS9928A_Context *sms_vdp_init (void *parent, void (* frame_done) (void *), Cons
     /* TODO: Only calculate each table once, choose the table based on console.
      *       Could this be combined with the tms9928A .palette? */
 
-    /* Populate vdp_to_float colour table */
+    /* Populate vdp_to_uint_pixel colour table */
     if (console == CONSOLE_GAME_GEAR)
     {
         context->is_game_gear = true;
@@ -160,9 +160,9 @@ TMS9928A_Context *sms_vdp_init (void *parent, void (* frame_done) (void *), Cons
 
         for (uint32_t i = 0; i < 4096; i++)
         {
-            context->vdp_to_float [i] = (float_Colour) GG_VDP_TO_FLOAT (i);
+            context->vdp_to_uint_pixel [i] = (uint_pixel) GG_VDP_TO_UINT_PIXEL (i);
         }
-        context->vdp_to_float_mask = 0x0fff;
+        context->vdp_pixel_mask = 0x0fff;
     }
     else
     {
@@ -171,9 +171,9 @@ TMS9928A_Context *sms_vdp_init (void *parent, void (* frame_done) (void *), Cons
 
         for (uint32_t i = 0; i < 64; i++)
         {
-            context->vdp_to_float [i] = (float_Colour) SMS_VDP_TO_FLOAT (i);
+            context->vdp_to_uint_pixel [i] = (uint_pixel) SMS_VDP_TO_UINT_PIXEL (i);
         }
-        context->vdp_to_float_mask = 0x3f;
+        context->vdp_pixel_mask = 0x3f;
     }
 
     context->parent = parent;
@@ -464,7 +464,7 @@ static void sms_vdp_mode4_draw_pattern_background (TMS9928A_Context *context, ui
         uint16_t pixel = context->state.cram [palette + colour_index];
 
         context->frame_buffer [(position.x + x + VIDEO_SIDE_BORDER) +
-                               (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = context->vdp_to_float [pixel & context->vdp_to_float_mask];
+                               (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = context->vdp_to_uint_pixel [pixel & context->vdp_pixel_mask];
     }
 }
 
@@ -595,7 +595,7 @@ static void sms_vdp_mode4_draw_pattern_sprite (TMS9928A_Context *context, uint16
         uint16_t pixel = context->state.cram [SMS_VDP_PALETTE_SPRITE + colour_index];
 
         context->frame_buffer [(position.x + x + VIDEO_SIDE_BORDER) +
-                               (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = context->vdp_to_float [pixel & context->vdp_to_float_mask];
+                               (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = context->vdp_to_uint_pixel [pixel & context->vdp_pixel_mask];
     }
 }
 
@@ -696,13 +696,13 @@ static void sms_vdp_mode4_draw_sprites (TMS9928A_Context *context, const TMS9928
  */
 static void sms_vdp_render_line (TMS9928A_Context *context, const TMS9928A_Config *config, uint16_t line)
 {
-    float_Colour video_backdrop;
+    uint_pixel video_backdrop;
 
     if (config->mode & SMS_VDP_MODE_4)
     {
         uint8_t bg_colour;
         bg_colour = context->state.cram [16 + (context->state.regs.background_colour & 0x0f)];
-        video_backdrop = context->vdp_to_float [bg_colour & context->vdp_to_float_mask];
+        video_backdrop = context->vdp_to_uint_pixel [bg_colour & context->vdp_pixel_mask];
     }
     else
     {

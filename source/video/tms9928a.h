@@ -155,10 +155,10 @@ typedef struct TMS9928A_Context_s {
     uint32_t video_height;
     uint32_t video_blank_left;
 
-    float_Colour vdp_to_float [4096];
-    uint16_t vdp_to_float_mask;
+    uint_pixel vdp_to_uint_pixel [4096];
+    uint16_t vdp_pixel_mask;
 
-    float_Colour frame_buffer [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
+    uint_pixel frame_buffer [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
     void (* frame_done) (void *);
 
 } TMS9928A_Context;
@@ -174,7 +174,7 @@ typedef struct TMS9928A_Config_s {
     TMS9928A_Mode mode;
     uint16_t lines_active;
     uint16_t lines_total;
-    float_Colour palette [16]; /* Palette to use for TMS9928A modes */
+    uint_pixel palette [16]; /* Palette to use for TMS9928A modes */
     SMS_VDP_V_Counter_Range v_counter_map [3]; /* SMS VDP v-counter mapping */
 } TMS9928A_Config;
 

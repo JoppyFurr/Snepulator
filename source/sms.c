@@ -157,7 +157,7 @@ static void sms_frame_done (void *context_ptr)
                 {
                     continue;
                 }
-                vdp_context->frame_buffer [x + y * VIDEO_BUFFER_WIDTH] = (float_Colour) { .r = 0.0, .g = 0.0, .b = 0.0 };
+                vdp_context->frame_buffer [x + y * VIDEO_BUFFER_WIDTH] = (uint_pixel) { .r = 0, .g = 0, .b = 0 };
             }
         }
     }
@@ -818,7 +818,7 @@ static void sms_process_3d_field (SMS_Context *context)
     bool update_red = false;
     bool update_green = false;
     bool update_blue = false;
-    float_Colour pixel;
+    uint_pixel pixel;
 
     switch (state.video_3d_mode)
     {

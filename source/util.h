@@ -17,11 +17,11 @@ int32_t util_load_rom (uint8_t **buffer, uint32_t *rom_size, char *filename);
 /* Take a screenshot. */
 void util_take_screenshot (void);
 
-/* Convert a float_Colour to greyscale. */
-float_Colour util_to_greyscale (float_Colour c);
+/* Convert a uint_pixel to greyscale. */
+uint_pixel util_to_greyscale (uint_pixel c);
 
-/* Reduce saturation of a float_Colour. */
-float_Colour util_colour_saturation (float_Colour c, float saturation);
+/* Reduce saturation of a uint_pixel. */
+uint_pixel util_colour_saturation (uint_pixel c, float saturation);
 
 /* Round up to the next power-of-two */
 uint32_t util_round_up (uint32_t n);

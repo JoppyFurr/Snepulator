@@ -40,42 +40,42 @@ const char *tms9928a_mode_name [16] = {
 
 /* "Datasheet" palette */
 #define TMS9928A_PALETTE_DATASHEET { \
-    {   0 / 255.0f,   0 / 255.0f,   0 / 255.0f }, /* Transparent */ \
-    {   0 / 255.0f,   0 / 255.0f,   0 / 255.0f }, /* Black */ \
-    {  33 / 255.0f, 200 / 255.0f,  66 / 255.0f }, /* Medium Green */ \
-    {  94 / 255.0f, 220 / 255.0f, 120 / 255.0f }, /* Light Green */ \
-    {  84 / 255.0f,  85 / 255.0f, 237 / 255.0f }, /* Dark Blue */ \
-    { 125 / 255.0f, 118 / 255.0f, 252 / 255.0f }, /* Light blue */ \
-    { 212 / 255.0f,  82 / 255.0f,  77 / 255.0f }, /* Dark Red */ \
-    {  66 / 255.0f, 235 / 255.0f, 245 / 255.0f }, /* Cyan */ \
-    { 252 / 255.0f,  85 / 255.0f,  84 / 255.0f }, /* Medium Red */ \
-    { 255 / 255.0f, 121 / 255.0f, 120 / 255.0f }, /* Light Red */ \
-    { 212 / 255.0f, 193 / 255.0f,  84 / 255.0f }, /* Dark Yellow */ \
-    { 230 / 255.0f, 206 / 255.0f, 128 / 255.0f }, /* Light Yellow */ \
-    {  33 / 255.0f, 176 / 255.0f,  59 / 255.0f }, /* Dark Green */ \
-    { 201 / 255.0f,  91 / 255.0f, 186 / 255.0f }, /* Magenta */ \
-    { 204 / 255.0f, 204 / 255.0f, 204 / 255.0f }, /* Grey */ \
-    { 255 / 255.0f, 255 / 255.0f, 255 / 255.0f }  /* White */ \
+    {   0,   0,   0 }, /* Transparent */ \
+    {   0,   0,   0 }, /* Black */ \
+    {  33, 200,  66 }, /* Medium Green */ \
+    {  94, 220, 120 }, /* Light Green */ \
+    {  84,  85, 237 }, /* Dark Blue */ \
+    { 125, 118, 252 }, /* Light blue */ \
+    { 212,  82,  77 }, /* Dark Red */ \
+    {  66, 235, 245 }, /* Cyan */ \
+    { 252,  85,  84 }, /* Medium Red */ \
+    { 255, 121, 120 }, /* Light Red */ \
+    { 212, 193,  84 }, /* Dark Yellow */ \
+    { 230, 206, 128 }, /* Light Yellow */ \
+    {  33, 176,  59 }, /* Dark Green */ \
+    { 201,  91, 186 }, /* Magenta */ \
+    { 204, 204, 204 }, /* Grey */ \
+    { 255, 255, 255 }  /* White */ \
 }
 
 /* Gamma corrected palette (Wikipedia) */
 #define TMS9928A_PALETTE { \
-    { 0x00 / 255.0f, 0x00 / 255.0f, 0x00 / 255.0f }, /* Transparent */ \
-    { 0x00 / 255.0f, 0x00 / 255.0f, 0x00 / 255.0f }, /* Black */ \
-    { 0x0a / 255.0f, 0xad / 255.0f, 0x1e / 255.0f }, /* Medium Green */ \
-    { 0x34 / 255.0f, 0xc8 / 255.0f, 0x4c / 255.0f }, /* Light Green */ \
-    { 0x2b / 255.0f, 0x2d / 255.0f, 0xe3 / 255.0f }, /* Dark Blue */ \
-    { 0x51 / 255.0f, 0x4b / 255.0f, 0xfb / 255.0f }, /* Light blue */ \
-    { 0xbd / 255.0f, 0x29 / 255.0f, 0x25 / 255.0f }, /* Dark Red */ \
-    { 0x1e / 255.0f, 0xe2 / 255.0f, 0xef / 255.0f }, /* Cyan */ \
-    { 0xfb / 255.0f, 0x2c / 255.0f, 0x2b / 255.0f }, /* Medium Red */ \
-    { 0xff / 255.0f, 0x5f / 255.0f, 0x4c / 255.0f }, /* Light Red */ \
-    { 0xbd / 255.0f, 0xa2 / 255.0f, 0x2b / 255.0f }, /* Dark Yellow */ \
-    { 0xd7 / 255.0f, 0xb4 / 255.0f, 0x54 / 255.0f }, /* Light Yellow */ \
-    { 0x0a / 255.0f, 0x8c / 255.0f, 0x18 / 255.0f }, /* Dark Green */ \
-    { 0xaf / 255.0f, 0x32 / 255.0f, 0x9a / 255.0f }, /* Magenta */ \
-    { 0xb2 / 255.0f, 0xb2 / 255.0f, 0xb2 / 255.0f }, /* Grey */ \
-    { 0xff / 255.0f, 0xff / 255.0f, 0xff / 255.0f }  /* White */ \
+    { 0x00 , 0x00, 0x00 }, /* Transparent */ \
+    { 0x00 , 0x00, 0x00 }, /* Black */ \
+    { 0x0a , 0xad, 0x1e }, /* Medium Green */ \
+    { 0x34 , 0xc8, 0x4c }, /* Light Green */ \
+    { 0x2b , 0x2d, 0xe3 }, /* Dark Blue */ \
+    { 0x51 , 0x4b, 0xfb }, /* Light blue */ \
+    { 0xbd , 0x29, 0x25 }, /* Dark Red */ \
+    { 0x1e , 0xe2, 0xef }, /* Cyan */ \
+    { 0xfb , 0x2c, 0x2b }, /* Medium Red */ \
+    { 0xff , 0x5f, 0x4c }, /* Light Red */ \
+    { 0xbd , 0xa2, 0x2b }, /* Dark Yellow */ \
+    { 0xd7 , 0xb4, 0x54 }, /* Light Yellow */ \
+    { 0x0a , 0x8c, 0x18 }, /* Dark Green */ \
+    { 0xaf , 0x32, 0x9a }, /* Magenta */ \
+    { 0xb2 , 0xb2, 0xb2 }, /* Grey */ \
+    { 0xff , 0xff, 0xff }  /* White */ \
 }
 
 /* Display mode details */
@@ -259,7 +259,7 @@ static void tms9928a_draw_pattern (TMS9928A_Context *context, const TMS9928A_Con
             }
         }
 
-        float_Colour pixel = config->palette [colour_index];
+        uint_pixel pixel = config->palette [colour_index];
         context->frame_buffer [(offset.x + x + VIDEO_SIDE_BORDER) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = pixel;
     }
 }
@@ -457,7 +457,7 @@ static uint8_t tms9928a_mode_get (TMS9928A_Context *context)
  */
 void tms9928a_render_line (TMS9928A_Context *context, const TMS9928A_Config *config, uint16_t line)
 {
-    float_Colour video_backdrop;
+    uint_pixel video_backdrop;
 
     context->render_start_y = (VIDEO_BUFFER_LINES - config->lines_active) / 2;
 

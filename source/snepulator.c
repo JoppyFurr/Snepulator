@@ -272,11 +272,11 @@ void snepulator_draw_logo (void)
         for (uint32_t x = 0; x < snepulator_logo.width; x++)
         {
             state.video_out_data [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].r =
-                snepulator_logo.pixel_data [(x + y * snepulator_logo.width) * 3 + 0] / 255.0;
+                snepulator_logo.pixel_data [(x + y * snepulator_logo.width) * 3 + 0];
             state.video_out_data [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].g =
-                snepulator_logo.pixel_data [(x + y * snepulator_logo.width) * 3 + 1] / 255.0;
+                snepulator_logo.pixel_data [(x + y * snepulator_logo.width) * 3 + 1];
             state.video_out_data [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].b =
-                snepulator_logo.pixel_data [(x + y * snepulator_logo.width) * 3 + 2] / 255.0;
+                snepulator_logo.pixel_data [(x + y * snepulator_logo.width) * 3 + 2];
         }
     }
 }
@@ -342,11 +342,11 @@ void snepulator_pause_animate (void)
                 }
 
                 state.video_out_data [(x + x_base - letter) + (uint32_t) (y + y_base + y_offset) * VIDEO_BUFFER_WIDTH].r =
-                    snepulator_paused.pixel_data [(x + y * snepulator_paused.width) * 3 + 0] / 255.0;
+                    snepulator_paused.pixel_data [(x + y * snepulator_paused.width) * 3 + 0];
                 state.video_out_data [(x + x_base - letter) + (uint32_t) (y + y_base + y_offset) * VIDEO_BUFFER_WIDTH].g =
-                    snepulator_paused.pixel_data [(x + y * snepulator_paused.width) * 3 + 1] / 255.0;
+                    snepulator_paused.pixel_data [(x + y * snepulator_paused.width) * 3 + 1];
                 state.video_out_data [(x + x_base - letter) + (uint32_t) (y + y_base + y_offset) * VIDEO_BUFFER_WIDTH].b =
-                    snepulator_paused.pixel_data [(x + y * snepulator_paused.width) * 3 + 2] / 255.0;
+                    snepulator_paused.pixel_data [(x + y * snepulator_paused.width) * 3 + 2];
             }
         }
     }

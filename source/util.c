@@ -235,48 +235,70 @@ void util_take_screenshot (void)
 
 
 /*
- * Convert a float_Colour to greyscale.
+ * Convert a uint_pixel to greyscale.
+ *
+ * TODO: Reduce floating-point math.
  */
-float_Colour util_to_greyscale (float_Colour c)
+uint_pixel util_to_greyscale (uint_pixel c)
 {
+    float float_r = c.r / 255.0f;
+    float float_g = c.g / 255.0f;
+    float float_b = c.b / 255.0f;
+
     /* Convert to linear colour */
-    c.r = (c.r < 0.04045) ? (c.r / 12.92) : pow ((c.r + 0.055) / 1.055, 2.4);
-    c.g = (c.g < 0.04045) ? (c.g / 12.92) : pow ((c.g + 0.055) / 1.055, 2.4);
-    c.b = (c.b < 0.04045) ? (c.b / 12.92) : pow ((c.b + 0.055) / 1.055, 2.4);
+    float_r = (float_r < 0.04045) ? (float_r / 12.92) : pow ((float_r + 0.055) / 1.055, 2.4);
+    float_g = (float_g < 0.04045) ? (float_g / 12.92) : pow ((float_g + 0.055) / 1.055, 2.4);
+    float_b = (float_b < 0.04045) ? (float_b / 12.92) : pow ((float_b + 0.055) / 1.055, 2.4);
 
     /* Convert linear colour to greyscale */
-    c.r = c.g = c.b = c.r * 0.2126 + c.g * 0.7152 + c.b * 0.0722;
+    float_r = float_g = float_b = float_r * 0.2126 + float_g * 0.7152 + float_b * 0.0722;
 
     /* Convert back to sRGB */
-    c.r = (c.r <= 0.0031308) ? (12.92 * c.r) : (1.055 * pow (c.r, 1.0 / 2.4) - 0.055);
-    c.g = (c.g <= 0.0031308) ? (12.92 * c.g) : (1.055 * pow (c.g, 1.0 / 2.4) - 0.055);
-    c.b = (c.b <= 0.0031308) ? (12.92 * c.b) : (1.055 * pow (c.b, 1.0 / 2.4) - 0.055);
+    float_r = (float_r <= 0.0031308) ? (12.92 * float_r) : (1.055 * pow (float_r, 1.0 / 2.4) - 0.055);
+    float_g = (float_g <= 0.0031308) ? (12.92 * float_g) : (1.055 * pow (float_g, 1.0 / 2.4) - 0.055);
+    float_b = (float_b <= 0.0031308) ? (12.92 * float_b) : (1.055 * pow (float_b, 1.0 / 2.4) - 0.055);
+
+    c.r = float_r * 255;
+    c.g = float_g * 255;
+    c.b = float_b * 255;
 
     return c;
 }
 
 
 /*
- * Reduce saturation of a float_Colour.
+ * Reduce saturation of a uint_pixel.
+ *
+ * TODO: Reduce floating-point math.
  */
-float_Colour util_colour_saturation (float_Colour c, float saturation)
+uint_pixel util_colour_saturation (uint_pixel c, float saturation)
 {
-    float_Colour mix;
+    float float_r = c.r / 255.0f;
+    float float_g = c.g / 255.0f;
+    float float_b = c.b / 255.0f;
+
+    float mix_r;
+    float mix_g;
+    float mix_b;
 
     /* Convert to linear colour */
-    c.r = (c.r < 0.04045) ? (c.r / 12.92) : pow ((c.r + 0.055) / 1.055, 2.4);
-    c.g = (c.g < 0.04045) ? (c.g / 12.92) : pow ((c.g + 0.055) / 1.055, 2.4);
-    c.b = (c.b < 0.04045) ? (c.b / 12.92) : pow ((c.b + 0.055) / 1.055, 2.4);
+    float_r = (float_r < 0.04045) ? (float_r / 12.92) : pow ((float_r + 0.055) / 1.055, 2.4);
+    float_g = (float_g < 0.04045) ? (float_g / 12.92) : pow ((float_g + 0.055) / 1.055, 2.4);
+    float_b = (float_b < 0.04045) ? (float_b / 12.92) : pow ((float_b + 0.055) / 1.055, 2.4);
 
     /* Desaturate */
-    mix.r = saturation * c.r + (1.0 - saturation) * (c.r * 0.2126 + c.g * 0.7152 + c.b * 0.0722);
-    mix.g = saturation * c.g + (1.0 - saturation) * (c.r * 0.2126 + c.g * 0.7152 + c.b * 0.0722);
-    mix.b = saturation * c.b + (1.0 - saturation) * (c.r * 0.2126 + c.g * 0.7152 + c.b * 0.0722);
+    mix_r = saturation * float_r + (1.0 - saturation) * (float_r * 0.2126 + float_g * 0.7152 + float_b * 0.0722);
+    mix_g = saturation * float_g + (1.0 - saturation) * (float_r * 0.2126 + float_g * 0.7152 + float_b * 0.0722);
+    mix_b = saturation * float_b + (1.0 - saturation) * (float_r * 0.2126 + float_g * 0.7152 + float_b * 0.0722);
 
     /* Convert back to sRGB */
-    c.r = (mix.r <= 0.0031308) ? (12.92 * mix.r) : (1.055 * pow (mix.r, 1.0 / 2.4) - 0.055);
-    c.g = (mix.g <= 0.0031308) ? (12.92 * mix.g) : (1.055 * pow (mix.g, 1.0 / 2.4) - 0.055);
-    c.b = (mix.b <= 0.0031308) ? (12.92 * mix.b) : (1.055 * pow (mix.b, 1.0 / 2.4) - 0.055);
+    float_r = (mix_r <= 0.0031308) ? (12.92 * mix_r) : (1.055 * pow (mix_r, 1.0 / 2.4) - 0.055);
+    float_g = (mix_g <= 0.0031308) ? (12.92 * mix_g) : (1.055 * pow (mix_g, 1.0 / 2.4) - 0.055);
+    float_b = (mix_b <= 0.0031308) ? (12.92 * mix_b) : (1.055 * pow (mix_b, 1.0 / 2.4) - 0.055);
+
+    c.r = float_r * 255;
+    c.g = float_g * 255;
+    c.b = float_b * 255;
 
     return c;
 }
