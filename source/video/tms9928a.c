@@ -624,8 +624,8 @@ void tms9928a_state_save (TMS9928A_Context *context)
         .code =                   context->state.code,
         .read_buffer =            context->state.read_buffer,
         .status =                 context->state.status,
-        .collision_buffer =       { 0 },
-        .cram =                   { 0 },
+        .collision_buffer =       {},
+        .cram =                   {},
         .line_interrupt_counter = context->state.line_interrupt_counter,
         .line_interrupt =         context->state.line_interrupt,
         .h_counter =              context->state.h_counter,
@@ -634,11 +634,7 @@ void tms9928a_state_save (TMS9928A_Context *context)
     };
 
     memcpy (tms9928a_state_be.collision_buffer, context->state.collision_buffer, 256);
-
-    for (uint8_t i = 0; i < 32; i++)
-    {
-        tms9928a_state_be.cram [i] = htons (context->state.cram[i]);
-    }
+    memcpy (tms9928a_state_be.cram, context->state.cram, sizeof (context->state.cram));
 
     save_state_section_add (SECTION_ID_VDP, 1, sizeof (tms9928a_state_be), &tms9928a_state_be);
 }
@@ -665,10 +661,7 @@ void tms9928a_state_load (TMS9928A_Context *context, uint32_t version, uint32_t 
         context->state.status =                 tms9928a_state_be.status;
 
         memcpy (context->state.collision_buffer, tms9928a_state_be.collision_buffer, 256);
-        for (uint8_t i = 0; i < 32; i++)
-        {
-            context->state.cram [i] = ntohs (tms9928a_state_be.cram[i]);
-        }
+        memcpy (context->state.cram, tms9928a_state_be.cram, sizeof (context->state.cram));
 
         context->state.line_interrupt_counter = tms9928a_state_be.line_interrupt_counter;
         context->state.line_interrupt =         tms9928a_state_be.line_interrupt;
@@ -678,6 +671,6 @@ void tms9928a_state_load (TMS9928A_Context *context, uint32_t version, uint32_t 
     }
     else
     {
-        snepulator_error ("Error", "Save-state contains incorrect VDP state size");
+        snepulator_error ("Error", "Save-state contains incompatible VDP state size");
     }
 }

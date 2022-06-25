@@ -123,7 +123,7 @@ typedef struct TMS9928A_State_s {
     uint8_t  collision_buffer [256];
 
     /* SMS VDP extensions */
-    uint16_t cram [32];
+    uint_pixel cram [32];               /* Conversion to uint_pixel is done when writing to cram */
     uint8_t  line_interrupt_counter;    /* Line interrupt counter current value */
     uint8_t  line_interrupt;            /* Line interrupt pending */
     uint8_t  h_counter;                 /* 8-bit horizontal counter */
@@ -156,7 +156,6 @@ typedef struct TMS9928A_Context_s {
     uint32_t video_blank_left;
 
     uint_pixel vdp_to_uint_pixel [4096];
-    uint16_t vdp_pixel_mask;
 
     uint_pixel frame_buffer [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
     void (* frame_done) (void *);

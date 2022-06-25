@@ -148,9 +148,6 @@ TMS9928A_Context *sms_vdp_init (void *parent, void (* frame_done) (void *), Cons
         return NULL;
     }
 
-    /* TODO: Only calculate each table once, choose the table based on console.
-     *       Could this be combined with the tms9928A .palette? */
-
     /* Populate vdp_to_uint_pixel colour table */
     if (console == CONSOLE_GAME_GEAR)
     {
@@ -162,7 +159,6 @@ TMS9928A_Context *sms_vdp_init (void *parent, void (* frame_done) (void *), Cons
         {
             context->vdp_to_uint_pixel [i] = (uint_pixel) GG_VDP_TO_UINT_PIXEL (i);
         }
-        context->vdp_pixel_mask = 0x0fff;
     }
     else
     {
@@ -173,7 +169,6 @@ TMS9928A_Context *sms_vdp_init (void *parent, void (* frame_done) (void *), Cons
         {
             context->vdp_to_uint_pixel [i] = (uint_pixel) SMS_VDP_TO_UINT_PIXEL (i);
         }
-        context->vdp_pixel_mask = 0x3f;
     }
 
     context->parent = parent;
@@ -227,12 +222,13 @@ void sms_vdp_data_write (TMS9928A_Context *context, uint8_t value)
                 }
                 else
                 {
-                    context->state.cram [(context->state.address >> 1) & 0x1f] = (((uint16_t) value) << 8) | context->state.cram_latch;
+                    context->state.cram [(context->state.address >> 1) & 0x1f] =
+                        context->vdp_to_uint_pixel [ ((((uint16_t) value) << 8) | context->state.cram_latch) & 0x0fff];
                 }
             }
             else
             {
-                context->state.cram [context->state.address & 0x1f] = value;
+                context->state.cram [context->state.address & 0x1f] = context->vdp_to_uint_pixel [value & 0x3f];
             }
             break;
 
@@ -461,10 +457,9 @@ static void sms_vdp_mode4_draw_pattern_background (TMS9928A_Context *context, ui
             continue;
         }
 
-        uint16_t pixel = context->state.cram [palette + colour_index];
+        uint_pixel pixel = context->state.cram [palette + colour_index];
 
-        context->frame_buffer [(position.x + x + VIDEO_SIDE_BORDER) +
-                               (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = context->vdp_to_uint_pixel [pixel & context->vdp_pixel_mask];
+        context->frame_buffer [(position.x + x + VIDEO_SIDE_BORDER) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = pixel;
     }
 }
 
@@ -592,10 +587,9 @@ static void sms_vdp_mode4_draw_pattern_sprite (TMS9928A_Context *context, uint16
         }
         context->state.collision_buffer [x + position.x] = true;
 
-        uint16_t pixel = context->state.cram [SMS_VDP_PALETTE_SPRITE + colour_index];
+        uint_pixel pixel = context->state.cram [SMS_VDP_PALETTE_SPRITE + colour_index];
 
-        context->frame_buffer [(position.x + x + VIDEO_SIDE_BORDER) +
-                               (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = context->vdp_to_uint_pixel [pixel & context->vdp_pixel_mask];
+        context->frame_buffer [(position.x + x + VIDEO_SIDE_BORDER) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = pixel;
     }
 }
 
@@ -700,9 +694,7 @@ static void sms_vdp_render_line (TMS9928A_Context *context, const TMS9928A_Confi
 
     if (config->mode & SMS_VDP_MODE_4)
     {
-        uint8_t bg_colour;
-        bg_colour = context->state.cram [16 + (context->state.regs.background_colour & 0x0f)];
-        video_backdrop = context->vdp_to_uint_pixel [bg_colour & context->vdp_pixel_mask];
+        video_backdrop = context->state.cram [16 + (context->state.regs.background_colour & 0x0f)];
     }
     else
     {
