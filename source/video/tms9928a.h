@@ -155,8 +155,6 @@ typedef struct TMS9928A_Context_s {
     uint32_t video_height;
     uint32_t video_blank_left;
 
-    uint_pixel vdp_to_uint_pixel [4096];
-
     uint_pixel frame_buffer [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
     void (* frame_done) (void *);
 

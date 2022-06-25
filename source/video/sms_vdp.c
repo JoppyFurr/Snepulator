@@ -148,27 +148,17 @@ TMS9928A_Context *sms_vdp_init (void *parent, void (* frame_done) (void *), Cons
         return NULL;
     }
 
-    /* Populate vdp_to_uint_pixel colour table */
+    /* Set console-specific parameters */
     if (console == CONSOLE_GAME_GEAR)
     {
         context->is_game_gear = true;
         context->video_width = 160;
         context->video_height = 144;
-
-        for (uint32_t i = 0; i < 4096; i++)
-        {
-            context->vdp_to_uint_pixel [i] = (uint_pixel) GG_VDP_TO_UINT_PIXEL (i);
-        }
     }
     else
     {
         context->video_width = 256;
         context->video_height = 192;
-
-        for (uint32_t i = 0; i < 64; i++)
-        {
-            context->vdp_to_uint_pixel [i] = (uint_pixel) SMS_VDP_TO_UINT_PIXEL (i);
-        }
     }
 
     context->parent = parent;
@@ -223,12 +213,12 @@ void sms_vdp_data_write (TMS9928A_Context *context, uint8_t value)
                 else
                 {
                     context->state.cram [(context->state.address >> 1) & 0x1f] =
-                        context->vdp_to_uint_pixel [ ((((uint16_t) value) << 8) | context->state.cram_latch) & 0x0fff];
+                        (uint_pixel) GG_VDP_TO_UINT_PIXEL ((((uint16_t) value) << 8) | context->state.cram_latch);
                 }
             }
             else
             {
-                context->state.cram [context->state.address & 0x1f] = context->vdp_to_uint_pixel [value & 0x3f];
+                context->state.cram [context->state.address & 0x1f] = (uint_pixel) SMS_VDP_TO_UINT_PIXEL (value);
             }
             break;
 
