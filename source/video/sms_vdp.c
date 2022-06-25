@@ -27,13 +27,13 @@ extern Snepulator_Gamepad gamepad [3];
 #define SMS_VDP_CRAM_SIZE (32)
 
 /* Macros */
-#define SMS_VDP_TO_UINT_PIXEL(C) { .r = ((0xff / 3) * (((C) & 0x03) >> 0)), \
-                              .g = ((0xff / 3) * (((C) & 0x0c) >> 2)), \
-                              .b = ((0xff / 3) * (((C) & 0x30) >> 4)) }
+#define SMS_VDP_TO_UINT_PIXEL(C) { .r = ((((C) >> 0) & 0x03) * (0xff / 3)), \
+                                   .g = ((((C) >> 2) & 0x03) * (0xff / 3)), \
+                                   .b = ((((C) >> 4) & 0x03) * (0xff / 3)) }
 
-#define GG_VDP_TO_UINT_PIXEL(C) { .r = ((0xff / 15) * (((C) & 0x000f) >> 0)), \
-                             .g = ((0xff / 15) * (((C) & 0x00f0) >> 4)), \
-                             .b = ((0xff / 15) * (((C) & 0x0f00) >> 8)) }
+#define GG_VDP_TO_UINT_PIXEL(C) { .r = ((((C) >> 0) & 0x0f) * (0xff / 15)), \
+                                  .g = ((((C) >> 4) & 0x0f) * (0xff / 15)), \
+                                  .b = ((((C) >> 8) & 0x0f) * (0xff / 15)) }
 
 #define SMS_VDP_LEGACY_PALETTE { \
     SMS_VDP_TO_UINT_PIXEL (0x00), /* Transparent */ \
