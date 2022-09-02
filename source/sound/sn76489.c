@@ -43,8 +43,7 @@ static uint64_t write_index = 0;
 void sn76489_data_write (uint8_t data)
 {
     uint16_t data_low = data & 0x0f;
-    uint16_t data_high = data << 4;
-
+    uint16_t data_high = data << 4 & 0x03f0;
 
     if (data & 0x80) /* LATCH + LOW DATA */
     {
