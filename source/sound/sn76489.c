@@ -42,88 +42,69 @@ static uint64_t write_index = 0;
  */
 void sn76489_data_write (uint8_t data)
 {
-    uint16_t data_low = data & 0x0f;
-    uint16_t data_high = data << 4 & 0x03f0;
-
-    if (data & 0x80) /* LATCH + LOW DATA */
+    if (data & 0x80)
     {
         sn76489_state.latch = data & 0x70;
-
-        switch (sn76489_state.latch)
-        {
-            /* Channel 0 (tone) */
-            case 0x00:
-                sn76489_state.tone_0 = (sn76489_state.tone_0 & 0x03f0) | data_low;
-                break;
-            case 0x10:
-                sn76489_state.vol_0 = data_low;
-                break;
-
-            /* Channel 1 (tone) */
-            case 0x20:
-                sn76489_state.tone_1 = (sn76489_state.tone_1 & 0x03f0) | data_low;
-                break;
-            case 0x30:
-                sn76489_state.vol_1 = data_low;
-                break;
-
-            /* Channel 2 (tone) */
-            case 0x40:
-                sn76489_state.tone_2 = (sn76489_state.tone_2 & 0x03f0) | data_low;
-                break;
-            case 0x50:
-                sn76489_state.vol_2 = data_low;
-                break;
-
-            /* Channel 3 (noise) */
-            case 0x60:
-                sn76489_state.noise = data_low;
-                sn76489_state.lfsr  = 0x8000;
-                break;
-            case 0x70:
-                sn76489_state.vol_3 = data_low;
-            default:
-                break;
-        }
     }
-    else /* HIGH DATA */
+
+    switch (sn76489_state.latch)
     {
-        switch (sn76489_state.latch)
-        {
-            /* Channel 0 (tone) */
-            case 0x00:
-                sn76489_state.tone_0 = (sn76489_state.tone_0 & 0x000f) | data_high;
-                break;
-            case 0x10:
-                sn76489_state.vol_0 = data_low;
-                break;
+        case 0x00: /* Channel 0 tone */
+            if (data & 0x80)
+            {
+                sn76489_state.tone_0_low = data;
+            }
+            else
+            {
+                sn76489_state.tone_0_high = data;
+            }
+            break;
 
-            /* Channel 1 (tone) */
-            case 0x20:
-                sn76489_state.tone_1 = (sn76489_state.tone_1 & 0x000f) | data_high;
-                break;
-            case 0x30:
-                sn76489_state.vol_1 = data_low;
-                break;
+        case 0x10: /* Channel 0 volume */
+            sn76489_state.vol_0_low = data;
+            break;
 
-            /* Channel 2 (tone) */
-            case 0x40:
-                sn76489_state.tone_2 = (sn76489_state.tone_2 & 0x000f) | data_high;
-                break;
-            case 0x50:
-                sn76489_state.vol_2 = data_low;
-                break;
+        case 0x20: /* Channel 1 tone */
+            if (data & 0x80)
+            {
+                sn76489_state.tone_1_low = data;
+            }
+            else
+            {
+                sn76489_state.tone_1_high = data;
+            }
+            break;
 
-            /* Channel 3 (noise) */
-            case 0x60:
-                sn76489_state.noise = data_low;
-                sn76489_state.lfsr  = 0x8000;
-                break;
-            case 0x70:
-                sn76489_state.vol_3 = data_low;
-            default:
-                break;
-        }
+        case 0x30: /* Channel 1 volume */
+            sn76489_state.vol_1_low = data;
+            break;
+
+        case 0x40: /* Channel 2 tone */
+            if (data & 0x80)
+            {
+                sn76489_state.tone_2_low = data;
+            }
+            else
+            {
+                sn76489_state.tone_2_high = data;
+            }
+            break;
+
+        case 0x50: /* Channel 2 volume */
+            sn76489_state.vol_2_low = data;
+            break;
+
+        case 0x60: /* Channel 3 noise */
+            sn76489_state.noise_low = data;
+            sn76489_state.lfsr  = 0x8000;
+            break;
+
+        case 0x70: /* Channel 3 volume */
+            sn76489_state.vol_3_low = data;
+            break;
+
+        default:
+            break;
     }
 }
 

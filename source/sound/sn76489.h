@@ -7,15 +7,44 @@
 
 typedef struct SN76489_State_s {
 
-    uint16_t vol_0; /* Volume: 4 bits */
-    uint16_t vol_1;
-    uint16_t vol_2;
-    uint16_t vol_3;
+    union {
+        struct {
+            /* Four 4-bit volume registers */
+            uint16_t vol_0;
+            uint16_t vol_1;
+            uint16_t vol_2;
+            uint16_t vol_3;
 
-    uint16_t tone_0; /* Tone: 10 bits */
-    uint16_t tone_1;
-    uint16_t tone_2;
-    uint16_t noise;  /* Noise: 4 bits */
+            /* Three 10-bit tone registers */
+            uint16_t tone_0;
+            uint16_t tone_1;
+            uint16_t tone_2;
+
+            /* One 4-bit noise register */
+            uint16_t noise;
+        };
+        struct {
+            uint16_t vol_0_low:4;
+            uint16_t vol_0_unused:12;
+            uint16_t vol_1_low:4;
+            uint16_t vol_1_unused:12;
+            uint16_t vol_2_low:4;
+            uint16_t vol_2_unused:12;
+            uint16_t vol_3_low:4;
+            uint16_t vol_3_unused:12;
+            uint16_t tone_0_low:4;
+            uint16_t tone_0_high:6;
+            uint16_t tone_0_unused:6;
+            uint16_t tone_1_low:4;
+            uint16_t tone_1_high:6;
+            uint16_t tone_1_unused:6;
+            uint16_t tone_2_low:4;
+            uint16_t tone_2_high:6;
+            uint16_t tone_2_unused:6;
+            uint16_t noise_low:4;
+            uint16_t noise_unused:12;
+        };
+    };
 
     uint16_t counter_0;
     uint16_t counter_1;
