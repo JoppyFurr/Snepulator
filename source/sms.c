@@ -736,14 +736,17 @@ static void sms_memory_write (void *context_ptr, uint16_t addr, uint8_t data)
         if (addr == 0xfffc)
         {
             context->hw_state.sram_enable = (data & BIT_3) ? true : false;
+            context->hw_state.sram_bank = (data & BIT_2) ? 1 : 0;
 
             if (data & (BIT_0 | BIT_1))
             {
+                /* No known software uses this feature. */
                 snepulator_error ("Error", "Bank shifting not implemented.");
             }
-            if (data & (BIT_2 | BIT_4))
+            if (data & (BIT_4))
             {
-                snepulator_error ("Error", "SRAM bank not implemented.");
+                /* No known software uses this feature. */
+                snepulator_error ("Error", "SRAM bank c000:ffff not implemented.");
             }
         }
         else if (addr == 0xfffd)
@@ -796,6 +799,15 @@ static void sms_memory_write (void *context_ptr, uint16_t addr, uint8_t data)
     /* On-cartridge SRAM */
     if (context->hw_state.sram_enable && addr >= 0x8000 && addr <= 0xbfff)
     {
+        if (context->hw_state.sram_bank == 1)
+        {
+            snepulator_error ("Error", "Second SRAM bank not implemented.");
+        }
+        if (addr >= 0xa000)
+        {
+            snepulator_error ("Error", "SRAM > 8 KiB not implemented.");
+        }
+
         context->sram [addr & (SMS_SRAM_SIZE - 1)] = data;
         context->sram_used = true;
     }

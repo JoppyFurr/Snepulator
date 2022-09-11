@@ -27,6 +27,7 @@ typedef struct SMS_HW_State_s {
     uint8_t io_control;
     uint8_t mapper;
     uint8_t mapper_bank [3];
+    uint8_t sram_bank;
     bool sram_enable;
 } SMS_HW_State;
 
