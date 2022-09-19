@@ -275,7 +275,7 @@ SMS_Context *sms_init (void)
     /* Defaults */
     context->hw_state.io_control = 0x0f;
     context->export_paddle = false;
-    context->sram_used = false;
+    context->sram_used = 0x0000;
     context->video_3d_field = SMS_3D_FIELD_NONE;
 
     /* Reset the mapper */
@@ -338,11 +338,19 @@ SMS_Context *sms_init (void)
     {
         uint32_t bytes_read = 0;
 
-        while (bytes_read < SMS_SRAM_SIZE)
+        while (bytes_read < SMS_SRAM_SIZE && !feof(sram_file))
         {
             bytes_read += fread (context->sram + bytes_read, 1, SMS_SRAM_SIZE - bytes_read, sram_file);
-        }
 
+            if (ferror (sram_file))
+            {
+                snepulator_error ("Error", "Error reading SRAM data.");
+                fclose (sram_file);
+                sms_cleanup (context);
+                return NULL;
+            }
+        }
+        context->sram_used = bytes_read - 1;
         fclose (sram_file);
     }
     free (sram_path);
@@ -670,7 +678,7 @@ static uint8_t sms_memory_read (void *context_ptr, uint16_t addr)
         /* On-cartridge SRAM */
         if (context->hw_state.sram_enable && slot == 2)
         {
-            return context->sram [offset & (SMS_SRAM_SIZE - 1)];
+            return context->sram [context->hw_state.sram_bank | (offset & SMS_SRAM_BANK_MASK)];
         }
 
         /* Cartridge ROM */
@@ -736,7 +744,7 @@ static void sms_memory_write (void *context_ptr, uint16_t addr, uint8_t data)
         if (addr == 0xfffc)
         {
             context->hw_state.sram_enable = (data & BIT_3) ? true : false;
-            context->hw_state.sram_bank = (data & BIT_2) ? 1 : 0;
+            context->hw_state.sram_bank = (data & BIT_2) ? SMS_SRAM_BANK_SIZE : 0;
 
             if (data & (BIT_0 | BIT_1))
             {
@@ -799,17 +807,8 @@ static void sms_memory_write (void *context_ptr, uint16_t addr, uint8_t data)
     /* On-cartridge SRAM */
     if (context->hw_state.sram_enable && addr >= 0x8000 && addr <= 0xbfff)
     {
-        if (context->hw_state.sram_bank == 1)
-        {
-            snepulator_error ("Error", "Second SRAM bank not implemented.");
-        }
-        if (addr >= 0xa000)
-        {
-            snepulator_error ("Error", "SRAM > 8 KiB not implemented.");
-        }
-
-        context->sram [addr & (SMS_SRAM_SIZE - 1)] = data;
-        context->sram_used = true;
+        context->sram [context->hw_state.sram_bank | (addr & SMS_SRAM_BANK_MASK)] = data;
+        context->sram_used |= (context->hw_state.sram_bank | (addr & SMS_SRAM_BANK_MASK));
     }
 
     /* RAM + mirror */
@@ -1108,15 +1107,22 @@ static void sms_sync (void *context_ptr)
 
     if (context->sram_used)
     {
+        uint32_t sram_size = 128;
         uint32_t bytes_written = 0;
         char *path = path_sram (context->rom_hash);
         FILE *sram_file = fopen (path, "wb");
 
+        /* Round SRAM file size to power of two. */
+        while (sram_size < SIZE_32K && context->sram_used > sram_size)
+        {
+            sram_size <<= 1;
+        }
+
         if (sram_file != NULL)
         {
-            while (bytes_written < SMS_SRAM_SIZE)
+            while (bytes_written < sram_size)
             {
-                bytes_written += fwrite (context->sram + bytes_written, 1, SMS_SRAM_SIZE - bytes_written, sram_file);
+                bytes_written += fwrite (context->sram + bytes_written, 1, sram_size - bytes_written, sram_file);
             }
 
             fclose (sram_file);

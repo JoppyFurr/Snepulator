@@ -5,8 +5,10 @@
 #define SMS_CLOCK_RATE_PAL  3546895
 #define SMS_CLOCK_RATE_NTSC 3579545
 
-#define SMS_RAM_SIZE SIZE_8K
-#define SMS_SRAM_SIZE SIZE_8K
+#define SMS_RAM_SIZE        SIZE_8K
+#define SMS_SRAM_SIZE       SIZE_32K
+#define SMS_SRAM_BANK_SIZE  SIZE_16K
+#define SMS_SRAM_BANK_MASK  (SMS_SRAM_BANK_SIZE - 1)
 
 typedef enum SMS_Mapper_e {
     SMS_MAPPER_UNKNOWN = 0,
@@ -27,7 +29,7 @@ typedef struct SMS_HW_State_s {
     uint8_t io_control;
     uint8_t mapper;
     uint8_t mapper_bank [3];
-    uint8_t sram_bank;
+    uint16_t sram_bank;
     bool sram_enable;
 } SMS_HW_State;
 
@@ -48,7 +50,7 @@ typedef struct SMS_Context_s {
 
     uint8_t ram [SMS_RAM_SIZE];
     uint8_t sram [SMS_SRAM_SIZE];
-    bool sram_used;
+    uint16_t sram_used;
 
     uint8_t *rom;
     uint32_t rom_size;
