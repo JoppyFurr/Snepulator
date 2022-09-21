@@ -24,6 +24,7 @@
 #define BIT_15      (1 << 15)
 
 /* Sizes */
+#define SIZE_128    128
 #define SIZE_1K     ( 1 << 10)
 #define SIZE_2K     ( 2 << 10)
 #define SIZE_4K     ( 4 << 10)

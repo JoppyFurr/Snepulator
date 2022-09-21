@@ -980,7 +980,7 @@ static void sms_state_load (void *context_ptr, const char *filename)
         return;
     }
 
-    context->sram_used = false;
+    context->sram_used = 0x0000;
 
     for (uint32_t i = 0; i < sections_loaded; i++)
     {
@@ -1018,14 +1018,14 @@ static void sms_state_load (void *context_ptr, const char *filename)
         }
         else if (!strncmp (section_id, SECTION_ID_SRAM, 4))
         {
-            context->sram_used = true;
-            if (size == SMS_SRAM_SIZE)
+            if (size >= SMS_SRAM_SIZE_MIN && size <= SMS_SRAM_SIZE)
             {
-                memcpy (context->sram, data, SMS_SRAM_SIZE);
+                context->sram_used = size - 1;
+                memcpy (context->sram, data, size);
             }
             else
             {
-                snepulator_error ("Error", "Save-state contains incorrect SRAM size");
+                snepulator_error ("Error", "Save-state contains invalid SRAM size");
             }
         }
         else if (!strncmp (section_id, SECTION_ID_VDP, 4))
@@ -1084,7 +1084,15 @@ static void sms_state_save (void *context_ptr, const char *filename)
     save_state_section_add (SECTION_ID_RAM, 1, SMS_RAM_SIZE, context->ram);
     if (context->sram_used)
     {
-        save_state_section_add (SECTION_ID_SRAM, 1, SMS_SRAM_SIZE, context->sram);
+        uint32_t sram_size = SMS_SRAM_SIZE_MIN;
+
+        /* Round SRAM file size to power of two. */
+        while (sram_size < SIZE_32K && context->sram_used > sram_size)
+        {
+            sram_size <<= 1;
+        }
+
+        save_state_section_add (SECTION_ID_SRAM, 1, sram_size, context->sram);
     }
 
     tms9928a_state_save (context->vdp_context);
@@ -1107,7 +1115,7 @@ static void sms_sync (void *context_ptr)
 
     if (context->sram_used)
     {
-        uint32_t sram_size = 128;
+        uint32_t sram_size = SMS_SRAM_SIZE_MIN;
         uint32_t bytes_written = 0;
         char *path = path_sram (context->rom_hash);
         FILE *sram_file = fopen (path, "wb");

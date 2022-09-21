@@ -7,6 +7,7 @@
 
 #define SMS_RAM_SIZE        SIZE_8K
 #define SMS_SRAM_SIZE       SIZE_32K
+#define SMS_SRAM_SIZE_MIN   SIZE_128
 #define SMS_SRAM_BANK_SIZE  SIZE_16K
 #define SMS_SRAM_BANK_MASK  (SMS_SRAM_BANK_SIZE - 1)
 
