@@ -4,7 +4,9 @@
 
 #define VIDEO_SIDE_BORDER 8
 #define VIDEO_BUFFER_WIDTH (256 + 2 * VIDEO_SIDE_BORDER)
+
 #define VIDEO_BUFFER_LINES 240
+#define VIDEO_TOP_BORDER_192 ((VIDEO_BUFFER_LINES - 192) / 2)
 
 typedef enum Run_State_e {
     RUN_STATE_INIT,     /* No ROM has been loaded. */
@@ -96,9 +98,9 @@ typedef struct Snepulator_State_s {
 
     /* Console video output */
     uint_pixel  video_out_data [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
-    uint32_t    video_start_x;
+    uint32_t    video_start_x;              /* Start of active area. */
     uint32_t    video_start_y;
-    uint32_t    video_width;
+    uint32_t    video_width;                /* Size of the active area. */
     uint32_t    video_height;
     uint32_t    video_blank_left;
     bool        video_has_border;

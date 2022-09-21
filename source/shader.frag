@@ -28,7 +28,7 @@ uniform int scale;
 
 /*
  * Given a pixel coordinate into the video-out, return the colour value.
- * This  function handles the dimming of the border area.
+ * This function handles the dimming of the border area.
  */
 vec4 get_pixel (int x, int y)
 {

@@ -468,7 +468,13 @@ void snepulator_reset (void)
     state.state_save = NULL;
     state.update_settings = NULL;
 
+    state.console = CONSOLE_NONE;
+
     /* Clear additional video parameters */
+    state.video_start_x = VIDEO_SIDE_BORDER;
+    state.video_start_y = VIDEO_TOP_BORDER_192;
+    state.video_width = 256;
+    state.video_height = 192;
     state.video_has_border = false;
     state.video_blank_left = 0;
 

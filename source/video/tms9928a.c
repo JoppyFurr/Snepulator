@@ -603,6 +603,8 @@ TMS9928A_Context *tms9928a_init (void *parent, void (* frame_done) (void *))
     context->parent = parent;
     context->frame_done = frame_done;
 
+    context->video_start_x = VIDEO_SIDE_BORDER;
+    context->video_start_y = VIDEO_TOP_BORDER_192;
     context->video_width = 256;
     context->video_height = 192;
 
