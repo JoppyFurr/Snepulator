@@ -42,6 +42,7 @@ const float Float4_Black[4] = { 0.0, 0.0, 0.0, 0.0 };
 /* Global state */
 Snepulator_State state;
 pthread_mutex_t video_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t run_mutex = PTHREAD_MUTEX_INITIALIZER;
 bool config_capture_events = false;
 SDL_Window *window = NULL;
 SDL_GLContext glcontext = NULL;
@@ -134,10 +135,12 @@ void *main_emulation_loop (void *data)
     {
         ticks_current = util_get_ticks ();
 
+        pthread_mutex_lock (&run_mutex);
         if (state.run == RUN_STATE_RUNNING || state.console == CONSOLE_LOGO)
         {
             state.run_callback (state.console_context, ticks_current - ticks_previous);
         }
+        pthread_mutex_unlock (&run_mutex);
 
         ticks_previous = ticks_current;
 

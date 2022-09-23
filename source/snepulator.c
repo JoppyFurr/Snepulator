@@ -30,6 +30,7 @@
 
 extern Snepulator_State state;
 extern pthread_mutex_t video_mutex;
+extern pthread_mutex_t run_mutex;
 
 
 /*
@@ -434,13 +435,22 @@ void snepulator_reset (void)
     /* Mark the system as not-ready. */
     state.run = RUN_STATE_INIT;
 
+    /* Don't free resources in the middle of the run_callback */
+    pthread_mutex_lock (&run_mutex);
+
     /* Free any console-specific resources */
     if (state.cleanup != NULL)
     {
         state.cleanup (state.console_context);
+    }
+    if (state.console_context != NULL)
+    {
         free (state.console_context);
         state.console_context = NULL;
     }
+    state.console = CONSOLE_NONE;
+
+    pthread_mutex_unlock (&run_mutex);
 
     /* Clear callback functions */
     state.audio_callback = NULL;
@@ -455,7 +465,6 @@ void snepulator_reset (void)
     state.state_save = NULL;
     state.update_settings = NULL;
 
-    state.console = CONSOLE_NONE;
     snepulator_clear_screen ();
 
     /* Clear additional video parameters */
