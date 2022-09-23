@@ -17,6 +17,7 @@ typedef enum Run_State_e {
 
 typedef enum Console_e {
     CONSOLE_NONE = 0,
+    CONSOLE_LOGO,
     CONSOLE_COLECOVISION,
     CONSOLE_GAME_GEAR,
     CONSOLE_MASTER_SYSTEM,
@@ -131,6 +132,9 @@ typedef struct Snepulator_State_s {
 /* Set and run a console BIOS. */
 void snepulator_bios_set (const char *path);
 
+/* Clear the screen. */
+void snepulator_clear_screen (void);
+
 /* Import settings from configuration from file. */
 int snepulator_config_import (void);
 
@@ -139,9 +143,6 @@ void snepulator_console_set_from_path (const char *path);
 
 /* Disable screen blanking when the blanking bit is set. */
 void snepulator_disable_blanking_set (bool disable_blanking);
-
-/* Draw the logo to the output texture. */
-void snepulator_draw_logo (void);
 
 /* Set whether or not to overclock. */
 void snepulator_overclock_set (bool overclock);

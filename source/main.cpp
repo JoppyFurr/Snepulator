@@ -93,7 +93,7 @@ void snepulator_render_error ()
         ImGui::Spacing ();
         ImGui::SameLine (ImGui::GetContentRegionAvail().x + 16 - 128);
         if (ImGui::Button ("Close", ImVec2 (120,0))) {
-            snepulator_draw_logo ();
+            snepulator_clear_screen ();
             ImGui::CloseCurrentPopup ();
 
             /* Reset the error popup */
@@ -134,7 +134,7 @@ void *main_emulation_loop (void *data)
     {
         ticks_current = util_get_ticks ();
 
-        if (state.run == RUN_STATE_RUNNING)
+        if (state.run == RUN_STATE_RUNNING || state.console == CONSOLE_LOGO)
         {
             state.run_callback (state.console_context, ticks_current - ticks_previous);
         }
@@ -179,10 +179,8 @@ int main_gui_loop (void)
                   0, GL_RGB, GL_FLOAT, NULL);
 
     /* Set up the GLSL shaders */
+    snepulator_clear_screen ();
     snepulator_shader_setup ();
-
-    /* TODO: To avoid a flicker - only draw this if no game is loaded. */
-    snepulator_draw_logo ();
 
     /* Main loop */
     while (state.run != RUN_STATE_EXIT)
@@ -582,11 +580,8 @@ int main (int argc, char **argv)
     gamepad_sdl_init ();
     gamepad_init ();
 
-    /* If we have a valid ROM to run, start emulation */
-    if (state.cart_filename)
-    {
-        snepulator_system_init ();
-    }
+    /* Start emulation, or the logo animation */
+    snepulator_system_init ();
 
     /* Create the emulation thread */
     pthread_t emulation_thread;

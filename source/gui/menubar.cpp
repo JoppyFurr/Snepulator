@@ -132,8 +132,11 @@ static void snepulator_file_menu (void)
 
         if (ImGui::MenuItem ("Close ROM", NULL))
         {
-            snepulator_reset ();
-            snepulator_draw_logo ();
+            if (state.run == RUN_STATE_RUNNING || state.run == RUN_STATE_PAUSED)
+            {
+                snepulator_rom_set (NULL);
+                snepulator_system_init ();
+            }
         }
 
         if (ImGui::MenuItem ("Pause", NULL, state.run == RUN_STATE_PAUSED))
@@ -161,7 +164,10 @@ static void snepulator_console_menu ()
 
         if (ImGui::MenuItem ("Hard Reset"))
         {
-            snepulator_system_init ();
+            if (state.run == RUN_STATE_RUNNING || state.run == RUN_STATE_PAUSED)
+            {
+                snepulator_system_init ();
+            }
         }
         ImGui::Separator ();
 

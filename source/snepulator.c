@@ -20,12 +20,12 @@
 
 #include "cpu/z80.h"
 #include "video/tms9928a.h"
+#include "logo.h"
 #include "sg-1000.h"
 #include "sms.h"
 #include "colecovision.h"
 
 /* Images */
-#include "../images/snepulator_logo.c"
 #include "../images/snepulator_paused.c"
 
 extern Snepulator_State state;
@@ -200,6 +200,15 @@ int snepulator_config_import (void)
 
 
 /*
+ * Clear the screen.
+ */
+void snepulator_clear_screen (void)
+{
+    memset (state.video_out_data, 0, sizeof (state.video_out_data));
+}
+
+
+/*
  * Set state.console using the file extension.
  */
 void snepulator_console_set_from_path (const char *path)
@@ -207,16 +216,19 @@ void snepulator_console_set_from_path (const char *path)
     char extension[16] = { '\0' };
     char *extension_ptr = NULL;
 
-    if (path != NULL)
+    /* If no ROM is selected, display the logo. */
+    if (path == NULL)
     {
-        extension_ptr = strrchr (path, '.');
+        state.console = CONSOLE_LOGO;
+        return;
+    }
 
-        if (extension_ptr != NULL)
+    extension_ptr = strrchr (path, '.');
+    if (extension_ptr != NULL)
+    {
+        for (int i = 0; i < 15 && extension_ptr[i] != '\0'; i++)
         {
-            for (int i = 0; i < 15 && extension_ptr[i] != '\0'; i++)
-            {
-                extension [i] = tolower (extension_ptr [i]);
-            }
+            extension [i] = tolower (extension_ptr [i]);
         }
     }
 
@@ -254,31 +266,6 @@ void snepulator_disable_blanking_set (bool disable_blanking)
     }
 
     config_write ();
-}
-
-
-/*
- * Draw the logo to the output texture.
- */
-void snepulator_draw_logo (void)
-{
-    memset (state.video_out_data, 0, sizeof (state.video_out_data));
-
-    for (uint32_t y = 0; y < snepulator_logo.height; y++)
-    {
-        uint32_t x_offset = VIDEO_BUFFER_WIDTH / 2 - snepulator_logo.width / 2;
-        uint32_t y_offset = VIDEO_BUFFER_LINES / 2 - snepulator_logo.height / 2;
-
-        for (uint32_t x = 0; x < snepulator_logo.width; x++)
-        {
-            state.video_out_data [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].r =
-                snepulator_logo.pixel_data [(x + y * snepulator_logo.width) * 3 + 0];
-            state.video_out_data [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].g =
-                snepulator_logo.pixel_data [(x + y * snepulator_logo.width) * 3 + 1];
-            state.video_out_data [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].b =
-                snepulator_logo.pixel_data [(x + y * snepulator_logo.width) * 3 + 2];
-        }
-    }
 }
 
 
@@ -469,6 +456,7 @@ void snepulator_reset (void)
     state.update_settings = NULL;
 
     state.console = CONSOLE_NONE;
+    snepulator_clear_screen ();
 
     /* Clear additional video parameters */
     state.video_start_x = VIDEO_SIDE_BORDER;
@@ -494,9 +482,13 @@ void snepulator_rom_set (const char *path)
     if (state.cart_filename != NULL)
     {
         free (state.cart_filename);
+        state.cart_filename = NULL;
     }
 
-    state.cart_filename = strdup (path);
+    if (path != NULL)
+    {
+        state.cart_filename = strdup (path);
+    }
 
     snepulator_system_init ();
 }
@@ -513,6 +505,9 @@ void snepulator_system_init (void)
 
     switch (state.console)
     {
+        case CONSOLE_LOGO:
+            state.console_context = logo_init ();
+            break;
         case CONSOLE_COLECOVISION:
             state.console_context = colecovision_init ();
             break;
