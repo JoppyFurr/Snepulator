@@ -120,6 +120,7 @@ static void sms_diagnostics_show (void)
 {
     SMS_Context *context = state.console_context;
     Z80_Context *z80_context = context->z80_context;
+    TMS9928A_Context *vdp_context = context->vdp_context;
 
     state.diagnostics_print ("Master System");
 
@@ -134,6 +135,8 @@ static void sms_diagnostics_show (void)
     state.diagnostics_print ("---");
     state.diagnostics_print ("Video");
     state.diagnostics_print ("Mode : %s", tms9928a_mode_name_get (sms_vdp_get_mode (context->vdp_context)));
+    state.diagnostics_print ("Frame interrupts : %s", vdp_context->state.regs.ctrl_1_frame_int_en ? "Enabled" : "Disabled");
+    state.diagnostics_print ("Line interrupts  : %s", vdp_context->state.regs.ctrl_0_line_int_en ? "Enabled" : "Disabled");
 }
 
 
