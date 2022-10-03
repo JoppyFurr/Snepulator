@@ -801,8 +801,10 @@ void sms_vdp_run_one_scanline (TMS9928A_Context *context)
             break;
 
         default:
-            /* Other modes not implemented. */
-            return;
+            /* Some games briefly pass through an unsupported mode.
+             * Assume Mode 0 to keep line counters and interrupts ticking. */
+            config = (context->format == VIDEO_FORMAT_NTSC) ? &Mode0_NTSC : &Mode0_PAL;
+            break;
     }
 
     /* The Master System supports multiple resolutions that can be changed on the fly. */
