@@ -1759,9 +1759,9 @@ static void z80_ed_4c_neg (Z80_Context *context)
 /* RETI */
 static void z80_ed_4d_reti (Z80_Context *context)
 {
-    context->state.pc_l = context->memory_read (context->parent, context->state.sp++);
-    context->state.pc_h = context->memory_read (context->parent, context->state.sp++);
-    context->used_cycles += 14;
+    /* While not mentioned in the official documentation,
+     * RETI has the same iff1 <- iff2 behaviour as RETN */
+    z80_ed_45_retn (context);
 }
 
 
