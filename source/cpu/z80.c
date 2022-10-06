@@ -150,12 +150,6 @@ Z80_Context *z80_init (void *parent,
                               context->state.flag_sign = (context->state.hl - X - context->state.flag_carry) >> 15; \
                               context->state.flag_carry = (context->state.hl - X - context->state.flag_carry) >> 16; }
 
-#define SET_FLAGS_CPI_CPD(X) { context->state.flag_sub = 1; \
-                               context->state.flag_parity_overflow = (context->state.bc != 0); \
-                               context->state.flag_half = ((context->state.a & 0x0f) - (X & 0x0f)) >> 4; \
-                               context->state.flag_zero = (context->state.a == X); \
-                               context->state.flag_sign = (context->state.a - X) >> 7; }
-
 #define SET_FLAGS_RLC(X) { context->state.flag_carry = X; \
                            context->state.flag_sub = 0; \
                            context->state.flag_parity_overflow = uint8_even_parity [X]; \
@@ -2237,10 +2231,18 @@ static void z80_ed_a0_ldi (Z80_Context *context)
 /* CPI */
 static void z80_ed_a1_cpi (Z80_Context *context)
 {
-    uint8_t temp = context->memory_read (context->parent, context->state.hl);
+    uint8_t value = context->memory_read (context->parent, context->state.hl);
     context->state.hl++;
     context->state.bc--;
-    SET_FLAGS_CPI_CPD (temp);
+    context->state.flag_sub = 1;
+    context->state.flag_parity_overflow = (context->state.bc != 0);
+    context->state.flag_half = ((context->state.a & 0x0f) - (value & 0x0f)) >> 4;
+    value = context->state.a - value;
+    context->state.flag_zero = (value == 0);
+    context->state.flag_sign = value >> 7;
+    value -= context->state.flag_half;
+    context->state.flag_x = value >> 3;
+    context->state.flag_y = value >> 1;
     context->used_cycles += 16;
 }
 
@@ -2297,10 +2299,18 @@ static void z80_ed_a8_ldd (Z80_Context *context)
 /* CPD */
 static void z80_ed_a9_cpd (Z80_Context *context)
 {
-    uint8_t temp = context->memory_read (context->parent, context->state.hl);
+    uint8_t value = context->memory_read (context->parent, context->state.hl);
     context->state.hl--;
     context->state.bc--;
-    SET_FLAGS_CPI_CPD (temp);
+    context->state.flag_sub = 1;
+    context->state.flag_parity_overflow = (context->state.bc != 0);
+    context->state.flag_half = ((context->state.a & 0x0f) - (value & 0x0f)) >> 4;
+    value = context->state.a - value;
+    context->state.flag_zero = (value == 0);
+    context->state.flag_sign = value >> 7;
+    value -= context->state.flag_half;
+    context->state.flag_x = value >> 3;
+    context->state.flag_y = value >> 1;
     context->used_cycles += 16;
 }
 
@@ -2364,10 +2374,10 @@ static void z80_ed_b0_ldir (Z80_Context *context)
 /* CPIR */
 static void z80_ed_b1_cpir (Z80_Context *context)
 {
-    uint8_t temp = context->memory_read (context->parent, context->state.hl);
+    uint8_t value = context->memory_read (context->parent, context->state.hl);
     context->state.hl++;
     context->state.bc--;
-    if (context->state.bc != 0 && context->state.a != temp)
+    if (context->state.bc != 0 && context->state.a != value)
     {
         context->state.pc -= 2;
         context->used_cycles += 21;
@@ -2376,7 +2386,15 @@ static void z80_ed_b1_cpir (Z80_Context *context)
     {
         context->used_cycles += 16;
     }
-    SET_FLAGS_CPI_CPD (temp);
+    context->state.flag_sub = 1;
+    context->state.flag_parity_overflow = (context->state.bc != 0);
+    context->state.flag_half = ((context->state.a & 0x0f) - (value & 0x0f)) >> 4;
+    value = context->state.a - value;
+    context->state.flag_zero = (value == 0);
+    context->state.flag_sign = value >> 7;
+    value -= context->state.flag_half;
+    context->state.flag_x = value >> 3;
+    context->state.flag_y = value >> 1;
 }
 
 
@@ -2455,11 +2473,13 @@ static void z80_ed_b8_lddr (Z80_Context *context)
 /* CPDR */
 static void z80_ed_b9_cpdr (Z80_Context *context)
 {
-    uint8_t temp = context->memory_read (context->parent, context->state.hl);
+    uint8_t value = context->memory_read (context->parent, context->state.hl);
     context->state.hl--;
     context->state.bc--;
-    SET_FLAGS_CPI_CPD (temp);
-    if (context->state.bc != 0 && context->state.a != temp)
+    context->state.flag_sub = 1;
+    context->state.flag_parity_overflow = (context->state.bc != 0);
+    context->state.flag_half = ((context->state.a & 0x0f) - (value & 0x0f)) >> 4;
+    if (context->state.bc != 0 && context->state.a != value)
     {
         context->state.pc -= 2;
         context->used_cycles += 21;
@@ -2468,6 +2488,12 @@ static void z80_ed_b9_cpdr (Z80_Context *context)
     {
         context->used_cycles += 16;
     }
+    value = context->state.a - value;
+    context->state.flag_zero = (value == 0);
+    context->state.flag_sign = value >> 7;
+    value -= context->state.flag_half;
+    context->state.flag_x = value >> 3;
+    context->state.flag_y = value >> 1;
 }
 
 
