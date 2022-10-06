@@ -182,6 +182,8 @@ Z80_Context *z80_init (void *parent,
                              context->state.flag_zero = (X == 0); \
                              context->state.flag_sign = X >> 7; }
 
+#define SET_FLAGS_XY(X) { context->state.flag_x = X >> 3; \
+                          context->state.flag_y = X >> 5; }
 
 
 /*
@@ -2659,6 +2661,7 @@ static void z80_04_inc_b (Z80_Context *context)
 {
     context->state.b++;
     SET_FLAGS_INC (context->state.b);
+    SET_FLAGS_XY (context->state.b);
     context->used_cycles += 4;
 }
 
@@ -2668,6 +2671,7 @@ static void z80_05_dec_b (Z80_Context *context)
 {
     context->state.b--;
     SET_FLAGS_DEC (context->state.b);
+    SET_FLAGS_XY (context->state.b);
     context->used_cycles += 4;
 }
 
@@ -2729,6 +2733,7 @@ static void z80_0c_inc_c (Z80_Context *context)
 {
     context->state.c++;
     SET_FLAGS_INC (context->state.c);
+    SET_FLAGS_XY (context->state.c);
     context->used_cycles += 4;
 }
 
@@ -2738,6 +2743,7 @@ static void z80_0d_dec_c (Z80_Context *context)
 {
     context->state.c--;
     SET_FLAGS_DEC (context->state.c);
+    SET_FLAGS_XY (context->state.c);
     context->used_cycles += 4;
 }
 
@@ -2808,6 +2814,7 @@ static void z80_14_inc_d (Z80_Context *context)
 {
     context->state.d++;
     SET_FLAGS_INC (context->state.d);
+    SET_FLAGS_XY (context->state.d);
     context->used_cycles += 4;
 }
 
@@ -2817,6 +2824,7 @@ static void z80_15_dec_d (Z80_Context *context)
 {
     context->state.d--;
     SET_FLAGS_DEC (context->state.d);
+    SET_FLAGS_XY (context->state.d);
     context->used_cycles += 4;
 }
 
@@ -2880,6 +2888,7 @@ static void z80_1c_inc_e (Z80_Context *context)
 {
     context->state.e++;
     SET_FLAGS_INC (context->state.e);
+    SET_FLAGS_XY (context->state.e);
     context->used_cycles += 4;
 }
 
@@ -2889,6 +2898,7 @@ static void z80_1d_dec_e (Z80_Context *context)
 {
     context->state.e--;
     SET_FLAGS_DEC (context->state.e);
+    SET_FLAGS_XY (context->state.e);
     context->used_cycles += 4;
 }
 
@@ -2964,6 +2974,7 @@ static void z80_24_inc_h (Z80_Context *context)
 {
     context->state.h++;
     SET_FLAGS_INC (context->state.h);
+    SET_FLAGS_XY (context->state.h);
     context->used_cycles += 4;
 }
 
@@ -2973,6 +2984,7 @@ static void z80_25_dec_h (Z80_Context *context)
 {
     context->state.h--;
     SET_FLAGS_DEC (context->state.h);
+    SET_FLAGS_XY (context->state.h);
     context->used_cycles += 4;
 }
 
@@ -3102,6 +3114,7 @@ static void z80_2c_inc_l (Z80_Context *context)
 {
     context->state.l++;
     SET_FLAGS_INC (context->state.l);
+    SET_FLAGS_XY (context->state.l);
     context->used_cycles += 4;
 }
 
@@ -3111,6 +3124,7 @@ static void z80_2d_dec_l (Z80_Context *context)
 {
     context->state.l--;
     SET_FLAGS_DEC (context->state.l);
+    SET_FLAGS_XY (context->state.l);
     context->used_cycles += 4;
 }
 
@@ -3185,6 +3199,7 @@ static void z80_34_inc_hl (Z80_Context *context)
     value++;
     context->memory_write (context->parent, context->state.hl, value);
     SET_FLAGS_INC (value);
+    SET_FLAGS_XY (value);
     context->used_cycles += 11;
 }
 
@@ -3196,6 +3211,7 @@ static void z80_35_dec_hl (Z80_Context *context)
     value--;
     context->memory_write (context->parent, context->state.hl, value);
     SET_FLAGS_DEC (value);
+    SET_FLAGS_XY (value);
     context->used_cycles += 11;
 }
 
@@ -3268,6 +3284,7 @@ static void z80_3c_inc_a (Z80_Context *context)
 {
     context->state.a++;
     SET_FLAGS_INC (context->state.a);
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 4;
 }
 
@@ -3276,6 +3293,7 @@ static void z80_3d_dec_a (Z80_Context *context)
 {
     context->state.a--;
     SET_FLAGS_DEC (context->state.a);
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 4;
 }
 
