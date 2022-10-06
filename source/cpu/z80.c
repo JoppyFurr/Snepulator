@@ -2219,13 +2219,17 @@ static void z80_ed_7e_im_2 (Z80_Context *context)
 /* LDI */
 static void z80_ed_a0_ldi (Z80_Context *context)
 {
-    context->memory_write (context->parent, context->state.de, context->memory_read (context->parent, context->state.hl));
+    uint8_t value = context->memory_read (context->parent, context->state.hl);
+    context->memory_write (context->parent, context->state.de, value);
+    value += context->state.a;
     context->state.hl++;
     context->state.de++;
     context->state.bc--;
     context->state.flag_sub = 0;
     context->state.flag_parity_overflow = (context->state.bc != 0);
     context->state.flag_half = 0;
+    context->state.flag_x = value >> 3;
+    context->state.flag_y = value >> 1;
     context->used_cycles += 16;
 }
 
@@ -2275,13 +2279,17 @@ static void z80_ed_a3_outi (Z80_Context *context)
 /* LDD */
 static void z80_ed_a8_ldd (Z80_Context *context)
 {
-    context->memory_write (context->parent, context->state.de, context->memory_read (context->parent, context->state.hl));
+    uint8_t value = context->memory_read (context->parent, context->state.hl);
+    context->memory_write (context->parent, context->state.de, value);
+    value += context->state.a;
     context->state.hl--;
     context->state.de--;
     context->state.bc--;
     context->state.flag_sub = 0;
     context->state.flag_parity_overflow = (context->state.bc != 0);
     context->state.flag_half = 0;
+    context->state.flag_x = value >> 3;
+    context->state.flag_y = value >> 1;
     context->used_cycles += 16;
 }
 
@@ -2330,13 +2338,17 @@ static void z80_ed_ab_outd (Z80_Context *context)
 /* LDIR */
 static void z80_ed_b0_ldir (Z80_Context *context)
 {
-    context->memory_write (context->parent, context->state.de, context->memory_read (context->parent, context->state.hl));
+    uint8_t value = context->memory_read (context->parent, context->state.hl);
+    context->memory_write (context->parent, context->state.de, value);
+    value += context->state.a;
     context->state.hl++;
     context->state.de++;
     context->state.bc--;
     context->state.flag_sub = 0;
     context->state.flag_parity_overflow = (context->state.bc != 0);
     context->state.flag_half = 0;
+    context->state.flag_x = value >> 3;
+    context->state.flag_y = value >> 1;
     if (context->state.bc)
     {
         context->state.pc -= 2;
@@ -2417,13 +2429,17 @@ static void z80_ed_b3_otir (Z80_Context *context)
 /* LDDR */
 static void z80_ed_b8_lddr (Z80_Context *context)
 {
-    context->memory_write (context->parent, context->state.de, context->memory_read (context->parent, context->state.hl));
+    uint8_t value = context->memory_read (context->parent, context->state.hl);
+    context->memory_write (context->parent, context->state.de, value);
+    value += context->state.a;
     context->state.hl--;
     context->state.de--;
     context->state.bc--;
     context->state.flag_sub = 0;
     context->state.flag_parity_overflow = (context->state.bc != 0);
     context->state.flag_half = 0;
+    context->state.flag_x = value >> 3;
+    context->state.flag_y = value >> 1;
     if (context->state.bc)
     {
         context->state.pc -= 2;
