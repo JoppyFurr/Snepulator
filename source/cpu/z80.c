@@ -214,12 +214,14 @@ void z80_ix_iy_bit_instruction (Z80_Context *context, uint16_t reg_ix_iy_w)
         case 0x00: /* RLC (ix+*) */
             data = (data << 1) | ((data & 0x80) ? 0x01 : 0x00);
             SET_FLAGS_RLC (data);
+            SET_FLAGS_XY (data);
             context->used_cycles += 23;
             break;
 
         case 0x08: /* RRC (ix+*) */
             data = (data >> 1) | (data << 7);
             SET_FLAGS_RRC (data);
+            SET_FLAGS_XY (data);
             context->used_cycles += 23;
             break;
 
@@ -227,6 +229,7 @@ void z80_ix_iy_bit_instruction (Z80_Context *context, uint16_t reg_ix_iy_w)
             temp = data;
             data = (data << 1) | context->state.flag_carry;
             SET_FLAGS_RL_RR (data);
+            SET_FLAGS_XY (data);
             context->state.flag_carry = temp >> 7;
             context->used_cycles += 23;
             break;
@@ -235,34 +238,43 @@ void z80_ix_iy_bit_instruction (Z80_Context *context, uint16_t reg_ix_iy_w)
             temp = data;
             data = (data >> 1) | (context->state.flag_carry << 7);
             SET_FLAGS_RL_RR (data);
+            SET_FLAGS_XY (data);
             context->state.flag_carry = temp;
             context->used_cycles += 23;
             break;
 
         case 0x20: /* SLA (ix+*) */
             temp = data;
-            data = (data << 1); SET_FLAGS_RL_RR (data);
+            data = (data << 1);
+            SET_FLAGS_RL_RR (data);
+            SET_FLAGS_XY (data);
             context->state.flag_carry = temp >> 7;
             context->used_cycles += 23;
             break;
 
         case 0x28: /* SRA (ix+*) */
             temp = data;
-            data = (data >> 1) | (data & 0x80); SET_FLAGS_RL_RR (data);
+            data = (data >> 1) | (data & 0x80);
+            SET_FLAGS_RL_RR (data);
+            SET_FLAGS_XY (data);
             context->state.flag_carry = temp;
             context->used_cycles += 23;
             break;
 
         case 0x30: /* SLL (ix+*) */
             temp = data;
-            data = (data << 1) | 0x01; SET_FLAGS_RL_RR (data);
+            data = (data << 1) | 0x01;
+            SET_FLAGS_RL_RR (data);
+            SET_FLAGS_XY (data);
             context->state.flag_carry = temp >> 7;
             context->used_cycles += 23;
             break;
 
         case 0x38: /* SRL (ix+*) */
             temp = data;
-            data = (data >> 1); SET_FLAGS_RL_RR (data);
+            data = (data >> 1);
+            SET_FLAGS_RL_RR (data);
+            SET_FLAGS_XY (data);
             context->state.flag_carry = temp;
             context->used_cycles += 23;
             break;
@@ -1323,6 +1335,7 @@ static uint8_t z80_cb_00_rlc (Z80_Context *context, uint8_t value)
 {
     value = (value << 1) | (value >> 7);
     SET_FLAGS_RLC (value);
+    SET_FLAGS_XY (value);
     return value;
 }
 
@@ -1332,6 +1345,7 @@ static uint8_t z80_cb_08_rrc (Z80_Context *context, uint8_t value)
 {
     value = (value >> 1) | (value << 7);
     SET_FLAGS_RRC (value);
+    SET_FLAGS_XY (value);
     return value;
 }
 
@@ -1342,6 +1356,7 @@ static uint8_t z80_cb_10_rl (Z80_Context *context, uint8_t value)
     uint8_t result;
     result = (value << 1) | context->state.flag_carry;
     SET_FLAGS_RL_RR (result);
+    SET_FLAGS_XY (result);
     context->state.flag_carry = value >> 7;
     return result;
 }
@@ -1353,6 +1368,7 @@ static uint8_t z80_cb_18_rr (Z80_Context *context, uint8_t value)
     uint8_t result;
     result = (value >> 1) | (context->state.flag_carry << 7);
     SET_FLAGS_RL_RR (result);
+    SET_FLAGS_XY (result);
     context->state.flag_carry = value;
     return result;
 }
@@ -1364,6 +1380,7 @@ static uint8_t z80_cb_20_sla (Z80_Context *context, uint8_t value)
     uint8_t result;
     result = (value << 1);
     SET_FLAGS_RL_RR (result);
+    SET_FLAGS_XY (result);
     context->state.flag_carry = value >> 7;
     return result;
 }
@@ -1375,6 +1392,7 @@ static uint8_t z80_cb_28_sra (Z80_Context *context, uint8_t value)
     uint8_t result;
     result = (value >> 1) | (value & 0x80);
     SET_FLAGS_RL_RR (result);
+    SET_FLAGS_XY (result);
     context->state.flag_carry = value;
     return result;
 }
@@ -1385,6 +1403,7 @@ static uint8_t z80_cb_30_sll (Z80_Context *context, uint8_t value)
     uint8_t result;
     result = (value << 1) | 0x01;
     SET_FLAGS_RL_RR (result);
+    SET_FLAGS_XY (result);
     context->state.flag_carry = value >> 7;
     return result;
 }
@@ -1396,6 +1415,7 @@ static uint8_t z80_cb_38_srl (Z80_Context *context, uint8_t value)
     uint8_t result;
     result = (value >> 1);
     SET_FLAGS_RL_RR (result);
+    SET_FLAGS_XY (result);
     context->state.flag_carry = value;
     return result;
 }
@@ -2017,6 +2037,7 @@ static void z80_ed_67_rrd (Z80_Context *context)
     context->state.a = (context->state.a & 0xf0) | shifted.h;
 
     SET_FLAGS_RLD_RRD;
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 18;
 }
 
@@ -2098,6 +2119,7 @@ static void z80_ed_6f_rld (Z80_Context *context)
     context->state.a = (context->state.a & 0xf0) | shifted.h;
 
     SET_FLAGS_RLD_RRD;
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 18;
 }
 
@@ -2706,6 +2728,7 @@ static void z80_07_rlca (Z80_Context *context)
     context->state.flag_carry = context->state.a;
     context->state.flag_sub = 0;
     context->state.flag_half = 0;
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 4;
 }
 
@@ -2779,6 +2802,7 @@ static void z80_0f_rrca (Z80_Context *context)
     context->state.flag_carry = context->state.a >> 7;
     context->state.flag_sub = 0;
     context->state.flag_half = 0;
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 4;
 }
 
@@ -2861,6 +2885,7 @@ static void z80_17_rla (Z80_Context *context)
     context->state.flag_carry = temp >> 7;
     context->state.flag_sub = 0;
     context->state.flag_half = 0;
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 4;
 }
 
@@ -2936,6 +2961,7 @@ static void z80_1f_rra (Z80_Context *context)
     context->state.flag_carry = temp;
     context->state.flag_sub = 0;
     context->state.flag_half = 0;
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 4;
 }
 
