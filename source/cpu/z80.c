@@ -185,6 +185,9 @@ Z80_Context *z80_init (void *parent,
 #define SET_FLAGS_XY(X) { context->state.flag_x = X >> 3; \
                           context->state.flag_y = X >> 5; }
 
+#define SET_FLAGS_XY_16(X) { context->state.flag_x = X >> 11; \
+                             context->state.flag_y = X >> 13; }
+
 
 /*
  * Read and execute an IX / IY bit instruction.
@@ -336,6 +339,7 @@ static uint16_t z80_ix_iy_09_add_ix_bc (Z80_Context *context, uint16_t ix)
 {
     SET_FLAGS_ADD_16 (ix, context->state.bc);
     ix += context->state.bc;
+    SET_FLAGS_XY_16 (ix);
     context->used_cycles += 15;
     return ix;
 }
@@ -346,6 +350,7 @@ static uint16_t z80_ix_iy_19_add_ix_de (Z80_Context *context, uint16_t ix)
 {
     SET_FLAGS_ADD_16 (ix, context->state.de);
     ix += context->state.de;
+    SET_FLAGS_XY_16 (ix);
     context->used_cycles += 15;
     return ix;
 }
@@ -422,6 +427,7 @@ static uint16_t z80_ix_iy_29_add_ix_ix (Z80_Context *context, uint16_t ix)
 {
     SET_FLAGS_ADD_16 (ix, ix);
     ix += ix;
+    SET_FLAGS_XY_16 (ix);
     context->used_cycles += 15;
     return ix;
 }
@@ -524,6 +530,7 @@ static uint16_t z80_ix_iy_39_add_ix_sp (Z80_Context *context, uint16_t ix)
 {
     SET_FLAGS_ADD_16 (ix, context->state.sp);
     ix += context->state.sp;
+    SET_FLAGS_XY_16 (ix);
     context->used_cycles = 15;
     return ix;
 }
@@ -1643,6 +1650,7 @@ static void z80_ed_42_sbc_hl_bc (Z80_Context *context)
     temp = context->state.bc + context->state.flag_carry;
     SET_FLAGS_SBC_16 (context->state.bc);
     context->state.hl -= temp;
+    SET_FLAGS_XY_16 (context->state.hl);
     context->used_cycles += 15;
 }
 
@@ -1728,6 +1736,7 @@ static void z80_ed_4a_adc_hl_bc (Z80_Context *context)
     temp = context->state.bc + context->state.flag_carry;
     SET_FLAGS_ADC_16 (context->state.bc);
     context->state.hl += temp;
+    SET_FLAGS_XY_16 (context->state.hl);
     context->used_cycles += 15;
 }
 
@@ -1800,6 +1809,7 @@ static void z80_ed_52_sbc_hl_de (Z80_Context *context)
     temp = context->state.de + context->state.flag_carry;
     SET_FLAGS_SBC_16 (context->state.de);
     context->state.hl -= temp;
+    SET_FLAGS_XY_16 (context->state.hl);
     context->used_cycles += 15;
 }
 
@@ -1875,6 +1885,7 @@ static void z80_ed_5a_adc_hl_de (Z80_Context *context)
     uint16_t temp = context->state.de + context->state.flag_carry;
     SET_FLAGS_ADC_16 (context->state.de);
     context->state.hl += temp;
+    SET_FLAGS_XY_16 (context->state.hl);
     context->used_cycles += 15;
 }
 
@@ -1950,6 +1961,7 @@ static void z80_ed_62_sbc_hl_hl (Z80_Context *context)
     uint16_t temp = context->state.hl + context->state.flag_carry;
     SET_FLAGS_SBC_16 (context->state.hl);
     context->state.hl -= temp;
+    SET_FLAGS_XY_16 (context->state.hl);
     context->used_cycles += 15;
 }
 
@@ -2032,6 +2044,7 @@ static void z80_ed_6a_adc_hl_hl (Z80_Context *context)
     uint16_t temp = context->state.hl + context->state.flag_carry;
     SET_FLAGS_ADC_16 (context->state.hl);
     context->state.hl += temp;
+    SET_FLAGS_XY_16 (context->state.hl);
     context->used_cycles += 15;
 }
 
@@ -2113,6 +2126,7 @@ static void z80_ed_72_sbc_hl_sp (Z80_Context *context)
     uint16_t temp = context->state.sp + context->state.flag_carry;
     SET_FLAGS_SBC_16 (context->state.sp);
     context->state.hl -= temp;
+    SET_FLAGS_XY_16 (context->state.hl);
     context->used_cycles += 15;
 }
 
@@ -2174,6 +2188,7 @@ static void z80_ed_7a_adc_hl_sp (Z80_Context *context)
     uint16_t temp = context->state.sp + context->state.flag_carry;
     SET_FLAGS_ADC_16 (context->state.sp);
     context->state.hl += temp;
+    SET_FLAGS_XY_16 (context->state.hl);
     context->used_cycles += 15;
 }
 
@@ -2708,6 +2723,7 @@ static void z80_09_add_hl_bc (Z80_Context *context)
 {
     SET_FLAGS_ADD_16 (context->state.hl, context->state.bc);
     context->state.hl += context->state.bc;
+    SET_FLAGS_XY_16 (context->state.hl);
     context->used_cycles += 11;
 }
 
@@ -2863,6 +2879,7 @@ static void z80_19_add_hl_de (Z80_Context *context)
 {
     SET_FLAGS_ADD_16 (context->state.hl, context->state.de);
     context->state.hl += context->state.de;
+    SET_FLAGS_XY_16 (context->state.hl);
     context->used_cycles += 11;
 }
 
@@ -3085,6 +3102,7 @@ static void z80_29_add_hl_hl (Z80_Context *context)
 {
     SET_FLAGS_ADD_16 (context->state.hl, context->state.hl);
     context->state.hl += context->state.hl;
+    SET_FLAGS_XY_16 (context->state.hl);
     context->used_cycles += 11;
 }
 
@@ -3256,6 +3274,7 @@ static void z80_39_add_hl_sp (Z80_Context *context)
 {
     SET_FLAGS_ADD_16 (context->state.hl, context->state.sp);
     context->state.hl += context->state.sp;
+    SET_FLAGS_XY_16 (context->state.hl);
     context->used_cycles += 11;
 }
 
