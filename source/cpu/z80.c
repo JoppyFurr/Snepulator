@@ -408,6 +408,7 @@ static uint16_t z80_ix_iy_24_inc_ixh (Z80_Context *context, uint16_t ix)
     uint16_t_Split _ix = { .w = ix };
     _ix.h++;
     SET_FLAGS_INC (_ix.h);
+    SET_FLAGS_XY (_ix.h);
     context->used_cycles += 8;
     return _ix.w;
 }
@@ -419,6 +420,7 @@ static uint16_t z80_ix_iy_25_dec_ixh (Z80_Context *context, uint16_t ix)
     uint16_t_Split _ix = { .w = ix };
     _ix.h--;
     SET_FLAGS_DEC (_ix.h);
+    SET_FLAGS_XY (_ix.h);
     context->used_cycles += 8;
     return _ix.w;
 }
@@ -474,6 +476,7 @@ static uint16_t z80_ix_iy_2c_inc_ixl (Z80_Context *context, uint16_t ix)
     uint16_t_Split _ix = { .w = ix };
     _ix.l++;
     SET_FLAGS_INC (_ix.l);
+    SET_FLAGS_XY (_ix.l);
     context->used_cycles += 8;
     return _ix.w;
 }
@@ -485,6 +488,7 @@ static uint16_t z80_ix_iy_2d_dec_ixl (Z80_Context *context, uint16_t ix)
     uint16_t_Split _ix = { .w = ix };
     _ix.l--;
     SET_FLAGS_DEC (_ix.l);
+    SET_FLAGS_XY (_ix.l);
     context->used_cycles += 8;
     return _ix.w;
 }
