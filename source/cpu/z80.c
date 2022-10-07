@@ -3106,6 +3106,7 @@ static void z80_27_daa (Z80_Context *context)
     context->state.flag_half = set_half;
     context->state.flag_zero = (context->state.a == 0x00);
     context->state.flag_sign = context->state.a >> 7;
+    SET_FLAGS_XY (context->state.a);
 
     context->used_cycles += 4;
 }
@@ -3192,6 +3193,7 @@ static void z80_2f_cpl (Z80_Context *context)
     context->state.a = ~context->state.a;
     context->state.flag_sub = 1;
     context->state.flag_half = 1;
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 4;
 }
 
@@ -3279,6 +3281,7 @@ static void z80_37_scf (Z80_Context *context)
     context->state.flag_carry = 1;
     context->state.flag_sub = 0;
     context->state.flag_half = 0;
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 4;
 }
 
@@ -3362,6 +3365,7 @@ static void z80_3f_ccf (Z80_Context *context)
     context->state.flag_sub = 0;
     context->state.flag_half = context->state.flag_carry;
     context->state.flag_carry = ~context->state.flag_carry;
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 4;
 }
 
