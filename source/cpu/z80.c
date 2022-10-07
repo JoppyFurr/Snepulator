@@ -1705,6 +1705,7 @@ static void z80_ed_44_neg (Z80_Context *context)
     context->state.flag_half = half >> 4;
     context->state.flag_zero = (context->state.a == 0x00);
     context->state.flag_sign = context->state.a >> 7;
+    SET_FLAGS_XY (context->state.a);
 
     context->used_cycles += 8;
 }
