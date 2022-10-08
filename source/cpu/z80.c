@@ -182,11 +182,11 @@ Z80_Context *z80_init (void *parent,
                              context->state.flag_zero = (X == 0); \
                              context->state.flag_sign = X >> 7; }
 
-#define SET_FLAGS_XY(X) { context->state.flag_x = X >> 3; \
-                          context->state.flag_y = X >> 5; }
+#define SET_FLAGS_XY(X) { context->state.flag_x = (X) >> 3; \
+                          context->state.flag_y = (X) >> 5; }
 
-#define SET_FLAGS_XY_16(X) { context->state.flag_x = X >> 11; \
-                             context->state.flag_y = X >> 13; }
+#define SET_FLAGS_XY_16(X) { context->state.flag_x = (X) >> 11; \
+                             context->state.flag_y = (X) >> 13; }
 
 
 /*
@@ -198,6 +198,7 @@ void z80_ix_iy_bit_instruction (Z80_Context *context, uint16_t reg_ix_iy_w)
     /* Note: The displacement comes first, then the instruction */
     uint8_t displacement = context->memory_read (context->parent, context->state.pc++);
     uint8_t instruction = context->memory_read (context->parent, context->state.pc++);
+    uint16_t addr;
     uint8_t data;
     uint8_t bit;
     bool write_data = true;
@@ -207,7 +208,8 @@ void z80_ix_iy_bit_instruction (Z80_Context *context, uint16_t reg_ix_iy_w)
     /* All IX/IY bit instructions take one parameter */
 
     /* Read data */
-    data = context->memory_read (context->parent, reg_ix_iy_w + (int8_t) displacement);
+    addr = reg_ix_iy_w + (int8_t) displacement;
+    data = context->memory_read (context->parent, addr);
 
     switch (instruction & 0xf8)
     {
@@ -288,6 +290,7 @@ void z80_ix_iy_bit_instruction (Z80_Context *context, uint16_t reg_ix_iy_w)
             context->state.flag_half = 1;
             context->state.flag_zero = ~data >> bit;
             context->state.flag_sign = (data & (1 << bit)) >> 7;
+            SET_FLAGS_XY_16(addr);
             context->used_cycles += 20;
             write_data = false;
             break;
@@ -1459,6 +1462,7 @@ static uint8_t z80_cb_40_bit_0 (Z80_Context *context, uint8_t value)
     context->state.flag_half = 1;
     context->state.flag_zero = ~value >> 0;
     context->state.flag_sign = 0;
+    SET_FLAGS_XY (0);
     return value;
 }
 
@@ -1471,6 +1475,7 @@ static uint8_t z80_cb_48_bit_1 (Z80_Context *context, uint8_t value)
     context->state.flag_half = 1;
     context->state.flag_zero = ~value >> 1;
     context->state.flag_sign = 0;
+    SET_FLAGS_XY (0);
     return value;
 }
 
@@ -1483,6 +1488,7 @@ static uint8_t z80_cb_50_bit_2 (Z80_Context *context, uint8_t value)
     context->state.flag_half = 1;
     context->state.flag_zero = ~value >> 2;
     context->state.flag_sign = 0;
+    SET_FLAGS_XY (0);
     return value;
 }
 
@@ -1495,6 +1501,7 @@ static uint8_t z80_cb_58_bit_3 (Z80_Context *context, uint8_t value)
     context->state.flag_half = 1;
     context->state.flag_zero = ~value >> 3;
     context->state.flag_sign = 0;
+    SET_FLAGS_XY (value & 0x08);
     return value;
 }
 
@@ -1507,6 +1514,7 @@ static uint8_t z80_cb_60_bit_4 (Z80_Context *context, uint8_t value)
     context->state.flag_half = 1;
     context->state.flag_zero = ~value >> 4;
     context->state.flag_sign = 0;
+    SET_FLAGS_XY (0);
     return value;
 }
 
@@ -1519,6 +1527,7 @@ static uint8_t z80_cb_68_bit_5 (Z80_Context *context, uint8_t value)
     context->state.flag_half = 1;
     context->state.flag_zero = ~value >> 5;
     context->state.flag_sign = 0;
+    SET_FLAGS_XY (value & 0x20);
     return value;
 }
 
@@ -1531,6 +1540,7 @@ static uint8_t z80_cb_70_bit_6 (Z80_Context *context, uint8_t value)
     context->state.flag_half = 1;
     context->state.flag_zero = ~value >> 6;
     context->state.flag_sign = 0;
+    SET_FLAGS_XY (0);
     return value;
 }
 
@@ -1543,6 +1553,7 @@ static uint8_t z80_cb_78_bit_7 (Z80_Context *context, uint8_t value)
     context->state.flag_half = 1;
     context->state.flag_zero = ~value >> 7;
     context->state.flag_sign = value >> 7;
+    SET_FLAGS_XY (0);
     return value;
 }
 
