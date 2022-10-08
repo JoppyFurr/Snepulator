@@ -1186,6 +1186,7 @@ static uint16_t z80_ix_iy_bc_cp_a_ixh (Z80_Context *context, uint16_t ix)
 {
     uint16_t_Split _ix = { .w = ix };
     SET_FLAGS_SUB (context->state.a, _ix.h);
+    SET_FLAGS_XY (_ix.h);
     context->used_cycles += 8;
     return ix;
 }
@@ -1196,6 +1197,7 @@ static uint16_t z80_ix_iy_bd_cp_a_ixl (Z80_Context *context, uint16_t ix)
 {
     uint16_t_Split _ix = { .w = ix };
     SET_FLAGS_SUB (context->state.a, _ix.l);
+    SET_FLAGS_XY (_ix.l);
     context->used_cycles += 8;
     return ix;
 }
@@ -1207,6 +1209,7 @@ static uint16_t z80_ix_iy_be_cp_a_ixx (Z80_Context *context, uint16_t ix)
     int8_t offset = context->memory_read (context->parent, context->state.pc++);
     uint8_t data = context->memory_read (context->parent, ix + offset);
     SET_FLAGS_SUB (context->state.a, data);
+    SET_FLAGS_XY (data);
     context->used_cycles += 19;
     return ix;
 }
@@ -4443,6 +4446,7 @@ static void z80_b7_or_a_a (Z80_Context *context)
 static void z80_b8_cp_a_b (Z80_Context *context)
 {
     SET_FLAGS_SUB (context->state.a, context->state.b);
+    SET_FLAGS_XY (context->state.b);
     context->used_cycles += 4;
 }
 
@@ -4451,6 +4455,7 @@ static void z80_b8_cp_a_b (Z80_Context *context)
 static void z80_b9_cp_a_c (Z80_Context *context)
 {
     SET_FLAGS_SUB (context->state.a, context->state.c);
+    SET_FLAGS_XY (context->state.c);
     context->used_cycles += 4;
 }
 
@@ -4459,6 +4464,7 @@ static void z80_b9_cp_a_c (Z80_Context *context)
 static void z80_ba_cp_a_d (Z80_Context *context)
 {
     SET_FLAGS_SUB (context->state.a, context->state.d);
+    SET_FLAGS_XY (context->state.d);
     context->used_cycles += 4;
 }
 
@@ -4467,6 +4473,7 @@ static void z80_ba_cp_a_d (Z80_Context *context)
 static void z80_bb_cp_a_e (Z80_Context *context)
 {
     SET_FLAGS_SUB (context->state.a, context->state.e);
+    SET_FLAGS_XY (context->state.e);
     context->used_cycles += 4;
 }
 
@@ -4475,6 +4482,7 @@ static void z80_bb_cp_a_e (Z80_Context *context)
 static void z80_bc_cp_a_h (Z80_Context *context)
 {
     SET_FLAGS_SUB (context->state.a, context->state.h);
+    SET_FLAGS_XY (context->state.h);
     context->used_cycles += 4;
 }
 
@@ -4483,6 +4491,7 @@ static void z80_bc_cp_a_h (Z80_Context *context)
 static void z80_bd_cp_a_l (Z80_Context *context)
 {
     SET_FLAGS_SUB (context->state.a, context->state.l);
+    SET_FLAGS_XY (context->state.l);
     context->used_cycles += 4;
 }
 
@@ -4491,6 +4500,7 @@ static void z80_be_cp_a_hl (Z80_Context *context)
 {
     uint8_t value = context->memory_read (context->parent, context->state.hl);
     SET_FLAGS_SUB (context->state.a, value);
+    SET_FLAGS_XY (value);
     context->used_cycles += 7;
 }
 
@@ -4498,6 +4508,7 @@ static void z80_be_cp_a_hl (Z80_Context *context)
 static void z80_bf_cp_a_a (Z80_Context *context)
 {
     SET_FLAGS_SUB (context->state.a, context->state.a);
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 4;
 }
 
@@ -5349,6 +5360,7 @@ static void z80_fe_cp_a_x (Z80_Context *context)
 {
     uint8_t imm = context->memory_read (context->parent, context->state.pc++);
     SET_FLAGS_SUB (context->state.a, imm);
+    SET_FLAGS_XY (imm);
     context->used_cycles += 7;
 }
 
