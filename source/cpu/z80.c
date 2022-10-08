@@ -1088,6 +1088,7 @@ static uint16_t z80_ix_iy_a4_and_a_ixh (Z80_Context *context, uint16_t ix)
     uint16_t_Split _ix = { .w = ix };
     context->state.a &= _ix.h;
     SET_FLAGS_AND;
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 8;
     return ix;
 }
@@ -1099,6 +1100,7 @@ static uint16_t z80_ix_iy_a5_and_a_ixl (Z80_Context *context, uint16_t ix)
     uint16_t_Split _ix = { .w = ix };
     context->state.a &= _ix.l;
     SET_FLAGS_AND;
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 8;
     return ix;
 }
@@ -1110,6 +1112,7 @@ static uint16_t z80_ix_iy_a6_and_a_ixx (Z80_Context *context, uint16_t ix)
     int8_t offset = context->memory_read (context->parent, context->state.pc++);
     context->state.a &= context->memory_read (context->parent, ix + offset);
     SET_FLAGS_AND;
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 19;
     return ix;
 }
@@ -1121,6 +1124,7 @@ static uint16_t z80_ix_iy_ac_xor_a_ixh (Z80_Context *context, uint16_t ix)
     uint16_t_Split _ix = { .w = ix };
     context->state.a ^= _ix.h;
     SET_FLAGS_OR_XOR;
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 8;
     return ix;
 }
@@ -1132,6 +1136,7 @@ static uint16_t z80_ix_iy_ad_xor_a_ixl (Z80_Context *context, uint16_t ix)
     uint16_t_Split _ix = { .w = ix };
     context->state.a ^= _ix.l;
     SET_FLAGS_OR_XOR;
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 8;
     return ix;
 }
@@ -1143,6 +1148,7 @@ static uint16_t z80_ix_iy_ae_xor_a_ixx (Z80_Context *context, uint16_t ix)
     int8_t offset = context->memory_read (context->parent, context->state.pc++);
     context->state.a ^= context->memory_read (context->parent, ix + offset);
     SET_FLAGS_OR_XOR;
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 19;
     return ix;
 }
@@ -1154,6 +1160,7 @@ static uint16_t z80_ix_iy_b4_or_a_ixh (Z80_Context *context, uint16_t ix)
     uint16_t_Split _ix = { .w = ix };
     context->state.a |= _ix.h;
     SET_FLAGS_OR_XOR;
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 8;
     return ix;
 }
@@ -1165,6 +1172,7 @@ static uint16_t z80_ix_iy_b5_or_a_ixl (Z80_Context *context, uint16_t ix)
     uint16_t_Split _ix = { .w = ix };
     context->state.a |= _ix.l;
     SET_FLAGS_OR_XOR;
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 8;
     return ix;
 }
@@ -1176,6 +1184,7 @@ static uint16_t z80_ix_iy_b6_or_a_ixx (Z80_Context *context, uint16_t ix)
     int8_t offset = context->memory_read (context->parent, context->state.pc++);
     context->state.a |= context->memory_read (context->parent, ix + offset);
     SET_FLAGS_OR_XOR;
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 19;
     return ix;
 }
@@ -3328,7 +3337,7 @@ static void z80_39_add_hl_sp (Z80_Context *context)
 }
 
 
-/* LD, A, (**) */
+/* LD A, (**) */
 static void z80_3a_ld_a_xx (Z80_Context *context)
 {
     uint16_t_Split addr;
@@ -4233,6 +4242,7 @@ static void z80_a0_and_a_b (Z80_Context *context)
 {
     context->state.a &= context->state.b;
     SET_FLAGS_AND;
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 4;
 }
 
@@ -4242,6 +4252,7 @@ static void z80_a1_and_a_c (Z80_Context *context)
 {
     context->state.a &= context->state.c;
     SET_FLAGS_AND;
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 4;
 }
 
@@ -4251,6 +4262,7 @@ static void z80_a2_and_a_d (Z80_Context *context)
 {
     context->state.a &= context->state.d;
     SET_FLAGS_AND;
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 4;
 }
 
@@ -4260,6 +4272,7 @@ static void z80_a3_and_a_e (Z80_Context *context)
 {
     context->state.a &= context->state.e;
     SET_FLAGS_AND;
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 4;
 }
 
@@ -4269,6 +4282,7 @@ static void z80_a4_and_a_h (Z80_Context *context)
 {
     context->state.a &= context->state.h;
     SET_FLAGS_AND;
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 4;
 }
 
@@ -4278,6 +4292,7 @@ static void z80_a5_and_a_l (Z80_Context *context)
 {
     context->state.a &= context->state.l;
     SET_FLAGS_AND;
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 4;
 }
 
@@ -4287,6 +4302,7 @@ static void z80_a6_and_a_hl (Z80_Context *context)
 {
     context->state.a &= context->memory_read (context->parent, context->state.hl);
     SET_FLAGS_AND;
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 7;
 }
 
@@ -4295,6 +4311,7 @@ static void z80_a6_and_a_hl (Z80_Context *context)
 static void z80_a7_and_a_a (Z80_Context *context)
 {
     SET_FLAGS_AND;
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 4;
 }
 
@@ -4304,6 +4321,7 @@ static void z80_a8_xor_a_b (Z80_Context *context)
 {
     context->state.a ^= context->state.b;
     SET_FLAGS_OR_XOR;
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 4;
 }
 
@@ -4313,6 +4331,7 @@ static void z80_a9_xor_a_c (Z80_Context *context)
 {
     context->state.a ^= context->state.c;
     SET_FLAGS_OR_XOR;
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 4;
 }
 
@@ -4322,6 +4341,7 @@ static void z80_aa_xor_a_d (Z80_Context *context)
 {
     context->state.a ^= context->state.d;
     SET_FLAGS_OR_XOR;
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 4;
 }
 
@@ -4331,6 +4351,7 @@ static void z80_ab_xor_a_e (Z80_Context *context)
 {
     context->state.a ^= context->state.e;
     SET_FLAGS_OR_XOR;
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 4;
 }
 
@@ -4340,6 +4361,7 @@ static void z80_ac_xor_a_h (Z80_Context *context)
 {
     context->state.a ^= context->state.h;
     SET_FLAGS_OR_XOR;
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 4;
 }
 
@@ -4349,6 +4371,7 @@ static void z80_ad_xor_a_l (Z80_Context *context)
 {
     context->state.a ^= context->state.l;
     SET_FLAGS_OR_XOR;
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 4;
 }
 
@@ -4358,6 +4381,7 @@ static void z80_ae_xor_a_hl (Z80_Context *context)
 {
     context->state.a ^= context->memory_read (context->parent, context->state.hl);
     SET_FLAGS_OR_XOR;
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 7;
 }
 
@@ -4367,6 +4391,7 @@ static void z80_af_xor_a_a (Z80_Context *context)
 {
     context->state.a ^= context->state.a;
     SET_FLAGS_OR_XOR;
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 4;
 }
 
@@ -4376,6 +4401,7 @@ static void z80_b0_or_a_b (Z80_Context *context)
 {
     context->state.a |= context->state.b;
     SET_FLAGS_OR_XOR;
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 4;
 }
 
@@ -4385,6 +4411,7 @@ static void z80_b1_or_a_c (Z80_Context *context)
 {
     context->state.a |= context->state.c;
     SET_FLAGS_OR_XOR;
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 4;
 }
 
@@ -4394,6 +4421,7 @@ static void z80_b2_or_a_d (Z80_Context *context)
 {
     context->state.a |= context->state.d;
     SET_FLAGS_OR_XOR;
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 4;
 }
 
@@ -4403,6 +4431,7 @@ static void z80_b3_or_a_e (Z80_Context *context)
 {
     context->state.a |= context->state.e;
     SET_FLAGS_OR_XOR;
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 4;
 }
 
@@ -4412,6 +4441,7 @@ static void z80_b4_or_a_h (Z80_Context *context)
 {
     context->state.a |= context->state.h;
     SET_FLAGS_OR_XOR;
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 4;
 }
 
@@ -4421,6 +4451,7 @@ static void z80_b5_or_a_l (Z80_Context *context)
 {
     context->state.a |= context->state.l;
     SET_FLAGS_OR_XOR;
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 4;
 }
 
@@ -4430,6 +4461,7 @@ static void z80_b6_or_a_hl (Z80_Context *context)
 {
     context->state.a |= context->memory_read (context->parent, context->state.hl);
     SET_FLAGS_OR_XOR;
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 7;
 }
 
@@ -4438,6 +4470,7 @@ static void z80_b6_or_a_hl (Z80_Context *context)
 static void z80_b7_or_a_a (Z80_Context *context)
 {
     SET_FLAGS_OR_XOR;
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 4;
 }
 
@@ -5064,6 +5097,7 @@ static void z80_e6_and_a_x (Z80_Context *context)
 {
     context->state.a &= context->memory_read (context->parent, context->state.pc++);
     SET_FLAGS_AND;
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 7;
 }
 
@@ -5162,6 +5196,7 @@ static void z80_ee_xor_a_x (Z80_Context *context)
 {
     context->state.a ^= context->memory_read (context->parent, context->state.pc++);
     SET_FLAGS_OR_XOR;
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 7;
 }
 
@@ -5260,6 +5295,7 @@ static void z80_f6_or_a_x (Z80_Context *context)
 {
     context->state.a |= context->memory_read (context->parent, context->state.pc++);
     SET_FLAGS_OR_XOR;
+    SET_FLAGS_XY (context->state.a);
     context->used_cycles += 7;
 }
 
