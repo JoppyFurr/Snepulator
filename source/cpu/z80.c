@@ -511,6 +511,7 @@ static uint16_t z80_ix_iy_34_inc_ixx (Z80_Context *context, uint16_t ix)
     uint8_t data = context->memory_read (context->parent, ix + offset);
     data++;
     SET_FLAGS_INC (data);
+    SET_FLAGS_XY (data);
     context->memory_write (context->parent, ix + offset, data);
     context->used_cycles += 23;
     return ix;
@@ -524,6 +525,7 @@ static uint16_t z80_ix_iy_35_dec_ixx (Z80_Context *context, uint16_t ix)
     uint8_t data = context->memory_read (context->parent, ix + offset);
     data--;
     SET_FLAGS_DEC (data);
+    SET_FLAGS_XY (data);
     context->memory_write (context->parent, ix + offset, data);
     context->used_cycles += 23;
     return ix;
