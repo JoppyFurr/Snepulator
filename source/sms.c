@@ -692,33 +692,55 @@ static uint8_t sms_memory_read (void *context_ptr, uint16_t addr)
     /* Cartridge, card, BIOS, expansion slot */
     if (addr >= 0x0000 && addr <= 0xbfff)
     {
-        uint8_t slot = (addr >> 14);
-        uint32_t bank_base = context->hw_state.mapper_bank [slot] * ((uint32_t) 16 << 10);
-        uint16_t offset    = addr & 0x3fff;
+        uint8_t slot = 0;
+        uint32_t bank_base;
+        uint32_t rom_address;
 
-        /* The first 1 KiB of slot 0 is not affected by mapping */
-        if (slot == 0 && offset < (1 << 10))
+        switch (context->hw_state.mapper)
         {
-            bank_base = 0;
+            case SMS_MAPPER_SEGA:
+                /* The first 1 KiB of slot 0 is not affected by mapping */
+                if (addr < SIZE_1K)
+                {
+                    bank_base = 0;
+                }
+                else
+                {
+                    slot = (addr >> 14);
+                    bank_base = context->hw_state.mapper_bank [slot] * SIZE_16K;
+                }
+                rom_address = bank_base + (addr & 0x3fff);
+                break;
+
+            case SMS_MAPPER_CODEMASTERS:
+            case SMS_MAPPER_KOREAN:
+                slot = (addr >> 14);
+                bank_base = context->hw_state.mapper_bank [slot] * SIZE_16K;
+                rom_address = bank_base + (addr & 0x3fff);
+                break;
+
+            default:
+                rom_address = addr;
+                break;
         }
 
         /* BIOS */
         if (context->bios != NULL && !(context->hw_state.memory_control & SMS_MEMORY_CTRL_BIOS_DISABLE))
         {
             /* Assumes a power-of-two BIOS size */
-            return context->bios [(bank_base + offset) & context->bios_mask];
+            return context->bios [rom_address & context->bios_mask];
         }
 
         /* On-cartridge SRAM */
         if (context->hw_state.sram_enable && slot == 2)
         {
-            return context->sram [context->hw_state.sram_bank | (offset & SMS_SRAM_BANK_MASK)];
+            return context->sram [context->hw_state.sram_bank | (addr & SMS_SRAM_BANK_MASK)];
         }
 
         /* Cartridge ROM */
         if (context->rom != NULL && !(context->hw_state.memory_control & SMS_MEMORY_CTRL_CART_DISABLE))
         {
-            return context->rom [(bank_base + offset) & context->rom_mask];
+            return context->rom [rom_address & context->rom_mask];
         }
     }
 
