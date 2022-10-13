@@ -312,6 +312,12 @@ SMS_Context *sms_init (void)
         context->rom_mask = util_round_up (context->rom_size) - 1;
         util_hash_rom (context->rom, context->rom_size, context->rom_hash);
         context->rom_hints = sms_db_get_hints (context->rom_hash);
+
+        /* Mapper */
+        if (context->rom_size <= SIZE_48K)
+        {
+            context->hw_state.mapper = SMS_MAPPER_NONE;
+        }
     }
 
     /* Pull in the settings - Done after the ROM is loaded for auto-region. */
