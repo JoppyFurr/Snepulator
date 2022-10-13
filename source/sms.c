@@ -52,16 +52,17 @@ static pthread_mutex_t sms_state_mutex = PTHREAD_MUTEX_INITIALIZER;
 /*
  * Declarations.
  */
-static uint8_t  sms_io_read (void *context_ptr, uint8_t addr);
-static void     sms_io_write (void *context_ptr, uint8_t addr, uint8_t data);
-static uint8_t  sms_memory_read (void *context_ptr, uint16_t addr);
-static void     sms_memory_write (void *context_ptr, uint16_t addr, uint8_t data);
-static void     sms_process_3d_field (SMS_Context *context);
-static void     sms_run (void *context_ptr, uint32_t ms);
-static void     sms_state_load (void *context_ptr, const char *filename);
-static void     sms_state_save (void *context_ptr, const char *filename);
-static void     sms_sync (void *context_ptr);
-static void     sms_update_settings (void *context_ptr);
+static uint8_t     sms_io_read (void *context_ptr, uint8_t addr);
+static void        sms_io_write (void *context_ptr, uint8_t addr, uint8_t data);
+static const char *sms_mapper_name_get (SMS_Mapper m);
+static uint8_t     sms_memory_read (void *context_ptr, uint16_t addr);
+static void        sms_memory_write (void *context_ptr, uint16_t addr, uint8_t data);
+static void        sms_process_3d_field (SMS_Context *context);
+static void        sms_run (void *context_ptr, uint32_t ms);
+static void        sms_state_load (void *context_ptr, const char *filename);
+static void        sms_state_save (void *context_ptr, const char *filename);
+static void        sms_sync (void *context_ptr);
+static void        sms_update_settings (void *context_ptr);
 
 /*
  * Callback to supply SDL with audio frames.
@@ -137,6 +138,9 @@ static void sms_diagnostics_show (void)
     state.diagnostics_print ("Mode : %s", tms9928a_mode_name_get (sms_vdp_get_mode (context->vdp_context)));
     state.diagnostics_print ("Frame interrupts : %s", vdp_context->state.regs.ctrl_1_frame_int_en ? "Enabled" : "Disabled");
     state.diagnostics_print ("Line interrupts  : %s", vdp_context->state.regs.ctrl_0_line_int_en ? "Enabled" : "Disabled");
+
+    state.diagnostics_print ("---");
+    state.diagnostics_print ("Mapper : %s", sms_mapper_name_get (context->hw_state.mapper));
 }
 
 
@@ -653,6 +657,27 @@ static void sms_io_write (void *context_ptr, uint8_t addr, uint8_t data)
     {
         fprintf (stdout, "%c", data);
         fflush (stdout);
+    }
+}
+
+
+/*
+ * Get the string name of a mapper.
+ */
+static const char *sms_mapper_name_get (SMS_Mapper m)
+{
+    switch (m)
+    {
+        case SMS_MAPPER_NONE:
+            return "None";
+        case SMS_MAPPER_SEGA:
+            return "Sega";
+        case SMS_MAPPER_CODEMASTERS:
+            return "Codemasters";
+        case SMS_MAPPER_KOREAN:
+            return "Korean";
+        default:
+            return "Unknown";
     }
 }
 
