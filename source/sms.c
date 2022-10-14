@@ -676,6 +676,8 @@ static const char *sms_mapper_name_get (SMS_Mapper m)
             return "Codemasters";
         case SMS_MAPPER_KOREAN:
             return "Korean";
+        case SMS_MAPPER_MSX:
+            return "MSX";
         default:
             return "Unknown";
     }
@@ -706,7 +708,7 @@ static uint8_t sms_memory_read (void *context_ptr, uint16_t addr)
                 }
                 else
                 {
-                    slot = (addr >> 14);
+                    slot = addr / SIZE_16K;
                     bank_base = context->hw_state.mapper_bank [slot] * SIZE_16K;
                 }
                 rom_address = bank_base + (addr & 0x3fff);
@@ -714,9 +716,22 @@ static uint8_t sms_memory_read (void *context_ptr, uint16_t addr)
 
             case SMS_MAPPER_CODEMASTERS:
             case SMS_MAPPER_KOREAN:
-                slot = (addr >> 14);
+                slot = addr / SIZE_16K;
                 bank_base = context->hw_state.mapper_bank [slot] * SIZE_16K;
                 rom_address = bank_base + (addr & 0x3fff);
+                break;
+
+            case SMS_MAPPER_MSX:
+                if (addr < SIZE_16K)
+                {
+                    rom_address = addr;
+                }
+                else
+                {
+                    slot = (addr - SIZE_16K) / SIZE_8K;
+                    bank_base = context->hw_state.mapper_bank [slot] * SIZE_8K;
+                    rom_address = bank_base + (addr & 0x1fff);
+                }
                 break;
 
             default:
@@ -793,6 +808,10 @@ static void sms_memory_write (void *context_ptr, uint16_t addr, uint8_t data)
         {
             context->hw_state.mapper = SMS_MAPPER_KOREAN;
         }
+        else if ((addr == 0x0000 && data != 0) || addr == 0x0001 || addr == 0x0002 || addr == 0x0003)
+        {
+            context->hw_state.mapper = SMS_MAPPER_MSX;
+        }
     }
 
     if (context->hw_state.mapper == SMS_MAPPER_SEGA)
@@ -857,6 +876,26 @@ static void sms_memory_write (void *context_ptr, uint16_t addr, uint8_t data)
         if (addr == 0xa000)
         {
             context->hw_state.mapper_bank [2] = data & 0x3f;
+        }
+    }
+
+    if (context->hw_state.mapper == SMS_MAPPER_MSX)
+    {
+        if (addr == 0x0000)
+        {
+            context->hw_state.mapper_bank [2] = data & 0x7f;
+        }
+        if (addr == 0x0001)
+        {
+            context->hw_state.mapper_bank [3] = data & 0x7f;
+        }
+        if (addr == 0x0002)
+        {
+            context->hw_state.mapper_bank [0] = data & 0x7f;
+        }
+        if (addr == 0x0003)
+        {
+            context->hw_state.mapper_bank [1] = data & 0x7f;
         }
     }
 

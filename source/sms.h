@@ -17,6 +17,7 @@ typedef enum SMS_Mapper_e {
     SMS_MAPPER_SEGA,
     SMS_MAPPER_CODEMASTERS,
     SMS_MAPPER_KOREAN,
+    SMS_MAPPER_MSX,
 } SMS_Mapper;
 
 typedef enum SMS_3D_Field_e {
@@ -30,7 +31,7 @@ typedef struct SMS_HW_State_s {
     uint8_t memory_control;
     uint8_t io_control;
     uint8_t mapper;
-    uint8_t mapper_bank [3];
+    uint8_t mapper_bank [4];
     uint16_t sram_bank;
     bool sram_enable;
 } SMS_HW_State;
