@@ -59,7 +59,7 @@ typedef struct SMS_Context_s {
     uint32_t rom_size;
     uint32_t rom_mask;
     uint8_t  rom_hash [HASH_LENGTH];
-    uint8_t  rom_hints;
+    uint16_t rom_hints;
 
     uint8_t *bios;
     uint32_t bios_size;

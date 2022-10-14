@@ -317,8 +317,24 @@ SMS_Context *sms_init (void)
         util_hash_rom (context->rom, context->rom_size, context->rom_hash);
         context->rom_hints = sms_db_get_hints (context->rom_hash);
 
-        /* Mapper */
-        if (context->rom_size <= SIZE_48K)
+        /* Mapper Hints */
+        if (context->rom_hints & SMS_HINT_MAPPER_SEGA)
+        {
+            context->hw_state.mapper = SMS_MAPPER_SEGA;
+        }
+        else if (context->rom_hints & SMS_HINT_MAPPER_CODEMASTERS)
+        {
+            context->hw_state.mapper = SMS_MAPPER_CODEMASTERS;
+        }
+        else if (context->rom_hints & SMS_HINT_MAPPER_KOREAN)
+        {
+            context->hw_state.mapper = SMS_MAPPER_KOREAN;
+        }
+        else if (context->rom_hints & SMS_HINT_MAPPER_MSX)
+        {
+            context->hw_state.mapper = SMS_MAPPER_MSX;
+        }
+        else if (context->rom_size <= SIZE_48K)
         {
             context->hw_state.mapper = SMS_MAPPER_NONE;
         }
