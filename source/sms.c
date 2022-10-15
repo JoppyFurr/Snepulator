@@ -334,6 +334,10 @@ SMS_Context *sms_init (void)
         {
             context->hw_state.mapper = SMS_MAPPER_MSX;
         }
+        else if (context->rom_hints & SMS_HINT_MAPPER_NEMESIS)
+        {
+            context->hw_state.mapper = SMS_MAPPER_NEMESIS;
+        }
         else if (context->rom_size <= SIZE_48K)
         {
             context->hw_state.mapper = SMS_MAPPER_NONE;
@@ -694,6 +698,8 @@ static const char *sms_mapper_name_get (SMS_Mapper m)
             return "Korean";
         case SMS_MAPPER_MSX:
             return "MSX";
+        case SMS_MAPPER_NEMESIS:
+            return "Nemesis";
         default:
             return "Unknown";
     }
@@ -741,6 +747,29 @@ static uint8_t sms_memory_read (void *context_ptr, uint16_t addr)
                 if (addr < SIZE_16K)
                 {
                     rom_address = addr;
+                }
+                else
+                {
+                    slot = (addr - SIZE_16K) / SIZE_8K;
+                    bank_base = context->hw_state.mapper_bank [slot] * SIZE_8K;
+                    rom_address = bank_base + (addr & 0x1fff);
+                }
+                break;
+
+            /* The "Nemesis" mapper is considered to be a variant of the MSX mapper.
+             * The difference is that first 8K always maps to the last 8K of the 128K ROM. */
+            case SMS_MAPPER_NEMESIS:
+                if (addr < SIZE_16K)
+                {
+                    if (addr < SIZE_8K)
+                    {
+                        bank_base = 15 * SIZE_8K;
+                        rom_address = bank_base + addr;
+                    }
+                    else
+                    {
+                        rom_address = addr;
+                    }
                 }
                 else
                 {
@@ -895,7 +924,8 @@ static void sms_memory_write (void *context_ptr, uint16_t addr, uint8_t data)
         }
     }
 
-    if (context->hw_state.mapper == SMS_MAPPER_MSX)
+    if (context->hw_state.mapper == SMS_MAPPER_MSX ||
+        context->hw_state.mapper == SMS_MAPPER_NEMESIS)
     {
         if (addr == 0x0000)
         {

@@ -89,6 +89,9 @@ SMS_DB_Entry sms_db [] = {
     /* Missile Defense 3D */
     { { 0xc4, 0x34, 0x87, 0x4d, 0x2d, 0x26, 0x7f, 0x7c, 0x6b, 0x76, 0x11, 0xec }, SMS_HINT_LIGHT_PHASER },
 
+    /* Nemesis (Korea) */
+    { { 0x83, 0xcc, 0x8d, 0xe2, 0x2f, 0xac, 0xb3, 0x52, 0x1e, 0x50, 0x36, 0xea }, SMS_HINT_MAPPER_NEMESIS },
+
     /* The New Zealand Story */
     { { 0x65, 0x79, 0xba, 0x1d, 0xe6, 0xc0, 0x77, 0xdb, 0x26, 0xa9, 0xc7, 0x1c }, SMS_HINT_PAL_ONLY },
 
@@ -152,7 +155,7 @@ SMS_DB_Entry sms_db [] = {
 /*
  * Get any hints for the supplied ROM hash.
  */
-uint8_t sms_db_get_hints (uint8_t *hash)
+uint16_t sms_db_get_hints (uint8_t *hash)
 {
 
     for (uint32_t i = 0; i < (sizeof (sms_db) / sizeof (SMS_DB_Entry)) ; i++)
@@ -164,5 +167,5 @@ uint8_t sms_db_get_hints (uint8_t *hash)
     }
 
     /* No hints by default */
-    return 0x00;
+    return 0x0000;
 }

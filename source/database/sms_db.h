@@ -11,6 +11,7 @@
 #define SMS_HINT_MAPPER_CODEMASTERS     0x0020
 #define SMS_HINT_MAPPER_KOREAN          0x0040
 #define SMS_HINT_MAPPER_MSX             0x0080
+#define SMS_HINT_MAPPER_NEMESIS         0x0100
 
 typedef struct SMS_DB_Entry_s {
     uint8_t hash [HASH_LENGTH];
@@ -19,4 +20,4 @@ typedef struct SMS_DB_Entry_s {
 
 
 /* Get any hints for the supplied ROM hash. */
-uint8_t sms_db_get_hints (uint8_t *hash);
+uint16_t sms_db_get_hints (uint8_t *hash);
