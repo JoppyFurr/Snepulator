@@ -20,7 +20,7 @@ extern Snepulator_State state;
 
 #define MAX_STRING_SIZE 1024
 
-const char *button_names [] = { "up", "down", "left", "right", "button_1", "button_2", "start" };
+const char *button_names [] = { "up", "down", "left", "right", "button-1", "button-2", "start" };
 
 
 /* Stored gamepad configuration */
