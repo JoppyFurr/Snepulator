@@ -58,13 +58,13 @@ void snepulator_bios_set (const char *path)
             {
                 free (state.colecovision_bios_filename);
             }
-            break;
             /* Store and use the BIOS */
             config_string_set ("colecovision", "bios", path);
             config_write ();
 
             state.colecovision_bios_filename = strdup (path);
             state.console_context = colecovision_init ();
+            break;
         case CONSOLE_MASTER_SYSTEM:
         default:
             if (state.sms_bios_filename != NULL)
