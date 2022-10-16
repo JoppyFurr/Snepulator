@@ -39,69 +39,65 @@ const char *tms9928a_mode_name [16] = {
 };
 
 /* "Datasheet" palette */
-#define TMS9928A_PALETTE_DATASHEET { \
-    {   0,   0,   0 }, /* Transparent */ \
-    {   0,   0,   0 }, /* Black */ \
-    {  33, 200,  66 }, /* Medium Green */ \
-    {  94, 220, 120 }, /* Light Green */ \
-    {  84,  85, 237 }, /* Dark Blue */ \
-    { 125, 118, 252 }, /* Light blue */ \
-    { 212,  82,  77 }, /* Dark Red */ \
-    {  66, 235, 245 }, /* Cyan */ \
-    { 252,  85,  84 }, /* Medium Red */ \
-    { 255, 121, 120 }, /* Light Red */ \
-    { 212, 193,  84 }, /* Dark Yellow */ \
-    { 230, 206, 128 }, /* Light Yellow */ \
-    {  33, 176,  59 }, /* Dark Green */ \
-    { 201,  91, 186 }, /* Magenta */ \
-    { 204, 204, 204 }, /* Grey */ \
-    { 255, 255, 255 }  /* White */ \
-}
+uint_pixel tms9928a_palette_uncorrected [16] = {
+    {   0,   0,   0 }, /* Transparent */
+    {   0,   0,   0 }, /* Black */
+    {  33, 200,  66 }, /* Medium Green */
+    {  94, 220, 120 }, /* Light Green */
+    {  84,  85, 237 }, /* Dark Blue */
+    { 125, 118, 252 }, /* Light blue */
+    { 212,  82,  77 }, /* Dark Red */
+    {  66, 235, 245 }, /* Cyan */
+    { 252,  85,  84 }, /* Medium Red */
+    { 255, 121, 120 }, /* Light Red */
+    { 212, 193,  84 }, /* Dark Yellow */
+    { 230, 206, 128 }, /* Light Yellow */
+    {  33, 176,  59 }, /* Dark Green */
+    { 201,  91, 186 }, /* Magenta */
+    { 204, 204, 204 }, /* Grey */
+    { 255, 255, 255 }  /* White */
+};
 
 /* Gamma corrected palette (Wikipedia) */
-#define TMS9928A_PALETTE { \
-    { 0x00 , 0x00, 0x00 }, /* Transparent */ \
-    { 0x00 , 0x00, 0x00 }, /* Black */ \
-    { 0x0a , 0xad, 0x1e }, /* Medium Green */ \
-    { 0x34 , 0xc8, 0x4c }, /* Light Green */ \
-    { 0x2b , 0x2d, 0xe3 }, /* Dark Blue */ \
-    { 0x51 , 0x4b, 0xfb }, /* Light blue */ \
-    { 0xbd , 0x29, 0x25 }, /* Dark Red */ \
-    { 0x1e , 0xe2, 0xef }, /* Cyan */ \
-    { 0xfb , 0x2c, 0x2b }, /* Medium Red */ \
-    { 0xff , 0x5f, 0x4c }, /* Light Red */ \
-    { 0xbd , 0xa2, 0x2b }, /* Dark Yellow */ \
-    { 0xd7 , 0xb4, 0x54 }, /* Light Yellow */ \
-    { 0x0a , 0x8c, 0x18 }, /* Dark Green */ \
-    { 0xaf , 0x32, 0x9a }, /* Magenta */ \
-    { 0xb2 , 0xb2, 0xb2 }, /* Grey */ \
-    { 0xff , 0xff, 0xff }  /* White */ \
-}
+uint_pixel tms9928a_palette [16] = {
+    { 0x00 , 0x00, 0x00 }, /* Transparent */
+    { 0x00 , 0x00, 0x00 }, /* Black */
+    { 0x0a , 0xad, 0x1e }, /* Medium Green */
+    { 0x34 , 0xc8, 0x4c }, /* Light Green */
+    { 0x2b , 0x2d, 0xe3 }, /* Dark Blue */
+    { 0x51 , 0x4b, 0xfb }, /* Light blue */
+    { 0xbd , 0x29, 0x25 }, /* Dark Red */
+    { 0x1e , 0xe2, 0xef }, /* Cyan */
+    { 0xfb , 0x2c, 0x2b }, /* Medium Red */
+    { 0xff , 0x5f, 0x4c }, /* Light Red */
+    { 0xbd , 0xa2, 0x2b }, /* Dark Yellow */
+    { 0xd7 , 0xb4, 0x54 }, /* Light Yellow */
+    { 0x0a , 0x8c, 0x18 }, /* Dark Green */
+    { 0xaf , 0x32, 0x9a }, /* Magenta */
+    { 0xb2 , 0xb2, 0xb2 }, /* Grey */
+    { 0xff , 0xff, 0xff }  /* White */
+};
 
 /* Display mode details */
 static const TMS9928A_Config Mode0_PAL = {
     .mode = TMS9928A_MODE_0,
     .lines_active = 192,
     .lines_total = 313,
-    .palette = TMS9928A_PALETTE
 };
 static const TMS9928A_Config Mode0_NTSC = {
     .mode = TMS9928A_MODE_0,
     .lines_active = 192,
     .lines_total = 262,
-    .palette = TMS9928A_PALETTE
 };
 static const TMS9928A_Config Mode2_PAL = {
     .mode = TMS9928A_MODE_2,
     .lines_active = 192,
     .lines_total = 313,
-    .palette = TMS9928A_PALETTE
 };
 static const TMS9928A_Config Mode2_NTSC = {
     .mode = TMS9928A_MODE_2,
     .lines_active = 192,
     .lines_total = 262,
-    .palette = TMS9928A_PALETTE
 };
 
 
@@ -259,7 +255,7 @@ static void tms9928a_draw_pattern (TMS9928A_Context *context, const TMS9928A_Con
             }
         }
 
-        uint_pixel pixel = config->palette [colour_index];
+        uint_pixel pixel = context->palette [colour_index];
         context->frame_buffer [(offset.x + x + VIDEO_SIDE_BORDER) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = pixel;
     }
 }
@@ -462,7 +458,7 @@ void tms9928a_render_line (TMS9928A_Context *context, const TMS9928A_Config *con
     context->render_start_y = (VIDEO_BUFFER_LINES - config->lines_active) / 2;
 
     /* Background */
-    video_backdrop = config->palette [context->state.regs.background_colour & 0x0f];
+    video_backdrop = context->palette [context->state.regs.background_colour & 0x0f];
 
     /* Note: The top/bottom borders use the background colour of the first and last active lines. */
 
@@ -607,6 +603,7 @@ TMS9928A_Context *tms9928a_init (void *parent, void (* frame_done) (void *))
     context->video_start_y = VIDEO_TOP_BORDER_192;
     context->video_width = 256;
     context->video_height = 192;
+    context->palette = tms9928a_palette;
 
     return context;
 }

@@ -444,6 +444,23 @@ static void snepulator_video_menu (void)
             ImGui::EndMenu ();
         }
 
+        if (ImGui::BeginMenu ("TMS Mode Palette"))
+        {
+            if (ImGui::MenuItem ("Auto", NULL, state.override_tms_palette == NULL)) {
+                snepulator_override_tms9928a_palette (NULL);
+            }
+            if (ImGui::MenuItem ("TMS9928a (gamma corrected)", NULL, state.override_tms_palette == tms9928a_palette)) {
+                snepulator_override_tms9928a_palette (tms9928a_palette);
+            }
+            if (ImGui::MenuItem ("TMS9928a (gamma uncorrected)", NULL, state.override_tms_palette == tms9928a_palette_uncorrected)) {
+                snepulator_override_tms9928a_palette (tms9928a_palette_uncorrected);
+            }
+            if (ImGui::MenuItem ("Master System",  NULL, state.override_tms_palette == sms_vdp_legacy_palette))  {
+                snepulator_override_tms9928a_palette (sms_vdp_legacy_palette);
+            }
+            ImGui::EndMenu ();
+        }
+
         if (ImGui::BeginMenu ("3D Mode"))
         {
             if (ImGui::MenuItem ("Red-Cyan", NULL, state.video_3d_mode == VIDEO_3D_RED_CYAN))

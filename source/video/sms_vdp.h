@@ -19,6 +19,8 @@ typedef enum SMS_VDP_Palette_e {
 
 #define SMS_PHASER_RADIUS 10
 
+extern uint_pixel sms_vdp_legacy_palette [16];
+
 /* Structs */
 typedef struct SMS_VDP_Mode4_Pattern_t {
     uint8_t data[32];

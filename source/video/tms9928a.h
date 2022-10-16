@@ -154,6 +154,7 @@ typedef struct TMS9928A_Context_s {
     uint32_t video_width;
     uint32_t video_height;
     uint32_t video_blank_left;
+    uint_pixel *palette;
 
     uint_pixel frame_buffer [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
     void (* frame_done) (void *);
@@ -171,7 +172,6 @@ typedef struct TMS9928A_Config_s {
     TMS9928A_Mode mode;
     uint16_t lines_active;
     uint16_t lines_total;
-    uint_pixel palette [16]; /* Palette to use for TMS9928A modes */
     SMS_VDP_V_Counter_Range v_counter_map [3]; /* SMS VDP v-counter mapping */
 } TMS9928A_Config;
 
@@ -187,6 +187,9 @@ typedef struct TMS9928A_Sprite_t {
     uint8_t pattern;
     uint8_t colour_ec;
 } TMS9928A_Sprite;
+
+extern uint_pixel tms9928a_palette [16];
+extern uint_pixel tms9928a_palette_uncorrected [16];
 
 /* Supply a human-readable string describing the specified mode. */
 const char *tms9928a_mode_name_get (TMS9928A_Mode mode);

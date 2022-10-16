@@ -628,4 +628,12 @@ static void colecovision_update_settings (void *context_ptr)
     context->vdp_context->format              = context->format;
     context->vdp_context->remove_sprite_limit = state.remove_sprite_limit;
     context->vdp_context->disable_blanking    = state.disable_blanking;
+    if (state.override_tms_palette == NULL)
+    {
+        context->vdp_context->palette = tms9928a_palette;
+    }
+    else
+    {
+        context->vdp_context->palette = state.override_tms_palette;
+    }
 }

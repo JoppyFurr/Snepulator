@@ -66,6 +66,7 @@ typedef struct Snepulator_State_s {
     /* User emulator settings */
     bool            disable_blanking;       /* Don't blank the screen when the blank bit is set. */
     uint32_t        overclock;              /* Extra CPU cycles to run per line. */
+    uint_pixel     *override_tms_palette;   /* Override default tms9928a palette. NULL for default. */
     Video_Format    format;                 /* 50 Hz PAL / 60 Hz NTSC. */
     bool            format_auto;            /* Automatically select PAL for games that require it. */
     Console_Region  region;                 /* Japan / World. */
@@ -146,6 +147,9 @@ void snepulator_disable_blanking_set (bool disable_blanking);
 
 /* Set whether or not to overclock. */
 void snepulator_overclock_set (bool overclock);
+
+/* Override the palette used for tms9928a modes. */
+void snepulator_override_tms9928a_palette (uint_pixel *palette);
 
 /* Animate the pause screen. */
 void snepulator_pause_animate (void);

@@ -35,24 +35,26 @@ extern Snepulator_Gamepad gamepad [3];
                                   .g = ((((C) >> 4) & 0x0f) * (0xff / 15)), \
                                   .b = ((((C) >> 8) & 0x0f) * (0xff / 15)) }
 
-#define SMS_VDP_LEGACY_PALETTE { \
-    SMS_VDP_TO_UINT_PIXEL (0x00), /* Transparent */ \
-    SMS_VDP_TO_UINT_PIXEL (0x00), /* Black */ \
-    SMS_VDP_TO_UINT_PIXEL (0x08), /* Medium Green */ \
-    SMS_VDP_TO_UINT_PIXEL (0x0c), /* Light Green */ \
-    SMS_VDP_TO_UINT_PIXEL (0x10), /* Dark Blue */ \
-    SMS_VDP_TO_UINT_PIXEL (0x30), /* Light blue */ \
-    SMS_VDP_TO_UINT_PIXEL (0x01), /* Dark Red */ \
-    SMS_VDP_TO_UINT_PIXEL (0x3c), /* Cyan */ \
-    SMS_VDP_TO_UINT_PIXEL (0x02), /* Medium Red */ \
-    SMS_VDP_TO_UINT_PIXEL (0x03), /* Light Red */ \
-    SMS_VDP_TO_UINT_PIXEL (0x05), /* Dark Yellow */ \
-    SMS_VDP_TO_UINT_PIXEL (0x0f), /* Light Yellow */ \
-    SMS_VDP_TO_UINT_PIXEL (0x04), /* Dark Green */ \
-    SMS_VDP_TO_UINT_PIXEL (0x33), /* Magenta */ \
-    SMS_VDP_TO_UINT_PIXEL (0x15), /* Grey */ \
-    SMS_VDP_TO_UINT_PIXEL (0x3f)  /* White */ \
-}
+/* Palette used by the Sega Master System VDP */
+uint_pixel sms_vdp_legacy_palette [16] = {
+    SMS_VDP_TO_UINT_PIXEL (0x00), /* Transparent */
+    SMS_VDP_TO_UINT_PIXEL (0x00), /* Black */
+    SMS_VDP_TO_UINT_PIXEL (0x08), /* Medium Green */
+    SMS_VDP_TO_UINT_PIXEL (0x0c), /* Light Green */
+    SMS_VDP_TO_UINT_PIXEL (0x10), /* Dark Blue */
+    SMS_VDP_TO_UINT_PIXEL (0x30), /* Light blue */
+    SMS_VDP_TO_UINT_PIXEL (0x01), /* Dark Red */
+    SMS_VDP_TO_UINT_PIXEL (0x3c), /* Cyan */
+    SMS_VDP_TO_UINT_PIXEL (0x02), /* Medium Red */
+    SMS_VDP_TO_UINT_PIXEL (0x03), /* Light Red */
+    SMS_VDP_TO_UINT_PIXEL (0x05), /* Dark Yellow */
+    SMS_VDP_TO_UINT_PIXEL (0x0f), /* Light Yellow */
+    SMS_VDP_TO_UINT_PIXEL (0x04), /* Dark Green */
+    SMS_VDP_TO_UINT_PIXEL (0x33), /* Magenta */
+    SMS_VDP_TO_UINT_PIXEL (0x15), /* Grey */
+    SMS_VDP_TO_UINT_PIXEL (0x3f)  /* White */
+};
+
 
 
 /* Display mode details */
@@ -60,7 +62,6 @@ static const TMS9928A_Config Mode0_PAL = {
     .mode = TMS9928A_MODE_0,
     .lines_active = 192,
     .lines_total = 313,
-    .palette = SMS_VDP_LEGACY_PALETTE,
     .v_counter_map = { { .first = 0x00, .last = 0xf2 },
                        { .first = 0xba, .last = 0xff } }
 };
@@ -68,7 +69,6 @@ static const TMS9928A_Config Mode0_NTSC = {
     .mode = TMS9928A_MODE_0,
     .lines_active = 192,
     .lines_total = 262,
-    .palette = SMS_VDP_LEGACY_PALETTE,
     .v_counter_map = { { .first = 0x00, .last = 0xda },
                        { .first = 0xd5, .last = 0xff } }
 };
@@ -76,7 +76,6 @@ static const TMS9928A_Config Mode2_PAL = {
     .mode = TMS9928A_MODE_2,
     .lines_active = 192,
     .lines_total = 313,
-    .palette = SMS_VDP_LEGACY_PALETTE,
     .v_counter_map = { { .first = 0x00, .last = 0xf2 },
                        { .first = 0xba, .last = 0xff } }
 };
@@ -84,7 +83,6 @@ static const TMS9928A_Config Mode2_NTSC = {
     .mode = TMS9928A_MODE_2,
     .lines_active = 192,
     .lines_total = 262,
-    .palette = SMS_VDP_LEGACY_PALETTE,
     .v_counter_map = { { .first = 0x00, .last = 0xda },
                        { .first = 0xd5, .last = 0xff } }
 };
@@ -161,6 +159,7 @@ TMS9928A_Context *sms_vdp_init (void *parent, void (* frame_done) (void *), Cons
         context->video_height = 192;
     }
 
+    context->palette = sms_vdp_legacy_palette;
     context->parent = parent;
     context->frame_done = frame_done;
 
@@ -688,7 +687,7 @@ static void sms_vdp_render_line (TMS9928A_Context *context, const TMS9928A_Confi
     }
     else
     {
-        video_backdrop = config->palette [context->state.regs.background_colour & 0x0f];
+        video_backdrop = context->palette [context->state.regs.background_colour & 0x0f];
     }
 
     /* Note: For now the top/bottom borders just copy the background from the first

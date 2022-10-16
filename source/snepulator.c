@@ -20,6 +20,7 @@
 
 #include "cpu/z80.h"
 #include "video/tms9928a.h"
+#include "video/sms_vdp.h"
 #include "logo.h"
 #include "sg-1000.h"
 #include "sms.h"
@@ -157,6 +158,24 @@ int snepulator_config_import (void)
         }
     }
 
+    /* TMS9928a Palette - Defaults to TMS9928a */
+    state.override_tms_palette = tms9928a_palette;
+    if (config_string_get ("video", "tms9928a-palette", &string) == 0)
+    {
+        if (strcmp (string, "Auto") == 0)
+        {
+            state.override_tms_palette = NULL;
+        }
+        else if (strcmp (string, "TMS9928a-Uncorrected") == 0)
+        {
+            state.override_tms_palette = tms9928a_palette_uncorrected;
+        }
+        else if (strcmp (string, "SMS-Legacy") == 0)
+        {
+            state.override_tms_palette = sms_vdp_legacy_palette;
+        }
+    }
+
     /* 3D Video Mode - Defaults to Red-Cyan */
     state.video_3d_mode = VIDEO_3D_RED_CYAN;
     if (config_string_get ("video", "3d-mode", &string) == 0)
@@ -286,6 +305,43 @@ void snepulator_overclock_set (bool overclock)
     }
 
     config_uint_set ("hacks", "overclock", state.overclock);
+
+    if (state.update_settings != NULL)
+    {
+        state.update_settings (state.console_context);
+    }
+
+    config_write ();
+}
+
+
+/*
+ * Override the palette used for tms9928a modes.
+ */
+void snepulator_override_tms9928a_palette (uint_pixel *palette)
+{
+    char *config_string = NULL;
+
+    state.override_tms_palette = palette;
+
+    if (palette == tms9928a_palette)
+    {
+        config_string = "TMS9928a";
+    }
+    else if (palette == tms9928a_palette_uncorrected)
+    {
+        config_string = "TMS9928a-Uncorrected";
+    }
+    else if (palette == sms_vdp_legacy_palette)
+    {
+        config_string = "SMS-Legacy";
+    }
+    else
+    {
+        config_string = "Auto";
+    }
+
+    config_string_set ("video", "tms9928a-palette", config_string);
 
     if (state.update_settings != NULL)
     {
