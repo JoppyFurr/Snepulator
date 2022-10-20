@@ -209,6 +209,9 @@ void tms9928a_control_write (TMS9928A_Context *context, uint8_t value);
 /* Render one line of sprites for mode0 / mode2 / mode3. */
 void tms9928a_draw_sprites (TMS9928A_Context *context, const TMS9928A_Config *config, uint16_t line);
 
+/* Render one line of the mode0 background layer. */
+void tms9928a_mode0_draw_background (TMS9928A_Context *context, const TMS9928A_Config *config, uint16_t line);
+
 /* Render one line of the mode2 background layer. */
 void tms9928a_mode2_draw_background (TMS9928A_Context *context, const TMS9928A_Config *config, uint16_t line);
 
