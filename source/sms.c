@@ -338,6 +338,10 @@ SMS_Context *sms_init (void)
         {
             context->hw_state.mapper = SMS_MAPPER_NEMESIS;
         }
+        else if (context->rom_hints & SMS_HINT_MAPPER_4PAK)
+        {
+            context->hw_state.mapper = SMS_MAPPER_4PAK;
+        }
         else if (context->rom_size <= SIZE_48K)
         {
             context->hw_state.mapper = SMS_MAPPER_NONE;
@@ -700,6 +704,8 @@ static const char *sms_mapper_name_get (SMS_Mapper m)
             return "MSX";
         case SMS_MAPPER_NEMESIS:
             return "Nemesis";
+        case SMS_MAPPER_4PAK:
+            return "4 PAK";
         default:
             return "Unknown";
     }
@@ -738,6 +744,7 @@ static uint8_t sms_memory_read (void *context_ptr, uint16_t addr)
 
             case SMS_MAPPER_CODEMASTERS:
             case SMS_MAPPER_KOREAN:
+            case SMS_MAPPER_4PAK:
                 slot = addr / SIZE_16K;
                 bank_base = context->hw_state.mapper_bank [slot] * SIZE_16K;
                 rom_address = bank_base + (addr & 0x3fff);
@@ -893,10 +900,8 @@ static void sms_memory_write (void *context_ptr, uint16_t addr, uint8_t data)
 
     if (context->hw_state.mapper == SMS_MAPPER_CODEMASTERS)
     {
-        /* TODO: There are differences from the Sega mapper. Do any games rely on them?
-         *  1. Initial banks are different (0, 1, 0) instead of (0, 1, 2).
-         *  2. The first 1KB is not protected.
-         */
+        /* Note: The initial selected banks are (0, 1, 0) instead of (0, 1, 2).
+                 It does not appear that any game relies on this. */
         if (addr == 0x0000)
         {
             context->hw_state.mapper_bank [0] = data & 0x3f;
@@ -942,6 +947,23 @@ static void sms_memory_write (void *context_ptr, uint16_t addr, uint8_t data)
         if (addr == 0x0003)
         {
             context->hw_state.mapper_bank [1] = data & 0x7f;
+        }
+    }
+
+    if (context->hw_state.mapper == SMS_MAPPER_4PAK)
+    {
+        if (addr == 0x3ffe)
+        {
+            context->hw_state.mapper_bank [0] = data & 0x3f;
+        }
+        else if (addr == 0x7fff)
+        {
+            context->hw_state.mapper_bank [1] = data & 0x3f;
+        }
+        else if (addr == 0xbfff)
+        {
+            /* Strange behaviour - Described by Bock on SMS Power forums */
+            context->hw_state.mapper_bank [2] = ((context->hw_state.mapper_bank[0] & 0x30) + data) & 0x3f;
         }
     }
 
