@@ -1252,10 +1252,12 @@ static uint16_t z80_ix_iy_e1_pop_ix (Z80_Context *context, uint16_t ix)
 static uint16_t z80_ix_iy_e3_ex_sp_ix (Z80_Context *context, uint16_t ix)
 {
     uint16_t_Split _ix = { .w = ix };
+    uint8_t temp = _ix.l;
     _ix.l = context->memory_read (context->parent, context->state.sp);
+    context->memory_write (context->parent, context->state.sp, temp);
+    temp = _ix.h;
     _ix.h = context->memory_read (context->parent, context->state.sp + 1);
-    context->memory_write (context->parent, context->state.sp,     _ix.l);
-    context->memory_write (context->parent, context->state.sp + 1, _ix.h);
+    context->memory_write (context->parent, context->state.sp + 1, temp);
     context->used_cycles += 23;
     return _ix.w;
 }
