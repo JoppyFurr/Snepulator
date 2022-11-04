@@ -42,9 +42,11 @@ extern pthread_mutex_t video_mutex;
 #define SMS_IO_TR_B_LEVEL (1 << 6)
 #define SMS_IO_TH_B_LEVEL (1 << 7)
 
-#define SMS_MEMORY_CTRL_BIOS_DISABLE 0x08
-#define SMS_MEMORY_CTRL_CART_DISABLE 0x40
-#define SMS_MEMORY_CTRL_IO_DISABLE   0x04
+#define SMS_MEMORY_CTRL_IO      0x04
+#define SMS_MEMORY_CTRL_BIOS    0x08
+#define SMS_MEMORY_CTRL_RAM     0x10
+#define SMS_MEMORY_CTRL_CARD    0x20
+#define SMS_MEMORY_CTRL_CART    0x40
 
 static pthread_mutex_t sms_state_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -436,7 +438,7 @@ SMS_Context *sms_init (void)
         z80_context->state.im = 1;
         z80_context->state.sp = 0xdff0;
 
-        context->hw_state.memory_control |= SMS_MEMORY_CTRL_BIOS_DISABLE;
+        context->hw_state.memory_control |= SMS_MEMORY_CTRL_BIOS;
 
         /* Leave the VDP in Mode4 */
         sms_vdp_control_write (vdp_context, SMS_VDP_CTRL_0_MODE_4);
@@ -645,6 +647,11 @@ static void sms_io_write (void *context_ptr, uint8_t addr, uint8_t data)
         if ((addr & 0x01) == 0x00)
         {
             /* Memory Control Register */
+            /* Ignore writes that would leave us with no possibility of executing code.  */
+            if ((~data & (SMS_MEMORY_CTRL_BIOS | SMS_MEMORY_CTRL_RAM | SMS_MEMORY_CTRL_CART)) == 0)
+            {
+                return;
+            }
             context->hw_state.memory_control = data;
         }
         else
@@ -792,7 +799,7 @@ static uint8_t sms_memory_read (void *context_ptr, uint16_t addr)
         }
 
         /* BIOS */
-        if (context->bios != NULL && !(context->hw_state.memory_control & SMS_MEMORY_CTRL_BIOS_DISABLE))
+        if (context->bios != NULL && !(context->hw_state.memory_control & SMS_MEMORY_CTRL_BIOS))
         {
             /* Assumes a power-of-two BIOS size */
             return context->bios [rom_address & context->bios_mask];
@@ -805,7 +812,7 @@ static uint8_t sms_memory_read (void *context_ptr, uint16_t addr)
         }
 
         /* Cartridge ROM */
-        if (context->rom != NULL && !(context->hw_state.memory_control & SMS_MEMORY_CTRL_CART_DISABLE))
+        if (context->rom != NULL && !(context->hw_state.memory_control & SMS_MEMORY_CTRL_CART))
         {
             return context->rom [rom_address & context->rom_mask];
         }
