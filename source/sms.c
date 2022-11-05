@@ -615,7 +615,8 @@ static uint8_t sms_io_read (void *context_ptr, uint8_t addr)
                    (gamepad [2].state [GAMEPAD_DIRECTION_RIGHT] ? 0 : BIT_1) |
                    (gamepad [2].state [GAMEPAD_BUTTON_1]        ? 0 : BIT_2) |
                    (gamepad [2].state [GAMEPAD_BUTTON_2]        ? 0 : BIT_3) |
-                   (/* TODO: RESET */                         0 ? 0 : BIT_4) |
+                   ( /* TODO: RESET */                        0 ? 0 : BIT_4) |
+                   ( /* Unused bit, always set on SMS */              BIT_5) |
                    (port_1_th                                   ? 0 : BIT_6) |
                    (port_2_th                                   ? 0 : BIT_7);
         }
