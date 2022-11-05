@@ -287,6 +287,9 @@ SMS_Context *sms_init (void)
     context->sram_used = 0x0000;
     context->video_3d_field = SMS_3D_FIELD_NONE;
 
+    /* Uninitialized RAM pattern */
+    memset (context->ram, 0xf0,SMS_RAM_SIZE);
+
     /* Reset the mapper */
     context->hw_state.mapper = SMS_MAPPER_UNKNOWN;
     context->hw_state.mapper_bank [0] = 0;
