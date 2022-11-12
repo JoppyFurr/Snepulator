@@ -573,6 +573,7 @@ void snepulator_system_init (void)
         case CONSOLE_LOGO:
             state.console_context = logo_init ();
             break;
+
         case CONSOLE_COLECOVISION:
             state.console_context = colecovision_init ();
             break;

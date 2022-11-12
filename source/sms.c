@@ -287,9 +287,6 @@ SMS_Context *sms_init (void)
     context->sram_used = 0x0000;
     context->video_3d_field = SMS_3D_FIELD_NONE;
 
-    /* Uninitialized RAM pattern */
-    memset (context->ram, 0xf0,SMS_RAM_SIZE);
-
     /* Reset the mapper */
     context->hw_state.mapper = SMS_MAPPER_UNKNOWN;
     context->hw_state.mapper_bank [0] = 0;
@@ -351,6 +348,13 @@ SMS_Context *sms_init (void)
         {
             context->hw_state.mapper = SMS_MAPPER_NONE;
         }
+    }
+
+    /* Some unlicensed games depend on an 0xf0 pattern being left in uninitialized
+     * memory. However, other games depend on the BIOS having zeroed the ram. */
+    if (context->rom_hints & SMS_HINT_RAM_PATTERN)
+    {
+        memset (context->ram, 0xf0, SMS_RAM_SIZE);
     }
 
     /* Pull in the settings - Done after the ROM is loaded for auto-region. */
