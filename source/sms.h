@@ -46,12 +46,13 @@ typedef struct SMS_Context_s {
     TMS9928A_Context *vdp_context;
     SMS_3D_Field video_3d_field;
     bool export_paddle;
+    bool reset_button;
+    uint32_t reset_button_timeout;
 
     /* Settings */
     Video_Format format;
     uint32_t overclock;
     Console_Region region;
-
 
     uint8_t ram [SMS_RAM_SIZE];
     uint8_t sram [SMS_SRAM_SIZE];

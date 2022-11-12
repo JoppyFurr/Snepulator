@@ -61,6 +61,7 @@ static uint8_t     sms_memory_read (void *context_ptr, uint16_t addr);
 static void        sms_memory_write (void *context_ptr, uint16_t addr, uint8_t data);
 static void        sms_process_3d_field (SMS_Context *context);
 static void        sms_run (void *context_ptr, uint32_t ms);
+static void        sms_soft_reset (void);
 static void        sms_state_load (void *context_ptr, const char *filename);
 static void        sms_state_save (void *context_ptr, const char *filename);
 static void        sms_sync (void *context_ptr);
@@ -433,6 +434,7 @@ SMS_Context *sms_init (void)
     state.get_clock_rate = sms_get_clock_rate;
     state.get_rom_hash = sms_get_rom_hash;
     state.run_callback = sms_run;
+    state.soft_reset = sms_soft_reset;
     state.sync = sms_sync;
     state.state_load = sms_state_load;
     state.state_save = sms_state_save;
@@ -622,7 +624,7 @@ static uint8_t sms_io_read (void *context_ptr, uint8_t addr)
                    (gamepad [2].state [GAMEPAD_DIRECTION_RIGHT] ? 0 : BIT_1) |
                    (gamepad [2].state [GAMEPAD_BUTTON_1]        ? 0 : BIT_2) |
                    (gamepad [2].state [GAMEPAD_BUTTON_2]        ? 0 : BIT_3) |
-                   ( /* TODO: RESET */                        0 ? 0 : BIT_4) |
+                   (context->reset_button                       ? 0 : BIT_4) |
                    ( /* Unused bit, always set on SMS */              BIT_5) |
                    (port_1_th                                   ? 0 : BIT_6) |
                    (port_2_th                                   ? 0 : BIT_7);
@@ -1124,7 +1126,27 @@ static void sms_run (void *context_ptr, uint32_t ms)
         sms_vdp_run_one_scanline (context->vdp_context);
     }
 
+    if (context->reset_button)
+    {
+        if (util_get_ticks () > context->reset_button_timeout)
+        {
+            context->reset_button = false;
+        }
+    }
+
     pthread_mutex_unlock (&sms_state_mutex);
+}
+
+
+/*
+ * Soft-reset the console.
+ * Simulates pressing the reset button for 200 ms.
+ */
+static void sms_soft_reset (void)
+{
+    SMS_Context *context = (SMS_Context *) state.console_context;
+    context->reset_button = true;
+    context->reset_button_timeout = util_get_ticks () + 200;
 }
 
 
