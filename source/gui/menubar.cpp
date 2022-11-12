@@ -167,6 +167,10 @@ static void snepulator_console_menu ()
         {
             snepulator_system_init ();
         }
+        if (ImGui::MenuItem ("Soft Reset", NULL, false, running_or_paused && state.soft_reset != NULL))
+        {
+            state.soft_reset ();
+        }
         ImGui::Separator ();
 
         if (ImGui::MenuItem ("World", NULL, state.region == REGION_WORLD)) {

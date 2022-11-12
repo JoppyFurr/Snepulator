@@ -84,8 +84,8 @@ typedef struct Snepulator_State_s {
     void         (*os_gamepad_get_uuid) (int32_t device_index, uint8_t *uuid);
 
     /* Console API */
-    Console console;
-    void *console_context;
+    Console   console;
+    void     *console_context;
     void      (*audio_callback) (void *userdata, uint8_t *stream, int len);
     void      (*cleanup) (void *);
     void      (*diagnostics_print) (const char *, ...);
@@ -93,6 +93,7 @@ typedef struct Snepulator_State_s {
     uint32_t  (*get_clock_rate) (void *);
     uint8_t * (*get_rom_hash) (void *);
     void      (*run_callback) (void *, uint32_t ms);
+    void      (*soft_reset) (void);
     void      (*sync) (void *);
     void      (*state_save) (void *, const char *filename);
     void      (*state_load) (void *, const char *filename);

@@ -516,6 +516,7 @@ void snepulator_reset (void)
     state.get_rom_hash = NULL;
     state.run_callback = NULL;
     state.get_rom_hash = NULL;
+    state.soft_reset = NULL;
     state.sync = NULL;
     state.state_load = NULL;
     state.state_save = NULL;
