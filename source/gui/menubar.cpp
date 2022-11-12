@@ -72,6 +72,8 @@ static void menubar_diagnostics_print (const char *format, ...)
  */
 static void snepulator_file_menu (void)
 {
+    bool running_or_paused = (state.run == RUN_STATE_RUNNING || state.run == RUN_STATE_PAUSED);
+
     if (ImGui::BeginMenu ("File"))
     {
         state.mouse_time = util_get_ticks ();
@@ -130,16 +132,13 @@ static void snepulator_file_menu (void)
             ImGui::EndMenu ();
         }
 
-        if (ImGui::MenuItem ("Close ROM", NULL))
+        if (ImGui::MenuItem ("Close ROM", NULL, false, running_or_paused))
         {
-            if (state.run == RUN_STATE_RUNNING || state.run == RUN_STATE_PAUSED)
-            {
-                snepulator_rom_set (NULL);
-                snepulator_system_init ();
-            }
+            snepulator_rom_set (NULL);
+            snepulator_system_init ();
         }
 
-        if (ImGui::MenuItem ("Pause", NULL, state.run == RUN_STATE_PAUSED))
+        if (ImGui::MenuItem ("Pause", NULL, state.run == RUN_STATE_PAUSED, running_or_paused))
         {
             snepulator_pause_set (state.run != RUN_STATE_PAUSED);
         }
@@ -158,16 +157,15 @@ static void snepulator_file_menu (void)
  */
 static void snepulator_console_menu ()
 {
+    bool running_or_paused = (state.run == RUN_STATE_RUNNING || state.run == RUN_STATE_PAUSED);
+
     if (ImGui::BeginMenu ("Console"))
     {
         state.mouse_time = util_get_ticks ();
 
-        if (ImGui::MenuItem ("Hard Reset"))
+        if (ImGui::MenuItem ("Hard Reset", NULL, false, running_or_paused))
         {
-            if (state.run == RUN_STATE_RUNNING || state.run == RUN_STATE_PAUSED)
-            {
-                snepulator_system_init ();
-            }
+            snepulator_system_init ();
         }
         ImGui::Separator ();
 
@@ -204,7 +202,7 @@ static void snepulator_console_menu ()
         }
         ImGui::Separator ();
 
-        if (ImGui::BeginMenu ("Diagnostics"))
+        if (ImGui::BeginMenu ("Diagnostics", running_or_paused))
         {
             if (state.diagnostics_show == NULL)
             {
@@ -251,61 +249,57 @@ static void snepulator_console_menu ()
  */
 static void snepulator_state_menu (void)
 {
+    bool running_or_paused = (state.run == RUN_STATE_RUNNING || state.run == RUN_STATE_PAUSED);
+
     if (ImGui::BeginMenu ("State"))
     {
         state.mouse_time = util_get_ticks ();
 
-        if (ImGui::BeginMenu ("Save State"))
+        if (ImGui::BeginMenu ("Save State", running_or_paused))
         {
-            if (state.run == RUN_STATE_RUNNING || state.run == RUN_STATE_PAUSED)
+            if (ImGui::MenuItem ("Save to Slot 1", NULL))
             {
-                if (ImGui::MenuItem ("Save to Slot 1", NULL))
-                {
-                    char *path = path_save_slot (1, state.get_rom_hash (state.console_context));
-                    state.state_save (state.console_context, path);
-                    free (path);
-                }
-                if (ImGui::MenuItem ("Save to Slot 2", NULL))
-                {
-                    char *path = path_save_slot (2, state.get_rom_hash (state.console_context));
-                    state.state_save (state.console_context, path);
-                    free (path);
-                }
-                if (ImGui::MenuItem ("Save to Slot 3", NULL))
-                {
-                    char *path = path_save_slot (3, state.get_rom_hash (state.console_context));
-                    state.state_save (state.console_context, path);
-                    free (path);
-                }
+                char *path = path_save_slot (1, state.get_rom_hash (state.console_context));
+                state.state_save (state.console_context, path);
+                free (path);
+            }
+            if (ImGui::MenuItem ("Save to Slot 2", NULL))
+            {
+                char *path = path_save_slot (2, state.get_rom_hash (state.console_context));
+                state.state_save (state.console_context, path);
+                free (path);
+            }
+            if (ImGui::MenuItem ("Save to Slot 3", NULL))
+            {
+                char *path = path_save_slot (3, state.get_rom_hash (state.console_context));
+                state.state_save (state.console_context, path);
+                free (path);
             }
             ImGui::EndMenu ();
         }
 
-        if (ImGui::BeginMenu ("Load State"))
+        if (ImGui::BeginMenu ("Load State", running_or_paused))
         {
-            if (state.run == RUN_STATE_RUNNING || state.run == RUN_STATE_PAUSED)
+            if (ImGui::MenuItem ("Load from Slot 1", NULL))
             {
-                if (ImGui::MenuItem ("Load from Slot 1", NULL))
-                {
-                    char *path = path_save_slot (1, state.get_rom_hash (state.console_context));
-                    state.state_load (state.console_context, path);
-                    free (path);
-                    snepulator_pause_set (false);
-                }
-                if (ImGui::MenuItem ("Load from Slot 2", NULL))
-                {
-                    char *path = path_save_slot (2, state.get_rom_hash (state.console_context));
-                    state.state_load (state.console_context, path);
-                    free (path);
-                    snepulator_pause_set (false);
-                }
-                if (ImGui::MenuItem ("Load from Slot 3", NULL))
-                {
-                    char *path = path_save_slot (3, state.get_rom_hash (state.console_context));
-                    state.state_load (state.console_context, path);
-                    free (path);
-                    snepulator_pause_set (false);
-                }
+                char *path = path_save_slot (1, state.get_rom_hash (state.console_context));
+                state.state_load (state.console_context, path);
+                free (path);
+                snepulator_pause_set (false);
+            }
+            if (ImGui::MenuItem ("Load from Slot 2", NULL))
+            {
+                char *path = path_save_slot (2, state.get_rom_hash (state.console_context));
+                state.state_load (state.console_context, path);
+                free (path);
+                snepulator_pause_set (false);
+            }
+            if (ImGui::MenuItem ("Load from Slot 3", NULL))
+            {
+                char *path = path_save_slot (3, state.get_rom_hash (state.console_context));
+                state.state_load (state.console_context, path);
+                free (path);
+                snepulator_pause_set (false);
             }
             ImGui::EndMenu ();
         }
