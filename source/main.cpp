@@ -504,10 +504,10 @@ int main (int argc, char **argv)
     SDL_GL_SetAttribute (SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute (SDL_GL_CONTEXT_MINOR_VERSION, 2);
 
-    /* Twice the Master System resolution, plus enough extra for 16 px boarders */
+    /* Three times the video buffer resolution */
     /* TODO: Make dialogues fit (full-screen?) */
     window = SDL_CreateWindow ("Snepulator", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-                      VIDEO_BUFFER_WIDTH * 2, VIDEO_BUFFER_LINES * 2, SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL);
+                      VIDEO_BUFFER_WIDTH * 3, VIDEO_BUFFER_LINES * 3, SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL);
     if (window == NULL)
     {
         snepulator_error ("SDL Error", SDL_GetError ());
