@@ -1095,26 +1095,23 @@ static void sms_process_3d_field (SMS_Context *context)
 
 /*
  * Emulate the SMS for the specified length of time.
- *
- * TODO: Something better than millicycles.
  */
 static void sms_run (void *context_ptr, uint32_t ms)
 {
     SMS_Context *context = (SMS_Context *) context_ptr;
-
-    static uint64_t millicycles = 0;
-    uint64_t lines;
+    uint32_t lines;
 
     pthread_mutex_lock (&sms_state_mutex);
+
+    /* Convert the time into lines to run, storing the remainder as millicycles. */
+    context->millicycles += (uint64_t) ms * sms_get_clock_rate (context);
+    lines = context->millicycles / 228000;
+    context->millicycles -= lines * 228000;
 
     if (gamepad [1].type == GAMEPAD_TYPE_SMS_PADDLE)
     {
         gamepad_paddle_tick (ms);
     }
-
-    millicycles += (uint64_t) ms * sms_get_clock_rate (context);
-    lines = millicycles / 228000;
-    millicycles -= lines * 228000;
 
     while (lines--)
     {

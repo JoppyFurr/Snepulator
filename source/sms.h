@@ -48,6 +48,7 @@ typedef struct SMS_Context_s {
     bool export_paddle;
     bool reset_button;
     uint32_t reset_button_timeout;
+    uint64_t millicycles;
 
     /* Settings */
     Video_Format format;

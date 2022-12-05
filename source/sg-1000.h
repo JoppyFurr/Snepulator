@@ -19,6 +19,7 @@ typedef struct SG_1000_Context_s {
     Z80_Context *z80_context;
     TMS9928A_Context *vdp_context;
     SG_1000_HW_State hw_state;
+    uint64_t millicycles;
 
     /* Settings */
     Video_Format format;

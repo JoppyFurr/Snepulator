@@ -383,16 +383,14 @@ static void sg_1000_memory_write (void *context_ptr, uint16_t addr, uint8_t data
 static void sg_1000_run (void *context_ptr, uint32_t ms)
 {
     SG_1000_Context *context = (SG_1000_Context *) context_ptr;
-
-    /* TODO: Make these calculations common */
-    static uint64_t millicycles = 0;
     uint64_t lines;
 
     pthread_mutex_lock (&sg_1000_state_mutex);
 
-    millicycles += (uint64_t) ms * sg_1000_get_clock_rate (context);
-    lines = millicycles / 228000;
-    millicycles -= lines * 228000;
+    /* Convert the time into lines to run, storing the remainder as millicycles. */
+    context->millicycles += (uint64_t) ms * sg_1000_get_clock_rate (context);
+    lines = context->millicycles / 228000;
+    context->millicycles -= lines * 228000;
 
     while (lines--)
     {
