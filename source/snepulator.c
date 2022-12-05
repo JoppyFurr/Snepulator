@@ -537,6 +537,9 @@ void snepulator_reset (void)
     {
         state.format = VIDEO_FORMAT_NTSC;
     }
+
+    /* Reset the tick counter */
+    state.ticks_previous = util_get_ticks ();
 }
 
 

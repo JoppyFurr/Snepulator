@@ -58,6 +58,9 @@ typedef struct Snepulator_State_s {
     bool show_gui;
     uint32_t mouse_time;
 
+    /* Timing */
+    uint32_t ticks_previous;
+
     /* Files */
     char *sms_bios_filename;
     char *colecovision_bios_filename;

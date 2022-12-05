@@ -128,21 +128,20 @@ void snepulator_audio_callback (void *userdata, uint8_t *stream, int len)
  */
 void *main_emulation_loop (void *data)
 {
-    static uint32_t ticks_previous = util_get_ticks ();
-    uint32_t ticks_current;
+    uint32_t ticks;
 
     while (state.run != RUN_STATE_EXIT)
     {
-        ticks_current = util_get_ticks ();
+        ticks = util_get_ticks ();
 
         pthread_mutex_lock (&run_mutex);
         if (state.run == RUN_STATE_RUNNING || state.console == CONSOLE_LOGO)
         {
-            state.run_callback (state.console_context, ticks_current - ticks_previous);
+            state.run_callback (state.console_context, ticks - state.ticks_previous);
         }
         pthread_mutex_unlock (&run_mutex);
 
-        ticks_previous = ticks_current;
+        state.ticks_previous = ticks;
 
         /* Sleep */
         util_delay (1);
