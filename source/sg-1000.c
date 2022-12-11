@@ -26,8 +26,6 @@ extern Snepulator_State state;
 extern Snepulator_Gamepad gamepad [3];
 extern pthread_mutex_t video_mutex;
 
-static pthread_mutex_t sg_1000_state_mutex = PTHREAD_MUTEX_INITIALIZER;
-
 
 /*
  * Declarations.
@@ -379,13 +377,12 @@ static void sg_1000_memory_write (void *context_ptr, uint16_t addr, uint8_t data
 
 /*
  * Emulate the SG-1000 for the specified length of time.
+ * Called with the run_mutex held.
  */
 static void sg_1000_run (void *context_ptr, uint32_t ms)
 {
     SG_1000_Context *context = (SG_1000_Context *) context_ptr;
     uint64_t lines;
-
-    pthread_mutex_lock (&sg_1000_state_mutex);
 
     /* Convert the time into lines to run, storing the remainder as millicycles. */
     context->millicycles += (uint64_t) ms * sg_1000_get_clock_rate (context);
@@ -401,13 +398,12 @@ static void sg_1000_run (void *context_ptr, uint32_t ms)
         psg_run_cycles (228);
         tms9928a_run_one_scanline (context->vdp_context);
     }
-
-    pthread_mutex_unlock (&sg_1000_state_mutex);
 }
 
 
 /*
  * Import SG-1000 state from a file.
+ * Called with the run_mutex held.
  */
 static void sg_1000_state_load (void *context_ptr, const char *filename)
 {
@@ -420,8 +416,6 @@ static void sg_1000_state_load (void *context_ptr, const char *filename)
     {
         return;
     }
-
-    pthread_mutex_lock (&sg_1000_state_mutex);
 
     if (!strncmp (console_id, CONSOLE_ID_SG_1000, 4))
     {
@@ -505,20 +499,17 @@ static void sg_1000_state_load (void *context_ptr, const char *filename)
         }
     }
 
-    pthread_mutex_unlock (&sg_1000_state_mutex);
-
     load_state_end ();
 }
 
 
 /*
  * Export SG-1000 state to a file.
+ * Called with the run_mutex held.
  */
 static void sg_1000_state_save (void *context_ptr, const char *filename)
 {
     SG_1000_Context *context = (SG_1000_Context *) context_ptr;
-
-    pthread_mutex_lock (&sg_1000_state_mutex);
 
     /* Begin creating a new save state. */
     save_state_begin (CONSOLE_ID_SG_1000);
@@ -536,8 +527,6 @@ static void sg_1000_state_save (void *context_ptr, const char *filename)
     save_state_section_add (SECTION_ID_VRAM, 1, TMS9928A_VRAM_SIZE, context->vdp_context->vram);
 
     sn76489_state_save ();
-
-    pthread_mutex_unlock (&sg_1000_state_mutex);
 
     save_state_write (filename);
 }

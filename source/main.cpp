@@ -505,6 +505,7 @@ int main (int argc, char **argv)
 
     /* Three times the video buffer resolution */
     /* TODO: Make dialogues fit (full-screen?) */
+    /* TODO: Check if we're running on a small-screened device and use a lower window size */
     window = SDL_CreateWindow ("Snepulator", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
                       VIDEO_BUFFER_WIDTH * 3, VIDEO_BUFFER_LINES * 3, SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL);
     if (window == NULL)

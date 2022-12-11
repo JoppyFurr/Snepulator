@@ -173,6 +173,12 @@ void snepulator_reset (void);
 /* Set the currently running ROM and initialise the system. */
 void snepulator_rom_set (const char *path);
 
+/* Load the console state from file. */
+void snepulator_state_load (void *context, const char *filename);
+
+/* Save the console state to file. */
+void snepulator_state_save (void *context, const char *filename);
+
 /* Call the appropriate initialisation for the chosen ROM. */
 void snepulator_system_init (void);
 

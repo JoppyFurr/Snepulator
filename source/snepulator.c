@@ -564,6 +564,38 @@ void snepulator_rom_set (const char *path)
 
 
 /*
+ * Load the console state from file.
+ */
+void snepulator_state_load (void *context, const char *filename)
+{
+    pthread_mutex_lock (&run_mutex);
+
+    if (state.state_load != NULL)
+    {
+        state.state_load (context, filename);
+    }
+
+    pthread_mutex_unlock (&run_mutex);
+}
+
+
+/*
+ * Save the console state to file.
+ */
+void snepulator_state_save (void *context, const char *filename)
+{
+    pthread_mutex_lock (&run_mutex);
+
+    if (state.state_load != NULL)
+    {
+        state.state_save (context, filename);
+    }
+
+    pthread_mutex_unlock (&run_mutex);
+}
+
+
+/*
  * Call the appropriate initialisation for the chosen ROM
  */
 void snepulator_system_init (void)

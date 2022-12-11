@@ -48,8 +48,6 @@ extern pthread_mutex_t video_mutex;
 #define SMS_MEMORY_CTRL_CARD    0x20
 #define SMS_MEMORY_CTRL_CART    0x40
 
-static pthread_mutex_t sms_state_mutex = PTHREAD_MUTEX_INITIALIZER;
-
 
 /*
  * Declarations.
@@ -1095,13 +1093,12 @@ static void sms_process_3d_field (SMS_Context *context)
 
 /*
  * Emulate the SMS for the specified length of time.
+ * Called with the run_mutex held.
  */
 static void sms_run (void *context_ptr, uint32_t ms)
 {
     SMS_Context *context = (SMS_Context *) context_ptr;
     uint32_t lines;
-
-    pthread_mutex_lock (&sms_state_mutex);
 
     /* Convert the time into lines to run, storing the remainder as millicycles. */
     context->millicycles += (uint64_t) ms * sms_get_clock_rate (context);
@@ -1130,8 +1127,6 @@ static void sms_run (void *context_ptr, uint32_t ms)
             context->reset_button = false;
         }
     }
-
-    pthread_mutex_unlock (&sms_state_mutex);
 }
 
 
@@ -1149,6 +1144,7 @@ static void sms_soft_reset (void)
 
 /*
  * Import SMS state from a file.
+ * Called with the run_mutex held.
  */
 static void sms_state_load (void *context_ptr, const char *filename)
 {
@@ -1161,8 +1157,6 @@ static void sms_state_load (void *context_ptr, const char *filename)
     {
         return;
     }
-
-    pthread_mutex_lock (&sms_state_mutex);
 
     if (!strncmp (console_id, CONSOLE_ID_SMS, 4))
     {
@@ -1250,20 +1244,17 @@ static void sms_state_load (void *context_ptr, const char *filename)
         }
     }
 
-    pthread_mutex_unlock (&sms_state_mutex);
-
     load_state_end ();
 }
 
 
 /*
  * Export SMS state to a file.
+ * Called with the run_mutex held.
  */
 static void sms_state_save (void *context_ptr, const char *filename)
 {
     SMS_Context *context = (SMS_Context *) context_ptr;
-
-    pthread_mutex_lock (&sms_state_mutex);
 
     /* Begin creating a new save state. */
     if (state.console == CONSOLE_GAME_GEAR)
@@ -1296,8 +1287,6 @@ static void sms_state_save (void *context_ptr, const char *filename)
     save_state_section_add (SECTION_ID_VRAM, 1, TMS9928A_VRAM_SIZE, context->vdp_context->vram);
 
     sn76489_state_save ();
-
-    pthread_mutex_unlock (&sms_state_mutex);
 
     save_state_write (filename);
 }
