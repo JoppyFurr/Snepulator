@@ -271,9 +271,14 @@ void snepulator_input_modal_render (void)
                 }
             }
 
-            /* Button outlines */
+            /* Button outlines & labels */
+            ImVec2 text_size;
             draw_list->AddCircle (button_1_centre, button_radius, White, 32);
+            text_size = ImGui::CalcTextSize ("1");
+            draw_list->AddText (ImVec2 (button_1_centre.x - text_size.x / 2, button_1_centre.y - text_size.y / 2), Grey_50, "1");
             draw_list->AddCircle (button_2_centre, button_radius, White, 32);
+            text_size = ImGui::CalcTextSize ("2");
+            draw_list->AddText (ImVec2 (button_2_centre.x - text_size.x / 2, button_2_centre.y - text_size.y / 2), Grey_50, "2");
 
             /* Dpad outline */
             draw_list->AddRect (ImVec2 (dpad_centre.x - dpad_width_r, dpad_centre.y - dpad_width_r),
