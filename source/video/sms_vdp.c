@@ -329,29 +329,45 @@ bool sms_vdp_get_phaser_th (TMS9928A_Context *context, uint64_t z80_cycle)
  */
 uint8_t sms_vdp_get_h_counter (TMS9928A_Context *context)
 {
+
+    /* If a phaser game is being played, update the h_counter to
+     * where the counter will have latched on this line. */
     if (gamepad [1].type == GAMEPAD_TYPE_SMS_PHASER &&
         context->state.line >= (state.phaser_y - SMS_PHASER_RADIUS) &&
         context->state.line <= (state.phaser_y + SMS_PHASER_RADIUS))
     {
         int32_t y_offset = state.phaser_y - context->state.line;
         int32_t x_offset = sqrt (SMS_PHASER_RADIUS * SMS_PHASER_RADIUS + y_offset * y_offset);
+        int32_t phaser_latch = (state.phaser_x - x_offset) / 2;
 
-        context->state.h_counter = (state.phaser_x - x_offset) / 2;
+        /* Games seem to add a left-offset, possibly to account for signal delays */
+        phaser_latch += 24;
 
-        if (context->state.h_counter < 0)
-        {
-            context->state.h_counter = 0;
-        }
-        if (context->state.h_counter > 0x7f)
-        {
-            context->state.h_counter = 0x7f;
-        }
+        /* For now, limit the phaser latching to the active area */
+        ENFORCE_MINIMUM (phaser_latch, 0x00);
+        ENFORCE_MAXIMUM (phaser_latch, 0x7f);
 
-        /* Games seem to add their own left-offset */
-        context->state.h_counter += 24;
+        context->state.h_counter = phaser_latch;
     }
 
     return context->state.h_counter;
+}
+
+
+/*
+ * Update the latched h_counter value.
+ * This is called on the rising-edge of the TH pins.
+ */
+void sms_vdp_update_h_counter (TMS9928A_Context *context, uint64_t cycle_count)
+{
+    /* Begin the count pattern at the discontinuity that occurs during H-sync */
+    uint8_t count_start = 0xe9;
+
+    /* The count pattern repeats once per scanline (228 cpu cycles) */
+    cycle_count %= 228;
+
+    /* Note the result is truncated to 8 bits */
+    context->state.h_counter = count_start + (cycle_count * 3 + 1) / 4;
 }
 
 

@@ -59,3 +59,5 @@ uint8_t sms_vdp_status_read (TMS9928A_Context *context);
 /* Run one scanline on the VDP. */
 void sms_vdp_run_one_scanline (TMS9928A_Context *context);
 
+/* Update the latched h_counter value. */
+void sms_vdp_update_h_counter (TMS9928A_Context *context, uint64_t cycle_count);

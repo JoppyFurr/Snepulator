@@ -665,9 +665,32 @@ static void sms_io_write (void *context_ptr, uint8_t addr, uint8_t data)
         else
         {
             /* I/O Control Register */
+
+            bool th_rising_edge = false;
+
+            if (context->hw_state.io_th_a_direction == 0 && context->hw_state.io_th_a_value == 0)
+            {
+                if (data & (SMS_IO_TH_A_DIRECTION | SMS_IO_TH_A_LEVEL))
+                {
+                    th_rising_edge = true;
+                }
+            }
+
+            if (context->hw_state.io_th_b_direction == 0 && context->hw_state.io_th_b_value == 0)
+            {
+                if (data & (SMS_IO_TH_B_DIRECTION | SMS_IO_TH_B_LEVEL))
+                {
+                    th_rising_edge = true;
+                }
+            }
+
+            if (th_rising_edge)
+            {
+                sms_vdp_update_h_counter (context->vdp_context, context->z80_context->cycle_count);
+            }
+
             context->hw_state.io_control = data;
         }
-
     }
 
     /* PSG */

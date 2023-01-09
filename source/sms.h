@@ -31,7 +31,19 @@ typedef enum SMS_3D_Field_e {
 /* Console hardware state */
 typedef struct SMS_HW_State_s {
     uint8_t memory_control;
-    uint8_t io_control;
+    union {
+        uint8_t io_control;
+        struct {
+            uint8_t io_tr_a_direction:1;
+            uint8_t io_th_a_direction:1;
+            uint8_t io_tr_b_direction:1;
+            uint8_t io_th_b_direction:1;
+            uint8_t io_tr_a_value:1;
+            uint8_t io_th_a_value:1;
+            uint8_t io_tr_b_value:1;
+            uint8_t io_th_b_value:1;
+        };
+    };
     uint8_t mapper;
     uint8_t mapper_bank [4];
     uint16_t sram_bank;
