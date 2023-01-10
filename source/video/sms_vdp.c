@@ -691,6 +691,47 @@ static void sms_vdp_mode4_draw_sprites (TMS9928A_Context *context, const TMS9928
 
 
 /*
+ * A simplified copy of the sprite overflow check to use when blanking is enabled.
+ */
+static void sms_vdp_mode4_check_sprite_overflow (TMS9928A_Context *context, const TMS9928A_Config *mode, uint16_t line)
+{
+    uint16_t sprite_attribute_table_base = (((uint16_t) context->state.regs.sprite_attr_table_base) << 7) & 0x3f00;
+    uint8_t pattern_height = context->state.regs.ctrl_1_sprite_mag ? 16 : 8;
+    uint8_t sprite_height = context->state.regs.ctrl_1_sprite_size ? (pattern_height << 1) : pattern_height;
+    uint8_t line_sprite_count = 0;
+    int32_Point_2D position;
+
+    /* Traverse the sprite list, filling the line sprite buffer */
+    for (int i = 0; i < 64; i++)
+    {
+        uint8_t y = context->vram [sprite_attribute_table_base + i];
+
+        /* Break if there are no more sprites */
+        if (mode->lines_active == 192 && y == 0xd0)
+            break;
+
+        /* This number is treated as unsigned when the first line of
+         * the sprite is on the screen, but signed when it is not */
+        if (y >= 0xe0)
+            position.y = ((int8_t) y) + 1;
+        else
+            position.y = y + 1;
+
+        /* If the sprite is on this line, add it to the buffer */
+        if (line >= position.y && line < position.y + sprite_height)
+        {
+            if (line_sprite_count == 8 && !context->remove_sprite_limit)
+            {
+                context->state.status |= TMS9928A_SPRITE_OVERFLOW;
+                break;
+            }
+            line_sprite_count++;
+        }
+    }
+}
+
+
+/*
  * Render one active line of output for the SMS VDP.
  */
 static void sms_vdp_render_line (TMS9928A_Context *context, const TMS9928A_Config *config, uint16_t line)
@@ -762,9 +803,13 @@ static void sms_vdp_render_line (TMS9928A_Context *context, const TMS9928A_Confi
         }
     }
 
-    /* Return without rendering patterns if BLANK is enabled */
+    /* Don't actually render if BLANK is enabled */
     if (!context->state.regs.ctrl_1_blank && !context->disable_blanking)
     {
+        if (context->state.regs.ctrl_0_mode_4)
+        {
+            sms_vdp_mode4_check_sprite_overflow (context, config, line);
+        }
         return;
     }
 
