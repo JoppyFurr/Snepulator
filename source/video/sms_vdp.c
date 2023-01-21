@@ -880,6 +880,23 @@ void sms_vdp_run_one_scanline (TMS9928A_Context *context)
         context->video_height   = config->lines_active;
     }
 
+    /* Update the V-Counter */
+    context->state.line = (context->state.line + 1) % config->lines_total;
+
+    uint16_t temp_line = context->state.line;
+    for (int range = 0; range < 3; range++)
+    {
+        if (temp_line < config->v_counter_map [range].last - config->v_counter_map [range].first + 1)
+        {
+            context->state.v_counter = temp_line + config->v_counter_map [range].first;
+            break;
+        }
+        else
+        {
+            temp_line -= config->v_counter_map [range].last - config->v_counter_map [range].first + 1;
+        }
+    }
+
     /* If this is an active line, render it */
     if (context->state.line < config->lines_active)
     {
@@ -904,23 +921,6 @@ void sms_vdp_run_one_scanline (TMS9928A_Context *context)
             state.vdp_framerate += 0.05 * (1000.0 / frame_time_taken);
         }
         vdp_previous_completion_time = vdp_current_time;
-    }
-
-    /* Update values for the next line */
-    context->state.line = (context->state.line + 1) % config->lines_total;
-
-    uint16_t temp_line = context->state.line;
-    for (int range = 0; range < 3; range++)
-    {
-        if (temp_line < config->v_counter_map [range].last - config->v_counter_map [range].first + 1)
-        {
-            context->state.v_counter = temp_line + config->v_counter_map [range].first;
-            break;
-        }
-        else
-        {
-            temp_line -= config->v_counter_map [range].last - config->v_counter_map [range].first + 1;
-        }
     }
 
     /* Propagate register writes that occurred during this line. */
