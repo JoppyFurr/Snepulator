@@ -191,10 +191,7 @@ void tms9928a_control_write (TMS9928A_Context *context, uint8_t value)
             case TMS9928A_CODE_REG_WRITE:
                 if ((value & 0x0f) <= 10)
                 {
-                    ((uint8_t *) &context->state.regs_buffer) [value & 0x0f] = context->state.address & 0x00ff;
-
-                    /* Enabling interrupts should take affect immediately */
-                    context->state.regs.ctrl_1_frame_int_en = context->state.regs_buffer.ctrl_1_frame_int_en;
+                    ((uint8_t *) &context->state.regs) [value & 0x0f] = context->state.address & 0x00ff;
                 }
                 break;
             default:
@@ -546,6 +543,9 @@ void tms9928a_run_one_scanline (TMS9928A_Context *context)
             return;
     }
 
+    /* Update the V-Counter */
+    context->state.line = (context->state.line + 1) % config->lines_total;
+
     /* If this is an active line, render it */
     if (context->state.line < config->lines_active)
     {
@@ -568,12 +568,6 @@ void tms9928a_run_one_scanline (TMS9928A_Context *context)
         }
         vdp_previous_completion_time = vdp_current_time;
     }
-
-    /* Update values for the next line */
-    context->state.line = (context->state.line + 1) % config->lines_total;
-
-    /* Propagate register writes that occurred during this line. */
-    context->state.regs = context->state.regs_buffer;
 
     /* Check for frame interrupt */
     if (context->state.line == config->lines_active + 1)
@@ -616,7 +610,6 @@ void tms9928a_state_save (TMS9928A_Context *context)
 {
     TMS9928A_State tms9928a_state_be = {
         .regs =                   context->state.regs,
-        .regs_buffer =            context->state.regs_buffer,
         .line =                   htons (context->state.line),
         .address =                htons (context->state.address),
         .first_byte_received =    context->state.first_byte_received,
@@ -651,7 +644,6 @@ void tms9928a_state_load (TMS9928A_Context *context, uint32_t version, uint32_t 
         memcpy (&tms9928a_state_be, data, sizeof (tms9928a_state_be));
 
         context->state.regs =                   tms9928a_state_be.regs;
-        context->state.regs_buffer =            tms9928a_state_be.regs_buffer;
         context->state.line =                   ntohs (tms9928a_state_be.line);
         context->state.address =                ntohs (tms9928a_state_be.address);
         context->state.first_byte_received =    tms9928a_state_be.first_byte_received;

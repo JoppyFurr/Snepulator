@@ -270,10 +270,7 @@ void sms_vdp_control_write (TMS9928A_Context *context, uint8_t value)
             case TMS9928A_CODE_REG_WRITE:
                 if ((value & 0x0f) <= 10)
                 {
-                    ((uint8_t *) &context->state.regs_buffer) [value & 0x0f] = context->state.address & 0x00ff;
-
-                    /* Enabling interrupts should take affect immediately */
-                    context->state.regs.ctrl_1_frame_int_en = context->state.regs_buffer.ctrl_1_frame_int_en;
+                    ((uint8_t *) &context->state.regs) [value & 0x0f] = context->state.address & 0x00ff;
                 }
                 break;
             case SMS_VDP_CODE_CRAM_WRITE:
@@ -922,9 +919,6 @@ void sms_vdp_run_one_scanline (TMS9928A_Context *context)
         }
         vdp_previous_completion_time = vdp_current_time;
     }
-
-    /* Propagate register writes that occurred during this line. */
-    context->state.regs = context->state.regs_buffer;
 
     /* Check for frame interrupt */
     if (context->state.line == config->lines_active + 1)

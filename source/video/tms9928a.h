@@ -113,7 +113,6 @@ typedef struct TMS9928A_Registers_s {
 
 typedef struct TMS9928A_State_s {
     TMS9928A_Registers regs;
-    TMS9928A_Registers regs_buffer;
     uint16_t line;
     uint16_t address;
     uint8_t  first_byte_received;
