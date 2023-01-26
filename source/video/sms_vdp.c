@@ -360,6 +360,11 @@ void sms_vdp_update_h_counter (TMS9928A_Context *context, uint64_t cycle_count)
     /* Begin the count pattern at the discontinuity that occurs during H-sync */
     uint8_t count_start = 0xe9;
 
+    /* The line is drawn and interrupts are generated at cycle_count % 228 == 0.
+     * Offset the cycle-count for this calculation to bring the frame-interrupt
+     * h-count into line with real hardware. */
+    cycle_count += 22;
+
     /* The count pattern repeats once per scanline (228 cpu cycles) */
     cycle_count %= 228;
 
