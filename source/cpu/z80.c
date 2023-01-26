@@ -5514,13 +5514,13 @@ static void z80_run_instruction (Z80_Context *context)
 /*
  * Simulate the Z80 for the specified number of clock cycles.
  */
-void z80_run_cycles (Z80_Context *context, uint64_t cycles)
+void z80_run_cycles (Z80_Context *context, int64_t cycles)
 {
+    /* Account for cycles used during the last run */
     cycles += context->state.excess_cycles;
 
-    /* For now, we only run an instruction if we have
-     * enough cycles to run any instruction with following interrupt */
-    for (context->used_cycles = 0; cycles > 34; cycles -= context->used_cycles, context->cycle_count += context->used_cycles)
+    /* As long as we have a positive number of cycles, run an instruction */
+    for ( ; cycles > 0; cycles -= context->used_cycles)
     {
         context->used_cycles = 0;
 
@@ -5585,9 +5585,9 @@ void z80_run_cycles (Z80_Context *context, uint64_t cycles)
                         return;
                 }
             }
-
         }
 
+        context->cycle_count += context->used_cycles;
     }
 
     context->state.excess_cycles = cycles;

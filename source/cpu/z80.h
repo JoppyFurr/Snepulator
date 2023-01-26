@@ -86,7 +86,7 @@ typedef struct Z80_State_s {
     uint8_t halt;
 
     /* Left-over cycles */
-    uint32_t excess_cycles;
+    int32_t excess_cycles;
 
 } Z80_State;
 
@@ -129,7 +129,7 @@ Z80_Context *z80_init (void *parent,
                        bool    (* get_nmi)     (void *));
 
 /* Simulate the Z80 for the specified number of clock cycles. */
-void z80_run_cycles (Z80_Context *context, uint64_t cycles);
+void z80_run_cycles (Z80_Context *context, int64_t cycles);
 
 /* Export Z80 state. */
 void z80_state_save (Z80_Context *context);
