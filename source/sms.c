@@ -397,6 +397,9 @@ SMS_Context *sms_init (void)
         }
         context->sram_used = bytes_read - 1;
         fclose (sram_file);
+
+        /* Update sram_last_write */
+        memcpy (context->sram_last_write, context->sram, SMS_SRAM_SIZE);
     }
     free (sram_path);
 
@@ -1324,6 +1327,12 @@ static void sms_sync (void *context_ptr)
 
     if (context->sram_used)
     {
+        /* Only write the file if there has been a change */
+        if (memcmp (context->sram, context->sram_last_write, SMS_SRAM_SIZE) == 0)
+        {
+            return;
+        }
+
         uint32_t sram_size = SMS_SRAM_SIZE_MIN;
         uint32_t bytes_written = 0;
         char *path = path_sram (context->rom_hash);
@@ -1344,6 +1353,9 @@ static void sms_sync (void *context_ptr)
 
             fclose (sram_file);
         }
+
+        /* Update sram_last_write */
+        memcpy (context->sram_last_write, context->sram, SMS_SRAM_SIZE);
 
         free (path);
     }

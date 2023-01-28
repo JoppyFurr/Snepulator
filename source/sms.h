@@ -69,6 +69,7 @@ typedef struct SMS_Context_s {
 
     uint8_t ram [SMS_RAM_SIZE];
     uint8_t sram [SMS_SRAM_SIZE];
+    uint8_t sram_last_write [SMS_SRAM_SIZE];
     uint16_t sram_used;
 
     uint8_t *rom;
