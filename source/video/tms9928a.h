@@ -71,6 +71,20 @@ typedef enum TMS9928A_Code_e {
 #define TMS9928A_SPRITE_OVERFLOW        BIT_6
 #define TMS9928A_STATUS_INT             BIT_7
 
+/* SMS - Range of 8-bit values to map onto the 16-bit v-counter */
+typedef struct SMS_VDP_V_Counter_Range_s {
+    uint16_t first;
+    uint16_t last;
+} SMS_VDP_V_Counter_Range;
+
+/* TMS9928A / SMS-VDP common Mode details structure */
+typedef struct TMS9928A_ModeInfo_s {
+    TMS9928A_Mode mode;
+    uint16_t lines_active;
+    uint16_t lines_total;
+    SMS_VDP_V_Counter_Range v_counter_map [3]; /* SMS VDP v-counter mapping */
+} TMS9928A_ModeInfo;
+
 typedef struct TMS9928A_Registers_s {
     union {
         uint8_t ctrl_0;
@@ -144,6 +158,12 @@ typedef struct TMS9928A_Context_s {
     bool remove_sprite_limit;
     bool disable_blanking;
 
+    /* Mode data */
+    TMS9928A_Mode mode;
+    uint16_t lines_active;
+    uint16_t lines_total;
+    SMS_VDP_V_Counter_Range v_counter_map [3]; /* SMS VDP v-counter mapping */
+
     /* Video output */
     uint8_t vram [TMS9928A_VRAM_SIZE];
     uint32_t render_start_x;
@@ -159,20 +179,6 @@ typedef struct TMS9928A_Context_s {
     void (* frame_done) (void *);
 
 } TMS9928A_Context;
-
-/* SMS - Range of 8-bit values to map onto the 16-bit v-counter */
-typedef struct SMS_VDP_V_Counter_Range_s {
-    uint16_t first;
-    uint16_t last;
-} SMS_VDP_V_Counter_Range;
-
-/* TMS9928A / SMS-VDP common configuration structure */
-typedef struct TMS9928A_Config_s {
-    TMS9928A_Mode mode;
-    uint16_t lines_active;
-    uint16_t lines_total;
-    SMS_VDP_V_Counter_Range v_counter_map [3]; /* SMS VDP v-counter mapping */
-} TMS9928A_Config;
 
 /* Each byte of the pattern represents a row of eight pixels. */
 typedef struct TMS9928A_Pattern_t {
@@ -206,13 +212,13 @@ uint8_t tms9928a_status_read (TMS9928A_Context *context);
 void tms9928a_control_write (TMS9928A_Context *context, uint8_t value);
 
 /* Render one line of sprites for mode0 / mode2 / mode3. */
-void tms9928a_draw_sprites (TMS9928A_Context *context, const TMS9928A_Config *config, uint16_t line);
+void tms9928a_draw_sprites (TMS9928A_Context *context, uint16_t line);
 
 /* Render one line of the mode0 background layer. */
-void tms9928a_mode0_draw_background (TMS9928A_Context *context, const TMS9928A_Config *config, uint16_t line);
+void tms9928a_mode0_draw_background (TMS9928A_Context *context, uint16_t line);
 
 /* Render one line of the mode2 background layer. */
-void tms9928a_mode2_draw_background (TMS9928A_Context *context, const TMS9928A_Config *config, uint16_t line);
+void tms9928a_mode2_draw_background (TMS9928A_Context *context, uint16_t line);
 
 /* Run one scanline on the tms9928a. */
 void tms9928a_run_one_scanline (TMS9928A_Context *context);

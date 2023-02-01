@@ -61,3 +61,6 @@ void sms_vdp_run_one_scanline (TMS9928A_Context *context);
 
 /* Update the latched h_counter value. */
 void sms_vdp_update_h_counter (TMS9928A_Context *context, uint64_t cycle_count);
+
+/* Check the line counter and update the line interrupt. */
+void sms_vdp_update_line_interrupt (TMS9928A_Context *context);

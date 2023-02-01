@@ -1141,9 +1141,17 @@ static void sms_run (void *context_ptr, uint32_t ms)
         assert (lines >= 0);
 
         /* 228 CPU cycles per scanline */
-        z80_run_cycles (context->z80_context, 228 + context->overclock);
-        psg_run_cycles (228);
+        z80_run_cycles (context->z80_context, 22);
         sms_vdp_run_one_scanline (context->vdp_context);
+        z80_run_cycles (context->z80_context, 1);
+        sms_vdp_update_line_interrupt (context->vdp_context);
+        z80_run_cycles (context->z80_context, 205);
+        psg_run_cycles (228);
+
+        if (context->overclock)
+        {
+            z80_run_cycles (context->z80_context, context->overclock);
+        }
     }
 
     if (context->reset_button)

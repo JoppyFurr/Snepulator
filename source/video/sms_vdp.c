@@ -58,42 +58,42 @@ uint_pixel sms_vdp_legacy_palette [16] = {
 
 
 /* Display mode details */
-static const TMS9928A_Config Mode0_PAL = {
+static const TMS9928A_ModeInfo Mode0_PAL = {
     .mode = TMS9928A_MODE_0,
     .lines_active = 192,
     .lines_total = 313,
     .v_counter_map = { { .first = 0x00, .last = 0xf2 },
                        { .first = 0xba, .last = 0xff } }
 };
-static const TMS9928A_Config Mode0_NTSC = {
+static const TMS9928A_ModeInfo Mode0_NTSC = {
     .mode = TMS9928A_MODE_0,
     .lines_active = 192,
     .lines_total = 262,
     .v_counter_map = { { .first = 0x00, .last = 0xda },
                        { .first = 0xd5, .last = 0xff } }
 };
-static const TMS9928A_Config Mode2_PAL = {
+static const TMS9928A_ModeInfo Mode2_PAL = {
     .mode = TMS9928A_MODE_2,
     .lines_active = 192,
     .lines_total = 313,
     .v_counter_map = { { .first = 0x00, .last = 0xf2 },
                        { .first = 0xba, .last = 0xff } }
 };
-static const TMS9928A_Config Mode2_NTSC = {
+static const TMS9928A_ModeInfo Mode2_NTSC = {
     .mode = TMS9928A_MODE_2,
     .lines_active = 192,
     .lines_total = 262,
     .v_counter_map = { { .first = 0x00, .last = 0xda },
                        { .first = 0xd5, .last = 0xff } }
 };
-static const TMS9928A_Config Mode4_PAL192 = {
+static const TMS9928A_ModeInfo Mode4_PAL192 = {
     .mode = SMS_VDP_MODE_4,
     .lines_active = 192,
     .lines_total = 313,
     .v_counter_map = { { .first = 0x00, .last = 0xf2 },
                        { .first = 0xba, .last = 0xff } }
 };
-static const TMS9928A_Config Mode4_PAL224 = {
+static const TMS9928A_ModeInfo Mode4_PAL224 = {
     .mode = SMS_VDP_MODE_4_224,
     .lines_active = 224,
     .lines_total = 313,
@@ -101,7 +101,7 @@ static const TMS9928A_Config Mode4_PAL224 = {
                        { .first = 0x00, .last = 0x02 },
                        { .first = 0xca, .last = 0xff } }
 };
-static const TMS9928A_Config Mode4_PAL240 = {
+static const TMS9928A_ModeInfo Mode4_PAL240 = {
     .mode = SMS_VDP_MODE_4_240,
     .lines_active = 240,
     .lines_total = 313,
@@ -109,62 +109,27 @@ static const TMS9928A_Config Mode4_PAL240 = {
                        { .first = 0x00, .last = 0x0a },
                        { .first = 0xd2, .last = 0xff } }
 };
-static const TMS9928A_Config Mode4_NTSC192 = {
+static const TMS9928A_ModeInfo Mode4_NTSC192 = {
     .mode = SMS_VDP_MODE_4,
     .lines_active = 192,
     .lines_total = 262,
     .v_counter_map = { { .first = 0x00, .last = 0xda },
                        { .first = 0xd5, .last = 0xff } }
 };
-static const TMS9928A_Config Mode4_NTSC224 = {
+static const TMS9928A_ModeInfo Mode4_NTSC224 = {
     .mode = SMS_VDP_MODE_4_224,
     .lines_active = 224,
     .lines_total = 262,
     .v_counter_map = { { .first = 0x00, .last = 0xea },
                        { .first = 0xe5, .last = 0xff } }
 };
-static const TMS9928A_Config Mode4_NTSC240 = {
+static const TMS9928A_ModeInfo Mode4_NTSC240 = {
     .mode = SMS_VDP_MODE_4_240,
     .lines_active = 240,
     .lines_total = 262,
     .v_counter_map = { { .first = 0x00, .last = 0xff },
                        { .first = 0x00, .last = 0x06 } }
 };
-
-
-/*
- * Create a SMS VDP context with power-on defaults.
- */
-TMS9928A_Context *sms_vdp_init (void *parent, void (* frame_done) (void *), Console console)
-{
-    TMS9928A_Context *context;
-
-    context = calloc (1, sizeof (TMS9928A_Context));
-    if (context == NULL)
-    {
-        snepulator_error ("Error", "Unable to allocate memory for TMS9928A_Context");
-        return NULL;
-    }
-
-    /* Set console-specific parameters */
-    if (console == CONSOLE_GAME_GEAR)
-    {
-        context->is_game_gear = true;
-        context->video_width = 160;
-        context->video_height = 144;
-    }
-    else
-    {
-        context->video_width = 256;
-        context->video_height = 192;
-    }
-
-    context->palette = sms_vdp_legacy_palette;
-    context->parent = parent;
-    context->frame_done = frame_done;
-
-    return context;
-}
 
 
 /* TODO: Use tms9928a versions where identical */
@@ -360,11 +325,6 @@ void sms_vdp_update_h_counter (TMS9928A_Context *context, uint64_t cycle_count)
     /* Begin the count pattern at the discontinuity that occurs during H-sync */
     uint8_t count_start = 0xe9;
 
-    /* The line is drawn and interrupts are generated at cycle_count % 228 == 0.
-     * Offset the cycle-count for this calculation to bring the frame-interrupt
-     * h-count into line with real hardware. */
-    cycle_count += 22;
-
     /* The count pattern repeats once per scanline (228 cpu cycles) */
     cycle_count %= 228;
 
@@ -474,10 +434,10 @@ static void sms_vdp_mode4_draw_pattern_background (TMS9928A_Context *context, ui
 /*
  * Render one line of the background layer.
  */
-static void sms_vdp_mode4_draw_background (TMS9928A_Context *context, const TMS9928A_Config *mode, uint16_t line, bool priority)
+static void sms_vdp_mode4_draw_background (TMS9928A_Context *context, uint16_t line, bool priority)
 {
     uint16_t name_table_base;
-    uint8_t num_rows = (mode->lines_active == 192) ? 28 : 32;
+    uint8_t num_rows = (context->lines_active == 192) ? 28 : 32;
 
     /* Name-table row and starting-column for this line */
     uint8_t table_row = ((context->state.regs.bg_scroll_y + line) >> 3) % num_rows;
@@ -489,7 +449,7 @@ static void sms_vdp_mode4_draw_background (TMS9928A_Context *context, const TMS9
 
     int32_Point_2D position; /* Position of the pattern on the display */
 
-    if (mode->lines_active == 192)
+    if (context->lines_active == 192)
     {
         name_table_base = (((uint16_t) context->state.regs.name_table_base) << 10) & 0x3800;
     }
@@ -604,7 +564,7 @@ static void sms_vdp_mode4_draw_pattern_sprite (TMS9928A_Context *context, uint16
 /*
  * Render one line of the sprite layer.
  */
-static void sms_vdp_mode4_draw_sprites (TMS9928A_Context *context, const TMS9928A_Config *mode, uint16_t line)
+static void sms_vdp_mode4_draw_sprites (TMS9928A_Context *context, uint16_t line)
 {
     uint16_t sprite_attribute_table_base = (((uint16_t) context->state.regs.sprite_attr_table_base) << 7) & 0x3f00;
     uint16_t sprite_pattern_offset = (context->state.regs.sprite_pg_base & 0x04) ? 256 : 0;
@@ -628,7 +588,7 @@ static void sms_vdp_mode4_draw_sprites (TMS9928A_Context *context, const TMS9928
         uint8_t y = context->vram [sprite_attribute_table_base + i];
 
         /* Break if there are no more sprites */
-        if (mode->lines_active == 192 && y == 0xd0)
+        if (context->lines_active == 192 && y == 0xd0)
             break;
 
         /* This number is treated as unsigned when the first line of
@@ -695,7 +655,7 @@ static void sms_vdp_mode4_draw_sprites (TMS9928A_Context *context, const TMS9928
 /*
  * A simplified copy of the sprite overflow check to use when blanking is enabled.
  */
-static void sms_vdp_mode4_check_sprite_overflow (TMS9928A_Context *context, const TMS9928A_Config *mode, uint16_t line)
+static void sms_vdp_mode4_check_sprite_overflow (TMS9928A_Context *context, uint16_t line)
 {
     uint16_t sprite_attribute_table_base = (((uint16_t) context->state.regs.sprite_attr_table_base) << 7) & 0x3f00;
     uint8_t pattern_height = context->state.regs.ctrl_1_sprite_mag ? 16 : 8;
@@ -709,7 +669,7 @@ static void sms_vdp_mode4_check_sprite_overflow (TMS9928A_Context *context, cons
         uint8_t y = context->vram [sprite_attribute_table_base + i];
 
         /* Break if there are no more sprites */
-        if (mode->lines_active == 192 && y == 0xd0)
+        if (context->lines_active == 192 && y == 0xd0)
             break;
 
         /* This number is treated as unsigned when the first line of
@@ -736,11 +696,11 @@ static void sms_vdp_mode4_check_sprite_overflow (TMS9928A_Context *context, cons
 /*
  * Render one active line of output for the SMS VDP.
  */
-static void sms_vdp_render_line (TMS9928A_Context *context, const TMS9928A_Config *config, uint16_t line)
+static void sms_vdp_render_line (TMS9928A_Context *context, uint16_t line)
 {
     uint_pixel video_backdrop;
 
-    if (config->mode & SMS_VDP_MODE_4)
+    if (context->mode & SMS_VDP_MODE_4)
     {
         video_backdrop = context->state.cram [16 + (context->state.regs.background_colour & 0x0f)];
     }
@@ -794,9 +754,9 @@ static void sms_vdp_render_line (TMS9928A_Context *context, const TMS9928A_Confi
     }
 
     /* Bottom border */
-    if (line == config->lines_active - 1)
+    if (line == context->lines_active - 1)
     {
-        for (uint32_t border_line = context->render_start_y + config->lines_active; border_line < VIDEO_BUFFER_LINES; border_line++)
+        for (uint32_t border_line = context->render_start_y + context->lines_active; border_line < VIDEO_BUFFER_LINES; border_line++)
         {
             for (uint32_t x = 0; x < VIDEO_BUFFER_WIDTH; x++)
             {
@@ -810,36 +770,36 @@ static void sms_vdp_render_line (TMS9928A_Context *context, const TMS9928A_Confi
     {
         if (context->state.regs.ctrl_0_mode_4)
         {
-            sms_vdp_mode4_check_sprite_overflow (context, config, line);
+            sms_vdp_mode4_check_sprite_overflow (context, line);
         }
         return;
     }
 
     if (context->state.regs.ctrl_0_mode_4)
     {
-        sms_vdp_mode4_draw_background (context, config, line, false);
-        sms_vdp_mode4_draw_sprites (context, config, line);
-        sms_vdp_mode4_draw_background (context, config, line, true);
+        sms_vdp_mode4_draw_background (context, line, false);
+        sms_vdp_mode4_draw_sprites (context, line);
+        sms_vdp_mode4_draw_background (context, line, true);
     }
-    else if (config->mode == TMS9928A_MODE_0)
+    else if (context->mode == TMS9928A_MODE_0)
     {
-        tms9928a_mode0_draw_background (context, config, line);
-        tms9928a_draw_sprites (context, config, line);
+        tms9928a_mode0_draw_background (context, line);
+        tms9928a_draw_sprites (context, line);
     }
-    else if (config->mode == TMS9928A_MODE_2)
+    else if (context->mode == TMS9928A_MODE_2)
     {
-        tms9928a_mode2_draw_background (context, config, line);
-        tms9928a_draw_sprites (context, config, line);
+        tms9928a_mode2_draw_background (context, line);
+        tms9928a_draw_sprites (context, line);
     }
 }
 
 
 /*
- * Run one scanline on the VDP.
+ * Called once per frame to update parameters based on the mode.
  */
-void sms_vdp_run_one_scanline (TMS9928A_Context *context)
+void sms_vdp_update_mode (TMS9928A_Context *context)
 {
-    const TMS9928A_Config *config;
+    const TMS9928A_ModeInfo *config;
     TMS9928A_Mode mode = sms_vdp_get_mode (context);
 
     switch (mode)
@@ -874,40 +834,59 @@ void sms_vdp_run_one_scanline (TMS9928A_Context *context)
             break;
     }
 
-    /* The Master System supports multiple resolutions that can be changed on the fly. */
-    if (!context->is_game_gear)
+    context->mode         = config->mode;
+    context->lines_total  = config->lines_total;
+    context->lines_active = config->lines_active;
+    memcpy (context->v_counter_map, config->v_counter_map, sizeof (context->v_counter_map));
+}
+
+
+/*
+ * Run one scanline on the VDP.
+ */
+void sms_vdp_run_one_scanline (TMS9928A_Context *context)
+{
+    /* Update the V-Counter */
+    context->state.line = (context->state.line + 1) % context->lines_total;
+
+    /* If this is the first line, update the mode */
+    if (context->state.line == 0)
     {
-        context->render_start_y = (VIDEO_BUFFER_LINES - config->lines_active) / 2;
-        context->video_start_y  = context->render_start_y;
-        context->video_height   = config->lines_active;
+        sms_vdp_update_mode (context);
+
+        /* The Master System supports multiple resolutions that can be changed on the fly. */
+        if (!context->is_game_gear)
+        {
+            context->render_start_y = (VIDEO_BUFFER_LINES - context->lines_active) / 2;
+            context->video_start_y  = context->render_start_y;
+            context->video_height   = context->lines_active;
+        }
     }
 
-    /* Update the V-Counter */
-    context->state.line = (context->state.line + 1) % config->lines_total;
-
+    /* Update the 8-bit V-Counter */
     uint16_t temp_line = context->state.line;
     for (int range = 0; range < 3; range++)
     {
-        if (temp_line < config->v_counter_map [range].last - config->v_counter_map [range].first + 1)
+        if (temp_line < context->v_counter_map [range].last - context->v_counter_map [range].first + 1)
         {
-            context->state.v_counter = temp_line + config->v_counter_map [range].first;
+            context->state.v_counter = temp_line + context->v_counter_map [range].first;
             break;
         }
         else
         {
-            temp_line -= config->v_counter_map [range].last - config->v_counter_map [range].first + 1;
+            temp_line -= context->v_counter_map [range].last - context->v_counter_map [range].first + 1;
         }
     }
 
     /* If this is an active line, render it */
-    if (context->state.line < config->lines_active)
+    if (context->state.line < context->lines_active)
     {
-        sms_vdp_render_line (context, config, context->state.line);
+        sms_vdp_render_line (context, context->state.line);
     }
 
     /* If this the final active line, copy the frame for output to the user */
     /* TODO: This is okay for single-threaded code, but locking may be needed if multi-threading is added */
-    if (context->state.line == config->lines_active - 1)
+    if (context->state.line == context->lines_active - 1)
     {
         context->frame_done (context->parent);
 
@@ -926,20 +905,70 @@ void sms_vdp_run_one_scanline (TMS9928A_Context *context)
     }
 
     /* Check for frame interrupt */
-    if (context->state.line == config->lines_active + 1)
+    if (context->state.line == context->lines_active + 1)
+    {
         context->state.status |= TMS9928A_STATUS_INT;
+    }
+}
 
+
+/*
+ * Check the line counter and update the line interrupt.
+ */
+void sms_vdp_update_line_interrupt (TMS9928A_Context *context)
+{
     /* Decrement the line interrupt counter during the active display period.
      * Reset outside of the active display period (but not the first line after) */
-    if (context->state.line <= config->lines_active)
+    if (context->state.line <= context->lines_active)
+    {
         context->state.line_interrupt_counter--;
+    }
     else
+    {
         context->state.line_interrupt_counter = context->state.regs.line_counter_reset;
+    }
 
     /* Check for line interrupt */
-    if (context->state.line <= config->lines_active && context->state.line_interrupt_counter == 0xff)
+    if (context->state.line <= context->lines_active && context->state.line_interrupt_counter == 0xff)
     {
         context->state.line_interrupt_counter = context->state.regs.line_counter_reset;
         context->state.line_interrupt = true;
     }
+}
+
+
+/*
+ * Create a SMS VDP context with power-on defaults.
+ */
+TMS9928A_Context *sms_vdp_init (void *parent, void (* frame_done) (void *), Console console)
+{
+    TMS9928A_Context *context;
+
+    context = calloc (1, sizeof (TMS9928A_Context));
+    if (context == NULL)
+    {
+        snepulator_error ("Error", "Unable to allocate memory for TMS9928A_Context");
+        return NULL;
+    }
+
+    /* Set console-specific parameters */
+    if (console == CONSOLE_GAME_GEAR)
+    {
+        context->is_game_gear = true;
+        context->video_width = 160;
+        context->video_height = 144;
+    }
+    else
+    {
+        context->video_width = 256;
+        context->video_height = 192;
+    }
+
+    context->palette = sms_vdp_legacy_palette;
+    context->parent = parent;
+    context->frame_done = frame_done;
+
+    sms_vdp_update_mode (context);
+
+    return context;
 }
