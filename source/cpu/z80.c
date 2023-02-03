@@ -5524,16 +5524,6 @@ void z80_run_cycles (Z80_Context *context, int64_t cycles)
     {
         context->used_cycles = 0;
 
-        if (context->state.halt)
-        {
-            /* NOP */
-            context->used_cycles += 4;
-        }
-        else
-        {
-            z80_run_instruction (context);
-        }
-
         /* Check for interrupts */
         if (context->state.wait_after_ei)
         {
@@ -5544,7 +5534,10 @@ void z80_run_cycles (Z80_Context *context, int64_t cycles)
             /* First, check for a non-maskable interrupt (edge-triggered) */
             static bool nmi_previous = 0;
             bool nmi = context->get_nmi (context->parent);
-            if (nmi && nmi_previous == 0)
+            bool nmi_rising_edge = (nmi && !nmi_previous);
+            nmi_previous = nmi;
+
+            if (nmi_rising_edge)
             {
                 if (context->state.halt)
                 {
@@ -5556,10 +5549,12 @@ void z80_run_cycles (Z80_Context *context, int64_t cycles)
                 context->memory_write (context->parent, --context->state.sp, context->state.pc_l);
                 context->state.pc = 0x66;
                 context->used_cycles += 11;
-            }
-            nmi_previous = nmi;
 
-            /* Then check for maskable interrupts */
+                context->cycle_count += context->used_cycles;
+                continue;
+            }
+
+            /* Then check for a maskable interrupt */
             if (context->state.iff1 && context->get_int (context->parent))
             {
                 if (context->state.halt)
@@ -5584,7 +5579,21 @@ void z80_run_cycles (Z80_Context *context, int64_t cycles)
                         snepulator_error ("Z80 Error", state.error_buffer);
                         return;
                 }
+
+                context->cycle_count += context->used_cycles;
+                continue;
             }
+        }
+
+        /* If there was no interrupts, run an instruction or remain in HALT. */
+        if (context->state.halt)
+        {
+            /* NOP */
+            context->used_cycles += 4;
+        }
+        else
+        {
+            z80_run_instruction (context);
         }
 
         context->cycle_count += context->used_cycles;
