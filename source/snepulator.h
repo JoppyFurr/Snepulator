@@ -60,6 +60,7 @@ typedef struct Snepulator_State_s {
 
     /* Timing */
     uint32_t ticks_previous;
+    uint32_t sync_time;
 
     /* Files */
     char *sms_bios_filename;

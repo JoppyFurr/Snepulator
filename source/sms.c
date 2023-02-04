@@ -1161,6 +1161,14 @@ static void sms_run (void *context_ptr, uint32_t ms)
             context->reset_button = false;
         }
     }
+
+    /* Periodic sync of cartridge-ram to file every five minutes.
+     * This is in addition to the save that occurs when exiting. */
+    if (util_get_ticks () > state.sync_time + 300000)
+    {
+        sms_sync (context);
+        state.sync_time = util_get_ticks ();
+    }
 }
 
 
