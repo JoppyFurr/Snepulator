@@ -139,6 +139,18 @@ void *main_emulation_loop (void *data)
         {
             state.run_callback (state.console_context, ticks - state.ticks_previous);
         }
+        else if (state.run == RUN_STATE_PAUSED)
+        {
+            /* Allow the console pause button to unpause emulation */
+            static bool pause_prev = false;
+            bool pause_now = gamepad [1].state [GAMEPAD_BUTTON_START];
+
+            if (pause_now && !pause_prev)
+            {
+                snepulator_pause_set (false);
+            }
+            pause_prev = pause_now;
+        }
         pthread_mutex_unlock (&run_mutex);
 
         state.ticks_previous = ticks;
