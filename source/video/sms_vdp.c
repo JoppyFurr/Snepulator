@@ -441,9 +441,9 @@ static void sms_vdp_mode4_draw_background (TMS9928A_Context *context, uint16_t l
 
     /* Name-table row and starting-column for this line */
     uint8_t table_row = ((context->state.regs.bg_scroll_y + line) >> 3) % num_rows;
-    uint8_t table_col = 32 - (context->state.regs.bg_scroll_x >> 3);
+    uint8_t table_col = 32 - (context->state.bg_scroll_x_latch >> 3);
 
-    uint8_t fine_scroll_x = context->state.regs.bg_scroll_x & 0x07;
+    uint8_t fine_scroll_x = context->state.bg_scroll_x_latch & 0x07;
     uint8_t fine_scroll_y = context->state.regs.bg_scroll_y & 0x07;
     uint32_t tile_y = (line + fine_scroll_y) >> 3;
 
@@ -838,6 +838,15 @@ void sms_vdp_update_mode (TMS9928A_Context *context)
     context->lines_total  = config->lines_total;
     context->lines_active = config->lines_active;
     memcpy (context->v_counter_map, config->v_counter_map, sizeof (context->v_counter_map));
+}
+
+
+/*
+ * Latch the scroll register.
+ */
+void sms_vdp_update_x_scroll_latch (TMS9928A_Context *context)
+{
+    context->state.bg_scroll_x_latch = context->state.regs.bg_scroll_x;
 }
 
 

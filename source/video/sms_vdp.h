@@ -64,3 +64,6 @@ void sms_vdp_update_h_counter (TMS9928A_Context *context, uint64_t cycle_count);
 
 /* Check the line counter and update the line interrupt. */
 void sms_vdp_update_line_interrupt (TMS9928A_Context *context);
+
+/* Latch the scroll register. */
+void sms_vdp_update_x_scroll_latch (TMS9928A_Context *context);

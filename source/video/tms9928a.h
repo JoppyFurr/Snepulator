@@ -141,6 +141,7 @@ typedef struct TMS9928A_State_s {
     uint8_t  line_interrupt;            /* Line interrupt pending */
     uint8_t  h_counter;                 /* 8-bit horizontal counter */
     uint8_t  v_counter;                 /* 8-bit line counter */
+    uint8_t  bg_scroll_x_latch;
 
     /* Game Gear VDP extensions */
     uint8_t cram_latch;
