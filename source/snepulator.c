@@ -602,6 +602,9 @@ void snepulator_system_init (void)
 {
     snepulator_reset ();
 
+    /* Lock to ensure that initialization is complete before emulation starts. */
+    pthread_mutex_lock (&run_mutex);
+
     snepulator_console_set_from_path (state.cart_filename);
 
     switch (state.console)
@@ -625,6 +628,7 @@ void snepulator_system_init (void)
             state.console_context = sms_init ();
             break;
     }
+    pthread_mutex_unlock (&run_mutex);
 }
 
 
