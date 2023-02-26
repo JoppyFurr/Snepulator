@@ -1,5 +1,4 @@
-R"(
-#version 330 core
+R"(#version 330 core
 
 #define VIDEO_SIDE_BORDER       8
 #define VIDEO_BUFFER_WIDTH      (256 + (2 * VIDEO_SIDE_BORDER))
