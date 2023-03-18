@@ -254,13 +254,13 @@ int main_gui_loop (void)
             /* Use the mouse coordinates for the light phaser target */
             if (event.type == SDL_MOUSEMOTION && state.video_scale >= 1)
             {
-                int32_t phaser_x = (event.motion.x - (state.host_width  / 2 - (VIDEO_BUFFER_WIDTH * state.video_scale) / 2))
+                int32_t cursor_x = (event.motion.x - (state.host_width  / 2 - (VIDEO_BUFFER_WIDTH * state.video_scale) / 2))
                                    / state.video_scale - VIDEO_SIDE_BORDER;
-                int32_t phaser_y = (event.motion.y - (state.host_height / 2 - (VIDEO_BUFFER_LINES * state.video_scale) / 2))
+                int32_t cursor_y = (event.motion.y - (state.host_height / 2 - (VIDEO_BUFFER_LINES * state.video_scale) / 2))
                                    / state.video_scale - state.video_start_y;
 
-                state.phaser_x = phaser_x;
-                state.phaser_y = phaser_y;
+                state.cursor_x = cursor_x;
+                state.cursor_y = cursor_y;
             }
 
             /* Device change */

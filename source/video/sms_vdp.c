@@ -267,8 +267,8 @@ bool sms_vdp_get_phaser_th (TMS9928A_Context *context, uint64_t z80_cycle)
     int32_t scan_x = ((z80_cycle % 228) * 342) / 228;
     int32_t scan_y = context->state.line;
 
-    int32_t delta_x = scan_x - state.phaser_x;
-    int32_t delta_y = scan_y - state.phaser_y;
+    int32_t delta_x = scan_x - state.cursor_x;
+    int32_t delta_y = scan_y - state.cursor_y;
 
     if ((delta_x * delta_x + delta_y * delta_y) < (SMS_PHASER_RADIUS * SMS_PHASER_RADIUS))
     {
@@ -295,12 +295,12 @@ uint8_t sms_vdp_get_h_counter (TMS9928A_Context *context)
     /* If a phaser game is being played, update the h_counter to
      * where the counter will have latched on this line. */
     if (gamepad [1].type == GAMEPAD_TYPE_SMS_PHASER &&
-        context->state.line >= (state.phaser_y - SMS_PHASER_RADIUS) &&
-        context->state.line <= (state.phaser_y + SMS_PHASER_RADIUS))
+        context->state.line >= (state.cursor_y - SMS_PHASER_RADIUS) &&
+        context->state.line <= (state.cursor_y + SMS_PHASER_RADIUS))
     {
-        int32_t y_offset = state.phaser_y - context->state.line;
+        int32_t y_offset = state.cursor_y - context->state.line;
         int32_t x_offset = sqrt (SMS_PHASER_RADIUS * SMS_PHASER_RADIUS + y_offset * y_offset);
-        int32_t phaser_latch = (state.phaser_x - x_offset) / 2;
+        int32_t phaser_latch = (state.cursor_x - x_offset) / 2;
 
         /* Games seem to add a left-offset, possibly to account for signal delays */
         phaser_latch += 24;

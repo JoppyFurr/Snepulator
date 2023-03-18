@@ -111,8 +111,8 @@ typedef struct Snepulator_State_s {
     uint32_t    video_height;
     uint32_t    video_blank_left;
     bool        video_has_border;
-    int16_t     phaser_x;
-    int16_t     phaser_y;
+    int16_t     cursor_x;                   /* User's cursor coordinate within active area. */
+    int16_t     cursor_y;
 
     /* Host video output */
     uint_pixel   video_pause_data [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
