@@ -578,6 +578,10 @@ static uint8_t sms_io_read (void *context_ptr, uint8_t addr)
                                  ((gamepad [1].state [GAMEPAD_BUTTON_1] || gamepad [1].state [GAMEPAD_BUTTON_2]) ? 0 : BIT_4) | BIT_5;
                 }
             }
+            else if (gamepad [1].type == GAMEPAD_TYPE_SMS_PHASER)
+            {
+                port_value = (state.cursor_button ? 0 : BIT_4) | 0x2f;
+            }
             else
             {
                 port_value = (gamepad [1].state [GAMEPAD_DIRECTION_UP]      ? 0 : BIT_0) |
