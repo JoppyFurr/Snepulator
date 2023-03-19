@@ -13,6 +13,7 @@
 #include "snepulator_types.h"
 #include "snepulator.h"
 #include "util.h"
+#include "database/sg_db.h"
 #include "save_state.h"
 
 #include "gamepad.h"
@@ -189,6 +190,7 @@ SG_1000_Context *sg_1000_init (void)
     sg_1000_update_settings (context);
 
     /* Reset the mapper */
+    context->hw_state.mapper = SG_MAPPER_UNKNOWN;
     context->hw_state.mapper_bank [0] = 0;
     context->hw_state.mapper_bank [1] = 1;
     context->hw_state.mapper_bank [2] = 2;
@@ -205,6 +207,16 @@ SG_1000_Context *sg_1000_init (void)
         fprintf (stdout, "%d KiB ROM %s loaded.\n", context->rom_size >> 10, state.cart_filename);
         context->rom_mask = util_round_up (context->rom_size) - 1;
         util_hash_rom (context->rom, context->rom_size, context->rom_hash);
+        context->rom_hints = sg_db_get_hints (context->rom_hash);
+
+        if (context->rom_hints & SG_HINT_MAPPER_GRAPHIC_BOARD)
+        {
+            context->hw_state.mapper = SG_MAPPER_GRAPHIC_BOARD;
+        }
+        else if (context->rom_size <= SIZE_48K)
+        {
+            context->hw_state.mapper = SG_MAPPER_NONE;
+        }
     }
 
     /* Initial video parameters */
@@ -321,6 +333,39 @@ static uint8_t sg_1000_memory_read (void *context_ptr, uint16_t addr)
 {
     SG_1000_Context *context = (SG_1000_Context *) context_ptr;
 
+    /* Graphic Board */
+    if (context->hw_state.mapper == SG_MAPPER_GRAPHIC_BOARD)
+    {
+        if (addr == 0x8000)
+        {
+            /* Bit 0: Button pressed
+             * Bit 7: Busy */
+            return state.cursor_button ? 0x00 : 0x01;
+        }
+        else if (addr == 0xa000)
+        {
+            /* Position - Make use of light-phaser cursor support */
+            if (state.cursor_x < 2 || state.cursor_x > 254 ||
+                state.cursor_y < 0 || state.cursor_y > 192)
+            {
+                /* Pen not on board */
+                return 0x00;
+            }
+            /* TODO: Investigate why the axis bit seems to behave
+             *       opposite to what's documented on SMS Power. */
+            else if (context->graphic_board_axis)
+            {
+                /* X position */
+                return state.cursor_x - 2;
+            }
+            else
+            {
+                /* Y position */
+                return state.cursor_y + 28;
+            }
+        }
+    }
+
     /* Cartridge slot */
     if (addr >= 0x0000 && addr <= 0xbfff && addr < context->rom_size)
     {
@@ -358,6 +403,12 @@ static void sg_1000_memory_write (void *context_ptr, uint16_t addr, uint8_t data
     if (addr == 0xffff)
     {
         context->hw_state.mapper_bank [2] = data & 0x3f;
+    }
+
+    /* Graphic Board */
+    if (context->hw_state.mapper == SG_MAPPER_GRAPHIC_BOARD && addr == 0x6000)
+    {
+        context->graphic_board_axis = data & 0x01;
     }
 
     /* Up to 8 KiB of on-cartridge sram */

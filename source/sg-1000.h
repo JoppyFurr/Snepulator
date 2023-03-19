@@ -8,6 +8,13 @@
 #define SG_1000_RAM_SIZE (1 << 10)
 #define SG_1000_SRAM_SIZE (8 << 10)
 
+typedef enum SG_Mapper_e {
+    SG_MAPPER_UNKNOWN = 0,
+    SG_MAPPER_NONE,
+    SG_MAPPER_SEGA,
+    SG_MAPPER_GRAPHIC_BOARD,
+} SG_Mapper;
+
 /* Console hardware state */
 typedef struct SG_1000_HW_State_s {
     uint8_t mapper;
@@ -33,6 +40,10 @@ typedef struct SG_1000_Context_s {
     uint32_t rom_size;
     uint32_t rom_mask;
     uint8_t  rom_hash [HASH_LENGTH];
+    uint16_t rom_hints;
+
+    /* State of Sega Graphic Board */
+    uint8_t graphic_board_axis;
 
 } SG_1000_Context;
 
