@@ -114,6 +114,7 @@ typedef struct Snepulator_State_s {
     int16_t     cursor_x;                   /* User's cursor coordinate within active area. */
     int16_t     cursor_y;
     bool        cursor_button;
+    bool        cursor_in_gui;              /* Cursor is interacting with the GUI. */
 
     /* Host video output */
     uint_pixel   video_pause_data [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];

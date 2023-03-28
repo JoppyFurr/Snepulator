@@ -234,7 +234,8 @@ void gamepad_sdl_process_event (SDL_Event *event)
     }
 
     /* Mouse */
-    if (event->type == SDL_MOUSEBUTTONDOWN && event->button.button == SDL_BUTTON_LEFT)
+    if (event->type == SDL_MOUSEBUTTONDOWN && event->button.button == SDL_BUTTON_LEFT &&
+        state.cursor_in_gui == false)
     {
         state.cursor_button = true;
     }

@@ -346,6 +346,9 @@ int main_gui_loop (void)
             }
         }
 
+        /* Keep track of when ImGui wants the mouse input */
+        state.cursor_in_gui = ImGui::GetIO ().WantCaptureMouse;
+
         /* Animate the pause screen. */
         if (state.run == RUN_STATE_PAUSED)
         {

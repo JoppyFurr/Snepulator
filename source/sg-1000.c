@@ -351,8 +351,6 @@ static uint8_t sg_1000_memory_read (void *context_ptr, uint16_t addr)
                 /* Pen not on board */
                 return 0x00;
             }
-            /* TODO: Investigate why the axis bit seems to behave
-             *       opposite to what's documented on SMS Power. */
             else if (context->graphic_board_axis)
             {
                 /* X position */
