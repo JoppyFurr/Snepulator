@@ -316,6 +316,7 @@ SMS_Context *sms_init (void)
         fprintf (stdout, "%d KiB ROM %s loaded.\n", context->rom_size >> 10, state.cart_filename);
         context->rom_mask = util_round_up (context->rom_size) - 1;
         util_hash_rom (context->rom, context->rom_size, context->rom_hash);
+
         context->rom_hints = sms_db_get_hints (context->rom_hash);
 
         /* Mapper Hints */
@@ -342,6 +343,10 @@ SMS_Context *sms_init (void)
         else if (context->rom_hints & SMS_HINT_MAPPER_4PAK)
         {
             context->hw_state.mapper = SMS_MAPPER_4PAK;
+        }
+        else if (context->rom_hints & SMS_HINT_MAPPER_JANGGUN)
+        {
+            context->hw_state.mapper = SMS_MAPPER_JANGGUN;
         }
         else if (context->rom_size <= SIZE_48K)
         {
@@ -770,6 +775,7 @@ static uint8_t sms_memory_read (void *context_ptr, uint16_t addr)
         uint8_t slot = 0;
         uint32_t bank_base;
         uint32_t rom_address;
+        bool bit_reverse = false;
 
         switch (context->hw_state.mapper)
         {
@@ -831,6 +837,21 @@ static uint8_t sms_memory_read (void *context_ptr, uint16_t addr)
                 }
                 break;
 
+            case SMS_MAPPER_JANGGUN:
+                /* The first 16K is fixed */
+                if (addr < SIZE_16K)
+                {
+                    rom_address = addr;
+                }
+                else
+                {
+                    slot = (addr - SIZE_16K) / SIZE_8K;
+                    bank_base = (context->hw_state.mapper_bank [slot] & 0x3f) * SIZE_8K;
+                    bit_reverse = !!(context->hw_state.mapper_bank [slot] & 0x40);
+                    rom_address = bank_base + (addr & 0x1fff);
+                }
+                break;
+
             default:
                 rom_address = addr;
                 break;
@@ -852,7 +873,18 @@ static uint8_t sms_memory_read (void *context_ptr, uint16_t addr)
         /* Cartridge ROM */
         if (context->rom != NULL && !(context->hw_state.memory_control & SMS_MEMORY_CTRL_CART))
         {
-            return context->rom [rom_address & context->rom_mask];
+            if (bit_reverse)
+            {
+                uint8_t value = context->rom [rom_address & context->rom_mask];
+                return ((value & BIT_0) << 7) | ((value & BIT_1) << 5) |
+                       ((value & BIT_2) << 3) | ((value & BIT_3) << 1) |
+                       ((value & BIT_4) >> 1) | ((value & BIT_5) >> 3) |
+                       ((value & BIT_6) >> 5) | ((value & BIT_7) >> 7);
+            }
+            else
+            {
+                return context->rom [rom_address & context->rom_mask];
+            }
         }
     }
 
@@ -1009,6 +1041,37 @@ static void sms_memory_write (void *context_ptr, uint16_t addr, uint8_t data)
         {
             /* Strange behaviour - Described by Bock on SMS Power forums */
             context->hw_state.mapper_bank [2] = ((context->hw_state.mapper_bank[0] & 0x30) + data) & 0x3f;
+        }
+    }
+
+    if (context->hw_state.mapper == SMS_MAPPER_JANGGUN)
+    {
+        if (addr == 0x4000)
+        {
+            context->hw_state.mapper_bank[0] = (data & 0x3f) | (context->hw_state.mapper_bank[0] & 0x40);
+        }
+        if (addr == 0x6000)
+        {
+            context->hw_state.mapper_bank[1] = (data & 0x3f) | (context->hw_state.mapper_bank[1] & 0x40);
+        }
+        if (addr == 0x8000)
+        {
+            context->hw_state.mapper_bank[2] = (data & 0x3f) | (context->hw_state.mapper_bank[2] & 0x40);
+        }
+        if (addr == 0xa000)
+        {
+            context->hw_state.mapper_bank[3] = (data & 0x3f) | (context->hw_state.mapper_bank[3] & 0x40);
+        }
+        if (addr == 0xfffe)
+        {
+            /* Keep the 'reverse' bit in bit 6 of the bank index. */
+            context->hw_state.mapper_bank[0] = ((data << 1) & 0x3f) | (data & 0x40);
+            context->hw_state.mapper_bank[1] = (((data << 1) | 1) & 0x3f) | (data & 0x40);
+        }
+        if (addr == 0xffff)
+        {
+            context->hw_state.mapper_bank[2] = ((data << 1) & 0x3f) | (data & 0x40);
+            context->hw_state.mapper_bank[3] = (((data << 1) | 1) & 0x3f) | (data & 0x40);
         }
     }
 

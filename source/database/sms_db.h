@@ -14,6 +14,7 @@
 #define SMS_HINT_MAPPER_MSX             0x0100
 #define SMS_HINT_MAPPER_NEMESIS         0x0200
 #define SMS_HINT_MAPPER_4PAK            0x0400
+#define SMS_HINT_MAPPER_JANGGUN         0x0800
 
 typedef struct SMS_DB_Entry_s {
     uint8_t hash [HASH_LENGTH];

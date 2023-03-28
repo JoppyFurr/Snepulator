@@ -20,6 +20,7 @@ typedef enum SMS_Mapper_e {
     SMS_MAPPER_MSX,
     SMS_MAPPER_NEMESIS,
     SMS_MAPPER_4PAK,
+    SMS_MAPPER_JANGGUN,
 } SMS_Mapper;
 
 typedef enum SMS_3D_Field_e {
