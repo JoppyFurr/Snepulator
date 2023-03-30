@@ -297,10 +297,14 @@ void tms9928a_draw_sprites (TMS9928A_Context *context, uint16_t line)
         /* If the sprite is on this line, add it to the buffer */
         if (line >= position.y && line < position.y + (sprite_size << magnify))
         {
+            /* TODO: Investigate exact behaviour on real hardware.
+             * -> What is the value when there is no overflow?
+             * -> What happens if the status register is not cleared?
+             * -> What happens if there are multiple lines with overflows?  */
             if (line_sprite_count == 4 && !context->remove_sprite_limit)
             {
                 context->state.status |= TMS9928A_SPRITE_OVERFLOW;
-                /* TODO: Fifth sprite field in status byte */
+                context->state.status = (context->state.status & 0xe0) | i;
                 break;
             }
             line_sprite_buffer [line_sprite_count++] = sprite;
