@@ -2,9 +2,6 @@
  * API for the SN76489 PSG chip.
  */
 
-#define PSG_RING_SIZE 16384
-#define BASE_VOLUME 100
-
 typedef struct SN76489_State_s {
 
     union {

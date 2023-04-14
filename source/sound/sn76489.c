@@ -10,12 +10,17 @@
 #include "../snepulator_types.h"
 #include "../snepulator.h"
 #include "../save_state.h"
+#include "band_limit.h"
 #include "sn76489.h"
 extern Snepulator_State state;
 
 /* State */
 SN76489_State sn76489_state;
 pthread_mutex_t psg_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+#define SAMPLE_RATE 48000
+#define PSG_RING_SIZE 4096
+#define BASE_VOLUME 100
 
 #define GG_CH0_RIGHT    BIT_0
 #define GG_CH1_RIGHT    BIT_1
@@ -28,13 +33,23 @@ pthread_mutex_t psg_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /*
  * PSG output ring buffer.
- * Stores samples at the PSG internal clock rate (~334 kHz).
+ * Stores samples and phase data with a sample rate of 48 kHz.
  * As the read/write index are 64-bit, they should never overflow.
  */
-static int16_t sample_ring_left [PSG_RING_SIZE];
-static int16_t sample_ring_right [PSG_RING_SIZE];
-static uint64_t read_index = 0;
 static uint64_t write_index = 0;
+static uint64_t read_index = 0;
+static uint64_t completed_cycles = 0;
+static uint32_t clock_rate = 0;
+
+static Bandlimit_Context *bandlimit_context_l = NULL;
+static int16_t sample_ring_l [PSG_RING_SIZE];
+static int16_t phase_ring_l [PSG_RING_SIZE];
+static uint16_t previous_sample_l = 0.0;
+
+static Bandlimit_Context *bandlimit_context_r = NULL;
+static int16_t sample_ring_r [PSG_RING_SIZE];
+static int16_t phase_ring_r [PSG_RING_SIZE];
+static uint16_t previous_sample_r = 0.0;
 
 
 /*
@@ -126,6 +141,29 @@ void sn76489_init (void)
     sn76489_state.output_3 = -1;
 
     sn76489_state.gg_stereo = 0xff;
+
+    memset (sample_ring_l, 0, sizeof (sample_ring_l));
+    memset (phase_ring_l, 0, sizeof (phase_ring_l));
+    previous_sample_l = 0.0;
+    if (bandlimit_context_l != NULL)
+    {
+        free (bandlimit_context_l);
+    }
+    bandlimit_context_l = band_limit_init ();
+
+    memset (sample_ring_r, 0, sizeof (sample_ring_r));
+    memset (phase_ring_r, 0, sizeof (phase_ring_r));
+    previous_sample_r = 0.0;
+    if (bandlimit_context_r != NULL)
+    {
+        free (bandlimit_context_r);
+    }
+    bandlimit_context_r = band_limit_init ();
+
+    completed_cycles = 0;
+    write_index = 0;
+    read_index = 0;
+    clock_rate = 0;
 }
 
 
@@ -134,18 +172,30 @@ void sn76489_init (void)
  */
 void _psg_run_cycles (uint64_t cycles)
 {
-
+    /* Divide the system clock by 16, store the excess cycles for next time */
     static uint32_t excess = 0;
     cycles += excess;
-
-    /* Divide the system clock by 16, store the excess cycles for next time */
     uint32_t psg_cycles = cycles >> 4;
     excess = cycles - (psg_cycles << 4);
 
+    /* Reset the ring buffer if the clock rate changes */
+    if (state.console_context != NULL &&
+        clock_rate != (state.get_clock_rate (state.console_context) >> 4))
+    {
+        clock_rate = state.get_clock_rate (state.console_context) >> 4;
+
+        read_index = 0;
+        write_index = 0;
+        completed_cycles = 0;
+    }
+
+    /* keep track of how much buffer is free */
+    uint32_t used_buffer = write_index - read_index;
+
     /* Try to avoid having more than two sound-card buffers worth of sound.
-     * The ring buffer can fit ~74 ms of sound.
+     * The ring buffer can fit ~85 ms of sound.
      * The sound card is configured to ask for sound in ~21 ms blocks. */
-    if (psg_cycles + (write_index - read_index) > PSG_RING_SIZE * 0.6)
+    if ((psg_cycles * SAMPLE_RATE / clock_rate) + used_buffer > PSG_RING_SIZE * 0.6)
     {
         if (psg_cycles > 1)
         {
@@ -154,16 +204,17 @@ void _psg_run_cycles (uint64_t cycles)
     }
 
     /* Limit the number of cycles we run to what will fit in the ring */
-    if (psg_cycles + (write_index - read_index) > PSG_RING_SIZE)
+    if ((psg_cycles * SAMPLE_RATE / clock_rate) + used_buffer > PSG_RING_SIZE)
     {
-        psg_cycles = PSG_RING_SIZE - (write_index - read_index);
+        psg_cycles = (PSG_RING_SIZE - used_buffer) * clock_rate / SAMPLE_RATE;
     }
 
     /* The read_index points to the next sample that will be passed to the sound card.
      * Make sure that by the time we return, there is valid data at the read_index. */
-    if (write_index + psg_cycles <= read_index)
+    if (write_index + (psg_cycles * SAMPLE_RATE / clock_rate) <= read_index)
     {
-        psg_cycles = read_index - write_index + 1;
+        /* An extra cycle is added to account for integer division losses */
+        psg_cycles = (read_index - write_index + 1) * clock_rate / SAMPLE_RATE + 1;
     }
 
     while (psg_cycles--)
@@ -232,33 +283,63 @@ void _psg_run_cycles (uint64_t cycles)
         /* Store this sample in the ring */
         if (state.console == CONSOLE_GAME_GEAR)
         {
-            sample_ring_left  [write_index % PSG_RING_SIZE] = (sn76489_state.gg_stereo & GG_CH0_LEFT
-                                                               ? sn76489_state.output_0    * (0x0f - sn76489_state.vol_0) * BASE_VOLUME : 0)
-                                                            + (sn76489_state.gg_stereo & GG_CH1_LEFT
-                                                               ? sn76489_state.output_1    * (0x0f - sn76489_state.vol_1) * BASE_VOLUME : 0)
-                                                            + (sn76489_state.gg_stereo & GG_CH2_LEFT
-                                                               ? sn76489_state.output_2    * (0x0f - sn76489_state.vol_2) * BASE_VOLUME : 0)
-                                                            + (sn76489_state.gg_stereo & GG_CH3_LEFT
-                                                               ? sn76489_state.output_lfsr * (0x0f - sn76489_state.vol_3) * BASE_VOLUME : 0);
+            sample_ring_l [write_index % PSG_RING_SIZE] =
+                (sn76489_state.gg_stereo & GG_CH0_LEFT ? sn76489_state.output_0    * (0x0f - sn76489_state.vol_0) * BASE_VOLUME : 0)
+              + (sn76489_state.gg_stereo & GG_CH1_LEFT ? sn76489_state.output_1    * (0x0f - sn76489_state.vol_1) * BASE_VOLUME : 0)
+              + (sn76489_state.gg_stereo & GG_CH2_LEFT ? sn76489_state.output_2    * (0x0f - sn76489_state.vol_2) * BASE_VOLUME : 0)
+              + (sn76489_state.gg_stereo & GG_CH3_LEFT ? sn76489_state.output_lfsr * (0x0f - sn76489_state.vol_3) * BASE_VOLUME : 0);
 
-            sample_ring_right [write_index % PSG_RING_SIZE] = (sn76489_state.gg_stereo & GG_CH0_RIGHT
-                                                               ? sn76489_state.output_0    * (0x0f - sn76489_state.vol_0) * BASE_VOLUME : 0)
-                                                            + (sn76489_state.gg_stereo & GG_CH1_RIGHT
-                                                               ? sn76489_state.output_1    * (0x0f - sn76489_state.vol_1) * BASE_VOLUME : 0)
-                                                            + (sn76489_state.gg_stereo & GG_CH2_RIGHT
-                                                               ? sn76489_state.output_2    * (0x0f - sn76489_state.vol_2) * BASE_VOLUME : 0)
-                                                            + (sn76489_state.gg_stereo & GG_CH3_RIGHT
-                                                               ? sn76489_state.output_lfsr * (0x0f - sn76489_state.vol_3) * BASE_VOLUME : 0);
+            if (sample_ring_l [write_index % PSG_RING_SIZE] != previous_sample_l)
+            {
+                /* Phase ranges from 0 (no delay) to 31 (0.97 samples delay) */
+                phase_ring_l [write_index % PSG_RING_SIZE] = (completed_cycles * SAMPLE_RATE * 32 / clock_rate) % 32;
+                previous_sample_l = sample_ring_l [write_index % PSG_RING_SIZE];
+            }
+
+            sample_ring_r [write_index % PSG_RING_SIZE] =
+                (sn76489_state.gg_stereo & GG_CH0_RIGHT ? sn76489_state.output_0    * (0x0f - sn76489_state.vol_0) * BASE_VOLUME : 0)
+              + (sn76489_state.gg_stereo & GG_CH1_RIGHT ? sn76489_state.output_1    * (0x0f - sn76489_state.vol_1) * BASE_VOLUME : 0)
+              + (sn76489_state.gg_stereo & GG_CH2_RIGHT ? sn76489_state.output_2    * (0x0f - sn76489_state.vol_2) * BASE_VOLUME : 0)
+              + (sn76489_state.gg_stereo & GG_CH3_RIGHT ? sn76489_state.output_lfsr * (0x0f - sn76489_state.vol_3) * BASE_VOLUME : 0);
+
+            if (sample_ring_r [write_index % PSG_RING_SIZE] != previous_sample_r)
+            {
+                /* Phase ranges from 0 (no delay) to 31 (0.97 samples delay) */
+                phase_ring_r [write_index % PSG_RING_SIZE] = (completed_cycles * SAMPLE_RATE * 32 / clock_rate) % 32;
+                previous_sample_r = sample_ring_r [write_index % PSG_RING_SIZE];
+            }
+
+            /* If this is the final value for this sample, pass it to the band limiter */
+            if ((completed_cycles + 1) * SAMPLE_RATE / clock_rate > write_index)
+            {
+                band_limit_samples (bandlimit_context_l, &sample_ring_l [write_index % PSG_RING_SIZE], &phase_ring_r [write_index % PSG_RING_SIZE], 1);
+                band_limit_samples (bandlimit_context_r, &sample_ring_r [write_index % PSG_RING_SIZE], &phase_ring_r [write_index % PSG_RING_SIZE], 1);
+            }
         }
         else
         {
-            sample_ring_left [write_index % PSG_RING_SIZE] = sn76489_state.output_0    * (0x0f - sn76489_state.vol_0) * BASE_VOLUME
-                                                           + sn76489_state.output_1    * (0x0f - sn76489_state.vol_1) * BASE_VOLUME
-                                                           + sn76489_state.output_2    * (0x0f - sn76489_state.vol_2) * BASE_VOLUME
-                                                           + sn76489_state.output_lfsr * (0x0f - sn76489_state.vol_3) * BASE_VOLUME;
-        }
-        write_index++;
+            sample_ring_l [write_index % PSG_RING_SIZE] = sn76489_state.output_0    * (0x0f - sn76489_state.vol_0) * BASE_VOLUME
+                                                        + sn76489_state.output_1    * (0x0f - sn76489_state.vol_1) * BASE_VOLUME
+                                                        + sn76489_state.output_2    * (0x0f - sn76489_state.vol_2) * BASE_VOLUME
+                                                        + sn76489_state.output_lfsr * (0x0f - sn76489_state.vol_3) * BASE_VOLUME;
 
+            if (sample_ring_l [write_index % PSG_RING_SIZE] != previous_sample_l)
+            {
+                /* Phase ranges from 0 (no delay) to 31 (0.97 samples delay) */
+                phase_ring_l [write_index % PSG_RING_SIZE] = (completed_cycles * SAMPLE_RATE * 32 / clock_rate) % 32;
+                previous_sample_l = sample_ring_l [write_index % PSG_RING_SIZE];
+            }
+
+            /* If this is the final value for this sample, pass it to the band limiter */
+            if ((completed_cycles + 1) * SAMPLE_RATE / clock_rate > write_index)
+            {
+                band_limit_samples (bandlimit_context_l, &sample_ring_l [write_index % PSG_RING_SIZE], &phase_ring_l [write_index % PSG_RING_SIZE], 1);
+            }
+        }
+
+        /* Map from the amount of time emulated (completed cycles / clock rate) to the sound card sample rate */
+        completed_cycles++;
+        write_index = completed_cycles * SAMPLE_RATE / clock_rate;
     }
 
     /* Update statistics (rolling average) */
@@ -284,50 +365,39 @@ void psg_run_cycles (uint64_t cycles)
 
 /*
  * Retrieves a block of samples from the sample-ring.
- * Assumes a sample-rate of 48 KHz.
- *
- * TODO: Proper sample-rate conversion.
+ * Assumes that the number of samples requested fits evenly into the ring buffer.
  */
 void sn76489_get_samples (int16_t *stream, int count)
 {
-    static uint64_t soundcard_sample_count = 0;
-    static uint32_t clock_rate = 0;
+    int sample_count = count >> 1;
 
-    /* Reset the ring buffer if the clock rate changes */
-    if (state.console_context != NULL &&
-        clock_rate != state.get_clock_rate (state.console_context))
+    if (read_index + sample_count > write_index)
     {
-        clock_rate = state.get_clock_rate (state.console_context);
-        soundcard_sample_count = 0;
-        read_index = 0;
-        write_index = 0;
+        int shortfall = sample_count - (write_index - read_index);
+
+        /* Note: We add one to the shortfall to account for integer division */
+        psg_run_cycles ((shortfall + 1) * (clock_rate << 4) / SAMPLE_RATE);
     }
 
-    /* Take samples from the PSG ring to pass to the sound card */
-    for (int i = 0; i < count; i+= 2)
+    /* Take samples and pass them to the sound card */
+    uint32_t read_start = read_index % PSG_RING_SIZE;
+
+    for (int i = 0; i < sample_count; i++)
     {
-        read_index = (soundcard_sample_count * (clock_rate >> 4)) / 48000;
-
-        if (read_index >= write_index)
-        {
-            /* Generate samples until we can meet the read_index */
-            psg_run_cycles (0);
-        }
-
         /* Left, Right */
         if (state.console == CONSOLE_GAME_GEAR)
         {
-            stream [i    ] = sample_ring_left  [read_index % PSG_RING_SIZE];
-            stream [i + 1] = sample_ring_right [read_index % PSG_RING_SIZE];
+            stream [2 * i    ] = sample_ring_l [read_start + i];
+            stream [2 * i + 1] = sample_ring_r [read_start + i];
         }
         else
         {
-            stream [i    ] = sample_ring_left [read_index % PSG_RING_SIZE];
-            stream [i + 1] = sample_ring_left [read_index % PSG_RING_SIZE];
+            stream [2 * i    ] = sample_ring_l [read_start + i];
+            stream [2 * i + 1] = sample_ring_l [read_start + i];
         }
-
-        soundcard_sample_count++;
     }
+
+    read_index += sample_count;
 }
 
 
@@ -361,6 +431,7 @@ void sn76489_state_save (void)
 
     save_state_section_add (SECTION_ID_PSG, 1, sizeof (sn76489_state_be), &sn76489_state_be);
 }
+
 
 /*
  * Import sn76489 state.
