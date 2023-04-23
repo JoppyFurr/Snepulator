@@ -42,19 +42,12 @@ static void     sg_1000_update_settings (void *context_ptr);
 
 
 /*
- * Callback to supply SDL with audio frames.
+ * Callback to supply audio frames.
  */
-static void sg_1000_audio_callback (void *userdata, uint8_t *stream, int len)
+static void sg_1000_audio_callback (int16_t *stream, uint32_t count)
 {
-    if (state.run == RUN_STATE_RUNNING)
-    {
-        /* Assuming little-endian host */
-        sn76489_get_samples ((int16_t *)stream, len / 2);
-    }
-    else
-    {
-        memset (stream, 0, len);
-    }
+    /* Assuming little-endian host */
+    sn76489_get_samples (stream, count);
 }
 
 

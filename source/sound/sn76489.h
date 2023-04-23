@@ -69,7 +69,7 @@ void sn76489_init (void);
 void sn76489_data_write (uint8_t data);
 
 /* Retrieves a block of samples from the sample-ring. */
-void sn76489_get_samples (int16_t *stream, int len);
+void sn76489_get_samples (int16_t *stream, uint32_t len);
 
 /* Run the PSG for a number of CPU clock cycles. */
 void psg_run_cycles (uint64_t cycles);

@@ -90,7 +90,7 @@ typedef struct Snepulator_State_s {
     /* Console API */
     Console   console;
     void     *console_context;
-    void      (*audio_callback) (void *userdata, uint8_t *stream, int len);
+    void      (*audio_callback) (int16_t *stream, uint32_t count);
     void      (*cleanup) (void *);
     void      (*diagnostics_print) (const char *, ...);
     void      (*diagnostics_show) (void);

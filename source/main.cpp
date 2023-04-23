@@ -111,13 +111,20 @@ void snepulator_render_error ()
 
 /*
  * Audio callback wrapper.
+ *
+ * Called assuming four bytes per sample.
+ * 16 bits each for the left and right channel.
  */
 void snepulator_audio_callback (void *userdata, uint8_t *stream, int len)
 {
-    if (state.audio_callback != NULL)
-        state.audio_callback (userdata, stream, len);
+    if (state.audio_callback != NULL && state.run == RUN_STATE_RUNNING)
+    {
+        state.audio_callback ((int16_t *)stream, len / 4);
+    }
     else
+    {
         memset (stream, 0, len);
+    }
 }
 
 

@@ -367,13 +367,11 @@ void psg_run_cycles (uint64_t cycles)
  * Retrieves a block of samples from the sample-ring.
  * Assumes that the number of samples requested fits evenly into the ring buffer.
  */
-void sn76489_get_samples (int16_t *stream, int count)
+void sn76489_get_samples (int16_t *stream, uint32_t count)
 {
-    int sample_count = count >> 1;
-
-    if (read_index + sample_count > write_index)
+    if (read_index + count > write_index)
     {
-        int shortfall = sample_count - (write_index - read_index);
+        int shortfall = count - (write_index - read_index);
 
         /* Note: We add one to the shortfall to account for integer division */
         psg_run_cycles ((shortfall + 1) * (clock_rate << 4) / SAMPLE_RATE);
@@ -382,7 +380,7 @@ void sn76489_get_samples (int16_t *stream, int count)
     /* Take samples and pass them to the sound card */
     uint32_t read_start = read_index % PSG_RING_SIZE;
 
-    for (int i = 0; i < sample_count; i++)
+    for (int i = 0; i < count; i++)
     {
         /* Left, Right */
         if (state.console == CONSOLE_GAME_GEAR)
@@ -397,7 +395,7 @@ void sn76489_get_samples (int16_t *stream, int count)
         }
     }
 
-    read_index += sample_count;
+    read_index += count;
 }
 
 
