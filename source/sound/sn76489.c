@@ -342,9 +342,11 @@ void _psg_run_cycles (uint64_t cycles)
         write_index = completed_cycles * SAMPLE_RATE / clock_rate;
     }
 
+#ifdef DEVELOPER_BUILD
     /* Update statistics (rolling average) */
     state.audio_ring_utilisation *= 0.9995;
     state.audio_ring_utilisation += 0.0005 * ((write_index - read_index) / (double) PSG_RING_SIZE);
+#endif
 }
 
 

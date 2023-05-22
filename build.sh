@@ -1,39 +1,5 @@
 #!/bin/sh
 
-# Select compiler
-COMPILER=${1:-"gcc"}
-
-if [ $COMPILER = clang ] ; then
-    echo "Using Clang"
-    CC=clang
-    CXX=clang++
-else
-    echo "Using GCC"
-    CC=gcc
-    CXX=g++
-fi
-
-# OS-specific compiler options
-if [ $(uname) = "Darwin" ]
-then
-    # MacOS
-    DATE=$(date "+%Y-%m-%d")
-    OSFLAGS="-framework OpenGL -framework CoreFoundation"
-else
-    # Linux
-    DATE=$(date --rfc-3339=date)
-    OSFLAGS="$(pkg-config --libs gl)"
-fi
-
-CFLAGS="-std=c11 -O2 -Wall -Werror -D_POSIX_C_SOURCE=200809L"
-CXXFLAGS="-std=c++11 -O2 -Wall -Werror"
-GUIFLAGS="$(sdl2-config --cflags) \
-          -DIMGUI_IMPL_OPENGL_LOADER_GL3W \
-          -DBUILD_DATE=\\\"$DATE\\\" \
-          -I libraries/imgui-1.83/ \
-          -I libraries/imgui-1.83/backends/ \
-          -I libraries/imgui-1.83/examples/libs/gl3w/"
-
 # Compile Snepulator emulator core.
 build_snepulator ()
 {
@@ -58,6 +24,7 @@ build_snepulator ()
     eval $CC $CFLAGS -c source/util.c               -o work/util.o
 }
 
+
 # Compile Snepulator GUI.
 build_snepulator_gui ()
 {
@@ -68,6 +35,7 @@ build_snepulator_gui ()
     eval $CXX $CXXFLAGS $GUIFLAGS -c source/gui/menubar.cpp -o work/menubar.o
     eval $CXX $CXXFLAGS $GUIFLAGS -c source/gui/open.cpp    -o work/open.o
 }
+
 
 # Campile ImGui if we haven't already.
 build_imgui ()
@@ -91,6 +59,7 @@ build_imgui ()
     eval $CXX $CXXFLAGS $GUIFLAGS -c libraries/imgui-1.83/examples/libs/gl3w/GL/gl3w.c    -o work/imgui/imgui_gl3w.o
 }
 
+
 # Compile other libraries.
 build_libraries ()
 {
@@ -101,6 +70,56 @@ build_libraries ()
                      -c libraries/BLAKE3/blake3_dispatch.c -o work/blake3_dispatch.o
     eval $CC $CFLAGS -c libraries/SDL_SavePNG/savepng.c    -o work/SDL_SavePNG.o
 }
+
+
+# Defaults
+CC=gcc
+CXX=g++
+
+
+# OS-specific compiler options
+if [ $(uname) = "Darwin" ]
+then
+    # MacOS
+    DATE=$(date "+%Y-%m-%d")
+    OSFLAGS="-framework OpenGL -framework CoreFoundation"
+else
+    # Linux
+    DATE=$(date --rfc-3339=date)
+    OSFLAGS="$(pkg-config --libs gl)"
+fi
+
+CFLAGS="-std=c11 -O2 -Wall -Werror -D_POSIX_C_SOURCE=200809L"
+CXXFLAGS="-std=c++11 -O2 -Wall -Werror"
+GUIFLAGS="$(sdl2-config --cflags) \
+          -DIMGUI_IMPL_OPENGL_LOADER_GL3W \
+          -DBUILD_DATE=\\\"$DATE\\\" \
+          -I libraries/imgui-1.83/ \
+          -I libraries/imgui-1.83/backends/ \
+          -I libraries/imgui-1.83/examples/libs/gl3w/"
+
+# Parameters
+while [ ${#} -gt 0 ]
+do
+    case ${1} in
+        clang)
+            echo "Using Clang"
+            CC=clang
+            CXX=clang++
+            ;;
+        dev*)
+            echo "Developer options enabled"
+            CFLAGS="${CFLAGS} -DDEVELOPER_BUILD"
+            CXXFLAGS="${CXXFLAGS} -DDEVELOPER_BUILD"
+            ;;
+        *)
+            echo "Unknown option ${1}, aborting."
+            exit
+            ;;
+    esac
+
+    shift
+done
 
 # Create a build directory if it does not already exist.
 mkdir -p work

@@ -511,7 +511,6 @@ void snepulator_reset (void)
     /* Clear callback functions */
     state.audio_callback = NULL;
     state.cleanup = NULL;
-    state.diagnostics_show = NULL;
     state.get_clock_rate = NULL;
     state.get_rom_hash = NULL;
     state.run_callback = NULL;
@@ -521,6 +520,9 @@ void snepulator_reset (void)
     state.state_load = NULL;
     state.state_save = NULL;
     state.update_settings = NULL;
+#ifdef DEVELOPER_BUILD
+    state.diagnostics_show = NULL;
+#endif
 
     snepulator_clear_screen ();
 

@@ -36,9 +36,6 @@ extern Snepulator_Gamepad gamepad [3];
 /* Images */
 #include "../images/snepulator_icon.c"
 
-/* Constants */
-const float Float4_Black[4] = { 0.0, 0.0, 0.0, 0.0 };
-
 /* Global state */
 Snepulator_State state;
 pthread_mutex_t video_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -392,6 +389,7 @@ int main_gui_loop (void)
         ImGui_ImplOpenGL3_RenderDrawData (ImGui::GetDrawData ());
         SDL_GL_SwapWindow (window);
 
+#if DEVELOPER_BUILD
         /* Update statistics (rolling average) */
         static int host_previous_completion_time = 0;
         static int host_current_time = 0;
@@ -402,6 +400,7 @@ int main_gui_loop (void)
             state.host_framerate += 0.05 * (1000.0 / (host_current_time - host_previous_completion_time));
         }
         host_previous_completion_time = host_current_time;
+#endif
     }
 
     glDeleteTextures (1, &video_out_texture);

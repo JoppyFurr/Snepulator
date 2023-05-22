@@ -92,8 +92,6 @@ typedef struct Snepulator_State_s {
     void     *console_context;
     void      (*audio_callback) (int16_t *stream, uint32_t count);
     void      (*cleanup) (void *);
-    void      (*diagnostics_print) (const char *, ...);
-    void      (*diagnostics_show) (void);
     uint32_t  (*get_clock_rate) (void *);
     uint8_t * (*get_rom_hash) (void *);
     void      (*run_callback) (void *, uint32_t ms);
@@ -102,6 +100,10 @@ typedef struct Snepulator_State_s {
     void      (*state_save) (void *, const char *filename);
     void      (*state_load) (void *, const char *filename);
     void      (*update_settings) (void *);
+#ifdef DEVELOPER_BUILD
+    void      (*diagnostics_print) (const char *, ...);
+    void      (*diagnostics_show) (void);
+#endif
 
     /* Console video output */
     uint_pixel  video_out_data [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
@@ -125,9 +127,11 @@ typedef struct Snepulator_State_s {
     bool         video_show_border;
 
     /* Statistics */
+#ifdef DEVELOPER_BUILD
     double host_framerate;
     double vdp_framerate;
     double audio_ring_utilisation;
+#endif
 
     /* Error reporting */
     char  error_buffer[80];

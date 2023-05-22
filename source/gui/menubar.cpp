@@ -2,6 +2,7 @@
  * Main Menu-bar
  */
 
+#include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
 
@@ -48,7 +49,7 @@ extern bool input_modal_create;
 /*
  * C-friendly wrapper for ImGui::Text
  */
-#include <stdarg.h>
+#if DEVELOPER_BUILD
 static void menubar_diagnostics_print (const char *format, ...)
 {
     va_list args;
@@ -65,6 +66,7 @@ static void menubar_diagnostics_print (const char *format, ...)
 
     va_end (args);
 }
+#endif
 
 
 /*
@@ -205,6 +207,7 @@ static void snepulator_console_menu ()
         }
         ImGui::Separator ();
 
+#ifdef DEVELOPER_BUILD
         if (ImGui::BeginMenu ("Diagnostics", running_or_paused))
         {
             if (state.diagnostics_show == NULL)
@@ -229,8 +232,9 @@ static void snepulator_console_menu ()
 
             ImGui::EndMenu ();
         }
+#endif
 
-        /* TODO: ifdef */
+#ifdef DEVELOPER_BUILD
         if (ImGui::MenuItem ("Time Five Minutes", NULL))
         {
             uint32_t start_time;
@@ -244,6 +248,7 @@ static void snepulator_console_menu ()
             fprintf (stdout, "[DEBUG] Took %d ms to emulate five minutes. (%fx speed-up)\n",
                      end_time - start_time, (5.0 * 60000.0) / (end_time - start_time));
         }
+#endif
         ImGui::EndMenu ();
     }
 }

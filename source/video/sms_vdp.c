@@ -899,6 +899,7 @@ void sms_vdp_run_one_scanline (TMS9928A_Context *context)
     {
         context->frame_done (context->parent);
 
+#if DEVELOPER_BUILD
         /* Update statistics (rolling average) */
         /* TODO: Move into a common "frame complete" function */
         static int vdp_previous_completion_time = 0;
@@ -911,6 +912,7 @@ void sms_vdp_run_one_scanline (TMS9928A_Context *context)
             state.vdp_framerate += 0.05 * (1000.0 / frame_time_taken);
         }
         vdp_previous_completion_time = vdp_current_time;
+#endif
     }
 
     /* Check for frame interrupt */

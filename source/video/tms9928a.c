@@ -579,6 +579,7 @@ void tms9928a_run_one_scanline (TMS9928A_Context *context)
     {
         context->frame_done (context->parent);
 
+#if DEVELOPER_BUILD
         /* Update statistics (rolling average) */
         static int vdp_previous_completion_time = 0;
         static int vdp_current_time = 0;
@@ -589,6 +590,7 @@ void tms9928a_run_one_scanline (TMS9928A_Context *context)
             state.vdp_framerate += 0.05 * (1000.0 / (vdp_current_time - vdp_previous_completion_time));
         }
         vdp_previous_completion_time = vdp_current_time;
+#endif
     }
 
     /* Check for frame interrupt */

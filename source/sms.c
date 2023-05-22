@@ -54,7 +54,6 @@ extern pthread_mutex_t video_mutex;
  */
 static uint8_t     sms_io_read (void *context_ptr, uint8_t addr);
 static void        sms_io_write (void *context_ptr, uint8_t addr, uint8_t data);
-static const char *sms_mapper_name_get (SMS_Mapper m);
 static uint8_t     sms_memory_read (void *context_ptr, uint16_t addr);
 static void        sms_memory_write (void *context_ptr, uint16_t addr, uint8_t data);
 static void        sms_process_3d_field (SMS_Context *context);
@@ -108,8 +107,38 @@ static void sms_cleanup (void *context_ptr)
 
 
 /*
+ * Get the string name of a mapper.
+ */
+#ifdef DEVELOPER_BUILD
+static const char *sms_mapper_name_get (SMS_Mapper m)
+{
+    switch (m)
+    {
+        case SMS_MAPPER_NONE:
+            return "None";
+        case SMS_MAPPER_SEGA:
+            return "Sega";
+        case SMS_MAPPER_CODEMASTERS:
+            return "Codemasters";
+        case SMS_MAPPER_KOREAN:
+            return "Korean";
+        case SMS_MAPPER_MSX:
+            return "MSX";
+        case SMS_MAPPER_NEMESIS:
+            return "Nemesis";
+        case SMS_MAPPER_4PAK:
+            return "4 PAK";
+        default:
+            return "Unknown";
+    }
+}
+#endif
+
+
+/*
  * Display diagnostic information.
  */
+#ifdef DEVELOPER_BUILD
 static void sms_diagnostics_show (void)
 {
     SMS_Context *context = state.console_context;
@@ -135,6 +164,7 @@ static void sms_diagnostics_show (void)
     state.diagnostics_print ("---");
     state.diagnostics_print ("Mapper : %s", sms_mapper_name_get (context->hw_state.mapper));
 }
+#endif
 
 
 /*
@@ -428,7 +458,6 @@ SMS_Context *sms_init (void)
     /* Hook up callbacks */
     state.audio_callback = sms_audio_callback;
     state.cleanup = sms_cleanup;
-    state.diagnostics_show = sms_diagnostics_show;
     state.get_clock_rate = sms_get_clock_rate;
     state.get_rom_hash = sms_get_rom_hash;
     state.run_callback = sms_run;
@@ -437,6 +466,9 @@ SMS_Context *sms_init (void)
     state.state_load = sms_state_load;
     state.state_save = sms_state_save;
     state.update_settings = sms_update_settings;
+#ifdef DEVELOPER_BUILD
+    state.diagnostics_show = sms_diagnostics_show;
+#endif
 
     /* Minimal alternative to the BIOS */
     if (context->bios == NULL)
@@ -723,33 +755,6 @@ static void sms_io_write (void *context_ptr, uint8_t addr, uint8_t data)
     {
         fprintf (stdout, "%c", data);
         fflush (stdout);
-    }
-}
-
-
-/*
- * Get the string name of a mapper.
- */
-static const char *sms_mapper_name_get (SMS_Mapper m)
-{
-    switch (m)
-    {
-        case SMS_MAPPER_NONE:
-            return "None";
-        case SMS_MAPPER_SEGA:
-            return "Sega";
-        case SMS_MAPPER_CODEMASTERS:
-            return "Codemasters";
-        case SMS_MAPPER_KOREAN:
-            return "Korean";
-        case SMS_MAPPER_MSX:
-            return "MSX";
-        case SMS_MAPPER_NEMESIS:
-            return "Nemesis";
-        case SMS_MAPPER_4PAK:
-            return "4 PAK";
-        default:
-            return "Unknown";
     }
 }
 
