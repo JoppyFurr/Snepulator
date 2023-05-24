@@ -4,10 +4,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <arpa/inet.h>
 
 #include "snepulator_types.h"
 #include "snepulator.h"
+#include "util.h"
 #include "save_state.h"
 
 /*
@@ -89,8 +89,8 @@ void save_state_section_add (const char *section_id, uint32_t version, uint32_t 
         }
     }
 
-    version_be = htonl (version);
-    size_be = htonl (size);
+    version_be = util_hton32 (version);
+    size_be = util_hton32 (size);
     memcpy (&buffer[buffer_used +  0], section_id, 4);
     memcpy (&buffer[buffer_used +  4], &version_be, 4);
     memcpy (&buffer[buffer_used +  8], &size_be, 4);
@@ -125,7 +125,7 @@ void save_state_write (const char *filename)
     }
 
     /* Store the section count */
-    section_count_be = htonl (section_count);
+    section_count_be = util_hton32 (section_count);
     memcpy (&buffer[12], &section_count_be, 4);
 
     /* Write the buffer to file */
@@ -198,7 +198,7 @@ int load_state_begin (const char *filename, const char **console_id, uint32_t *s
     *console_id = (char *) &buffer [8];
 
     memcpy (&sections_loaded_be, &buffer[12], 4);
-    *sections_loaded = ntohl (sections_loaded_be);
+    *sections_loaded = util_ntoh32 (sections_loaded_be);
 
     buffer_used = 16;
     return 0;
@@ -216,10 +216,10 @@ void load_state_section (const char **section_id, uint32_t *version, uint32_t *s
     *section_id = (char *) &buffer [buffer_used];
 
     memcpy (&version_be, &buffer [buffer_used + 4], 4);
-    *version = ntohl (version_be);
+    *version = util_ntoh32 (version_be);
 
     memcpy (&size_be, &buffer [buffer_used + 8], 4);
-    *size = ntohl (size_be);
+    *size = util_ntoh32 (size_be);
 
     *data = &buffer [buffer_used + 12];
     buffer_used += 12 + *size;

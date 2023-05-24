@@ -8,7 +8,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
-#include <arpa/inet.h>
 
 #include "../snepulator_types.h"
 #include "../snepulator.h"
@@ -637,8 +636,8 @@ void tms9928a_state_save (TMS9928A_Context *context)
 {
     TMS9928A_State tms9928a_state_be = {
         .regs =                   context->state.regs,
-        .line =                   htons (context->state.line),
-        .address =                htons (context->state.address),
+        .line =                   util_hton16 (context->state.line),
+        .address =                util_hton16 (context->state.address),
         .first_byte_received =    context->state.first_byte_received,
         .code =                   context->state.code,
         .read_buffer =            context->state.read_buffer,
@@ -671,8 +670,8 @@ void tms9928a_state_load (TMS9928A_Context *context, uint32_t version, uint32_t 
         memcpy (&tms9928a_state_be, data, sizeof (tms9928a_state_be));
 
         context->state.regs =                   tms9928a_state_be.regs;
-        context->state.line =                   ntohs (tms9928a_state_be.line);
-        context->state.address =                ntohs (tms9928a_state_be.address);
+        context->state.line =                   util_ntoh16 (tms9928a_state_be.line);
+        context->state.address =                util_ntoh16 (tms9928a_state_be.address);
         context->state.first_byte_received =    tms9928a_state_be.first_byte_received;
         context->state.code =                   tms9928a_state_be.code;
         context->state.read_buffer =            tms9928a_state_be.read_buffer;

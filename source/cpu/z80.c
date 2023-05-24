@@ -3,10 +3,10 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <arpa/inet.h>
 
 #include "../snepulator_types.h"
 #include "../snepulator.h"
+#include "../util.h"
 #include "../save_state.h"
 #include "z80.h"
 #include "z80_names.h"
@@ -5609,25 +5609,25 @@ void z80_run_cycles (Z80_Context *context, int64_t cycles)
 void z80_state_save (Z80_Context *context)
 {
     Z80_State z80_state_be = {
-        .af =            htons (context->state.af),
-        .bc =            htons (context->state.bc),
-        .de =            htons (context->state.de),
-        .hl =            htons (context->state.hl),
-        .af_alt =        htons (context->state.af_alt),
-        .bc_alt =        htons (context->state.bc_alt),
-        .de_alt =        htons (context->state.de_alt),
-        .hl_alt =        htons (context->state.hl_alt),
-        .ir =            htons (context->state.ir),
-        .ix =            htons (context->state.ix),
-        .iy =            htons (context->state.iy),
-        .sp =            htons (context->state.sp),
-        .pc =            htons (context->state.pc),
+        .af =            util_hton16 (context->state.af),
+        .bc =            util_hton16 (context->state.bc),
+        .de =            util_hton16 (context->state.de),
+        .hl =            util_hton16 (context->state.hl),
+        .af_alt =        util_hton16 (context->state.af_alt),
+        .bc_alt =        util_hton16 (context->state.bc_alt),
+        .de_alt =        util_hton16 (context->state.de_alt),
+        .hl_alt =        util_hton16 (context->state.hl_alt),
+        .ir =            util_hton16 (context->state.ir),
+        .ix =            util_hton16 (context->state.ix),
+        .iy =            util_hton16 (context->state.iy),
+        .sp =            util_hton16 (context->state.sp),
+        .pc =            util_hton16 (context->state.pc),
         .im =            context->state.im,
         .iff1 =          context->state.iff1,
         .iff2 =          context->state.iff2,
         .wait_after_ei = context->state.wait_after_ei,
         .halt =          context->state.halt,
-        .excess_cycles = htonl (context->state.excess_cycles)
+        .excess_cycles = util_hton32 (context->state.excess_cycles)
     };
 
     save_state_section_add (SECTION_ID_Z80, 1, sizeof (z80_state_be), &z80_state_be);
@@ -5645,25 +5645,25 @@ void z80_state_load (Z80_Context *context, uint32_t version, uint32_t size, void
     {
         memcpy (&z80_state_be, data, sizeof (z80_state_be));
 
-        context->state.af =            ntohs (z80_state_be.af);
-        context->state.bc =            ntohs (z80_state_be.bc);
-        context->state.de =            ntohs (z80_state_be.de);
-        context->state.hl =            ntohs (z80_state_be.hl);
-        context->state.af_alt =        ntohs (z80_state_be.af_alt);
-        context->state.bc_alt =        ntohs (z80_state_be.bc_alt);
-        context->state.de_alt =        ntohs (z80_state_be.de_alt);
-        context->state.hl_alt =        ntohs (z80_state_be.hl_alt);
-        context->state.ir =            ntohs (z80_state_be.ir);
-        context->state.ix =            ntohs (z80_state_be.ix);
-        context->state.iy =            ntohs (z80_state_be.iy);
-        context->state.sp =            ntohs (z80_state_be.sp);
-        context->state.pc =            ntohs (z80_state_be.pc);
+        context->state.af =            util_ntoh16 (z80_state_be.af);
+        context->state.bc =            util_ntoh16 (z80_state_be.bc);
+        context->state.de =            util_ntoh16 (z80_state_be.de);
+        context->state.hl =            util_ntoh16 (z80_state_be.hl);
+        context->state.af_alt =        util_ntoh16 (z80_state_be.af_alt);
+        context->state.bc_alt =        util_ntoh16 (z80_state_be.bc_alt);
+        context->state.de_alt =        util_ntoh16 (z80_state_be.de_alt);
+        context->state.hl_alt =        util_ntoh16 (z80_state_be.hl_alt);
+        context->state.ir =            util_ntoh16 (z80_state_be.ir);
+        context->state.ix =            util_ntoh16 (z80_state_be.ix);
+        context->state.iy =            util_ntoh16 (z80_state_be.iy);
+        context->state.sp =            util_ntoh16 (z80_state_be.sp);
+        context->state.pc =            util_ntoh16 (z80_state_be.pc);
         context->state.im =            z80_state_be.im;
         context->state.iff1 =          z80_state_be.iff1;
         context->state.iff2 =          z80_state_be.iff2;
         context->state.wait_after_ei = z80_state_be.wait_after_ei;
         context->state.halt =          z80_state_be.halt;
-        context->state.excess_cycles = ntohl (z80_state_be.excess_cycles);
+        context->state.excess_cycles = util_ntoh32 (z80_state_be.excess_cycles);
     }
     else
     {

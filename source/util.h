@@ -28,3 +28,9 @@ uint_pixel util_colour_saturation (uint_pixel c, float saturation);
 
 /* Round up to the next power-of-two */
 uint32_t util_round_up (uint32_t n);
+
+/* Conversion to and from network byte order */
+uint16_t util_hton16 (uint16_t h);
+uint32_t util_hton32 (uint32_t h);
+uint16_t util_ntoh16 (uint16_t n);
+uint32_t util_ntoh32 (uint32_t n);

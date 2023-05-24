@@ -25,6 +25,54 @@
 extern Snepulator_State state;
 
 /*
+ * 16-bit endian conversion - Host to network.
+ * Assumes a little-endian host.
+ */
+uint16_t util_hton16 (uint16_t h)
+{
+    return ((h & 0x00ff) << 8)
+         | ((h & 0xff00) >> 8);
+}
+
+
+/*
+ * 32-bit endian conversion - Host to network.
+ * Assumes a little-endian host.
+ */
+uint32_t util_hton32 (uint32_t h)
+{
+    return ((h & 0x000000ff) << 24)
+         | ((h & 0x0000ff00) << 8)
+         | ((h & 0x00ff0000) >> 8)
+         | ((h & 0xff000000) >> 24);
+}
+
+
+/*
+ * 16-bit endian conversion - Network to host.
+ * Assumes a little-endian host.
+ */
+uint16_t util_ntoh16 (uint16_t n)
+{
+    return ((n & 0x00ff) << 8)
+         | ((n & 0xff00) >> 8);
+}
+
+
+/*
+ * 32-bit endian conversion - Network to host.
+ * Assumes a little-endian host.
+ */
+uint32_t util_ntoh32 (uint32_t n)
+{
+    return ((n & 0x000000ff) << 24)
+         | ((n & 0x0000ff00) << 8)
+         | ((n & 0x00ff0000) >> 8)
+         | ((n & 0xff000000) >> 24);
+}
+
+
+/*
  * Get the number of ticks that have passed.
  *
  * Based on SDL_GetTicks ()
