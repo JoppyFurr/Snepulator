@@ -168,7 +168,7 @@ SG_1000_Context *sg_1000_init (void)
                             sg_1000_get_int, sg_1000_get_nmi);
     context->z80_context = z80_context;
 
-    /* Initialize VDP */
+    /* Initialise VDP */
     vdp_context = tms9928a_init (context, sg_1000_frame_done);
     vdp_context->render_start_x = VIDEO_SIDE_BORDER;
     vdp_context->render_start_y = (VIDEO_BUFFER_LINES - 192) / 2;

@@ -376,7 +376,7 @@ SMS_Context *sms_init (void)
         }
     }
 
-    /* Some unlicensed games depend on an 0xf0 pattern being left in uninitialized
+    /* Some unlicensed games depend on an 0xf0 pattern being left in uninitialised
      * memory. However, other games depend on the BIOS having zeroed the ram. */
     if (context->rom_hints & SMS_HINT_RAM_PATTERN)
     {

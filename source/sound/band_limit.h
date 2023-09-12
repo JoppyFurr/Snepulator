@@ -14,5 +14,5 @@ typedef struct Bandlimit_Context_s {
 /* Apply band-limited synthesis to non-limited input. */
 void band_limit_samples (Bandlimit_Context *context, int16_t *sample, int16_t *phase, int count);
 
-/* Initialize data for band limited synthesis. */
+/* Initialise data for band limited synthesis. */
 Bandlimit_Context *band_limit_init (void);

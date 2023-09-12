@@ -77,7 +77,7 @@ static void logo_run (void *context_ptr, uint32_t ms)
 
 
 /*
- * Initialize the logo animation.
+ * Initialise the logo animation.
  */
 Logo_Context *logo_init (void)
 {

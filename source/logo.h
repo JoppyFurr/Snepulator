@@ -8,5 +8,5 @@ typedef struct Logo_Context_s {
 
 } Logo_Context;
 
-/* Initialize the logo animation.  */
+/* Initialise the logo animation.  */
 Logo_Context *logo_init (void);

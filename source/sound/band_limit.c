@@ -173,7 +173,7 @@ void band_limit_samples (Bandlimit_Context *context, int16_t *sample_buf, int16_
 
 
 /*
- * Initialize data for band limited synthesis.
+ * Initialise data for band limited synthesis.
  */
 Bandlimit_Context *band_limit_init (void)
 {
