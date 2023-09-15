@@ -22,6 +22,7 @@ extern "C" {
 #include "../gamepad.h"
 #include "../video/tms9928a.h"
 #include "../video/sms_vdp.h"
+#include "../sound/ym2413.h"
 #include "../cpu/z80.h"
 #include "../colecovision.h"
 #include "../sg-1000.h"
@@ -190,6 +191,12 @@ static void snepulator_console_menu ()
         }
         if (ImGui::MenuItem ("PAL",  NULL, state.format == VIDEO_FORMAT_PAL))  {
             snepulator_video_format_set (VIDEO_FORMAT_PAL);
+        }
+        ImGui::Separator ();
+
+        /* TODO: Hide or grey this when playing another console? */
+        if (ImGui::MenuItem ("FM Sound",  NULL, state.fm_sound))  {
+            snepulator_fm_sound_set (!state.fm_sound);
         }
         ImGui::Separator ();
 

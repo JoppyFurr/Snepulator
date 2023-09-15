@@ -119,6 +119,13 @@ int snepulator_config_import (void)
         }
     }
 
+    /* SMS FM Sound */
+    state.fm_sound = false;
+    if (config_uint_get ("sms", "fm-sound", &uint) == 0)
+    {
+        state.fm_sound = uint;
+    }
+
     /* Overclock - Defaults to off */
     state.overclock = 0;
     if (config_uint_get ("hacks", "overclock", &uint) == 0)
@@ -279,6 +286,23 @@ void snepulator_disable_blanking_set (bool disable_blanking)
 {
     state.disable_blanking = disable_blanking;
     config_uint_set ("hacks", "disable-blanking", disable_blanking);
+
+    if (state.update_settings != NULL)
+    {
+        state.update_settings (state.console_context);
+    }
+
+    config_write ();
+}
+
+
+/*
+ * Enable the FM Sound Unit for the SMS.
+ */
+void snepulator_fm_sound_set (bool enable)
+{
+    state.fm_sound = enable;
+    config_uint_set ("sms", "fm-sound", enable);
 
     if (state.update_settings != NULL)
     {

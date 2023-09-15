@@ -74,6 +74,7 @@ typedef struct Snepulator_State_s {
     Video_Format    format;                 /* 50 Hz PAL / 60 Hz NTSC. */
     bool            format_auto;            /* Automatically select PAL for games that require it. */
     Console_Region  region;                 /* Japan / World. */
+    bool            fm_sound;               /* Enable FM sound support for the Master System. */
     bool            remove_sprite_limit;    /* Remove the single line sprite limit. */
     Video_3D_Mode   video_3d_mode;          /* Left / Right / Anaglyph selection. */
     float           video_3d_saturation;    /* Colour saturation for anaglyph modes. */
@@ -155,6 +156,9 @@ void snepulator_console_set_from_path (const char *path);
 
 /* Disable screen blanking when the blanking bit is set. */
 void snepulator_disable_blanking_set (bool disable_blanking);
+
+/* Enable the FM Sound Unit for the SMS. */
+void snepulator_fm_sound_set (bool enable);
 
 /* Set whether or not to overclock. */
 void snepulator_overclock_set (bool overclock);
