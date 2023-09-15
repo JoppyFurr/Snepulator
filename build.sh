@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# Exit on first error.
+set -e
+
 # Compile Snepulator emulator core.
 build_snepulator ()
 {
