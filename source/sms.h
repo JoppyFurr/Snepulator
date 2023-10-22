@@ -57,6 +57,7 @@ typedef struct SMS_Context_s {
     Console console;
     Z80_Context *z80_context;
     TMS9928A_Context *vdp_context;
+    YM2413_Context *ym2413_context;
     SMS_3D_Field video_3d_field;
     bool export_paddle;
     bool reset_button;

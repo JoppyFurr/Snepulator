@@ -21,6 +21,7 @@
 #include "cpu/z80.h"
 #include "video/tms9928a.h"
 #include "video/sms_vdp.h"
+#include "sound/ym2413.h"
 #include "logo.h"
 #include "sg-1000.h"
 #include "sms.h"

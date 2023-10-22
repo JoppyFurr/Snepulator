@@ -21,6 +21,7 @@ extern "C" {
 #include "gamepad_sdl.h"
 #include "cpu/z80.h"
 #include "video/tms9928a.h"
+#include "sound/ym2413.h"
 #include "sms.h"
 #include "colecovision.h"
 

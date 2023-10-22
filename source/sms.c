@@ -21,8 +21,9 @@
 #include "gamepad.h"
 #include "cpu/z80.h"
 #include "video/tms9928a.h"
-#include "sound/sn76489.h"
 #include "video/sms_vdp.h"
+#include "sound/sn76489.h"
+#include "sound/ym2413.h"
 #include "sms.h"
 
 extern Snepulator_State state;
@@ -64,12 +65,40 @@ static void        sms_state_save (void *context_ptr, const char *filename);
 static void        sms_sync (void *context_ptr);
 static void        sms_update_settings (void *context_ptr);
 
+/* TODO: The audio_control register is used to enable/disable
+ *       the two sound chips on consoles that have FM capability.
+ *       The lower two bits are used to enable/disable the chips,
+ *       and is also used in the detection of the FM capability.
+ *
+ *       1. This should be within the console state. However, just
+ *          putting it there may break save-state compatibility as
+ *          the state size will change.
+ *
+ *       2. The muting should be implemented.
+ */
+static uint8_t audio_control = 0;
+
 /*
  * Callback to supply audio frames.
  */
 static void sms_audio_callback (int16_t *stream, uint32_t count)
 {
-    sn76489_get_samples ((int16_t *)stream, count);
+    sn76489_get_samples (stream, count);
+
+    if (state.fm_sound)
+    {
+        /* TODO: We probably want some kind of mixing function for when
+         *       multiple sound chips are active. For now just add them
+         *       together. */
+        int16_t fm_buffer [4096];
+        ym2413_get_samples (fm_buffer, count);
+
+        for (uint32_t i = 0; i < count; i++)
+        {
+            stream [2 * i    ] += fm_buffer [2 * i    ];
+            stream [2 * i + 1] += fm_buffer [2 * i + 1];
+        }
+    }
 }
 
 
@@ -90,6 +119,12 @@ static void sms_cleanup (void *context_ptr)
     {
         free (context->vdp_context);
         context->vdp_context = NULL;
+    }
+
+    if (context->ym2413_context != NULL)
+    {
+        free (context->ym2413_context);
+        context->ym2413_context = NULL;
     }
 
     if (context->rom != NULL)
@@ -275,6 +310,7 @@ SMS_Context *sms_init (void)
     SMS_Context *context;
     Z80_Context *z80_context;
     TMS9928A_Context *vdp_context;
+    YM2413_Context *ym2413_context;
 
     context = calloc (1, sizeof (SMS_Context));
     if (context == NULL)
@@ -299,14 +335,20 @@ SMS_Context *sms_init (void)
     vdp_context->video_start_y  = vdp_context->render_start_y;
     context->vdp_context = vdp_context;
 
-    /* Initialise PSG */
+    /* Initialise sound chips */
     sn76489_init ();
+    /* TODO: Should we:
+     * A) Always initialize the YM
+     * B) Only initialize the YM if it's being used... */
+    ym2413_context = ym2413_init ();
+    context->ym2413_context = ym2413_context;
 
     /* Defaults */
     context->hw_state.io_control = 0x0f;
     context->export_paddle = false;
     context->sram_used = 0x0000;
     context->video_3d_field = SMS_3D_FIELD_NONE;
+    audio_control = 0;
 
     /* Reset the mapper */
     context->hw_state.mapper = SMS_MAPPER_UNKNOWN;
@@ -567,7 +609,8 @@ static uint8_t sms_io_read (void *context_ptr, uint8_t addr)
     }
 
     /* Controller inputs */
-    else if (addr >= 0xc0 && addr <= 0xff)
+    else if ((context->hw_state.memory_control & SMS_MEMORY_CTRL_IO) == 0 &&
+             addr >= 0xc0 && addr <= 0xff)
     {
         if ((addr & 0x01) == 0x00)
         {
@@ -665,6 +708,15 @@ static uint8_t sms_io_read (void *context_ptr, uint8_t addr)
         }
     }
 
+    /* FM Sound Unit */
+    if (state.fm_sound && addr == 0xf2)
+    {
+        /* TODO: The upper nibble of the audio_control contains
+         *       bits derived from a counter. Does anything
+         *       rely on this? */
+        return audio_control & 0x03;
+    }
+
     /* DEFAULT */
     return 0xff;
 }
@@ -747,6 +799,25 @@ static void sms_io_write (void *context_ptr, uint8_t addr, uint8_t data)
         {
             /* VDP Control Register */
             sms_vdp_control_write (context->vdp_context, data);
+        }
+    }
+
+    /* FM Sound Unit */
+    else if (state.fm_sound)
+    {
+        if (addr == 0xf0)
+        {
+            ym2413_addr_write (context->ym2413_context, data);
+        }
+
+        else if (addr == 0xf1)
+        {
+            ym2413_data_write (context->ym2413_context, data);
+        }
+
+        else if (addr == 0xf2)
+        {
+            audio_control = (data & 0x03);
         }
     }
 
@@ -1213,6 +1284,11 @@ static void sms_run (void *context_ptr, uint32_t ms)
         sms_vdp_update_line_interrupt (context->vdp_context);
         z80_run_cycles (context->z80_context, 201);
         psg_run_cycles (228);
+
+        if (state.fm_sound)
+        {
+            ym2413_run_cycles (228);
+        }
 
         if (context->overclock)
         {
