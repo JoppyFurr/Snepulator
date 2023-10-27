@@ -40,7 +40,6 @@ static uint32_t clock_rate;
 static int16_t sample_ring [YM2413_RING_SIZE];
 
 /* TODO:
- * - Register access
  * - Phase generator
  * - global counter
  * - exp lookup
@@ -58,8 +57,6 @@ static int16_t sample_ring [YM2413_RING_SIZE];
  * - Feedback
  *
  * - SMS Interface:
- *   I/O Port 0xf0 - Register latch
- *   I/O Port 0xf1 - Register data
  *   I/O Port 0xf2 - Read bit 0 to detect if YM2413 is present (according to McDonald document)
  *                 - Write bits 1:0 to configure muting:
  *                   0 - Only SN76489 enabled
@@ -74,20 +71,6 @@ static int16_t sample_ring [YM2413_RING_SIZE];
  *                   * It always returns %10 in the lowermost two bits on a non-japanese SMS.
  *                   * On a Mark III without FM unit, it returns the input from port 0.
  *                   * Writing to the audio control port has no effect if no YM2413 is present.
- *
- *   Note: Normally reads from 0xc0--0xff come from the I/O chip.
- *         The I/O chip must be disabled by setting bit 2 of port 0x3e
- *
- *   Detection (Phantasy Star):
- *      Disable I/O chip
- *      b = 7, c = 0
- *      loop over b, decrementing
- *        each loop, write b bit 0 (masked) to register 0xf2
- *        read it back, masking 0x07
- *        check the result matches what was written
- *      write result (1 for has-fm) to 0xf2 to enable it if it's there.
- *      Turn I/O chip back on
- *
  */
 
 static uint32_t exp_table [256] = { };
@@ -98,7 +81,10 @@ static uint32_t log_sin_table [256] = { };
  */
 void ym2413_data_write (YM2413_Context *context, uint8_t data)
 {
-    printf ("ym2413 write: %02x <- %02x.\n", context->state.addr, data);
+    if (context->state.addr_latch <= 0x39)
+    {
+        ((uint8_t *) &context->state.r00_instrument_params) [context->state.addr_latch] = data;
+    }
 }
 
 
@@ -107,7 +93,15 @@ void ym2413_data_write (YM2413_Context *context, uint8_t data)
  */
 void ym2413_addr_write (YM2413_Context *context, uint8_t addr)
 {
-    context->state.addr = addr;
+    /* Register mirroring */
+    if ((addr <= 0x19 && addr >= 0x1f) ||
+        (addr <= 0x29 && addr >= 0x2f) ||
+        (addr <= 0x39 && addr >= 0x3f))
+    {
+        addr -= 0x09;
+    }
+
+    context->state.addr_latch = addr;
 }
 
 

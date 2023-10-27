@@ -4,27 +4,121 @@
 
 typedef struct YM2413_State_s {
 
-    uint8_t addr;
-    /* TODO: Break registers down with unions */
+    uint8_t addr_latch;
 
     /* Custom Instrument registers */
-    uint8_t ci_param_0;
-    uint8_t ci_param_1;
-    uint8_t ci_param_2;
-    uint8_t ci_param_3;
-    uint8_t ci_mod_ar_dr;
-    uint8_t ci_car_ar_dr;
-    uint8_t ci_mod_sl_rr;
-    uint8_t ci_car_sl_rr;
+    union {
+        uint8_t r00_instrument_params;
+        struct {
+            uint8_t custom_modulator_multiplication_factor:4;
+            uint8_t custom_modulator_key_scale_rate:1;
+            uint8_t custom_modulator_envelope_type:1;
+            uint8_t custom_modulator_vibrato:1;
+            uint8_t custom_modulator_tremolo:1;
+        };
+    };
+    union {
+        uint8_t r01_instrument_params;
+        struct {
+            uint8_t custom_carrier_multiplication_factor:4;
+            uint8_t custom_carrier_key_scale_rate:1;
+            uint8_t custom_carrier_envelope_type:1;
+            uint8_t custom_carrier_vibrato:1;
+            uint8_t custom_carrier_tremolo:1;
+        };
+    };
+    union {
+        uint8_t r02_instrument_params;
+        struct {
+            uint8_t custom_modulator_total_level:6;
+            uint8_t custom_modulator_key_scale_level:2;
+        };
+    };
+    union {
+        uint8_t r03_instrument_params;
+        struct {
+            uint8_t custom_modulator_feedback_level:3;
+            uint8_t custom_modulator_waveform:1;
+            uint8_t custom_carrier_waveform:1;
+            uint8_t r03_unused:1;
+            uint8_t custom_carrier_key_scale_level:2;
+        };
+    };
+    union {
+        uint8_t r04_instrument_params;
+        struct {
+            uint8_t custom_modulator_decay_rate:4;
+            uint8_t custom_modulator_attack_level:4;
+        };
+    };
+    union {
+        uint8_t r05_instrument_params;
+        struct {
+            uint8_t custom_carrier_decay_rate:4;
+            uint8_t custom_carrier_attack_level:4;
+        };
+    };
+    union {
+        uint8_t r06_instrument_params;
+        struct {
+            uint8_t custom_modulator_release_rate:4;
+            uint8_t custom_modulator_sustain_level:4;
+        };
+    };
+    union {
+        uint8_t r07_instrument_params;
+        struct {
+            uint8_t custom_carrier_release_rate:4;
+            uint8_t custom_carrier_sustain_level:4;
+        };
+    };
+
+    uint8_t r08_unused [6];
+
+    /* Rhythm register */
+    union {
+        uint8_t r0e_rhythm;
+        struct {
+            uint8_t rhythm_hat:1;
+            uint8_t rhythm_cymbal:1;
+            uint8_t rhythm_tom:1;
+            uint8_t rhythm_snare:1;
+            uint8_t rhythm_bass:1;
+            uint8_t rhythm_mode:1;
+            uint8_t r0e_unused:2;
+        };
+    };
+
+    /* Test register */
+    uint8_t r0f_test;
 
     /* Channel Registers */
-    uint8_t ch_fnum_0_7 [9];
-    uint8_t ch_param [9];
-    uint8_t ch_inst_vol [9];
+    struct {
+        uint8_t fnum;
+    } r10_channel_params [9];
 
-    /* Other Registers */
-    uint8_t rhythm;
-    uint8_t test;
+    uint8_t r19_unused [7];
+
+    union {
+        uint8_t r20_channel_params;
+        struct {
+            uint8_t fnum_9:1;
+            uint8_t block:3;
+            uint8_t key_on:1;
+            uint8_t sustain:1;
+            uint8_t unused:2;
+        };
+    } r20_channel_params [9];
+
+    uint8_t r29_unused [7];
+
+    union {
+        uint8_t r30_channel_params;
+        struct {
+            uint8_t volume:4;
+            uint8_t instrument:4;
+        };
+    } r30_channel_params [9];
 
     /* Internal State */
 
