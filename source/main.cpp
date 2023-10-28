@@ -117,7 +117,7 @@ void snepulator_audio_callback (void *userdata, uint8_t *stream, int len)
 {
     if (state.audio_callback != NULL && state.run == RUN_STATE_RUNNING)
     {
-        state.audio_callback ((int16_t *)stream, len / 4);
+        state.audio_callback (state.console_context, (int16_t *)stream, len / 4);
     }
     else
     {

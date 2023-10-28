@@ -44,7 +44,7 @@ static void     sg_1000_update_settings (void *context_ptr);
 /*
  * Callback to supply audio frames.
  */
-static void sg_1000_audio_callback (int16_t *stream, uint32_t count)
+static void sg_1000_audio_callback (void *context_ptr, int16_t *stream, uint32_t count)
 {
     /* Assuming little-endian host */
     sn76489_get_samples (stream, count);

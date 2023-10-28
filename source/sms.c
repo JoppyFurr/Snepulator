@@ -81,7 +81,7 @@ static uint8_t audio_control = 0;
 /*
  * Callback to supply audio frames.
  */
-static void sms_audio_callback (int16_t *stream, uint32_t count)
+static void sms_audio_callback (void *context_ptr, int16_t *stream, uint32_t count)
 {
     sn76489_get_samples (stream, count);
 
