@@ -39,6 +39,12 @@ static uint32_t clock_rate;
 
 static int16_t sample_ring [YM2413_RING_SIZE];
 
+/* Use a special type definition to mark sign-magnitude numbers.
+ * The most significant bit is used to indicate if the number is negative. */
+#define SIGN_BIT 0x8000
+#define MAG_BITS 0x7fff
+typedef uint16_t signmag16_t;
+
 /* TODO:
  * - Phase generator
  * - global counter
@@ -55,6 +61,10 @@ static int16_t sample_ring [YM2413_RING_SIZE];
  * - Key Scale Rate
  * - Key Scale Level
  * - Feedback
+ * - Volume
+ * - Investigate behaviour of +0 and -0 in the DAC.
+ *   Should they be the same value?
+ *   If different, is their delta the same as other number pairs?
  *
  * - SMS Interface:
  *   I/O Port 0xf2 - Read bit 0 to detect if YM2413 is present (according to McDonald document)
@@ -119,6 +129,26 @@ static void ym2413_populate_exp_table (void)
 
 
 /*
+ * Lookup an entry using the exp table.
+ * Input is fixed-point with 8 fractional bits.
+ */
+static signmag16_t ym2413_exp (signmag16_t val)
+{
+    /* Note that the index is inverted to account
+     * for the log-sine table using -log2. */
+    uint8_t fractional = ~(val & 0xff);
+    uint16_t integral = (val & MAG_BITS) >> 8;
+
+    int16_t result = exp_table [fractional] >> integral;
+
+    /* Propagate the sign */
+    result |= (val & SIGN_BIT);
+
+    return result;
+}
+
+
+/*
  * Populate the log (sin ()) table.
  * Fixed-point with 8 fractional bits.
  */
@@ -128,6 +158,37 @@ static void ym2413_populate_log_sin_table (void)
     {
         log_sin_table [i] = round (-log2 (sin ((i + 0.5) * M_PI / 2.0 / 256.0)) * 256.0);
     }
+}
+
+
+/*
+ * Lookup an entry from the log-sin table.
+ * A 10-bit phase is used to index the table.
+ * As the 256-entry table stores only the first quarter
+ * of the sine wave, mirroring and flipping is used to
+ * give a 1024-entry waveform.
+ */
+static signmag16_t ym2413_sin (uint16_t phase)
+{
+    uint8_t index = phase & 0xff;
+
+    /* Mirror the table for the 2nd and 4th quarter of the wave.
+     * Instead of negating then number, we invert the bits to
+     * account for the wave samples representing 0.5 - 255.5. */
+    if (phase & (1 << 8))
+    {
+        index = ~index;
+    }
+
+    int16_t result = log_sin_table [index & 0xff];
+
+    /* The second half of the sine wave is identical to the
+     * first, but with the sign bit set to indicate that
+     * values are negative. To avoid branching, this is done
+     * by shifting the phase MSB into the sign bit position. */
+    result |= (phase << 6) & SIGN_BIT;
+
+    return result;
 }
 
 
