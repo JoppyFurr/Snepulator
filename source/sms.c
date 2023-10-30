@@ -83,6 +83,8 @@ static uint8_t audio_control = 0;
  */
 static void sms_audio_callback (void *context_ptr, int16_t *stream, uint32_t count)
 {
+    SMS_Context *context = (SMS_Context *) context_ptr;
+
     sn76489_get_samples (stream, count);
 
     if (state.fm_sound)
@@ -91,7 +93,7 @@ static void sms_audio_callback (void *context_ptr, int16_t *stream, uint32_t cou
          *       multiple sound chips are active. For now just add them
          *       together. */
         int16_t fm_buffer [4096];
-        ym2413_get_samples (fm_buffer, count);
+        ym2413_get_samples (context->ym2413_context, fm_buffer, count);
 
         for (uint32_t i = 0; i < count; i++)
         {
@@ -1287,7 +1289,7 @@ static void sms_run (void *context_ptr, uint32_t ms)
 
         if (state.fm_sound)
         {
-            ym2413_run_cycles (228);
+            ym2413_run_cycles (context->ym2413_context, 228);
         }
 
         if (context->overclock)

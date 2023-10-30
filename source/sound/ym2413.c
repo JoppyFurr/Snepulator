@@ -86,6 +86,13 @@ typedef uint16_t signmag16_t;
 static uint32_t exp_table [256] = { };
 static uint32_t log_sin_table [256] = { };
 
+/* Note: Values are doubled when compared to the
+ * datasheet to deal with the first entry being ½ */
+static uint32_t factor_table [16] = {
+     1,  2,  4,  6,  8, 10, 12, 14,
+    16, 18, 20, 20, 24, 24, 30, 30
+};
+
 static uint8_t instrument_rom [15][8] = {
     { 0x71, 0x61, 0x1E, 0x17, 0xD0, 0x78, 0x00, 0x17 },
     { 0x13, 0x41, 0x1A, 0x0D, 0xD8, 0xF7, 0x23, 0x13 },
@@ -110,9 +117,31 @@ static uint8_t instrument_rom [15][8] = {
  */
 void ym2413_data_write (YM2413_Context *context, uint8_t data)
 {
-    if (context->state.addr_latch <= 0x39)
+    uint8_t addr = context->state.addr_latch;
+
+    if (addr >= 0x00 && addr <= 0x07)
     {
-        ((uint8_t *) &context->state.r00_instrument_params) [context->state.addr_latch] = data;
+        ((uint8_t *) &context->state.regs_custom.r00) [addr] = data;
+    }
+    else if (addr == 0x0e)
+    {
+        context->state.r0e_rhythm = data;
+    }
+    else if (addr == 0x0f)
+    {
+        context->state.r0f_test = data;
+    }
+    else if (addr >= 0x10 && addr <= 0x19)
+    {
+        ((uint8_t *) &context->state.r10_channel_params) [addr - 0x10] = data;
+    }
+    else if (addr >= 0x20 && addr <= 0x29)
+    {
+        ((uint8_t *) &context->state.r20_channel_params) [addr - 0x20] = data;
+    }
+    else if (addr >= 0x30 && addr <= 0x39)
+    {
+        ((uint8_t *) &context->state.r30_channel_params) [addr - 0x30] = data;
     }
 }
 
@@ -212,9 +241,9 @@ static signmag16_t ym2413_sin (uint16_t phase)
 
 
 /*
- * Run the PSG for a number of CPU clock cycles
+ * Run the YM2413 for a number of CPU clock cycles
  */
-void _ym2413_run_cycles (uint64_t cycles)
+void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
 {
     /* The YM2413 takes 72 cycles to update all 18 operators */
     static uint32_t excess = 0;
@@ -235,12 +264,51 @@ void _ym2413_run_cycles (uint64_t cycles)
 
     while (ym_samples--)
     {
-        /* TODO: Simulate envelope generator */
+        int16_t output_level = 0;;
 
-        /* TODO: Simulate operators */
+        /* Note: As we don't check for rhythm mode yet, only run the first six channels */
+        for (uint32_t channel = 0; channel < 6; channel++)
+        {
+            YM2413_Instrument *instrument;
+            uint16_t fnum   = context->state.r10_channel_params [channel].fnum |
+                 (((uint16_t) context->state.r20_channel_params [channel].fnum_9) << 8);
+            uint16_t block  = context->state.r20_channel_params [channel].block;
+            uint16_t inst   = context->state.r30_channel_params [channel].instrument;
+
+            if (inst == 0)
+            {
+                instrument = &context->state.regs_custom;
+            }
+            else
+            {
+                instrument = (YM2413_Instrument *) instrument_rom [inst - 1];
+            }
+
+            /* TODO: Simulate envelope generator */
+
+            /* Simulate operators */
+            uint16_t factor;
+
+            /* Modulator */
+
+            /* Carrier */
+            factor = factor_table [instrument->carrier_multiplication_factor];
+            context->state.channel [channel].carrier_phase += ((fnum * factor) << block) >> 1;
+
+            signmag16_t channel_level = ym2413_exp (ym2413_sin (context->state.channel [channel].carrier_phase >> 9));
+
+            if (channel_level & SIGN_BIT)
+            {
+                output_level -= (channel_level & MAG_BITS);
+            }
+            else
+            {
+                output_level += (channel_level & MAG_BITS);
+            }
+        }
 
         /* TODO: Propagate new samples into ring buffer */
-        sample_ring [write_index % YM2413_RING_SIZE] = 0;
+        sample_ring [write_index % YM2413_RING_SIZE] = output_level;
 
         /* Map from the amount of time emulated (completed cycles / clock rate) to the sound card sample rate */
         completed_samples++;
@@ -250,16 +318,16 @@ void _ym2413_run_cycles (uint64_t cycles)
 
 
 /*
- * Run the PSG for a number of CPU clock cycles (mutex-wrapper)
+ * Run the YM2413 for a number of CPU clock cycles (mutex-wrapper)
  *
  * Allows two threads to request sound to be generated:
  *  1. The emulation loop, this is the usual case.
  *  2. Additional samples needed to keep the sound card from running out.
  */
-void ym2413_run_cycles (uint64_t cycles)
+void ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
 {
     pthread_mutex_lock (&ym2413_mutex);
-    _ym2413_run_cycles (cycles);
+    _ym2413_run_cycles (context, cycles);
     pthread_mutex_unlock (&ym2413_mutex);
 }
 
@@ -268,14 +336,14 @@ void ym2413_run_cycles (uint64_t cycles)
  * Retrieves a block of samples from the sample-ring.
  * Assumes that the number of samples requested fits evenly into the ring buffer.
  */
-void ym2413_get_samples (int16_t *stream, uint32_t count)
+void ym2413_get_samples (YM2413_Context *context, int16_t *stream, uint32_t count)
 {
     if (read_index + count > write_index)
     {
         int shortfall = count - (write_index - read_index);
 
         /* Note: We add one to the shortfall to account for integer division */
-        ym2413_run_cycles ((shortfall + 1) * clock_rate / SAMPLE_RATE);
+        ym2413_run_cycles (context, (shortfall + 1) * clock_rate / SAMPLE_RATE);
     }
 
     /* Take samples and pass them to the sound card */
