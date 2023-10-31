@@ -53,7 +53,6 @@ typedef uint16_t signmag16_t;
  * - Envelope generator (Damp, Attack, Decay, Sustain, Release)
  * - LFSR
  * - Rhythm
- * - Waveforms (full-sine / rectified sin)
  * - Key Scale Rate
  * - Key Scale Level
  * - Feedback
@@ -300,7 +299,8 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
             uint16_t modulator_value = ym2413_exp (log_modulator_value);
             if (modulator_value & SIGN_BIT)
             {
-                modulator_value = -modulator_value;
+                /* When the 'waveform' bit is set, the negative half of the wave is flattened to zero. */
+                modulator_value = instrument->modulator_waveform ? 0 : -modulator_value;
             }
 
             /* Carrier */
@@ -315,6 +315,11 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
 
             if (carrier_value & SIGN_BIT)
             {
+                /* When the 'waveform' bit is set, the negative half of the wave is flattened to zero. */
+                if (instrument->carrier_waveform)
+                {
+                    carrier_value &= SIGN_BIT;
+                }
                 output_level -= (carrier_value & MAG_BITS) >> 1;
             }
             else
