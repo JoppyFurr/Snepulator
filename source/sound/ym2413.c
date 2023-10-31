@@ -46,13 +46,9 @@ static int16_t sample_ring [YM2413_RING_SIZE];
 typedef uint16_t signmag16_t;
 
 /* TODO:
- * - Phase generator
  * - global counter
- * - exp lookup
- * - sin lookup
  * - Tremolo
  * - Vibrato
- * - Instrument ROM
  * - Key on / off
  * - Envelope generator (Damp, Attack, Decay, Sustain, Release)
  * - LFSR
@@ -61,7 +57,6 @@ typedef uint16_t signmag16_t;
  * - Key Scale Rate
  * - Key Scale Level
  * - Feedback
- * - Volume
  * - Investigate behaviour of +0 and -0 in the DAC.
  *   Should they be the same value?
  *   If different, is their delta the same as other number pairs?
@@ -179,6 +174,7 @@ static void ym2413_populate_exp_table (void)
 /*
  * Lookup an entry using the exp table.
  * Input is fixed-point with 8 fractional bits.
+ * Output range is ±4084.
  */
 static signmag16_t ym2413_exp (signmag16_t val)
 {
@@ -187,7 +183,7 @@ static signmag16_t ym2413_exp (signmag16_t val)
     uint8_t fractional = ~(val & 0xff);
     uint16_t integral = (val & MAG_BITS) >> 8;
 
-    int16_t result = exp_table [fractional] >> integral;
+    int16_t result = (exp_table [fractional] << 1) >> integral;
 
     /* Propagate the sign */
     result |= (val & SIGN_BIT);
@@ -274,6 +270,12 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
                  (((uint16_t) context->state.r20_channel_params [channel].fnum_9) << 8);
             uint16_t block  = context->state.r20_channel_params [channel].block;
             uint16_t inst   = context->state.r30_channel_params [channel].instrument;
+            uint16_t volume = context->state.r30_channel_params [channel].volume;
+
+            if (context->state.r20_channel_params [channel].key_on == 0)
+            {
+                continue;
+            }
 
             if (inst == 0)
             {
@@ -286,24 +288,38 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
 
             /* TODO: Simulate envelope generator */
 
-            /* Simulate operators */
-            uint16_t factor;
-
             /* Modulator */
+            uint16_t total_level = instrument->modulator_total_level;
+            uint16_t factor = factor_table [instrument->modulator_multiplication_factor];
+
+            context->state.channel [channel].modulator_phase += ((fnum * factor) << block) >> 1;
+            signmag16_t log_modulator_value = ym2413_sin (context->state.channel [channel].modulator_phase >> 9);
+
+            log_modulator_value += total_level << 5;
+
+            uint16_t modulator_value = ym2413_exp (log_modulator_value);
+            if (modulator_value & SIGN_BIT)
+            {
+                modulator_value = -modulator_value;
+            }
 
             /* Carrier */
             factor = factor_table [instrument->carrier_multiplication_factor];
+
             context->state.channel [channel].carrier_phase += ((fnum * factor) << block) >> 1;
+            signmag16_t log_carrier_value = ym2413_sin ((context->state.channel [channel].carrier_phase >> 9) + modulator_value);
 
-            signmag16_t channel_level = ym2413_exp (ym2413_sin (context->state.channel [channel].carrier_phase >> 9));
+            log_carrier_value += volume << 7;
 
-            if (channel_level & SIGN_BIT)
+            signmag16_t carrier_value = ym2413_exp (log_carrier_value);
+
+            if (carrier_value & SIGN_BIT)
             {
-                output_level -= (channel_level & MAG_BITS);
+                output_level -= (carrier_value & MAG_BITS) >> 1;
             }
             else
             {
-                output_level += (channel_level & MAG_BITS);
+                output_level += (carrier_value & MAG_BITS) >> 1;
             }
         }
 
