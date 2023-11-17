@@ -1,7 +1,8 @@
 /*
  * YM2413 implementation.
  *
- * Based on reverse engineering documents by Andete.
+ * Based on reverse engineering documents by Andete,
+ * and some experiments of my own with a ym2413 chip.
  */
 
 #include <math.h>
@@ -46,9 +47,9 @@ static int16_t sample_ring [YM2413_RING_SIZE];
 typedef uint16_t signmag16_t;
 
 /* TODO:
- * - global counter
  * - Tremolo
  * - Vibrato
+ * - Sustain bit
  * - Key on / off
  * - Envelope generator (Damp, Attack, Decay, Sustain, Release)
  * - LFSR
@@ -87,7 +88,7 @@ static uint32_t factor_table [16] = {
     16, 18, 20, 20, 24, 24, 30, 30
 };
 
-static uint8_t instrument_rom [15][8] = {
+static uint8_t instrument_rom [15] [8] = {
     { 0x71, 0x61, 0x1E, 0x17, 0xD0, 0x78, 0x00, 0x17 },
     { 0x13, 0x41, 0x1A, 0x0D, 0xD8, 0xF7, 0x23, 0x13 },
     { 0x13, 0x01, 0x99, 0x00, 0xF2, 0xC4, 0x11, 0x23 },
@@ -235,6 +236,68 @@ static signmag16_t ym2413_sin (uint16_t phase)
 }
 
 
+static uint8_t eg_step_table [4] [8] = {
+    { 0, 1, 0, 1, 0, 1, 0, 1 }, /* 4 of 8 */
+    { 0, 1, 0, 1, 1, 1, 0, 1 }, /* 5 of 8 */
+    { 0, 1, 1, 1, 0, 1, 1, 1 }, /* 6 of 8 */
+    { 0, 1, 1, 1, 1, 1, 1, 1 }, /* 7 of 8 */
+};
+
+
+static uint8_t eg_step_table_fast_decay [4] [8] = {
+    { 1, 1, 1, 1, 1, 1, 1, 1 }, /* 0 of 8 are +2 */
+    { 2, 1, 1, 1, 2, 1, 1, 1 }, /* 2 of 8 are +2 */
+    { 2, 1, 2, 1, 2, 1, 2, 1 }, /* 4 of 8 are +2 */
+    { 2, 2, 2, 1, 2, 2, 2, 1 }, /* 6 of 8 are +2 */
+};
+
+
+/*
+ * Calculate the number of eg_level steps to decay by.
+ * Note that for rates 52..59, we don't copy the hardware behaviour exactly.
+ * Instead, values are chosen that should result in a smoother curve.
+ * Input:  6-bit effective rate.
+ * Output: 0, 1, or 2 steps.
+ */
+static uint16_t ym2413_decay (YM2413_Context *context, uint16_t rate)
+{
+    uint32_t global_counter = context->state.global_counter;
+
+    /* Never decay for rates below four */
+    if (rate < 4)
+    {
+        return 0;
+    }
+    /* Zero or one step for rate 4..55 */
+    else if (rate < 56)
+    {
+        /* Only do a table lookup if the bits we shift off the global
+         * counter are all zeros. */
+        if ((global_counter & (0x1fff >> (rate >> 2))) == 0)
+        {
+            uint8_t table_row = rate & 0x03;
+            uint8_t table_col = (global_counter >> (13 - (rate >> 2))) & 0x07;
+            return eg_step_table [table_row] [table_col];
+        }
+    }
+    /* One or two steps for rate 56..59 */
+    else if (rate < 60)
+    {
+        uint8_t table_row = rate & 0x03;
+        uint8_t table_col = global_counter & 0x07;
+        return eg_step_table_fast_decay [table_row] [table_col];
+    }
+    /* Always decay by two steps for rates 60+ */
+    else
+    {
+        return 2;
+    }
+
+    /* Zero steps if the global counter didn't trigger an earlier return */
+    return 0;
+}
+
+
 /*
  * Run the YM2413 for a number of CPU clock cycles
  */
@@ -257,61 +320,153 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
         completed_samples = 0;
     }
 
+    /* Update channel state changes trigger by the key-on bit */
+    for (uint32_t channel = 0; channel < 6; channel++)
+    {
+        bool key_on = context->state.r20_channel_params [channel].key_on;
+        YM2413_Channel_State *channel_state = &context->state.channel_state [channel];
+
+        /* Key-on: Transition to DAMP */
+        if (key_on && channel_state->carrier_eg_state == YM2413_STATE_RELEASE)
+        {
+            channel_state->modulator_eg_state = YM2413_STATE_DAMP;
+            channel_state->carrier_eg_state = YM2413_STATE_DAMP;
+        }
+        /* Key-off: Transition to RELEASE */
+        else if (!key_on)
+        {
+            channel_state->modulator_eg_state = YM2413_STATE_RELEASE;
+            channel_state->carrier_eg_state = YM2413_STATE_RELEASE;
+        }
+    }
+
     while (ym_samples--)
     {
         int16_t output_level = 0;;
+        context->state.global_counter++;
 
         /* Note: As we don't check for rhythm mode yet, only run the first six channels */
         for (uint32_t channel = 0; channel < 6; channel++)
         {
-            YM2413_Instrument *instrument;
-            uint16_t fnum   = context->state.r10_channel_params [channel].fnum |
-                 (((uint16_t) context->state.r20_channel_params [channel].fnum_9) << 8);
-            uint16_t block  = context->state.r20_channel_params [channel].block;
-            uint16_t inst   = context->state.r30_channel_params [channel].instrument;
-            uint16_t volume = context->state.r30_channel_params [channel].volume;
+            uint16_t fnum    = context->state.r10_channel_params [channel].fnum |
+                  (((uint16_t) context->state.r20_channel_params [channel].fnum_9) << 8);
+            uint16_t block   = context->state.r20_channel_params [channel].block;
+            uint16_t volume  = context->state.r30_channel_params [channel].volume;
+            uint16_t inst    = context->state.r30_channel_params [channel].instrument;
+            YM2413_Channel_State *channel_state = &context->state.channel_state [channel];
+            YM2413_Instrument *instrument = (inst == 0) ? &context->state.regs_custom
+                                                        : (YM2413_Instrument *) instrument_rom [inst - 1];
 
-            if (context->state.r20_channel_params [channel].key_on == 0)
-            {
-                continue;
-            }
-
-            if (inst == 0)
-            {
-                instrument = &context->state.regs_custom;
-            }
-            else
-            {
-                instrument = (YM2413_Instrument *) instrument_rom [inst - 1];
-            }
-
-            /* TODO: Simulate envelope generator */
+            /* TODO: Modulator Envelope */
 
             /* Modulator */
             uint16_t total_level = instrument->modulator_total_level;
             uint16_t factor = factor_table [instrument->modulator_multiplication_factor];
 
-            context->state.channel [channel].modulator_phase += ((fnum * factor) << block) >> 1;
-            signmag16_t log_modulator_value = ym2413_sin (context->state.channel [channel].modulator_phase >> 9);
+            channel_state->modulator_phase += ((fnum * factor) << block) >> 1;
+            signmag16_t log_modulator_value = ym2413_sin (channel_state->modulator_phase >> 9);
 
             log_modulator_value += total_level << 5;
+            log_modulator_value += channel_state->modulator_eg_level << 4;
 
             uint16_t modulator_value = ym2413_exp (log_modulator_value);
+
             if (modulator_value & SIGN_BIT)
             {
                 /* When the 'waveform' bit is set, the negative half of the wave is flattened to zero. */
                 modulator_value = instrument->modulator_waveform ? 0 : -modulator_value;
             }
 
-            /* Carrier */
-            factor = factor_table [instrument->carrier_multiplication_factor];
+            /* Carrier Envelope */
+            uint16_t key_scale_rate = context->state.r20_channel_params [channel].r20_channel_params & 0x0f;
+            if (instrument->carrier_key_scale_rate == 0)
+            {
+                key_scale_rate >>= 2;
+            }
 
-            context->state.channel [channel].carrier_phase += ((fnum * factor) << block) >> 1;
-            signmag16_t log_carrier_value = ym2413_sin ((context->state.channel [channel].carrier_phase >> 9) + modulator_value);
+            /* TODO: If the eg level is already high, we may want to skip the damp state. */
+            /* TODO: If the Attack Rate is 15, we should also skip the attack state. However,
+             *       consider modulator and carrier may have different attack rates. */
+            switch (channel_state->carrier_eg_state)
+            {
+                case YM2413_STATE_DAMP:
+                    channel_state->carrier_eg_level += ym2413_decay (context, 48 + key_scale_rate);
+                    ENFORCE_MAXIMUM (channel_state->carrier_eg_level, 127);
 
-            log_carrier_value += volume << 7;
+                    /* Damp->Attack transition */
+                    if (channel_state->carrier_eg_level >= 120)
+                    {
+                        channel_state->carrier_eg_state = YM2413_STATE_ATTACK;
+                        channel_state->modulator_eg_state = YM2413_STATE_ATTACK;
+                        channel_state->modulator_phase = 0;
+                        channel_state->carrier_phase = 0;
+                    }
 
-            signmag16_t carrier_value = ym2413_exp (log_carrier_value);
+                    break;
+
+                case YM2413_STATE_ATTACK:
+                    /* TODO - For now we instantly jump to the peak.
+                     *        Eventually, only rate=15 will instantly
+                     *        jump and other rates will follow a curve. */
+                    channel_state->carrier_eg_level = 0;
+                    channel_state->carrier_eg_state = YM2413_STATE_DECAY;
+                    break;
+
+                case YM2413_STATE_DECAY:
+                    channel_state->carrier_eg_level += ym2413_decay (context, (instrument->carrier_decay_rate << 2) + key_scale_rate);
+
+                    if (channel_state->carrier_eg_level >= (instrument->carrier_sustain_level << 3))
+                    {
+                        channel_state->carrier_eg_state = YM2413_STATE_SUSTAIN;
+                    }
+
+                    break;
+
+                case YM2413_STATE_SUSTAIN:
+                    /* For a Percussive Tone - Uses release rate during sustain state */
+                    if (instrument->carrier_envelope_type == 0)
+                    {
+                        channel_state->carrier_eg_level += ym2413_decay (context, (instrument->carrier_release_rate << 2) + key_scale_rate);
+                        ENFORCE_MAXIMUM (channel_state->carrier_eg_level, 127);
+                    }
+                    break;
+
+                case YM2413_STATE_RELEASE:
+                    /* For a Sustained Tone, use the configured release rate */
+                    if (instrument->carrier_envelope_type == 1)
+                    {
+                        channel_state->carrier_eg_level += ym2413_decay (context, (instrument->carrier_release_rate << 2) + key_scale_rate);
+                        ENFORCE_MAXIMUM (channel_state->carrier_eg_level, 127);
+                    }
+                    /* For a Percussive Tone - Use a hard-coded release rate */
+                    else
+                    {
+                        channel_state->carrier_eg_level += ym2413_decay (context, 28 + key_scale_rate);
+                        ENFORCE_MAXIMUM (channel_state->carrier_eg_level, 127);
+                    }
+                    break;
+            }
+
+            /* Carrier Phase */
+
+            /* If EG value is >= 124, just output +0 */
+            signmag16_t carrier_value;
+            if (channel_state->carrier_eg_level >= 124)
+            {
+                carrier_value = 0;
+            }
+            else
+            {
+                factor = factor_table [instrument->carrier_multiplication_factor];
+
+                channel_state->carrier_phase += ((fnum * factor) << block) >> 1;
+                signmag16_t log_carrier_value = ym2413_sin ((channel_state->carrier_phase >> 9) + modulator_value);
+
+                log_carrier_value += volume << 7;
+                log_carrier_value += channel_state->carrier_eg_level << 4;
+
+                carrier_value = ym2413_exp (log_carrier_value);
+            }
 
             if (carrier_value & SIGN_BIT)
             {
@@ -328,7 +483,7 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
             }
         }
 
-        /* TODO: Propagate new samples into ring buffer */
+        /* Propagate new samples into ring buffer */
         sample_ring [write_index % YM2413_RING_SIZE] = output_level;
 
         /* Map from the amount of time emulated (completed cycles / clock rate) to the sound card sample rate */

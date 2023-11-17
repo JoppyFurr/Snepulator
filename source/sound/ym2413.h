@@ -2,6 +2,14 @@
  * API for the YM2413 synth chip.
  */
 
+typedef enum YM2413_Envelope_State_e {
+    YM2413_STATE_DAMP = 0,
+    YM2413_STATE_ATTACK,
+    YM2413_STATE_DECAY,
+    YM2413_STATE_SUSTAIN,
+    YM2413_STATE_RELEASE
+} YM2413_Envelope_State;
+
 typedef struct YM2413_Instrument_s {
     union {
         uint8_t r00;
@@ -70,6 +78,20 @@ typedef struct YM2413_Instrument_s {
     };
 } YM2413_Instrument;
 
+typedef struct YM2413_Channel_State_s {
+
+    /* Envelope Generators */
+    YM2413_Envelope_State modulator_eg_state;
+    uint8_t modulator_eg_level;
+    YM2413_Envelope_State carrier_eg_state;
+    uint8_t carrier_eg_level;
+
+    /* Fixed-point phase accumulators - 10.9 bits */
+    uint32_t modulator_phase;
+    uint32_t carrier_phase;
+
+} YM2413_Channel_State;
+
 typedef struct YM2413_State_s {
 
     uint8_t addr_latch;
@@ -119,13 +141,8 @@ typedef struct YM2413_State_s {
     } r30_channel_params [9];
 
     /* Internal State */
-    struct {
-
-        /* Fixed-point phase accumulators - 10.9 bits */
-        uint32_t modulator_phase;
-        uint32_t carrier_phase;
-
-    } channel [9];
+    uint32_t global_counter;
+    YM2413_Channel_State channel_state [9];
 
 } YM2413_State;
 
