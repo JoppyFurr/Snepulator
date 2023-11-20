@@ -439,19 +439,37 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
             YM2413_Instrument *instrument = (inst == 0) ? &context->state.regs_custom
                                                         : (YM2413_Instrument *) instrument_rom [inst - 1];
 
-            /* TODO: Modulator Envelope */
 
-            /* Modulator */
+            /* Modulator Envelope */
             YM2413_Operator_State *modulator = &context->state.modulator [channel];
-            uint16_t total_level = instrument->modulator_total_level;
+            uint16_t key_scale_rate = context->state.r20_channel_params [channel].r20_channel_params & 0x0f;
+            if (instrument->modulator_key_scale_rate == 0)
+            {
+                key_scale_rate >>= 2;
+            }
+
+            if (instrument->modulator_envelope_type == 1)
+            {
+                ym2413_sustained_envelope_cycle (context, modulator, instrument->modulator_attack_rate,
+                                                 instrument->modulator_decay_rate, instrument->modulator_sustain_level,
+                                                 instrument->modulator_release_rate, key_scale_rate);
+            }
+            else
+            {
+                ym2413_percussive_envelope_cycle (context, modulator, instrument->modulator_attack_rate,
+                                                  instrument->modulator_decay_rate, instrument->modulator_sustain_level,
+                                                  instrument->modulator_release_rate, key_scale_rate);
+            }
+
+            /* Modulator Phase */
             uint16_t factor = factor_table [instrument->modulator_multiplication_factor];
-
             modulator->phase += ((fnum * factor) << block) >> 1;
-            signmag16_t log_modulator_value = ym2413_sin (modulator->phase >> 9);
 
+            /* Modulator Output */
+            uint16_t total_level = instrument->modulator_total_level;
+            signmag16_t log_modulator_value = ym2413_sin (modulator->phase >> 9);
             log_modulator_value += total_level << 5;
             log_modulator_value += modulator->eg_level << 4;
-
             uint16_t modulator_value = ym2413_exp (log_modulator_value);
 
             if (modulator_value & SIGN_BIT)
@@ -462,7 +480,7 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
 
             /* Carrier Envelope */
             YM2413_Operator_State *carrier = &context->state.carrier [channel];
-            uint16_t key_scale_rate = context->state.r20_channel_params [channel].r20_channel_params & 0x0f;
+            key_scale_rate = context->state.r20_channel_params [channel].r20_channel_params & 0x0f;
             if (instrument->carrier_key_scale_rate == 0)
             {
                 key_scale_rate >>= 2;
@@ -490,26 +508,21 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
                                                   instrument->carrier_release_rate, key_scale_rate);
             }
 
-            /* Carrier Phase */
-
-            /* If EG value is >= 124, just output +0 */
-            signmag16_t carrier_value;
+            /* If the EG level is above the threshold , no sound is output */
             if (carrier->eg_level >= 124)
             {
-                carrier_value = 0;
+                continue;
             }
-            else
-            {
-                factor = factor_table [instrument->carrier_multiplication_factor];
 
-                carrier->phase += ((fnum * factor) << block) >> 1;
-                signmag16_t log_carrier_value = ym2413_sin ((carrier->phase >> 9) + modulator_value);
+            /* Carrier Phase */
+            factor = factor_table [instrument->carrier_multiplication_factor];
+            carrier->phase += ((fnum * factor) << block) >> 1;
 
-                log_carrier_value += volume << 7;
-                log_carrier_value += carrier->eg_level << 4;
-
-                carrier_value = ym2413_exp (log_carrier_value);
-            }
+            /* Carrier Output */
+            signmag16_t log_carrier_value = ym2413_sin ((carrier->phase >> 9) + modulator_value);
+            log_carrier_value += volume << 7;
+            log_carrier_value += carrier->eg_level << 4;
+            signmag16_t carrier_value = ym2413_exp (log_carrier_value);
 
             if (carrier_value & SIGN_BIT)
             {
