@@ -299,6 +299,88 @@ static uint16_t ym2413_decay (YM2413_Context *context, uint16_t rate)
 
 
 /*
+ * Run the sustained-tone envelope generator for one sample.
+ */
+static void ym2413_sustained_envelope_cycle (YM2413_Context *context, YM2413_Operator_State *operator,
+                                               uint8_t attack_rate, uint8_t decay_rate, uint8_t sustain_level,
+                                               uint8_t release_rate, uint8_t key_scale_rate)
+{
+    switch (operator->eg_state)
+    {
+        case YM2413_STATE_DAMP:
+            operator->eg_level += ym2413_decay (context, 48 + key_scale_rate);
+            break;
+
+        case YM2413_STATE_ATTACK:
+            /* TODO - For now we instantly jump to the peak. Eventually, we
+             * should only jump when rate=15. Other rates will follow a curve. */
+            operator->eg_level = 0;
+            operator->eg_state = YM2413_STATE_DECAY;
+            break;
+
+        case YM2413_STATE_DECAY:
+            operator->eg_level += ym2413_decay (context, (decay_rate << 2) + key_scale_rate);
+            if (operator->eg_level >= (sustain_level << 3))
+            {
+                operator->eg_state = YM2413_STATE_SUSTAIN;
+            }
+            break;
+
+        case YM2413_STATE_SUSTAIN:
+            /* Sustain until the key is released. */
+            break;
+
+        case YM2413_STATE_RELEASE:
+            operator->eg_level += ym2413_decay (context, (release_rate << 2) + key_scale_rate);
+            break;
+    }
+
+    ENFORCE_MAXIMUM (operator->eg_level, 127);
+}
+
+
+/*
+ * Run the percussive-tone envelope generator for one sample.
+ */
+static void ym2413_percussive_envelope_cycle (YM2413_Context *context, YM2413_Operator_State *operator,
+                                   uint8_t attack_rate, uint8_t decay_rate, uint8_t sustain_level,
+                                   uint8_t release_rate, uint8_t key_scale_rate)
+{
+    switch (operator->eg_state)
+    {
+        case YM2413_STATE_DAMP:
+            operator->eg_level += ym2413_decay (context, 48 + key_scale_rate);
+            break;
+
+        case YM2413_STATE_ATTACK:
+            /* TODO - For now we instantly jump to the peak. Eventually, we
+             * should only jump when rate=15. Other rates will follow a curve. */
+            operator->eg_level = 0;
+            operator->eg_state = YM2413_STATE_DECAY;
+            break;
+
+        case YM2413_STATE_DECAY:
+            operator->eg_level += ym2413_decay (context, (decay_rate << 2) + key_scale_rate);
+            if (operator->eg_level >= (sustain_level << 3))
+            {
+                operator->eg_state = YM2413_STATE_SUSTAIN;
+            }
+            break;
+
+        case YM2413_STATE_SUSTAIN:
+            operator->eg_level += ym2413_decay (context, (release_rate << 2) + key_scale_rate);
+            break;
+
+        case YM2413_STATE_RELEASE:
+            operator->eg_level += ym2413_decay (context, 28 + key_scale_rate);
+            break;
+    }
+
+    ENFORCE_MAXIMUM (operator->eg_level, 127);
+}
+
+
+/*
  * Run the YM2413 for a number of CPU clock cycles
  */
 void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
@@ -386,67 +468,26 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
                 key_scale_rate >>= 2;
             }
 
-            /* TODO: If the eg level is already high, we may want to skip the damp state. */
-            /* TODO: If the Attack Rate is 15, we should also skip the attack state. However,
-             *       consider modulator and carrier may have different attack rates. */
-            switch (carrier->eg_state)
+            /* Damp->Attack transition */
+            if (carrier->eg_state == YM2413_STATE_DAMP && carrier->eg_level >= 120)
             {
-                case YM2413_STATE_DAMP:
-                    carrier->eg_level += ym2413_decay (context, 48 + key_scale_rate);
-                    ENFORCE_MAXIMUM (carrier->eg_level, 127);
+                carrier->eg_state = YM2413_STATE_ATTACK;
+                modulator->eg_state = YM2413_STATE_ATTACK;
+                modulator->phase = 0;
+                carrier->phase = 0;
+            }
 
-                    /* Damp->Attack transition */
-                    if (carrier->eg_level >= 120)
-                    {
-                        carrier->eg_state = YM2413_STATE_ATTACK;
-                        modulator->eg_state = YM2413_STATE_ATTACK;
-                        modulator->phase = 0;
-                        carrier->phase = 0;
-                    }
-
-                    break;
-
-                case YM2413_STATE_ATTACK:
-                    /* TODO - For now we instantly jump to the peak.
-                     *        Eventually, only rate=15 will instantly
-                     *        jump and other rates will follow a curve. */
-                    carrier->eg_level = 0;
-                    carrier->eg_state = YM2413_STATE_DECAY;
-                    break;
-
-                case YM2413_STATE_DECAY:
-                    carrier->eg_level += ym2413_decay (context, (instrument->carrier_decay_rate << 2) + key_scale_rate);
-
-                    if (carrier->eg_level >= (instrument->carrier_sustain_level << 3))
-                    {
-                        carrier->eg_state = YM2413_STATE_SUSTAIN;
-                    }
-
-                    break;
-
-                case YM2413_STATE_SUSTAIN:
-                    /* For a Percussive Tone - Uses release rate during sustain state */
-                    if (instrument->carrier_envelope_type == 0)
-                    {
-                        carrier->eg_level += ym2413_decay (context, (instrument->carrier_release_rate << 2) + key_scale_rate);
-                        ENFORCE_MAXIMUM (carrier->eg_level, 127);
-                    }
-                    break;
-
-                case YM2413_STATE_RELEASE:
-                    /* For a Sustained Tone, use the configured release rate */
-                    if (instrument->carrier_envelope_type == 1)
-                    {
-                        carrier->eg_level += ym2413_decay (context, (instrument->carrier_release_rate << 2) + key_scale_rate);
-                        ENFORCE_MAXIMUM (carrier->eg_level, 127);
-                    }
-                    /* For a Percussive Tone - Use a hard-coded release rate */
-                    else
-                    {
-                        carrier->eg_level += ym2413_decay (context, 28 + key_scale_rate);
-                        ENFORCE_MAXIMUM (carrier->eg_level, 127);
-                    }
-                    break;
+            if (instrument->carrier_envelope_type == 1)
+            {
+                ym2413_sustained_envelope_cycle (context, carrier, instrument->carrier_attack_rate,
+                                                 instrument->carrier_decay_rate, instrument->carrier_sustain_level,
+                                                 instrument->carrier_release_rate, key_scale_rate);
+            }
+            else
+            {
+                ym2413_percussive_envelope_cycle (context, carrier, instrument->carrier_attack_rate,
+                                                  instrument->carrier_decay_rate, instrument->carrier_sustain_level,
+                                                  instrument->carrier_release_rate, key_scale_rate);
             }
 
             /* Carrier Phase */
