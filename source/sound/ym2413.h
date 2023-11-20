@@ -78,19 +78,16 @@ typedef struct YM2413_Instrument_s {
     };
 } YM2413_Instrument;
 
-typedef struct YM2413_Channel_State_s {
+typedef struct YM2413_Operator_State_s {
 
     /* Envelope Generators */
-    YM2413_Envelope_State modulator_eg_state;
-    uint8_t modulator_eg_level;
-    YM2413_Envelope_State carrier_eg_state;
-    uint8_t carrier_eg_level;
+    YM2413_Envelope_State eg_state;
+    uint8_t eg_level;
 
     /* Fixed-point phase accumulators - 10.9 bits */
-    uint32_t modulator_phase;
-    uint32_t carrier_phase;
+    uint32_t phase;
 
-} YM2413_Channel_State;
+} YM2413_Operator_State;
 
 typedef struct YM2413_State_s {
 
@@ -142,7 +139,8 @@ typedef struct YM2413_State_s {
 
     /* Internal State */
     uint32_t global_counter;
-    YM2413_Channel_State channel_state [9];
+    YM2413_Operator_State modulator [9];
+    YM2413_Operator_State carrier [9];
 
 } YM2413_State;
 
