@@ -32,13 +32,14 @@ extern Snepulator_State state;
 /* State */
 pthread_mutex_t ym2413_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-/* TODO: Avoid globals */
+/* TODO: Avoid globals, move these into the context. */
 static uint64_t write_index = 0;
 static uint64_t read_index = 0;
 static uint64_t completed_samples = 0; /* ym2413 samples, not sound card samples */
 static uint32_t clock_rate;
 
 static int16_t sample_ring [YM2413_RING_SIZE];
+static int16_t previous_output_level = 0;
 
 /* Use a special type definition to mark sign-magnitude numbers.
  * The most significant bit is used to indicate if the number is negative. */
@@ -602,11 +603,20 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
 
         /* Propagate new samples into ring buffer */
         /* TODO: Sort out proper volume levels. */
-        sample_ring [write_index % YM2413_RING_SIZE] = output_level * 3 / 2;
 
-        /* Map from the amount of time emulated (completed cycles / clock rate) to the sound card sample rate */
+        /* Linear interpolation to get 48 kHz from 49.7… kHz */
+        if (completed_samples * SAMPLE_RATE * 72 > write_index * clock_rate)
+        {
+            float portion = (float) ((write_index * clock_rate) % (SAMPLE_RATE * 72)) /
+                            (float) (SAMPLE_RATE * 72);
+
+            int16_t sample = roundf (portion * output_level + (1.0 - portion) * previous_output_level);
+            sample_ring [write_index % YM2413_RING_SIZE] = sample * 3 / 2;
+            write_index++;
+        }
+
+        previous_output_level = output_level;
         completed_samples++;
-        write_index = completed_samples * SAMPLE_RATE * 72 / clock_rate;
     }
 }
 
