@@ -139,6 +139,7 @@ typedef struct YM2413_State_s {
 
     /* Internal State */
     uint32_t global_counter;
+    int16_t feedback [9] [2];
     YM2413_Operator_State modulator [9];
     YM2413_Operator_State carrier [9];
 

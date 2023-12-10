@@ -55,7 +55,6 @@ typedef uint16_t signmag16_t;
  * - LFSR
  * - Rhythm
  * - Key Scale Level
- * - Feedback
  * - Investigate behaviour of +0 and -0 in the DAC.
  *   Should they be the same value?
  *   If different, is their delta the same as other number pairs?
@@ -516,7 +515,13 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
 
             /* Modulator Output */
             uint16_t total_level = instrument->modulator_total_level;
-            signmag16_t log_modulator_value = ym2413_sin (modulator->phase >> 9);
+            uint16_t feedback = 0;
+            if (instrument->modulator_feedback_level)
+            {
+                feedback = (context->state.feedback [channel] [0] +
+                            context->state.feedback [channel] [1]) >> (9 - instrument->modulator_feedback_level);
+            }
+            signmag16_t log_modulator_value = ym2413_sin ((modulator->phase >> 9) + feedback);
             log_modulator_value += total_level << 5;
             log_modulator_value += modulator->eg_level << 4;
             uint16_t modulator_value = ym2413_exp (log_modulator_value);
@@ -524,8 +529,10 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
             if (modulator_value & SIGN_BIT)
             {
                 /* When the 'waveform' bit is set, the negative half of the wave is flattened to zero. */
-                modulator_value = instrument->modulator_waveform ? 0 : -modulator_value;
+                modulator_value = instrument->modulator_waveform ? 0 : -(modulator_value & MAG_BITS);
             }
+
+            context->state.feedback [channel] [context->state.global_counter % 2] = modulator_value;
 
             /* Carrier Envelope */
             YM2413_Operator_State *carrier = &context->state.carrier [channel];
