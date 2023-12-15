@@ -18,7 +18,7 @@ typedef struct YM2413_Instrument_s {
             uint8_t modulator_key_scale_rate:1;
             uint8_t modulator_envelope_type:1;
             uint8_t modulator_vibrato:1;
-            uint8_t modulator_tremolo:1;
+            uint8_t modulator_am:1;
         };
     };
     union {
@@ -28,7 +28,7 @@ typedef struct YM2413_Instrument_s {
             uint8_t carrier_key_scale_rate:1;
             uint8_t carrier_envelope_type:1;
             uint8_t carrier_vibrato:1;
-            uint8_t carrier_tremolo:1;
+            uint8_t carrier_am:1;
         };
     };
     union {
@@ -139,6 +139,8 @@ typedef struct YM2413_State_s {
 
     /* Internal State */
     uint32_t global_counter;
+    uint16_t am_counter;
+    uint16_t am_value;
     int16_t feedback [9] [2];
     YM2413_Operator_State modulator [9];
     YM2413_Operator_State carrier [9];

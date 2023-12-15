@@ -48,7 +48,6 @@ static int16_t previous_output_level = 0;
 typedef uint16_t signmag16_t;
 
 /* TODO:
- * - Tremolo
  * - Vibrato
  * - Sustain bit
  * - LFSR
@@ -76,6 +75,7 @@ typedef uint16_t signmag16_t;
 
 static uint32_t exp_table [256] = { };
 static uint32_t log_sin_table [256] = { };
+static uint32_t am_table [210] = { };
 
 /* Note: Values are doubled when compared to the
  * datasheet to deal with the first entry being ½ */
@@ -229,6 +229,39 @@ static signmag16_t ym2413_sin (uint16_t phase)
     result |= (phase << 6) & SIGN_BIT;
 
     return result;
+}
+
+
+/*
+ * Populate the am table.
+ * The 210-entry table defines the triangle wave used for AM.
+ */
+static void ym2413_populate_am_table (void)
+{
+    uint8_t index = 0;
+
+    for (int i = 0; i < 15; i++)
+    {
+        am_table [index++] = 0;
+    }
+    for (int value = 1; value <= 12; value++)
+    {
+        for (int i = 0; i < 8; i++)
+        {
+            am_table [index++] = value << 4;
+        }
+    }
+    for (int i = 0; i < 3; i++)
+    {
+        am_table [index++] = 13 << 4;
+    }
+    for (int value = 12; value >= 1; value--)
+    {
+        for (int i = 0; i < 8; i++)
+        {
+            am_table [index++] = value << 4;
+        }
+    }
 }
 
 
@@ -496,6 +529,13 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
         int16_t output_level = 0;;
         context->state.global_counter++;
 
+        /* AM Counter */
+        if ((context->state.global_counter & 0x3f) == 0x00)
+        {
+            context->state.am_counter = (context->state.am_counter + 1) % 210;
+            context->state.am_value = am_table [context->state.am_counter];
+        }
+
         /* Note: As we don't check for rhythm mode yet, only run the first six channels */
         for (uint32_t channel = 0; channel < 6; channel++)
         {
@@ -545,6 +585,7 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
             log_modulator_value += total_level << 5;
             log_modulator_value += modulator->eg_level << 4;
             log_modulator_value += ym2413_ksl (instrument->modulator_key_scale_level, block, fnum) << 4;
+            log_modulator_value += (instrument->modulator_am) ? context->state.am_value : 0;
             uint16_t modulator_value = ym2413_exp (log_modulator_value);
 
             if (modulator_value & SIGN_BIT)
@@ -613,6 +654,7 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
             log_carrier_value += volume << 7;
             log_carrier_value += carrier->eg_level << 4;
             log_carrier_value += ym2413_ksl (instrument->carrier_key_scale_level, block, fnum) << 4;
+            log_carrier_value += (instrument->carrier_am) ? context->state.am_value : 0;
             signmag16_t carrier_value = ym2413_exp (log_carrier_value);
 
             if (carrier_value & SIGN_BIT)
@@ -706,6 +748,7 @@ YM2413_Context *ym2413_init (void)
         first = false;
         ym2413_populate_exp_table ();
         ym2413_populate_log_sin_table ();
+        ym2413_populate_am_table ();
     }
 
     YM2413_Context *context = calloc (1, sizeof (YM2413_Context));
