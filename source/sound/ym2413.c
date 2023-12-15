@@ -51,10 +51,8 @@ typedef uint16_t signmag16_t;
  * - Tremolo
  * - Vibrato
  * - Sustain bit
- * - Key on / off
  * - LFSR
  * - Rhythm
- * - Key Scale Level
  * - Investigate behaviour of +0 and -0 in the DAC.
  *   Should they be the same value?
  *   If different, is their delta the same as other number pairs?
@@ -231,6 +229,28 @@ static signmag16_t ym2413_sin (uint16_t phase)
     result |= (phase << 6) & SIGN_BIT;
 
     return result;
+}
+
+
+static uint8_t ksl_table [16] = {
+     0,  48,  64,  74,  80,  86,  90,  94,
+    96, 100, 102, 104, 106, 108, 110, 112
+};
+
+
+/*
+ * Calculate the ksl value for the current note.
+ */
+static uint8_t ym2413_ksl (uint8_t ksl, uint8_t block, uint16_t fnum)
+{
+    int16_t level = ksl_table [fnum >> 5] - 16 * (7 - block);
+
+    if (ksl == 0 || level <= 0)
+    {
+        return 0;
+    }
+
+    return level >> (3 - ksl);
 }
 
 
@@ -524,6 +544,7 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
             signmag16_t log_modulator_value = ym2413_sin ((modulator->phase >> 9) + feedback);
             log_modulator_value += total_level << 5;
             log_modulator_value += modulator->eg_level << 4;
+            log_modulator_value += ym2413_ksl (instrument->modulator_key_scale_level, block, fnum) << 4;
             uint16_t modulator_value = ym2413_exp (log_modulator_value);
 
             if (modulator_value & SIGN_BIT)
@@ -591,6 +612,7 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
             signmag16_t log_carrier_value = ym2413_sin ((carrier->phase >> 9) + modulator_value);
             log_carrier_value += volume << 7;
             log_carrier_value += carrier->eg_level << 4;
+            log_carrier_value += ym2413_ksl (instrument->carrier_key_scale_level, block, fnum) << 4;
             signmag16_t carrier_value = ym2413_exp (log_carrier_value);
 
             if (carrier_value & SIGN_BIT)
