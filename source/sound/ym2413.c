@@ -48,7 +48,6 @@ static int16_t previous_output_level = 0;
 typedef uint16_t signmag16_t;
 
 /* TODO:
- * - Vibrato
  * - Sustain bit
  * - LFSR
  * - Rhythm
@@ -82,6 +81,17 @@ static uint32_t am_table [210] = { };
 static uint32_t factor_table [16] = {
      1,  2,  4,  6,  8, 10, 12, 14,
     16, 18, 20, 20, 24, 24, 30, 30
+};
+
+static int8_t vibrato_table [8] [8] = {
+    { 0, 0, 0, 0, 0,  0,  0,  0 },
+    { 0, 0, 1, 0, 0,  0, -1,  0 },
+    { 0, 1, 2, 1, 0, -1, -2, -1 },
+    { 0, 1, 3, 1, 0, -1, -3, -1 },
+    { 0, 2, 4, 2, 0, -2, -4, -2 },
+    { 0, 2, 5, 2, 0, -2, -5, -2 },
+    { 0, 3, 6, 3, 0, -3, -6, -3 },
+    { 0, 3, 7, 3, 0, -3, -7, -3 }
 };
 
 static uint8_t instrument_rom [15] [8] = {
@@ -546,6 +556,7 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
             uint16_t inst    = context->state.r30_channel_params [channel].instrument;
             YM2413_Instrument *instrument = (inst == 0) ? &context->state.regs_custom
                                                         : (YM2413_Instrument *) instrument_rom [inst - 1];
+            int16_t fm = vibrato_table [fnum >> 6] [(context->state.global_counter >> 10) & 0x07];
 
 
             /* Modulator Envelope */
@@ -571,7 +582,8 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
 
             /* Modulator Phase */
             uint16_t factor = factor_table [instrument->modulator_multiplication_factor];
-            modulator->phase += ((fnum * factor) << block) >> 1;
+            int16_t modulator_fm = (instrument->modulator_vibrato) ? fm : 0;
+            modulator->phase += ((((fnum << 1) + modulator_fm) * factor) << block) >> 2;
 
             /* Modulator Output */
             uint16_t total_level = instrument->modulator_total_level;
@@ -647,7 +659,8 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
 
             /* Carrier Phase */
             factor = factor_table [instrument->carrier_multiplication_factor];
-            carrier->phase += ((fnum * factor) << block) >> 1;
+            int16_t carrier_fm = (instrument->carrier_vibrato) ? fm : 0;
+            carrier->phase += ((((fnum << 1) + carrier_fm) * factor) << block) >> 2;
 
             /* Carrier Output */
             signmag16_t log_carrier_value = ym2413_sin ((carrier->phase >> 9) + modulator_value);
