@@ -48,7 +48,6 @@ static int16_t previous_output_level = 0;
 typedef uint16_t signmag16_t;
 
 /* TODO:
- * - Sustain bit
  * - LFSR
  * - Rhythm
  * - Investigate behaviour of +0 and -0 in the DAC.
@@ -412,7 +411,7 @@ static uint16_t ym2413_decay (YM2413_Context *context, uint16_t rate)
  */
 static void ym2413_sustained_envelope_cycle (YM2413_Context *context, YM2413_Operator_State *operator,
                                                uint8_t attack_rate, uint8_t decay_rate, uint8_t sustain_level,
-                                               uint8_t release_rate, uint8_t key_scale_rate)
+                                               uint8_t release_rate, uint8_t key_scale_rate, bool sustain)
 {
     switch (operator->eg_state)
     {
@@ -441,6 +440,10 @@ static void ym2413_sustained_envelope_cycle (YM2413_Context *context, YM2413_Ope
             break;
 
         case YM2413_STATE_RELEASE:
+            if (sustain)
+            {
+                release_rate = 5;
+            }
             operator->eg_level += ym2413_decay (context, (release_rate << 2) + key_scale_rate);
             break;
     }
@@ -454,7 +457,7 @@ static void ym2413_sustained_envelope_cycle (YM2413_Context *context, YM2413_Ope
  */
 static void ym2413_percussive_envelope_cycle (YM2413_Context *context, YM2413_Operator_State *operator,
                                    uint8_t attack_rate, uint8_t decay_rate, uint8_t sustain_level,
-                                   uint8_t release_rate, uint8_t key_scale_rate)
+                                   uint8_t release_rate, uint8_t key_scale_rate, bool sustain)
 {
     switch (operator->eg_state)
     {
@@ -483,7 +486,7 @@ static void ym2413_percussive_envelope_cycle (YM2413_Context *context, YM2413_Op
             break;
 
         case YM2413_STATE_RELEASE:
-            operator->eg_level += ym2413_decay (context, 28 + key_scale_rate);
+            operator->eg_level += ym2413_decay (context, (sustain ? 20 : 28) + key_scale_rate);
             break;
     }
 
@@ -552,6 +555,7 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
             uint16_t fnum    = context->state.r10_channel_params [channel].fnum |
                   (((uint16_t) context->state.r20_channel_params [channel].fnum_9) << 8);
             uint16_t block   = context->state.r20_channel_params [channel].block;
+            bool     sustain = context->state.r20_channel_params [channel].sustain;
             uint16_t volume  = context->state.r30_channel_params [channel].volume;
             uint16_t inst    = context->state.r30_channel_params [channel].instrument;
             YM2413_Instrument *instrument = (inst == 0) ? &context->state.regs_custom
@@ -571,13 +575,13 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
             {
                 ym2413_sustained_envelope_cycle (context, modulator, instrument->modulator_attack_rate,
                                                  instrument->modulator_decay_rate, instrument->modulator_sustain_level,
-                                                 instrument->modulator_release_rate, modulator_key_scale_rate);
+                                                 instrument->modulator_release_rate, modulator_key_scale_rate, sustain);
             }
             else
             {
                 ym2413_percussive_envelope_cycle (context, modulator, instrument->modulator_attack_rate,
                                                   instrument->modulator_decay_rate, instrument->modulator_sustain_level,
-                                                  instrument->modulator_release_rate, modulator_key_scale_rate);
+                                                  instrument->modulator_release_rate, modulator_key_scale_rate, sustain);
             }
 
             /* Modulator Phase */
@@ -642,13 +646,13 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
             {
                 ym2413_sustained_envelope_cycle (context, carrier, instrument->carrier_attack_rate,
                                                  instrument->carrier_decay_rate, instrument->carrier_sustain_level,
-                                                 instrument->carrier_release_rate, carrier_key_scale_rate);
+                                                 instrument->carrier_release_rate, carrier_key_scale_rate, sustain);
             }
             else
             {
                 ym2413_percussive_envelope_cycle (context, carrier, instrument->carrier_attack_rate,
                                                   instrument->carrier_decay_rate, instrument->carrier_sustain_level,
-                                                  instrument->carrier_release_rate, carrier_key_scale_rate);
+                                                  instrument->carrier_release_rate, carrier_key_scale_rate, sustain);
             }
 
             /* If the EG level is above the threshold , no sound is output */
