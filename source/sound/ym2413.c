@@ -529,8 +529,8 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
         /* Key-off: Transition to RELEASE */
         else if (!key_on)
         {
+            /* Note that only the carrier is put into the release state. */
             carrier->eg_state = YM2413_STATE_RELEASE;
-            modulator->eg_state = YM2413_STATE_RELEASE;
         }
     }
 
