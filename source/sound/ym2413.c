@@ -428,7 +428,10 @@ static void ym2413_sustained_envelope_cycle (YM2413_Context *context, YM2413_Ope
             break;
 
         case YM2413_STATE_DECAY:
-            operator->eg_level += ym2413_decay (context, (decay_rate << 2) + key_scale_rate);
+            if (decay_rate)
+            {
+                operator->eg_level += ym2413_decay (context, (decay_rate << 2) + key_scale_rate);
+            }
             if (operator->eg_level >= (sustain_level << 3))
             {
                 operator->eg_state = YM2413_STATE_SUSTAIN;
@@ -444,7 +447,10 @@ static void ym2413_sustained_envelope_cycle (YM2413_Context *context, YM2413_Ope
             {
                 release_rate = 5;
             }
-            operator->eg_level += ym2413_decay (context, (release_rate << 2) + key_scale_rate);
+            if (release_rate)
+            {
+                operator->eg_level += ym2413_decay (context, (release_rate << 2) + key_scale_rate);
+            }
             break;
     }
 
@@ -474,7 +480,10 @@ static void ym2413_percussive_envelope_cycle (YM2413_Context *context, YM2413_Op
             break;
 
         case YM2413_STATE_DECAY:
-            operator->eg_level += ym2413_decay (context, (decay_rate << 2) + key_scale_rate);
+            if (decay_rate)
+            {
+                operator->eg_level += ym2413_decay (context, (decay_rate << 2) + key_scale_rate);
+            }
             if (operator->eg_level >= (sustain_level << 3))
             {
                 operator->eg_state = YM2413_STATE_SUSTAIN;
@@ -482,7 +491,10 @@ static void ym2413_percussive_envelope_cycle (YM2413_Context *context, YM2413_Op
             break;
 
         case YM2413_STATE_SUSTAIN:
-            operator->eg_level += ym2413_decay (context, (release_rate << 2) + key_scale_rate);
+            if (release_rate)
+            {
+                operator->eg_level += ym2413_decay (context, (release_rate << 2) + key_scale_rate);
+            }
             break;
 
         case YM2413_STATE_RELEASE:
