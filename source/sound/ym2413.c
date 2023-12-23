@@ -583,6 +583,19 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
                 modulator_key_scale_rate >>= 2;
             }
 
+            /* Damp->Attack transition */
+            if (modulator->eg_state == YM2413_STATE_DAMP && modulator->eg_level >= 120)
+            {
+                modulator->eg_state = YM2413_STATE_ATTACK;
+
+                /* Skip the attack phase if the rate is high enough */
+                if ((instrument->modulator_attack_rate << 2) + modulator_key_scale_rate >= 60)
+                {
+                    modulator->eg_state = YM2413_STATE_DECAY;
+                    modulator->eg_level = 0;
+                }
+            }
+
             if (instrument->modulator_envelope_type == 1)
             {
                 ym2413_sustained_envelope_cycle (context, modulator, instrument->modulator_attack_rate,
@@ -635,18 +648,11 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
             /* Damp->Attack transition */
             if (carrier->eg_state == YM2413_STATE_DAMP && carrier->eg_level >= 120)
             {
-                modulator->eg_state = YM2413_STATE_ATTACK;
                 carrier->eg_state = YM2413_STATE_ATTACK;
-                modulator->phase = 0;
-                modulator->eg_level = 127;
                 carrier->phase = 0;
+                modulator->phase = 0;
 
                 /* Skip the attack phase if the rate is high enough */
-                if ((instrument->modulator_attack_rate << 2) + modulator_key_scale_rate >= 60)
-                {
-                    modulator->eg_state = YM2413_STATE_DECAY;
-                    modulator->eg_level = 0;
-                }
                 if ((instrument->carrier_attack_rate << 2) + carrier_key_scale_rate >= 60)
                 {
                     carrier->eg_state = YM2413_STATE_DECAY;
