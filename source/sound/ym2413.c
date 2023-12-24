@@ -564,6 +564,10 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
         /* Note: As we don't check for rhythm mode yet, only run the first six channels */
         for (uint32_t channel = 0; channel < 6; channel++)
         {
+            YM2413_Operator_State *modulator = &context->state.modulator [channel];
+            YM2413_Operator_State *carrier = &context->state.carrier [channel];
+
+            /* Channel Parameters */
             uint16_t fnum    = context->state.r10_channel_params [channel].fnum |
                   (((uint16_t) context->state.r20_channel_params [channel].fnum_9) << 8);
             uint16_t block   = context->state.r20_channel_params [channel].block;
@@ -572,18 +576,22 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
             uint16_t inst    = context->state.r30_channel_params [channel].instrument;
             YM2413_Instrument *instrument = (inst == 0) ? &context->state.regs_custom
                                                         : (YM2413_Instrument *) instrument_rom [inst - 1];
+
             int16_t fm = vibrato_table [fnum >> 6] [(context->state.global_counter >> 10) & 0x07];
 
-
-            /* Modulator Envelope */
-            YM2413_Operator_State *modulator = &context->state.modulator [channel];
+            /* Key Scale Rate */
             uint16_t modulator_key_scale_rate = context->state.r20_channel_params [channel].r20_channel_params & 0x0f;
             if (instrument->modulator_key_scale_rate == 0)
             {
                 modulator_key_scale_rate >>= 2;
             }
+            uint16_t carrier_key_scale_rate = context->state.r20_channel_params [channel].r20_channel_params & 0x0f;
+            if (instrument->carrier_key_scale_rate == 0)
+            {
+                carrier_key_scale_rate >>= 2;
+            }
 
-            /* Damp->Attack transition */
+            /* Damp->Attack Transition */
             if (modulator->eg_state == YM2413_STATE_DAMP && modulator->eg_level >= 120)
             {
                 modulator->eg_state = YM2413_STATE_ATTACK;
@@ -595,7 +603,21 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
                     modulator->eg_level = 0;
                 }
             }
+            if (carrier->eg_state == YM2413_STATE_DAMP && carrier->eg_level >= 120)
+            {
+                carrier->eg_state = YM2413_STATE_ATTACK;
+                carrier->phase = 0;
+                modulator->phase = 0;
 
+                /* Skip the attack phase if the rate is high enough */
+                if ((instrument->carrier_attack_rate << 2) + carrier_key_scale_rate >= 60)
+                {
+                    carrier->eg_state = YM2413_STATE_DECAY;
+                    carrier->eg_level = 0;
+                }
+            }
+
+            /* Modulator Envelope */
             if (instrument->modulator_envelope_type == 1)
             {
                 ym2413_sustained_envelope_cycle (context, modulator, instrument->modulator_attack_rate,
@@ -638,28 +660,6 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
             context->state.feedback [channel] [context->state.global_counter % 2] = modulator_value;
 
             /* Carrier Envelope */
-            YM2413_Operator_State *carrier = &context->state.carrier [channel];
-            uint16_t carrier_key_scale_rate = context->state.r20_channel_params [channel].r20_channel_params & 0x0f;
-            if (instrument->carrier_key_scale_rate == 0)
-            {
-                carrier_key_scale_rate >>= 2;
-            }
-
-            /* Damp->Attack transition */
-            if (carrier->eg_state == YM2413_STATE_DAMP && carrier->eg_level >= 120)
-            {
-                carrier->eg_state = YM2413_STATE_ATTACK;
-                carrier->phase = 0;
-                modulator->phase = 0;
-
-                /* Skip the attack phase if the rate is high enough */
-                if ((instrument->carrier_attack_rate << 2) + carrier_key_scale_rate >= 60)
-                {
-                    carrier->eg_state = YM2413_STATE_DECAY;
-                    carrier->eg_level = 0;
-                }
-            }
-
             if (instrument->carrier_envelope_type == 1)
             {
                 ym2413_sustained_envelope_cycle (context, carrier, instrument->carrier_attack_rate,
@@ -673,16 +673,16 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
                                                   instrument->carrier_release_rate, carrier_key_scale_rate, sustain);
             }
 
+            /* Carrier Phase */
+            factor = factor_table [instrument->carrier_multiplication_factor];
+            int16_t carrier_fm = (instrument->carrier_vibrato) ? fm : 0;
+            carrier->phase += ((((fnum << 1) + carrier_fm) * factor) << block) >> 2;
+
             /* If the EG level is above the threshold , no sound is output */
             if (carrier->eg_level >= 124)
             {
                 continue;
             }
-
-            /* Carrier Phase */
-            factor = factor_table [instrument->carrier_multiplication_factor];
-            int16_t carrier_fm = (instrument->carrier_vibrato) ? fm : 0;
-            carrier->phase += ((((fnum << 1) + carrier_fm) * factor) << block) >> 2;
 
             /* Carrier Output */
             signmag16_t log_carrier_value = ym2413_sin ((carrier->phase >> 9) + modulator_value);
