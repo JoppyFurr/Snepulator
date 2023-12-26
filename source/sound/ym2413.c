@@ -568,6 +568,7 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
             YM2413_Operator_State *carrier = &context->state.carrier [channel];
 
             /* Channel Parameters */
+            bool     key_on  = context->state.r20_channel_params [channel].key_on;
             uint16_t fnum    = context->state.r10_channel_params [channel].fnum |
                   (((uint16_t) context->state.r20_channel_params [channel].fnum_9) << 8);
             uint16_t block   = context->state.r20_channel_params [channel].block;
@@ -617,18 +618,21 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
                 }
             }
 
-            /* Modulator Envelope */
-            if (instrument->modulator_envelope_type == 1)
+            /* Modulator Envelope - Only runs when the key is pressed */
+            if (key_on)
             {
-                ym2413_sustained_envelope_cycle (context, modulator, instrument->modulator_attack_rate,
-                                                 instrument->modulator_decay_rate, instrument->modulator_sustain_level,
-                                                 instrument->modulator_release_rate, modulator_key_scale_rate, sustain);
-            }
-            else
-            {
-                ym2413_percussive_envelope_cycle (context, modulator, instrument->modulator_attack_rate,
-                                                  instrument->modulator_decay_rate, instrument->modulator_sustain_level,
-                                                  instrument->modulator_release_rate, modulator_key_scale_rate, sustain);
+                if (instrument->modulator_envelope_type == 1)
+                {
+                    ym2413_sustained_envelope_cycle (context, modulator, instrument->modulator_attack_rate,
+                                                     instrument->modulator_decay_rate, instrument->modulator_sustain_level,
+                                                     instrument->modulator_release_rate, modulator_key_scale_rate, sustain);
+                }
+                else
+                {
+                    ym2413_percussive_envelope_cycle (context, modulator, instrument->modulator_attack_rate,
+                                                      instrument->modulator_decay_rate, instrument->modulator_sustain_level,
+                                                      instrument->modulator_release_rate, modulator_key_scale_rate, sustain);
+                }
             }
 
             /* Modulator Phase */
