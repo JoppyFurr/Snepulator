@@ -721,7 +721,7 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
                             (float) (SAMPLE_RATE * 72);
 
             int16_t sample = roundf (portion * output_level + (1.0 - portion) * previous_output_level);
-            sample_ring [write_index % YM2413_RING_SIZE] = sample * 3 / 2;
+            sample_ring [write_index % YM2413_RING_SIZE] = sample * 3;
             write_index++;
         }
 
