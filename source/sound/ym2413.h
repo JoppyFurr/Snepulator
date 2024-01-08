@@ -89,6 +89,12 @@ typedef struct YM2413_Operator_State_s {
 
 } YM2413_Operator_State;
 
+#define YM2413_BASS_DRUM_CH     6
+#define YM2413_HIGH_HAT_CH      7
+#define YM2413_SNARE_DRUM_CH    7
+#define YM2413_TOM_TOM_CH       8
+#define YM2413_TOP_CYMBAL_CH    8
+
 typedef struct YM2413_State_s {
 
     uint8_t addr_latch;
@@ -100,11 +106,11 @@ typedef struct YM2413_State_s {
     union {
         uint8_t r0e_rhythm;
         struct {
-            uint8_t rhythm_hat:1;
-            uint8_t rhythm_cymbal:1;
-            uint8_t rhythm_tom:1;
-            uint8_t rhythm_snare:1;
-            uint8_t rhythm_bass:1;
+            uint8_t rhythm_key_hh:1;
+            uint8_t rhythm_key_tc:1;
+            uint8_t rhythm_key_tt:1;
+            uint8_t rhythm_key_sd:1;
+            uint8_t rhythm_key_bd:1;
             uint8_t rhythm_mode:1;
             uint8_t r0e_unused:2;
         };
@@ -130,12 +136,25 @@ typedef struct YM2413_State_s {
     } r20_channel_params [9];
 
     union {
-        uint8_t r30_channel_params;
+        union {
+            uint8_t r30_channel_params;
+            struct {
+                uint8_t volume:4;
+                uint8_t instrument:4;
+            };
+        } r30_channel_params [9];
         struct {
-            uint8_t volume:4;
-            uint8_t instrument:4;
+            uint8_t r30_unused [6];
+            struct {
+                uint8_t rhythm_volume_bd:4;
+                uint8_t rhythm_volume_unused:4;
+                uint8_t rhythm_volume_sd:4;
+                uint8_t rhythm_volume_hh:4;
+                uint8_t rhythm_volume_tc:4;
+                uint8_t rhythm_volume_tt:4;
+            };
         };
-    } r30_channel_params [9];
+    };
 
     /* Internal State */
     uint32_t global_counter;

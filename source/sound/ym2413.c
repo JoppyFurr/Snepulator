@@ -111,6 +111,10 @@ static uint8_t instrument_rom [15] [8] = {
     { 0x61, 0x41, 0x89, 0x03, 0xF1, 0xE4, 0x40, 0x13 }  /* Electric Guitar */
 };
 
+static uint8_t rhythm_rom [3] [8] = {
+    { 0x01, 0x01, 0x18, 0x0f, 0xdf, 0xf8, 0x6a, 0x6d }, /* Bass Drum */
+};
+
 
 /*
  * Write data to the latched register address.
@@ -678,8 +682,10 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
         completed_samples = 0;
     }
 
+    uint32_t melody_channels = (context->state.rhythm_mode) ? 6 : 9;
+
     /* Update channel state changes trigger by the key-on bit */
-    for (uint32_t channel = 0; channel < 6; channel++)
+    for (uint32_t channel = 0; channel < melody_channels; channel++)
     {
         bool key_on = context->state.r20_channel_params [channel].key_on;
         YM2413_Operator_State *modulator = &context->state.modulator [channel];
@@ -698,6 +704,19 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
             carrier->eg_state = YM2413_STATE_RELEASE;
         }
     }
+    if (context->state.rhythm_mode)
+    {
+        /* Bass Drum */
+        if (context->state.rhythm_key_bd && context->state.carrier [YM2413_BASS_DRUM_CH].eg_state == YM2413_STATE_RELEASE)
+        {
+             context->state.modulator [YM2413_BASS_DRUM_CH].eg_state = YM2413_STATE_DAMP;
+             context->state.carrier [YM2413_BASS_DRUM_CH].eg_state = YM2413_STATE_DAMP;
+        }
+        else if (!context->state.rhythm_key_bd)
+        {
+             context->state.carrier [YM2413_BASS_DRUM_CH].eg_state = YM2413_STATE_RELEASE;
+        }
+    }
 
     while (ym_samples--)
     {
@@ -712,7 +731,7 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
         }
 
         /* Note: As we don't check for rhythm mode yet, only run the first six channels */
-        for (uint32_t channel = 0; channel < 6; channel++)
+        for (uint32_t channel = 0; channel < melody_channels; channel++)
         {
             /* Melody-specific channel Parameters */
             bool     key_on  = context->state.r20_channel_params [channel].key_on;
@@ -722,7 +741,13 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
                                                         : (YM2413_Instrument *) instrument_rom [inst - 1];
 
             output_level += ym2413_run_channel_sample (context, channel, instrument, key_on, volume);
+        }
 
+        if (context->state.rhythm_mode)
+        {
+            /* Bass Drum */
+            output_level += ym2413_run_channel_sample (context, YM2413_BASS_DRUM_CH, (YM2413_Instrument *) rhythm_rom [0],
+                                                       context->state.rhythm_key_bd, context->state.rhythm_volume_bd) << 1;
         }
 
         /* Propagate new samples into ring buffer */
