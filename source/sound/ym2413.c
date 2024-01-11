@@ -77,12 +77,12 @@ static uint32_t am_table [210] = { };
 
 /* Note: Values are doubled when compared to the
  * datasheet to deal with the first entry being ½ */
-static uint32_t factor_table [16] = {
+static const uint32_t factor_table [16] = {
      1,  2,  4,  6,  8, 10, 12, 14,
     16, 18, 20, 20, 24, 24, 30, 30
 };
 
-static int8_t vibrato_table [8] [8] = {
+static const int8_t vibrato_table [8] [8] = {
     { 0, 0, 0, 0, 0,  0,  0,  0 },
     { 0, 0, 1, 0, 0,  0, -1,  0 },
     { 0, 1, 2, 1, 0, -1, -2, -1 },
@@ -93,7 +93,7 @@ static int8_t vibrato_table [8] [8] = {
     { 0, 3, 7, 3, 0, -3, -7, -3 }
 };
 
-static uint8_t instrument_rom [15] [8] = {
+static const uint8_t instrument_rom [15] [8] = {
     { 0x71, 0x61, 0x1E, 0x17, 0xD0, 0x78, 0x00, 0x17 }, /* Violin */
     { 0x13, 0x41, 0x1A, 0x0D, 0xD8, 0xF7, 0x23, 0x13 }, /* Guitar */
     { 0x13, 0x01, 0x99, 0x00, 0xF2, 0xC4, 0x11, 0x23 }, /* Piano */
@@ -111,9 +111,27 @@ static uint8_t instrument_rom [15] [8] = {
     { 0x61, 0x41, 0x89, 0x03, 0xF1, 0xE4, 0x40, 0x13 }  /* Electric Guitar */
 };
 
-static uint8_t rhythm_rom [3] [8] = {
+static const uint8_t rhythm_rom [3] [8] = {
     { 0x01, 0x01, 0x18, 0x0f, 0xdf, 0xf8, 0x6a, 0x6d }, /* Bass Drum */
+    { 0x01, 0x01, 0x00, 0x00, 0xc8, 0xd8, 0xa7, 0x48 }, /* Snare Drum / High Hat */
+    { 0x05, 0x01, 0x00, 0x00, 0xf8, 0xaa, 0x59, 0x55 }, /* Tom Tom / Top Cymbal */
 };
+
+
+/*
+ * Convert signmag16_t to int16_t.
+ */
+static inline int16_t signmag_convert (signmag16_t value)
+{
+    if (value & SIGN_BIT)
+    {
+        return -(value & MAG_BITS);
+    }
+    else
+    {
+        return value;
+    }
+}
 
 
 /*
@@ -129,6 +147,14 @@ void ym2413_data_write (YM2413_Context *context, uint8_t data)
     }
     else if (addr == 0x0e)
     {
+        /* Some of the operators don't normally experience release,
+         * so put them into release when entering rhythm mode. */
+        if (context->state.rhythm_mode == false && data & 0x20)
+        {
+            context->state.modulator [YM2413_TOM_TOM_CH].eg_state = YM2413_STATE_RELEASE;
+            context->state.modulator [YM2413_TOM_TOM_CH].eg_level = 127;
+        }
+
         context->state.r0e_rhythm = data;
     }
     else if (addr == 0x0f)
@@ -415,7 +441,7 @@ static uint16_t ym2413_decay (YM2413_Context *context, uint16_t rate)
  */
 static void ym2413_sustained_envelope_cycle (YM2413_Context *context, YM2413_Operator_State *operator,
                                                uint8_t attack_rate, uint8_t decay_rate, uint8_t sustain_level,
-                                               uint8_t release_rate, uint8_t key_scale_rate, bool sustain)
+                                               uint8_t release_rate, uint8_t key_scale_rate)
 {
     switch (operator->eg_state)
     {
@@ -447,10 +473,6 @@ static void ym2413_sustained_envelope_cycle (YM2413_Context *context, YM2413_Ope
             break;
 
         case YM2413_STATE_RELEASE:
-            if (sustain)
-            {
-                release_rate = 5;
-            }
             if (release_rate)
             {
                 operator->eg_level += ym2413_decay (context, (release_rate << 2) + key_scale_rate);
@@ -467,7 +489,7 @@ static void ym2413_sustained_envelope_cycle (YM2413_Context *context, YM2413_Ope
  */
 static void ym2413_percussive_envelope_cycle (YM2413_Context *context, YM2413_Operator_State *operator,
                                    uint8_t attack_rate, uint8_t decay_rate, uint8_t sustain_level,
-                                   uint8_t release_rate, uint8_t key_scale_rate, bool sustain)
+                                   uint8_t release_rate_1, uint8_t release_rate_2, uint8_t key_scale_rate)
 {
     switch (operator->eg_state)
     {
@@ -495,14 +517,14 @@ static void ym2413_percussive_envelope_cycle (YM2413_Context *context, YM2413_Op
             break;
 
         case YM2413_STATE_SUSTAIN:
-            if (release_rate)
+            if (release_rate_1)
             {
-                operator->eg_level += ym2413_decay (context, (release_rate << 2) + key_scale_rate);
+                operator->eg_level += ym2413_decay (context, (release_rate_1 << 2) + key_scale_rate);
             }
             break;
 
         case YM2413_STATE_RELEASE:
-            operator->eg_level += ym2413_decay (context, (sustain ? 20 : 28) + key_scale_rate);
+            operator->eg_level += ym2413_decay (context, (release_rate_2 << 2) + key_scale_rate);
             break;
     }
 
@@ -572,13 +594,13 @@ static int16_t ym2413_run_channel_sample (YM2413_Context *context, uint16_t chan
         {
             ym2413_sustained_envelope_cycle (context, modulator, instrument->modulator_attack_rate,
                                              instrument->modulator_decay_rate, instrument->modulator_sustain_level,
-                                             instrument->modulator_release_rate, modulator_key_scale_rate, sustain);
+                                             (sustain ? 5 : instrument->modulator_release_rate), modulator_key_scale_rate);
         }
         else
         {
             ym2413_percussive_envelope_cycle (context, modulator, instrument->modulator_attack_rate,
                                               instrument->modulator_decay_rate, instrument->modulator_sustain_level,
-                                              instrument->modulator_release_rate, modulator_key_scale_rate, sustain);
+                                              instrument->modulator_release_rate, (sustain ? 5 : 7), modulator_key_scale_rate);
         }
     }
 
@@ -616,13 +638,13 @@ static int16_t ym2413_run_channel_sample (YM2413_Context *context, uint16_t chan
     {
         ym2413_sustained_envelope_cycle (context, carrier, instrument->carrier_attack_rate,
                                          instrument->carrier_decay_rate, instrument->carrier_sustain_level,
-                                         instrument->carrier_release_rate, carrier_key_scale_rate, sustain);
+                                         (sustain ? 5 : instrument->carrier_release_rate), carrier_key_scale_rate);
     }
     else
     {
         ym2413_percussive_envelope_cycle (context, carrier, instrument->carrier_attack_rate,
                                           instrument->carrier_decay_rate, instrument->carrier_sustain_level,
-                                          instrument->carrier_release_rate, carrier_key_scale_rate, sustain);
+                                          instrument->carrier_release_rate, (sustain ? 5 : 7), carrier_key_scale_rate);
     }
 
     /* Carrier Phase */
@@ -716,6 +738,16 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
         {
              context->state.carrier [YM2413_BASS_DRUM_CH].eg_state = YM2413_STATE_RELEASE;
         }
+
+        /* Tom Tom */
+        if (context->state.rhythm_key_tt && context->state.modulator [YM2413_TOM_TOM_CH].eg_state == YM2413_STATE_RELEASE)
+        {
+            context->state.modulator [YM2413_TOM_TOM_CH].eg_state = YM2413_STATE_DAMP;
+        }
+        else if (!context->state.rhythm_key_tt)
+        {
+            context->state.modulator [YM2413_TOM_TOM_CH].eg_state = YM2413_STATE_RELEASE;
+        }
     }
 
     while (ym_samples--)
@@ -745,9 +777,41 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
 
         if (context->state.rhythm_mode)
         {
+            YM2413_Instrument *tt_tc_instrument = (YM2413_Instrument *) rhythm_rom [2];
+            uint16_t tt_tc_fnum    = context->state.r10_channel_params [YM2413_TOM_TOM_CH].fnum |
+                        (((uint16_t) context->state.r20_channel_params [YM2413_TOM_TOM_CH].fnum_9) << 8);
+            uint16_t tt_tc_block   = context->state.r20_channel_params [YM2413_TOM_TOM_CH].block;
+
             /* Bass Drum */
             output_level += ym2413_run_channel_sample (context, YM2413_BASS_DRUM_CH, (YM2413_Instrument *) rhythm_rom [0],
                                                        context->state.rhythm_key_bd, context->state.rhythm_volume_bd) << 1;
+
+            /* Tom Tom */
+            YM2413_Operator_State *tom_tom = &context->state.modulator [YM2413_TOM_TOM_CH];
+            uint16_t tt_ksr = (context->state.r20_channel_params [YM2413_TOM_TOM_CH].r20_channel_params & 0x0f) >> 2;
+            uint16_t tt_factor = factor_table [tt_tc_instrument->modulator_multiplication_factor];
+
+            if (tom_tom->eg_state == YM2413_STATE_DAMP && tom_tom->eg_level >= 120)
+            {
+                tom_tom->eg_state = YM2413_STATE_DECAY;
+                tom_tom->eg_level = 0;
+                tom_tom->phase = 0;
+            }
+            ym2413_percussive_envelope_cycle (context, tom_tom, tt_tc_instrument->modulator_attack_rate,
+                                              tt_tc_instrument->modulator_decay_rate, tt_tc_instrument->modulator_sustain_level,
+                                              tt_tc_instrument->modulator_release_rate, tt_tc_instrument->modulator_release_rate, tt_ksr);
+
+            tom_tom->phase += (((tt_tc_fnum << 1) * tt_factor) << tt_tc_block) >> 2;
+
+            if (tom_tom->eg_level < 124)
+            {
+                signmag16_t log_tt_value = ym2413_sin (tom_tom->phase >> 9);
+                log_tt_value += context->state.rhythm_volume_tt << 7;
+                log_tt_value += tom_tom->eg_level << 4;
+                signmag16_t tt_value = ym2413_exp (log_tt_value);
+
+                output_level += signmag_convert (tt_value);
+            }
         }
 
         /* Propagate new samples into ring buffer */
