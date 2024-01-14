@@ -48,8 +48,6 @@ static int16_t previous_output_level = 0;
 typedef uint16_t signmag16_t;
 
 /* TODO:
- * - LFSR
- * - Rhythm
  * - Investigate behaviour of +0 and -0 in the DAC.
  *   Should they be the same value?
  *   If different, is their delta the same as other number pairs?
@@ -151,6 +149,8 @@ void ym2413_data_write (YM2413_Context *context, uint8_t data)
          * so put them into release when entering rhythm mode. */
         if (context->state.rhythm_mode == false && data & 0x20)
         {
+            context->state.modulator [YM2413_HIGH_HAT_CH].eg_state = YM2413_STATE_RELEASE;
+            context->state.modulator [YM2413_HIGH_HAT_CH].eg_level = 127;
             context->state.modulator [YM2413_TOM_TOM_CH].eg_state = YM2413_STATE_RELEASE;
             context->state.modulator [YM2413_TOM_TOM_CH].eg_level = 127;
         }
@@ -739,6 +739,16 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
              context->state.carrier [YM2413_BASS_DRUM_CH].eg_state = YM2413_STATE_RELEASE;
         }
 
+        /* High Hat */
+        if (context->state.rhythm_key_hh && context->state.modulator [YM2413_HIGH_HAT_CH].eg_state == YM2413_STATE_RELEASE)
+        {
+            context->state.modulator [YM2413_HIGH_HAT_CH].eg_state = YM2413_STATE_DAMP;
+        }
+        else if (!context->state.rhythm_key_hh)
+        {
+            context->state.modulator [YM2413_HIGH_HAT_CH].eg_state = YM2413_STATE_RELEASE;
+        }
+
         /* Snare Drum */
         if (context->state.rhythm_key_sd && context->state.carrier [YM2413_SNARE_DRUM_CH].eg_state == YM2413_STATE_RELEASE)
         {
@@ -818,9 +828,45 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
 
 
             /* High Hat */
+            uint16_t hh_ksr = (context->state.r20_channel_params [YM2413_HIGH_HAT_CH].r20_channel_params & 0x0f) >> 2;
             uint16_t hh_factor = factor_table [sd_hh_instrument->modulator_multiplication_factor];
 
+            if (high_hat->eg_state == YM2413_STATE_DAMP && high_hat->eg_level >= 120)
+            {
+                high_hat->eg_state = YM2413_STATE_ATTACK;
+                high_hat->phase = 0;
+
+                /* Skip the attack phase if the rate is high enough */
+                if ((sd_hh_instrument->modulator_attack_rate << 2) + hh_ksr >= 60)
+                {
+                    high_hat->eg_state = YM2413_STATE_DECAY;
+                    high_hat->eg_level = 0;
+                }
+            }
+
+            ym2413_percussive_envelope_cycle (context, high_hat, sd_hh_instrument->modulator_attack_rate,
+                                              sd_hh_instrument->modulator_decay_rate, sd_hh_instrument->modulator_sustain_level,
+                                              sd_hh_instrument->modulator_release_rate, 7, hh_ksr);
+
             high_hat->phase += (((sd_hh_fnum << 1) * hh_factor) << sd_hh_block) >> 2;
+            uint16_t lfsr_bit = context->state.hh_lfsr & 0x0001;
+            uint32_t lfsr_xor = (lfsr_bit) ? 0x800302 : 0;
+            context->state.hh_lfsr = (context->state.hh_lfsr ^ lfsr_xor) >> 1;
+
+            if (high_hat->eg_level < 124)
+            {
+                uint16_t phase_bit = (((top_cymbal->phase >> 14) ^ (top_cymbal->phase >> 12)) &
+                                      ((high_hat->phase   >> 16) ^ (high_hat->phase   >> 11)) &
+                                      ((top_cymbal->phase >> 14) ^ (high_hat->phase   >> 12))) & 0x01;
+
+                signmag16_t log_hh_value = ((phase_bit ^ lfsr_bit) ? 425 : 16) | (phase_bit << 15);
+
+                log_hh_value += context->state.rhythm_volume_hh << 7;
+                log_hh_value += high_hat->eg_level << 4;
+
+                signmag16_t hh_value = ym2413_exp (log_hh_value);
+                output_level += signmag_convert (hh_value);
+            }
 
             /* Snare Drum */
             uint16_t sd_ksr = (context->state.r20_channel_params [YM2413_SNARE_DRUM_CH].r20_channel_params & 0x0f) >> 2;
@@ -844,13 +890,13 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
                                               sd_hh_instrument->carrier_release_rate, 7, sd_ksr);
 
             snare_drum->phase += (((sd_hh_fnum << 1) * sd_factor) << sd_hh_block) >> 2;
-            uint16_t phase_bit = (snare_drum->phase >> 17) & 0x0001;
-            uint16_t lfsr_bit = context->state.sd_lfsr & 0x0001;
-            uint32_t lfsr_xor = (lfsr_bit) ? 0x800302 : 0;
+            lfsr_bit = context->state.sd_lfsr & 0x0001;
+            lfsr_xor = (lfsr_bit) ? 0x800302 : 0;
             context->state.sd_lfsr = (context->state.sd_lfsr ^ lfsr_xor) >> 1;
 
             if (snare_drum->eg_level < 124)
             {
+                uint16_t phase_bit = (snare_drum->phase >> 17) & 0x0001;
                 signmag16_t log_sd_value = (phase_bit ^ lfsr_bit) ? 0 : 2137; /* 0 = maximum, 2137 = minimum */
                 log_sd_value |= phase_bit << 15; /* Sign comes from phase */
                 log_sd_value += context->state.rhythm_volume_sd << 7;
@@ -1004,6 +1050,7 @@ YM2413_Context *ym2413_init (void)
 
     YM2413_Context *context = calloc (1, sizeof (YM2413_Context));
     context->state.sd_lfsr = 0x000001;
+    context->state.hh_lfsr = 0x000003;
 
     memset (sample_ring, 0, sizeof (sample_ring));
 

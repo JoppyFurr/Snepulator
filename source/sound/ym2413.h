@@ -164,6 +164,7 @@ typedef struct YM2413_State_s {
     YM2413_Operator_State modulator [9];
     YM2413_Operator_State carrier [9];
     uint32_t sd_lfsr;
+    uint32_t hh_lfsr;
 
 } YM2413_State;
 
