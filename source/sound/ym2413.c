@@ -133,6 +133,96 @@ static inline int16_t signmag_convert (signmag16_t value)
 
 
 /*
+ * Handle key-on / key-off events for the melody channels.
+ */
+static void ym2413_handle_melody_keys (YM2413_Context *context)
+{
+    uint32_t melody_channels = (context->state.rhythm_mode) ? 6 : 9;
+
+    for (uint32_t channel = 0; channel < melody_channels; channel++)
+    {
+        bool key_on = context->state.r20_channel_params [channel].key_on;
+        YM2413_Operator_State *modulator = &context->state.modulator [channel];
+        YM2413_Operator_State *carrier = &context->state.carrier [channel];
+
+        /* Key-on: Transition to DAMP */
+        if (key_on && carrier->eg_state == YM2413_STATE_RELEASE)
+        {
+            modulator->eg_state = YM2413_STATE_DAMP;
+            carrier->eg_state = YM2413_STATE_DAMP;
+        }
+        /* Key-off: Transition to RELEASE */
+        else if (!key_on)
+        {
+            /* Note that only the carrier is put into the release state. */
+            carrier->eg_state = YM2413_STATE_RELEASE;
+        }
+    }
+}
+
+
+/*
+ * Handle key-on / key-off events for rhythm instruments.
+ */
+static void ym2413_handle_rhythm_keys (YM2413_Context *context)
+{
+    if (context->state.rhythm_mode)
+    {
+        /* Bass Drum */
+        if (context->state.rhythm_key_bd && context->state.carrier [YM2413_BASS_DRUM_CH].eg_state == YM2413_STATE_RELEASE)
+        {
+             context->state.modulator [YM2413_BASS_DRUM_CH].eg_state = YM2413_STATE_DAMP;
+             context->state.carrier [YM2413_BASS_DRUM_CH].eg_state = YM2413_STATE_DAMP;
+        }
+        else if (!context->state.rhythm_key_bd)
+        {
+             context->state.carrier [YM2413_BASS_DRUM_CH].eg_state = YM2413_STATE_RELEASE;
+        }
+
+        /* High Hat */
+        if (context->state.rhythm_key_hh && context->state.modulator [YM2413_HIGH_HAT_CH].eg_state == YM2413_STATE_RELEASE)
+        {
+            context->state.modulator [YM2413_HIGH_HAT_CH].eg_state = YM2413_STATE_DAMP;
+        }
+        else if (!context->state.rhythm_key_hh)
+        {
+            context->state.modulator [YM2413_HIGH_HAT_CH].eg_state = YM2413_STATE_RELEASE;
+        }
+
+        /* Snare Drum */
+        if (context->state.rhythm_key_sd && context->state.carrier [YM2413_SNARE_DRUM_CH].eg_state == YM2413_STATE_RELEASE)
+        {
+            context->state.carrier [YM2413_SNARE_DRUM_CH].eg_state = YM2413_STATE_DAMP;
+        }
+        else if (!context->state.rhythm_key_sd)
+        {
+            context->state.carrier [YM2413_SNARE_DRUM_CH].eg_state = YM2413_STATE_RELEASE;
+        }
+
+        /* Tom Tom */
+        if (context->state.rhythm_key_tt && context->state.modulator [YM2413_TOM_TOM_CH].eg_state == YM2413_STATE_RELEASE)
+        {
+            context->state.modulator [YM2413_TOM_TOM_CH].eg_state = YM2413_STATE_DAMP;
+        }
+        else if (!context->state.rhythm_key_tt)
+        {
+            context->state.modulator [YM2413_TOM_TOM_CH].eg_state = YM2413_STATE_RELEASE;
+        }
+
+        /* Top Cymbal */
+        if (context->state.rhythm_key_tc && context->state.carrier [YM2413_TOP_CYMBAL_CH].eg_state == YM2413_STATE_RELEASE)
+        {
+            context->state.carrier [YM2413_TOP_CYMBAL_CH].eg_state = YM2413_STATE_DAMP;
+        }
+        else if (!context->state.rhythm_key_tc)
+        {
+            context->state.carrier [YM2413_TOP_CYMBAL_CH].eg_state = YM2413_STATE_RELEASE;
+        }
+    }
+}
+
+
+/*
  * Write data to the latched register address.
  */
 void ym2413_data_write (YM2413_Context *context, uint8_t data)
@@ -156,6 +246,7 @@ void ym2413_data_write (YM2413_Context *context, uint8_t data)
         }
 
         context->state.r0e_rhythm = data;
+        ym2413_handle_rhythm_keys (context);
     }
     else if (addr == 0x0f)
     {
@@ -168,6 +259,7 @@ void ym2413_data_write (YM2413_Context *context, uint8_t data)
     else if (addr >= 0x20 && addr <= 0x29)
     {
         ((uint8_t *) &context->state.r20_channel_params) [addr - 0x20] = data;
+        ym2413_handle_melody_keys (context);
     }
     else if (addr >= 0x30 && addr <= 0x39)
     {
@@ -706,80 +798,6 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
 
     uint32_t melody_channels = (context->state.rhythm_mode) ? 6 : 9;
 
-    /* Update channel state changes trigger by the key-on bit */
-    for (uint32_t channel = 0; channel < melody_channels; channel++)
-    {
-        bool key_on = context->state.r20_channel_params [channel].key_on;
-        YM2413_Operator_State *modulator = &context->state.modulator [channel];
-        YM2413_Operator_State *carrier = &context->state.carrier [channel];
-
-        /* Key-on: Transition to DAMP */
-        if (key_on && carrier->eg_state == YM2413_STATE_RELEASE)
-        {
-            modulator->eg_state = YM2413_STATE_DAMP;
-            carrier->eg_state = YM2413_STATE_DAMP;
-        }
-        /* Key-off: Transition to RELEASE */
-        else if (!key_on)
-        {
-            /* Note that only the carrier is put into the release state. */
-            carrier->eg_state = YM2413_STATE_RELEASE;
-        }
-    }
-    if (context->state.rhythm_mode)
-    {
-        /* Bass Drum */
-        if (context->state.rhythm_key_bd && context->state.carrier [YM2413_BASS_DRUM_CH].eg_state == YM2413_STATE_RELEASE)
-        {
-             context->state.modulator [YM2413_BASS_DRUM_CH].eg_state = YM2413_STATE_DAMP;
-             context->state.carrier [YM2413_BASS_DRUM_CH].eg_state = YM2413_STATE_DAMP;
-        }
-        else if (!context->state.rhythm_key_bd)
-        {
-             context->state.carrier [YM2413_BASS_DRUM_CH].eg_state = YM2413_STATE_RELEASE;
-        }
-
-        /* High Hat */
-        if (context->state.rhythm_key_hh && context->state.modulator [YM2413_HIGH_HAT_CH].eg_state == YM2413_STATE_RELEASE)
-        {
-            context->state.modulator [YM2413_HIGH_HAT_CH].eg_state = YM2413_STATE_DAMP;
-        }
-        else if (!context->state.rhythm_key_hh)
-        {
-            context->state.modulator [YM2413_HIGH_HAT_CH].eg_state = YM2413_STATE_RELEASE;
-        }
-
-        /* Snare Drum */
-        if (context->state.rhythm_key_sd && context->state.carrier [YM2413_SNARE_DRUM_CH].eg_state == YM2413_STATE_RELEASE)
-        {
-            context->state.carrier [YM2413_SNARE_DRUM_CH].eg_state = YM2413_STATE_DAMP;
-        }
-        else if (!context->state.rhythm_key_sd)
-        {
-            context->state.carrier [YM2413_SNARE_DRUM_CH].eg_state = YM2413_STATE_RELEASE;
-        }
-
-        /* Tom Tom */
-        if (context->state.rhythm_key_tt && context->state.modulator [YM2413_TOM_TOM_CH].eg_state == YM2413_STATE_RELEASE)
-        {
-            context->state.modulator [YM2413_TOM_TOM_CH].eg_state = YM2413_STATE_DAMP;
-        }
-        else if (!context->state.rhythm_key_tt)
-        {
-            context->state.modulator [YM2413_TOM_TOM_CH].eg_state = YM2413_STATE_RELEASE;
-        }
-
-        /* Top Cymbal */
-        if (context->state.rhythm_key_tc && context->state.carrier [YM2413_TOP_CYMBAL_CH].eg_state == YM2413_STATE_RELEASE)
-        {
-            context->state.carrier [YM2413_TOP_CYMBAL_CH].eg_state = YM2413_STATE_DAMP;
-        }
-        else if (!context->state.rhythm_key_tc)
-        {
-            context->state.carrier [YM2413_TOP_CYMBAL_CH].eg_state = YM2413_STATE_RELEASE;
-        }
-    }
-
     while (ym_samples--)
     {
         int16_t output_level = 0;
@@ -792,7 +810,6 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
             context->state.am_value = am_table [context->state.am_counter];
         }
 
-        /* Note: As we don't check for rhythm mode yet, only run the first six channels */
         for (uint32_t channel = 0; channel < melody_channels; channel++)
         {
             /* Melody-specific channel Parameters */
