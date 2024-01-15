@@ -845,7 +845,7 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
 
 
             /* High Hat */
-            uint16_t hh_ksr = (context->state.r20_channel_params [YM2413_HIGH_HAT_CH].r20_channel_params & 0x0f) >> 2;
+            uint16_t hh_sd_ksr = (context->state.r20_channel_params [YM2413_HIGH_HAT_CH].r20_channel_params & 0x0f) >> 2;
             uint16_t hh_factor = factor_table [sd_hh_instrument->modulator_multiplication_factor];
 
             if (high_hat->eg_state == YM2413_STATE_DAMP && high_hat->eg_level >= 120)
@@ -854,7 +854,7 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
                 high_hat->phase = 0;
 
                 /* Skip the attack phase if the rate is high enough */
-                if ((sd_hh_instrument->modulator_attack_rate << 2) + hh_ksr >= 60)
+                if ((sd_hh_instrument->modulator_attack_rate << 2) + hh_sd_ksr >= 60)
                 {
                     high_hat->eg_state = YM2413_STATE_DECAY;
                     high_hat->eg_level = 0;
@@ -863,7 +863,7 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
 
             ym2413_percussive_envelope_cycle (context, high_hat, sd_hh_instrument->modulator_attack_rate,
                                               sd_hh_instrument->modulator_decay_rate, sd_hh_instrument->modulator_sustain_level,
-                                              sd_hh_instrument->modulator_release_rate, 7, hh_ksr);
+                                              sd_hh_instrument->modulator_release_rate, 7, hh_sd_ksr);
 
             high_hat->phase += (((sd_hh_fnum << 1) * hh_factor) << sd_hh_block) >> 2;
             uint16_t lfsr_bit = context->state.hh_lfsr & 0x0001;
@@ -886,7 +886,6 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
             }
 
             /* Snare Drum */
-            uint16_t sd_ksr = (context->state.r20_channel_params [YM2413_SNARE_DRUM_CH].r20_channel_params & 0x0f) >> 2;
             uint16_t sd_factor = factor_table [sd_hh_instrument->carrier_multiplication_factor];
 
             if (snare_drum->eg_state == YM2413_STATE_DAMP && snare_drum->eg_level >= 120)
@@ -895,7 +894,7 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
                 snare_drum->phase = 0;
 
                 /* Skip the attack phase if the rate is high enough */
-                if ((sd_hh_instrument->carrier_attack_rate << 2) + sd_ksr >= 60)
+                if ((sd_hh_instrument->carrier_attack_rate << 2) + hh_sd_ksr >= 60)
                 {
                     snare_drum->eg_state = YM2413_STATE_DECAY;
                     snare_drum->eg_level = 0;
@@ -904,7 +903,7 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
 
             ym2413_percussive_envelope_cycle (context, snare_drum, sd_hh_instrument->carrier_attack_rate,
                                               sd_hh_instrument->carrier_decay_rate, sd_hh_instrument->carrier_sustain_level,
-                                              sd_hh_instrument->carrier_release_rate, 7, sd_ksr);
+                                              sd_hh_instrument->carrier_release_rate, 7, hh_sd_ksr);
 
             snare_drum->phase += (((sd_hh_fnum << 1) * sd_factor) << sd_hh_block) >> 2;
             lfsr_bit = context->state.sd_lfsr & 0x0001;
@@ -924,7 +923,7 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
             }
 
             /* Tom Tom */
-            uint16_t tt_ksr = (context->state.r20_channel_params [YM2413_TOM_TOM_CH].r20_channel_params & 0x0f) >> 2;
+            uint16_t tt_tc_ksr = (context->state.r20_channel_params [YM2413_TOM_TOM_CH].r20_channel_params & 0x0f) >> 2;
             uint16_t tt_factor = factor_table [tt_tc_instrument->modulator_multiplication_factor];
 
             if (tom_tom->eg_state == YM2413_STATE_DAMP && tom_tom->eg_level >= 120)
@@ -935,7 +934,7 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
             }
             ym2413_percussive_envelope_cycle (context, tom_tom, tt_tc_instrument->modulator_attack_rate,
                                               tt_tc_instrument->modulator_decay_rate, tt_tc_instrument->modulator_sustain_level,
-                                              tt_tc_instrument->modulator_release_rate, tt_tc_instrument->modulator_release_rate, tt_ksr);
+                                              tt_tc_instrument->modulator_release_rate, tt_tc_instrument->modulator_release_rate, tt_tc_ksr);
 
             tom_tom->phase += (((tt_tc_fnum << 1) * tt_factor) << tt_tc_block) >> 2;
 
@@ -950,7 +949,6 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
             }
 
             /* Top Cymbal */
-            uint16_t tc_ksr = (context->state.r20_channel_params [YM2413_TOP_CYMBAL_CH].r20_channel_params & 0x0f) >> 2;
             uint16_t tc_factor = factor_table [tt_tc_instrument->carrier_multiplication_factor];
 
             if (top_cymbal->eg_state == YM2413_STATE_DAMP && top_cymbal->eg_level >= 120)
@@ -959,7 +957,7 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
                 top_cymbal->phase = 0;
 
                 /* Skip the attack phase if the rate is high enough */
-                if ((tt_tc_instrument->carrier_attack_rate << 2) + sd_ksr >= 60)
+                if ((tt_tc_instrument->carrier_attack_rate << 2) + tt_tc_ksr >= 60)
                 {
                     top_cymbal->eg_state = YM2413_STATE_DECAY;
                     top_cymbal->eg_level = 0;
@@ -968,7 +966,7 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
 
             ym2413_percussive_envelope_cycle (context, top_cymbal, tt_tc_instrument->carrier_attack_rate,
                                               tt_tc_instrument->carrier_decay_rate, tt_tc_instrument->carrier_sustain_level,
-                                              tt_tc_instrument->carrier_release_rate, 7, tc_ksr);
+                                              tt_tc_instrument->carrier_release_rate, 7, tt_tc_ksr);
 
             top_cymbal->phase += (((tt_tc_fnum << 1) * tc_factor) << tt_tc_block) >> 2;
 
