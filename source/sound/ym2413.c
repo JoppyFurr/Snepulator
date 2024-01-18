@@ -133,14 +133,15 @@ static inline int16_t signmag_convert (signmag16_t value)
 
 
 /*
- * Handle key-on / key-off events for the melody channels.
+ * Handle changes driven by writes to channel registers.
+ * Calculate values that only change when the register values change.
  */
-static void ym2413_handle_melody_keys (YM2413_Context *context)
+static void ym2413_handle_channel_update (YM2413_Context *context, uint8_t channel)
 {
-    uint32_t melody_channels = (context->state.rhythm_mode) ? 6 : 9;
-
-    for (uint32_t channel = 0; channel < melody_channels; channel++)
+    /* Melody calculations */
+    if (channel < ((context->state.rhythm_mode) ? 6 : 9))
     {
+        /* Key-on / key-off */
         bool key_on = context->state.r20_channel_params [channel].key_on;
         YM2413_Operator_State *modulator = &context->state.modulator [channel];
         YM2413_Operator_State *carrier = &context->state.carrier [channel];
@@ -154,9 +155,142 @@ static void ym2413_handle_melody_keys (YM2413_Context *context)
         /* Key-off: Transition to RELEASE */
         else if (!key_on)
         {
-            /* Note that only the carrier is put into the release state. */
+            modulator->eg_state = YM2413_STATE_RELEASE;
             carrier->eg_state = YM2413_STATE_RELEASE;
         }
+
+        uint16_t inst = context->state.r30_channel_params [channel].instrument;
+        YM2413_Instrument *instrument = (inst == 0) ? &context->state.regs_custom
+                                                    : (YM2413_Instrument *) instrument_rom [inst - 1];
+
+        /* Calculate modulator effective rates */
+        YM2413_Envelope_Params *modulator_envelope = &context->calculated [channel].modulator_envelope;
+        bool sustain = context->state.r20_channel_params [channel].sustain;
+        uint32_t modulator_key_scale_rate = context->state.r20_channel_params [channel].r20_channel_params & 0x0f;
+        if (instrument->modulator_key_scale_rate == 0)
+        {
+            modulator_key_scale_rate >>= 2;
+        }
+        modulator_envelope->effective_damp = 48 + modulator_key_scale_rate;
+        modulator_envelope->effective_attack = (instrument->modulator_attack_rate << 2) + modulator_key_scale_rate;
+        modulator_envelope->effective_decay = (instrument->modulator_decay_rate == 0) ? 0
+                                            : (instrument->modulator_decay_rate << 2) + modulator_key_scale_rate;
+        modulator_envelope->effective_sustain_level = instrument->modulator_sustain_level << 3;
+
+        if (instrument->modulator_envelope_type == 0)
+        {
+            /* Percussive Tone */
+            modulator_envelope->effective_release_1 = (instrument->modulator_release_rate == 0) ? 0
+                                                    : (instrument->modulator_release_rate << 2) + modulator_key_scale_rate;
+            modulator_envelope->effective_release_2 = 0; /* Modulator envelope only runs when the key is pressed */
+        }
+        else
+        {
+            /* Sustained Tone */
+            modulator_envelope->effective_release_1 = 0;
+            modulator_envelope->effective_release_2 = 0; /* Modulator envelope only runs when the key is pressed */
+        }
+
+        /* Calculate carrier effective rates */
+        YM2413_Envelope_Params *carrier_envelope = &context->calculated [channel].carrier_envelope;
+        uint32_t carrier_key_scale_rate = context->state.r20_channel_params [channel].r20_channel_params & 0x0f;
+        if (instrument->carrier_key_scale_rate == 0)
+        {
+            carrier_key_scale_rate >>= 2;
+        }
+        carrier_envelope->effective_damp = 48 + carrier_key_scale_rate;
+        carrier_envelope->effective_attack = (instrument->carrier_attack_rate << 2) + carrier_key_scale_rate;
+        carrier_envelope->effective_decay = (instrument->carrier_decay_rate == 0) ? 0
+                                          : (instrument->carrier_decay_rate << 2) + carrier_key_scale_rate;
+        carrier_envelope->effective_sustain_level = instrument->carrier_sustain_level << 3;
+
+        if (instrument->carrier_envelope_type == 0)
+        {
+            /* Percussive Tone */
+            carrier_envelope->effective_release_1 = (instrument->carrier_release_rate == 0) ? 0
+                                                  : (instrument->carrier_release_rate << 2) + carrier_key_scale_rate;
+            carrier_envelope->effective_release_2 = ((sustain ? 5 : 7) << 2) + carrier_key_scale_rate;
+        }
+        else
+        {
+            /* Sustained Tone */
+            carrier_envelope->effective_release_1 = 0;
+            carrier_envelope->effective_release_2 = (instrument->carrier_release_rate == 0 && !sustain) ? 0
+                                                  : ((sustain ? 5 : instrument->carrier_release_rate) << 2) + carrier_key_scale_rate;
+        }
+    }
+
+    /* Bass Drum */
+    else if (context->state.rhythm_mode && channel == 6)
+    {
+        YM2413_Instrument *instrument = (YM2413_Instrument *) rhythm_rom [0];
+        uint32_t key_scale_rate = (context->state.r20_channel_params [channel].r20_channel_params & 0x0f) >> 2;
+
+        /* Calculate modulator effective rates */
+        YM2413_Envelope_Params *modulator_envelope = &context->calculated [channel].modulator_envelope;
+        modulator_envelope->effective_damp = 48 + key_scale_rate;
+        modulator_envelope->effective_attack = (instrument->modulator_attack_rate << 2) + key_scale_rate;
+        modulator_envelope->effective_decay = (instrument->modulator_decay_rate << 2) + key_scale_rate;
+        modulator_envelope->effective_sustain_level = instrument->modulator_sustain_level << 3;
+        modulator_envelope->effective_release_1 = (instrument->modulator_release_rate << 2) + key_scale_rate;
+        modulator_envelope->effective_release_2 = 0;
+
+        /* Calculate carrier effective rates */
+        YM2413_Envelope_Params *carrier_envelope = &context->calculated [channel].carrier_envelope;
+        carrier_envelope->effective_damp = 48 + key_scale_rate;
+        carrier_envelope->effective_attack = (instrument->carrier_attack_rate << 2) + key_scale_rate;
+        carrier_envelope->effective_decay = (instrument->carrier_decay_rate << 2) + key_scale_rate;
+        carrier_envelope->effective_sustain_level = instrument->carrier_sustain_level << 3;
+        carrier_envelope->effective_release_1 = (instrument->carrier_release_rate << 2) + key_scale_rate;
+        carrier_envelope->effective_release_2 = (7 << 2) + key_scale_rate;
+    }
+    /* High Hat / Snare Drum */
+    else if (context->state.rhythm_mode && channel == 7)
+    {
+        YM2413_Instrument *instrument = (YM2413_Instrument *) rhythm_rom [1];
+        uint16_t key_scale_rate = (context->state.r20_channel_params [7].r20_channel_params & 0x0f) >> 2;
+
+        /* Calculate High Hat effective rates */
+        YM2413_Envelope_Params *high_hat_envelope = &context->calculated [7].modulator_envelope;
+        high_hat_envelope->effective_damp = 48 + key_scale_rate;
+        high_hat_envelope->effective_attack = (instrument->modulator_attack_rate << 2) + key_scale_rate;
+        high_hat_envelope->effective_decay = (instrument->modulator_decay_rate << 2) + key_scale_rate;
+        high_hat_envelope->effective_sustain_level = instrument->modulator_sustain_level << 3;
+        high_hat_envelope->effective_release_1 = (instrument->modulator_release_rate << 2) + key_scale_rate;
+        high_hat_envelope->effective_release_2 = (7 << 2) + key_scale_rate;
+
+        /* Calculate Snare Drum effective rates */
+        YM2413_Envelope_Params *snare_drum_envelope = &context->calculated [7].carrier_envelope;
+        snare_drum_envelope->effective_damp = 48 + key_scale_rate;
+        snare_drum_envelope->effective_attack = (instrument->carrier_attack_rate << 2) + key_scale_rate;
+        snare_drum_envelope->effective_decay = (instrument->carrier_decay_rate << 2) + key_scale_rate;
+        snare_drum_envelope->effective_sustain_level = instrument->carrier_sustain_level << 3;
+        snare_drum_envelope->effective_release_1 = (instrument->carrier_release_rate << 2) + key_scale_rate;
+        snare_drum_envelope->effective_release_2 = (7 << 2) + key_scale_rate;
+    }
+    /* Tom Tom / Top Cymbal */
+    else if (context->state.rhythm_mode && channel == 8)
+    {
+        YM2413_Instrument *instrument = (YM2413_Instrument *) rhythm_rom [2];
+        uint16_t key_scale_rate = (context->state.r20_channel_params [8].r20_channel_params & 0x0f) >> 2;
+
+        /* Calculate Tom Tom effective rates */
+        YM2413_Envelope_Params *tom_tom_envelope = &context->calculated [8].modulator_envelope;
+        tom_tom_envelope->effective_damp = 48 + key_scale_rate;
+        tom_tom_envelope->effective_attack = (instrument->modulator_attack_rate << 2) + key_scale_rate;
+        tom_tom_envelope->effective_decay = (instrument->modulator_decay_rate << 2) + key_scale_rate;
+        tom_tom_envelope->effective_sustain_level = instrument->modulator_sustain_level << 3;
+        tom_tom_envelope->effective_release_1 = (instrument->modulator_release_rate << 2) + key_scale_rate;
+        tom_tom_envelope->effective_release_2 = (instrument->modulator_release_rate << 2) + key_scale_rate;
+
+        /* Calculate Top Cymbal effective rates */
+        YM2413_Envelope_Params *top_cymbal_envelope = &context->calculated [8].carrier_envelope;
+        top_cymbal_envelope->effective_damp = 48 + key_scale_rate;
+        top_cymbal_envelope->effective_attack = (instrument->carrier_attack_rate << 2) + key_scale_rate;
+        top_cymbal_envelope->effective_decay = (instrument->carrier_decay_rate << 2) + key_scale_rate;
+        top_cymbal_envelope->effective_sustain_level = instrument->carrier_sustain_level << 3;
+        top_cymbal_envelope->effective_release_1 = (instrument->carrier_release_rate << 2) + key_scale_rate;
+        top_cymbal_envelope->effective_release_2 = (7 << 2) + key_scale_rate;
     }
 }
 
@@ -229,23 +363,48 @@ void ym2413_data_write (YM2413_Context *context, uint8_t data)
 {
     uint8_t addr = context->state.addr_latch;
 
+    pthread_mutex_lock (&ym2413_mutex);
+
     if (addr >= 0x00 && addr <= 0x07)
     {
+        uint32_t melody_channels = (context->state.rhythm_mode) ? 6 : 9;
+
         ((uint8_t *) &context->state.regs_custom.r00) [addr] = data;
+
+        for (int channel = 0; channel < melody_channels; channel++)
+        {
+            if (context->state.r30_channel_params [channel].instrument == 0)
+            {
+                ym2413_handle_channel_update (context, channel);
+            }
+        }
     }
     else if (addr == 0x0e)
     {
-        /* Some of the operators don't normally experience release,
-         * so put them into release when entering rhythm mode. */
-        if (context->state.rhythm_mode == false && data & 0x20)
+        bool rhythm_mode_was = !!context->state.rhythm_mode;
+        context->state.r0e_rhythm = data;
+
+        /* Handle transitions in and out of rhythm mode */
+        if (rhythm_mode_was == false && context->state.rhythm_mode == true)
         {
+            /* Some of the operators don't normally experience release,
+             * so put them into release when entering rhythm mode. */
             context->state.modulator [YM2413_HIGH_HAT_CH].eg_state = YM2413_STATE_RELEASE;
             context->state.modulator [YM2413_HIGH_HAT_CH].eg_level = 127;
             context->state.modulator [YM2413_TOM_TOM_CH].eg_state = YM2413_STATE_RELEASE;
             context->state.modulator [YM2413_TOM_TOM_CH].eg_level = 127;
+
+            ym2413_handle_channel_update (context, 6);
+            ym2413_handle_channel_update (context, 7);
+            ym2413_handle_channel_update (context, 8);
+        }
+        else if (rhythm_mode_was == true && context->state.rhythm_mode == false)
+        {
+            ym2413_handle_channel_update (context, 6);
+            ym2413_handle_channel_update (context, 7);
+            ym2413_handle_channel_update (context, 8);
         }
 
-        context->state.r0e_rhythm = data;
         ym2413_handle_rhythm_keys (context);
     }
     else if (addr == 0x0f)
@@ -255,16 +414,20 @@ void ym2413_data_write (YM2413_Context *context, uint8_t data)
     else if (addr >= 0x10 && addr <= 0x19)
     {
         ((uint8_t *) &context->state.r10_channel_params) [addr - 0x10] = data;
+        ym2413_handle_channel_update (context, addr - 0x10);
     }
     else if (addr >= 0x20 && addr <= 0x29)
     {
         ((uint8_t *) &context->state.r20_channel_params) [addr - 0x20] = data;
-        ym2413_handle_melody_keys (context);
+        ym2413_handle_channel_update (context, addr - 0x20);
     }
     else if (addr >= 0x30 && addr <= 0x39)
     {
         ((uint8_t *) &context->state.r30_channel_params) [addr - 0x30] = data;
+        ym2413_handle_channel_update (context, addr - 0x30);
     }
+
+    pthread_mutex_unlock (&ym2413_mutex);
 }
 
 
@@ -529,68 +692,19 @@ static uint16_t ym2413_decay (YM2413_Context *context, uint16_t rate)
 
 
 /*
- * Run the sustained-tone envelope generator for one sample.
- */
-static void ym2413_sustained_envelope_cycle (YM2413_Context *context, YM2413_Operator_State *operator,
-                                               uint8_t attack_rate, uint8_t decay_rate, uint8_t sustain_level,
-                                               uint8_t release_rate, uint8_t key_scale_rate)
-{
-    switch (operator->eg_state)
-    {
-        case YM2413_STATE_DAMP:
-            operator->eg_level += ym2413_decay (context, 48 + key_scale_rate);
-            break;
-
-        case YM2413_STATE_ATTACK:
-            operator->eg_level = ym2413_attack (context, operator->eg_level, (attack_rate << 2) + key_scale_rate);
-            if (operator->eg_level == 0)
-            {
-                operator->eg_state = YM2413_STATE_DECAY;
-            }
-            break;
-
-        case YM2413_STATE_DECAY:
-            if (decay_rate)
-            {
-                operator->eg_level += ym2413_decay (context, (decay_rate << 2) + key_scale_rate);
-            }
-            if (operator->eg_level >= (sustain_level << 3))
-            {
-                operator->eg_state = YM2413_STATE_SUSTAIN;
-            }
-            break;
-
-        case YM2413_STATE_SUSTAIN:
-            /* Sustain until the key is released. */
-            break;
-
-        case YM2413_STATE_RELEASE:
-            if (release_rate)
-            {
-                operator->eg_level += ym2413_decay (context, (release_rate << 2) + key_scale_rate);
-            }
-            break;
-    }
-
-    ENFORCE_MAXIMUM (operator->eg_level, 127);
-}
-
-
-/*
  * Run the percussive-tone envelope generator for one sample.
  */
-static void ym2413_percussive_envelope_cycle (YM2413_Context *context, YM2413_Operator_State *operator,
-                                   uint8_t attack_rate, uint8_t decay_rate, uint8_t sustain_level,
-                                   uint8_t release_rate_1, uint8_t release_rate_2, uint8_t key_scale_rate)
+static void ym2413_envelope_cycle (YM2413_Context *context, YM2413_Operator_State *operator,
+                                   YM2413_Envelope_Params *params)
 {
     switch (operator->eg_state)
     {
         case YM2413_STATE_DAMP:
-            operator->eg_level += ym2413_decay (context, 48 + key_scale_rate);
+            operator->eg_level += ym2413_decay (context, params->effective_damp);
             break;
 
         case YM2413_STATE_ATTACK:
-            operator->eg_level = ym2413_attack (context, operator->eg_level, (attack_rate << 2) + key_scale_rate);
+            operator->eg_level = ym2413_attack (context, operator->eg_level, params->effective_attack);
             if (operator->eg_level == 0)
             {
                 operator->eg_state = YM2413_STATE_DECAY;
@@ -598,25 +712,19 @@ static void ym2413_percussive_envelope_cycle (YM2413_Context *context, YM2413_Op
             break;
 
         case YM2413_STATE_DECAY:
-            if (decay_rate)
-            {
-                operator->eg_level += ym2413_decay (context, (decay_rate << 2) + key_scale_rate);
-            }
-            if (operator->eg_level >= (sustain_level << 3))
+            operator->eg_level += ym2413_decay (context, params->effective_decay);
+            if (operator->eg_level >= params->effective_sustain_level)
             {
                 operator->eg_state = YM2413_STATE_SUSTAIN;
             }
             break;
 
         case YM2413_STATE_SUSTAIN:
-            if (release_rate_1)
-            {
-                operator->eg_level += ym2413_decay (context, (release_rate_1 << 2) + key_scale_rate);
-            }
+            operator->eg_level += ym2413_decay (context, params->effective_release_1);
             break;
 
         case YM2413_STATE_RELEASE:
-            operator->eg_level += ym2413_decay (context, (release_rate_2 << 2) + key_scale_rate);
+            operator->eg_level += ym2413_decay (context, params->effective_release_2);
             break;
     }
 
@@ -637,21 +745,8 @@ static int16_t ym2413_run_channel_sample (YM2413_Context *context, uint16_t chan
     uint16_t fnum    = context->state.r10_channel_params [channel].fnum |
           (((uint16_t) context->state.r20_channel_params [channel].fnum_9) << 8);
     uint16_t block   = context->state.r20_channel_params [channel].block;
-    bool     sustain = context->state.r20_channel_params [channel].sustain;
 
     int16_t fm = vibrato_table [fnum >> 6] [(context->state.global_counter >> 10) & 0x07];
-
-    /* Key Scale Rate */
-    uint16_t modulator_key_scale_rate = context->state.r20_channel_params [channel].r20_channel_params & 0x0f;
-    if (instrument->modulator_key_scale_rate == 0)
-    {
-        modulator_key_scale_rate >>= 2;
-    }
-    uint16_t carrier_key_scale_rate = context->state.r20_channel_params [channel].r20_channel_params & 0x0f;
-    if (instrument->carrier_key_scale_rate == 0)
-    {
-        carrier_key_scale_rate >>= 2;
-    }
 
     /* Damp->Attack Transition */
     if (modulator->eg_state == YM2413_STATE_DAMP && modulator->eg_level >= 120)
@@ -659,7 +754,7 @@ static int16_t ym2413_run_channel_sample (YM2413_Context *context, uint16_t chan
         modulator->eg_state = YM2413_STATE_ATTACK;
 
         /* Skip the attack phase if the rate is high enough */
-        if ((instrument->modulator_attack_rate << 2) + modulator_key_scale_rate >= 60)
+        if (context->calculated [channel].modulator_envelope.effective_attack >= 60)
         {
             modulator->eg_state = YM2413_STATE_DECAY;
             modulator->eg_level = 0;
@@ -672,29 +767,15 @@ static int16_t ym2413_run_channel_sample (YM2413_Context *context, uint16_t chan
         modulator->phase = 0;
 
         /* Skip the attack phase if the rate is high enough */
-        if ((instrument->carrier_attack_rate << 2) + carrier_key_scale_rate >= 60)
+        if (context->calculated [channel].carrier_envelope.effective_attack >= 60)
         {
             carrier->eg_state = YM2413_STATE_DECAY;
             carrier->eg_level = 0;
         }
     }
 
-    /* Modulator Envelope - Only runs when the key is pressed */
-    if (key_on)
-    {
-        if (instrument->modulator_envelope_type == 1)
-        {
-            ym2413_sustained_envelope_cycle (context, modulator, instrument->modulator_attack_rate,
-                                             instrument->modulator_decay_rate, instrument->modulator_sustain_level,
-                                             (sustain ? 5 : instrument->modulator_release_rate), modulator_key_scale_rate);
-        }
-        else
-        {
-            ym2413_percussive_envelope_cycle (context, modulator, instrument->modulator_attack_rate,
-                                              instrument->modulator_decay_rate, instrument->modulator_sustain_level,
-                                              instrument->modulator_release_rate, (sustain ? 5 : 7), modulator_key_scale_rate);
-        }
-    }
+    /* Modulator Envelope */
+    ym2413_envelope_cycle (context, modulator, &context->calculated [channel].modulator_envelope);
 
     /* Modulator Phase */
     uint16_t factor = factor_table [instrument->modulator_multiplication_factor];
@@ -726,18 +807,7 @@ static int16_t ym2413_run_channel_sample (YM2413_Context *context, uint16_t chan
     context->state.feedback [channel] [context->state.global_counter % 2] = modulator_value;
 
     /* Carrier Envelope */
-    if (instrument->carrier_envelope_type == 1)
-    {
-        ym2413_sustained_envelope_cycle (context, carrier, instrument->carrier_attack_rate,
-                                         instrument->carrier_decay_rate, instrument->carrier_sustain_level,
-                                         (sustain ? 5 : instrument->carrier_release_rate), carrier_key_scale_rate);
-    }
-    else
-    {
-        ym2413_percussive_envelope_cycle (context, carrier, instrument->carrier_attack_rate,
-                                          instrument->carrier_decay_rate, instrument->carrier_sustain_level,
-                                          instrument->carrier_release_rate, (sustain ? 5 : 7), carrier_key_scale_rate);
-    }
+    ym2413_envelope_cycle (context, carrier, &context->calculated [channel].carrier_envelope);
 
     /* Carrier Phase */
     factor = factor_table [instrument->carrier_multiplication_factor];
@@ -843,9 +913,7 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
             YM2413_Operator_State *tom_tom = &context->state.modulator [YM2413_TOM_TOM_CH];
             YM2413_Operator_State *top_cymbal = &context->state.carrier [YM2413_TOP_CYMBAL_CH];
 
-
             /* High Hat */
-            uint16_t hh_sd_ksr = (context->state.r20_channel_params [YM2413_HIGH_HAT_CH].r20_channel_params & 0x0f) >> 2;
             uint16_t hh_factor = factor_table [sd_hh_instrument->modulator_multiplication_factor];
 
             if (high_hat->eg_state == YM2413_STATE_DAMP && high_hat->eg_level >= 120)
@@ -854,16 +922,13 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
                 high_hat->phase = 0;
 
                 /* Skip the attack phase if the rate is high enough */
-                if ((sd_hh_instrument->modulator_attack_rate << 2) + hh_sd_ksr >= 60)
+                if (context->calculated [YM2413_HIGH_HAT_CH].modulator_envelope.effective_attack >= 60)
                 {
                     high_hat->eg_state = YM2413_STATE_DECAY;
                     high_hat->eg_level = 0;
                 }
             }
-
-            ym2413_percussive_envelope_cycle (context, high_hat, sd_hh_instrument->modulator_attack_rate,
-                                              sd_hh_instrument->modulator_decay_rate, sd_hh_instrument->modulator_sustain_level,
-                                              sd_hh_instrument->modulator_release_rate, 7, hh_sd_ksr);
+            ym2413_envelope_cycle (context, high_hat, &context->calculated [YM2413_HIGH_HAT_CH].modulator_envelope);
 
             high_hat->phase += (((sd_hh_fnum << 1) * hh_factor) << sd_hh_block) >> 2;
             uint16_t lfsr_bit = context->state.hh_lfsr & 0x0001;
@@ -894,16 +959,13 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
                 snare_drum->phase = 0;
 
                 /* Skip the attack phase if the rate is high enough */
-                if ((sd_hh_instrument->carrier_attack_rate << 2) + hh_sd_ksr >= 60)
+                if (context->calculated [YM2413_SNARE_DRUM_CH].carrier_envelope.effective_attack >= 60)
                 {
                     snare_drum->eg_state = YM2413_STATE_DECAY;
                     snare_drum->eg_level = 0;
                 }
             }
-
-            ym2413_percussive_envelope_cycle (context, snare_drum, sd_hh_instrument->carrier_attack_rate,
-                                              sd_hh_instrument->carrier_decay_rate, sd_hh_instrument->carrier_sustain_level,
-                                              sd_hh_instrument->carrier_release_rate, 7, hh_sd_ksr);
+            ym2413_envelope_cycle (context, snare_drum, &context->calculated [YM2413_SNARE_DRUM_CH].carrier_envelope);
 
             snare_drum->phase += (((sd_hh_fnum << 1) * sd_factor) << sd_hh_block) >> 2;
             lfsr_bit = context->state.sd_lfsr & 0x0001;
@@ -923,7 +985,6 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
             }
 
             /* Tom Tom */
-            uint16_t tt_tc_ksr = (context->state.r20_channel_params [YM2413_TOM_TOM_CH].r20_channel_params & 0x0f) >> 2;
             uint16_t tt_factor = factor_table [tt_tc_instrument->modulator_multiplication_factor];
 
             if (tom_tom->eg_state == YM2413_STATE_DAMP && tom_tom->eg_level >= 120)
@@ -932,9 +993,7 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
                 tom_tom->eg_level = 0;
                 tom_tom->phase = 0;
             }
-            ym2413_percussive_envelope_cycle (context, tom_tom, tt_tc_instrument->modulator_attack_rate,
-                                              tt_tc_instrument->modulator_decay_rate, tt_tc_instrument->modulator_sustain_level,
-                                              tt_tc_instrument->modulator_release_rate, tt_tc_instrument->modulator_release_rate, tt_tc_ksr);
+            ym2413_envelope_cycle (context, tom_tom, &context->calculated [YM2413_TOM_TOM_CH].modulator_envelope);
 
             tom_tom->phase += (((tt_tc_fnum << 1) * tt_factor) << tt_tc_block) >> 2;
 
@@ -957,16 +1016,13 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
                 top_cymbal->phase = 0;
 
                 /* Skip the attack phase if the rate is high enough */
-                if ((tt_tc_instrument->carrier_attack_rate << 2) + tt_tc_ksr >= 60)
+                if (context->calculated [YM2413_TOP_CYMBAL_CH].carrier_envelope.effective_attack >= 60)
                 {
                     top_cymbal->eg_state = YM2413_STATE_DECAY;
                     top_cymbal->eg_level = 0;
                 }
             }
-
-            ym2413_percussive_envelope_cycle (context, top_cymbal, tt_tc_instrument->carrier_attack_rate,
-                                              tt_tc_instrument->carrier_decay_rate, tt_tc_instrument->carrier_sustain_level,
-                                              tt_tc_instrument->carrier_release_rate, 7, tt_tc_ksr);
+            ym2413_envelope_cycle (context, top_cymbal, &context->calculated [YM2413_TOP_CYMBAL_CH].carrier_envelope);
 
             top_cymbal->phase += (((tt_tc_fnum << 1) * tc_factor) << tt_tc_block) >> 2;
 
@@ -984,10 +1040,8 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
             }
         }
 
-        /* Propagate new samples into ring buffer */
-        /* TODO: Sort out proper volume levels. */
-
-        /* Linear interpolation to get 48 kHz from 49.7… kHz */
+        /* Propagate new samples into ring buffer.
+         * Linear interpolation to get 48 kHz from 49.7… kHz */
         if (completed_samples * SAMPLE_RATE * 72 > write_index * clock_rate)
         {
             float portion = (float) ((write_index * clock_rate) % (SAMPLE_RATE * 72)) /
@@ -1066,6 +1120,12 @@ YM2413_Context *ym2413_init (void)
     YM2413_Context *context = calloc (1, sizeof (YM2413_Context));
     context->state.sd_lfsr = 0x000001;
     context->state.hh_lfsr = 0x000003;
+
+    for (uint32_t channel = 0; channel < 9; channel++)
+    {
+        context->state.modulator [channel].eg_level = 127;
+        context->state.carrier [channel].eg_level = 127;
+    }
 
     memset (sample_ring, 0, sizeof (sample_ring));
 

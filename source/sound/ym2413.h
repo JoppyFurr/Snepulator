@@ -89,6 +89,15 @@ typedef struct YM2413_Operator_State_s {
 
 } YM2413_Operator_State;
 
+typedef struct YM2413_Envelope_Params_s {
+    uint32_t effective_damp;
+    uint32_t effective_attack;
+    uint32_t effective_decay;
+    uint32_t effective_sustain_level;
+    uint32_t effective_release_1;
+    uint32_t effective_release_2;
+} YM2413_Envelope_Params;
+
 #define YM2413_BASS_DRUM_CH     6
 #define YM2413_HIGH_HAT_CH      7
 #define YM2413_SNARE_DRUM_CH    7
@@ -169,7 +178,15 @@ typedef struct YM2413_State_s {
 } YM2413_State;
 
 typedef struct YM2413_Context_s {
+
     YM2413_State state;
+
+    /* Calculated Values */
+    struct {
+        YM2413_Envelope_Params modulator_envelope;
+        YM2413_Envelope_Params carrier_envelope;
+    } calculated [9];
+
 } YM2413_Context;
 
 /* Latch a register address. */
