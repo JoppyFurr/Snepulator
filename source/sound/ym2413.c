@@ -224,10 +224,11 @@ static void ym2413_handle_channel_update (YM2413_Context *context, uint8_t chann
     else if (context->state.rhythm_mode && channel == 6)
     {
         YM2413_Instrument *instrument = (YM2413_Instrument *) rhythm_rom [0];
-        uint32_t key_scale_rate = (context->state.r20_channel_params [channel].r20_channel_params & 0x0f) >> 2;
+        uint32_t key_scale_rate = (context->state.r20_channel_params [6].r20_channel_params & 0x0f) >> 2;
+        bool sustain = context->state.r20_channel_params [6].sustain;
 
         /* Calculate modulator effective rates */
-        YM2413_Envelope_Params *modulator_envelope = &context->calculated [channel].modulator_envelope;
+        YM2413_Envelope_Params *modulator_envelope = &context->calculated [6].modulator_envelope;
         modulator_envelope->effective_damp = 48 + key_scale_rate;
         modulator_envelope->effective_attack = (instrument->modulator_attack_rate << 2) + key_scale_rate;
         modulator_envelope->effective_decay = (instrument->modulator_decay_rate << 2) + key_scale_rate;
@@ -236,19 +237,20 @@ static void ym2413_handle_channel_update (YM2413_Context *context, uint8_t chann
         modulator_envelope->effective_release_2 = 0;
 
         /* Calculate carrier effective rates */
-        YM2413_Envelope_Params *carrier_envelope = &context->calculated [channel].carrier_envelope;
+        YM2413_Envelope_Params *carrier_envelope = &context->calculated [6].carrier_envelope;
         carrier_envelope->effective_damp = 48 + key_scale_rate;
         carrier_envelope->effective_attack = (instrument->carrier_attack_rate << 2) + key_scale_rate;
         carrier_envelope->effective_decay = (instrument->carrier_decay_rate << 2) + key_scale_rate;
         carrier_envelope->effective_sustain_level = instrument->carrier_sustain_level << 3;
         carrier_envelope->effective_release_1 = (instrument->carrier_release_rate << 2) + key_scale_rate;
-        carrier_envelope->effective_release_2 = (7 << 2) + key_scale_rate;
+        carrier_envelope->effective_release_2 = ((sustain ? 5 : 7) << 2) + key_scale_rate;
     }
     /* High Hat / Snare Drum */
     else if (context->state.rhythm_mode && channel == 7)
     {
         YM2413_Instrument *instrument = (YM2413_Instrument *) rhythm_rom [1];
         uint16_t key_scale_rate = (context->state.r20_channel_params [7].r20_channel_params & 0x0f) >> 2;
+        bool sustain = context->state.r20_channel_params [7].sustain;
 
         /* Calculate High Hat effective rates */
         YM2413_Envelope_Params *high_hat_envelope = &context->calculated [7].modulator_envelope;
@@ -257,7 +259,7 @@ static void ym2413_handle_channel_update (YM2413_Context *context, uint8_t chann
         high_hat_envelope->effective_decay = (instrument->modulator_decay_rate << 2) + key_scale_rate;
         high_hat_envelope->effective_sustain_level = instrument->modulator_sustain_level << 3;
         high_hat_envelope->effective_release_1 = (instrument->modulator_release_rate << 2) + key_scale_rate;
-        high_hat_envelope->effective_release_2 = (7 << 2) + key_scale_rate;
+        high_hat_envelope->effective_release_2 = ((sustain ? 5 : 7) << 2) + key_scale_rate;
 
         /* Calculate Snare Drum effective rates */
         YM2413_Envelope_Params *snare_drum_envelope = &context->calculated [7].carrier_envelope;
@@ -266,13 +268,14 @@ static void ym2413_handle_channel_update (YM2413_Context *context, uint8_t chann
         snare_drum_envelope->effective_decay = (instrument->carrier_decay_rate << 2) + key_scale_rate;
         snare_drum_envelope->effective_sustain_level = instrument->carrier_sustain_level << 3;
         snare_drum_envelope->effective_release_1 = (instrument->carrier_release_rate << 2) + key_scale_rate;
-        snare_drum_envelope->effective_release_2 = (7 << 2) + key_scale_rate;
+        snare_drum_envelope->effective_release_2 = ((sustain ? 5 : 7) << 2) + key_scale_rate;
     }
     /* Tom Tom / Top Cymbal */
     else if (context->state.rhythm_mode && channel == 8)
     {
         YM2413_Instrument *instrument = (YM2413_Instrument *) rhythm_rom [2];
         uint16_t key_scale_rate = (context->state.r20_channel_params [8].r20_channel_params & 0x0f) >> 2;
+        bool sustain = context->state.r20_channel_params [8].sustain;
 
         /* Calculate Tom Tom effective rates */
         YM2413_Envelope_Params *tom_tom_envelope = &context->calculated [8].modulator_envelope;
@@ -281,7 +284,7 @@ static void ym2413_handle_channel_update (YM2413_Context *context, uint8_t chann
         tom_tom_envelope->effective_decay = (instrument->modulator_decay_rate << 2) + key_scale_rate;
         tom_tom_envelope->effective_sustain_level = instrument->modulator_sustain_level << 3;
         tom_tom_envelope->effective_release_1 = (instrument->modulator_release_rate << 2) + key_scale_rate;
-        tom_tom_envelope->effective_release_2 = (instrument->modulator_release_rate << 2) + key_scale_rate;
+        tom_tom_envelope->effective_release_2 = ((sustain ? 5 : instrument->modulator_release_rate) << 2) + key_scale_rate;
 
         /* Calculate Top Cymbal effective rates */
         YM2413_Envelope_Params *top_cymbal_envelope = &context->calculated [8].carrier_envelope;
@@ -290,7 +293,7 @@ static void ym2413_handle_channel_update (YM2413_Context *context, uint8_t chann
         top_cymbal_envelope->effective_decay = (instrument->carrier_decay_rate << 2) + key_scale_rate;
         top_cymbal_envelope->effective_sustain_level = instrument->carrier_sustain_level << 3;
         top_cymbal_envelope->effective_release_1 = (instrument->carrier_release_rate << 2) + key_scale_rate;
-        top_cymbal_envelope->effective_release_2 = (7 << 2) + key_scale_rate;
+        top_cymbal_envelope->effective_release_2 = ((sustain ? 5 : 7) << 2) + key_scale_rate;
     }
 }
 
