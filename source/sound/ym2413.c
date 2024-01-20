@@ -305,53 +305,59 @@ static void ym2413_handle_rhythm_keys (YM2413_Context *context)
 {
     if (context->state.rhythm_mode)
     {
+        bool bass_drum_key  = context->state.rhythm_key_bd || context->state.r20_channel_params [YM2413_BASS_DRUM_CH].key_on;
+        bool high_hat_key   = context->state.rhythm_key_hh || context->state.r20_channel_params [YM2413_HIGH_HAT_CH].key_on;
+        bool snare_drum_key = context->state.rhythm_key_sd || context->state.r20_channel_params [YM2413_SNARE_DRUM_CH].key_on;
+        bool tom_tom_key    = context->state.rhythm_key_tt || context->state.r20_channel_params [YM2413_TOM_TOM_CH].key_on;
+        bool top_cymbal_key = context->state.rhythm_key_tc || context->state.r20_channel_params [YM2413_TOP_CYMBAL_CH].key_on;
+
         /* Bass Drum */
-        if (context->state.rhythm_key_bd && context->state.carrier [YM2413_BASS_DRUM_CH].eg_state == YM2413_STATE_RELEASE)
+        if (bass_drum_key && context->state.carrier [YM2413_BASS_DRUM_CH].eg_state == YM2413_STATE_RELEASE)
         {
              context->state.modulator [YM2413_BASS_DRUM_CH].eg_state = YM2413_STATE_DAMP;
              context->state.carrier [YM2413_BASS_DRUM_CH].eg_state = YM2413_STATE_DAMP;
         }
-        else if (!context->state.rhythm_key_bd)
+        else if (!bass_drum_key)
         {
              context->state.carrier [YM2413_BASS_DRUM_CH].eg_state = YM2413_STATE_RELEASE;
         }
 
         /* High Hat */
-        if (context->state.rhythm_key_hh && context->state.modulator [YM2413_HIGH_HAT_CH].eg_state == YM2413_STATE_RELEASE)
+        if (high_hat_key && context->state.modulator [YM2413_HIGH_HAT_CH].eg_state == YM2413_STATE_RELEASE)
         {
             context->state.modulator [YM2413_HIGH_HAT_CH].eg_state = YM2413_STATE_DAMP;
         }
-        else if (!context->state.rhythm_key_hh)
+        else if (!high_hat_key)
         {
             context->state.modulator [YM2413_HIGH_HAT_CH].eg_state = YM2413_STATE_RELEASE;
         }
 
         /* Snare Drum */
-        if (context->state.rhythm_key_sd && context->state.carrier [YM2413_SNARE_DRUM_CH].eg_state == YM2413_STATE_RELEASE)
+        if (snare_drum_key && context->state.carrier [YM2413_SNARE_DRUM_CH].eg_state == YM2413_STATE_RELEASE)
         {
             context->state.carrier [YM2413_SNARE_DRUM_CH].eg_state = YM2413_STATE_DAMP;
         }
-        else if (!context->state.rhythm_key_sd)
+        else if (!snare_drum_key)
         {
             context->state.carrier [YM2413_SNARE_DRUM_CH].eg_state = YM2413_STATE_RELEASE;
         }
 
         /* Tom Tom */
-        if (context->state.rhythm_key_tt && context->state.modulator [YM2413_TOM_TOM_CH].eg_state == YM2413_STATE_RELEASE)
+        if (tom_tom_key && context->state.modulator [YM2413_TOM_TOM_CH].eg_state == YM2413_STATE_RELEASE)
         {
             context->state.modulator [YM2413_TOM_TOM_CH].eg_state = YM2413_STATE_DAMP;
         }
-        else if (!context->state.rhythm_key_tt)
+        else if (!tom_tom_key)
         {
             context->state.modulator [YM2413_TOM_TOM_CH].eg_state = YM2413_STATE_RELEASE;
         }
 
         /* Top Cymbal */
-        if (context->state.rhythm_key_tc && context->state.carrier [YM2413_TOP_CYMBAL_CH].eg_state == YM2413_STATE_RELEASE)
+        if (top_cymbal_key && context->state.carrier [YM2413_TOP_CYMBAL_CH].eg_state == YM2413_STATE_RELEASE)
         {
             context->state.carrier [YM2413_TOP_CYMBAL_CH].eg_state = YM2413_STATE_DAMP;
         }
-        else if (!context->state.rhythm_key_tc)
+        else if (!top_cymbal_key)
         {
             context->state.carrier [YM2413_TOP_CYMBAL_CH].eg_state = YM2413_STATE_RELEASE;
         }
@@ -423,6 +429,10 @@ void ym2413_data_write (YM2413_Context *context, uint8_t data)
     {
         ((uint8_t *) &context->state.r20_channel_params) [addr - 0x20] = data;
         ym2413_handle_channel_update (context, addr - 0x20);
+        if ((addr - 0x10) >= YM2413_BASS_DRUM_CH)
+        {
+            ym2413_handle_rhythm_keys (context);
+        }
     }
     else if (addr >= 0x30 && addr <= 0x39)
     {
