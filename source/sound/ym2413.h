@@ -2,6 +2,8 @@
  * API for the YM2413 synth chip.
  */
 
+#define YM2413_RING_SIZE 4096
+
 typedef enum YM2413_Envelope_State_e {
     YM2413_STATE_DAMP = 0,
     YM2413_STATE_ATTACK,
@@ -179,6 +181,7 @@ typedef struct YM2413_State_s {
 
 typedef struct YM2413_Context_s {
 
+    pthread_mutex_t mutex;
     YM2413_State state;
 
     /* Calculated Values */
@@ -186,6 +189,14 @@ typedef struct YM2413_Context_s {
         YM2413_Envelope_Params modulator_envelope;
         YM2413_Envelope_Params carrier_envelope;
     } calculated [9];
+
+    /* Ring buffer */
+    int16_t sample_ring [YM2413_RING_SIZE];
+    int16_t previous_output_level; /* For linear interpolation */
+    uint64_t write_index;
+    uint64_t read_index;
+    uint64_t completed_samples; /* YM2413 samples, not sound card samples */
+    uint32_t clock_rate;
 
 } YM2413_Context;
 

@@ -18,7 +18,6 @@ extern Snepulator_State state;
 SN76489_State sn76489_state;
 pthread_mutex_t psg_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-#define SAMPLE_RATE 48000
 #define PSG_RING_SIZE 4096
 #define BASE_VOLUME 100
 
@@ -195,7 +194,7 @@ void _psg_run_cycles (uint64_t cycles)
     /* Try to avoid having more than two sound-card buffers worth of sound.
      * The ring buffer can fit ~85 ms of sound.
      * The sound card is configured to ask for sound in ~21 ms blocks. */
-    if ((psg_cycles * SAMPLE_RATE / clock_rate) + used_buffer > PSG_RING_SIZE * 0.6)
+    if ((psg_cycles * AUDIO_SAMPLE_RATE / clock_rate) + used_buffer > PSG_RING_SIZE * 0.6)
     {
         if (psg_cycles > 1)
         {
@@ -204,17 +203,17 @@ void _psg_run_cycles (uint64_t cycles)
     }
 
     /* Limit the number of cycles we run to what will fit in the ring */
-    if ((psg_cycles * SAMPLE_RATE / clock_rate) + used_buffer > PSG_RING_SIZE)
+    if ((psg_cycles * AUDIO_SAMPLE_RATE / clock_rate) + used_buffer > PSG_RING_SIZE)
     {
-        psg_cycles = (PSG_RING_SIZE - used_buffer) * clock_rate / SAMPLE_RATE;
+        psg_cycles = (PSG_RING_SIZE - used_buffer) * clock_rate / AUDIO_SAMPLE_RATE;
     }
 
     /* The read_index points to the next sample that will be passed to the sound card.
      * Make sure that by the time we return, there is valid data at the read_index. */
-    if (write_index + (psg_cycles * SAMPLE_RATE / clock_rate) <= read_index)
+    if (write_index + (psg_cycles * AUDIO_SAMPLE_RATE / clock_rate) <= read_index)
     {
         /* An extra cycle is added to account for integer division losses */
-        psg_cycles = (read_index - write_index + 1) * clock_rate / SAMPLE_RATE + 1;
+        psg_cycles = (read_index - write_index + 1) * clock_rate / AUDIO_SAMPLE_RATE + 1;
     }
 
     while (psg_cycles--)
@@ -292,7 +291,7 @@ void _psg_run_cycles (uint64_t cycles)
             if (sample_ring_l [write_index % PSG_RING_SIZE] != previous_sample_l)
             {
                 /* Phase ranges from 0 (no delay) to 31 (0.97 samples delay) */
-                phase_ring_l [write_index % PSG_RING_SIZE] = (completed_cycles * SAMPLE_RATE * 32 / clock_rate) % 32;
+                phase_ring_l [write_index % PSG_RING_SIZE] = (completed_cycles * AUDIO_SAMPLE_RATE * 32 / clock_rate) % 32;
                 previous_sample_l = sample_ring_l [write_index % PSG_RING_SIZE];
             }
 
@@ -305,12 +304,12 @@ void _psg_run_cycles (uint64_t cycles)
             if (sample_ring_r [write_index % PSG_RING_SIZE] != previous_sample_r)
             {
                 /* Phase ranges from 0 (no delay) to 31 (0.97 samples delay) */
-                phase_ring_r [write_index % PSG_RING_SIZE] = (completed_cycles * SAMPLE_RATE * 32 / clock_rate) % 32;
+                phase_ring_r [write_index % PSG_RING_SIZE] = (completed_cycles * AUDIO_SAMPLE_RATE * 32 / clock_rate) % 32;
                 previous_sample_r = sample_ring_r [write_index % PSG_RING_SIZE];
             }
 
             /* If this is the final value for this sample, pass it to the band limiter */
-            if ((completed_cycles + 1) * SAMPLE_RATE / clock_rate > write_index)
+            if ((completed_cycles + 1) * AUDIO_SAMPLE_RATE / clock_rate > write_index)
             {
                 band_limit_samples (bandlimit_context_l, &sample_ring_l [write_index % PSG_RING_SIZE], &phase_ring_r [write_index % PSG_RING_SIZE], 1);
                 band_limit_samples (bandlimit_context_r, &sample_ring_r [write_index % PSG_RING_SIZE], &phase_ring_r [write_index % PSG_RING_SIZE], 1);
@@ -326,12 +325,12 @@ void _psg_run_cycles (uint64_t cycles)
             if (sample_ring_l [write_index % PSG_RING_SIZE] != previous_sample_l)
             {
                 /* Phase ranges from 0 (no delay) to 31 (0.97 samples delay) */
-                phase_ring_l [write_index % PSG_RING_SIZE] = (completed_cycles * SAMPLE_RATE * 32 / clock_rate) % 32;
+                phase_ring_l [write_index % PSG_RING_SIZE] = (completed_cycles * AUDIO_SAMPLE_RATE * 32 / clock_rate) % 32;
                 previous_sample_l = sample_ring_l [write_index % PSG_RING_SIZE];
             }
 
             /* If this is the final value for this sample, pass it to the band limiter */
-            if ((completed_cycles + 1) * SAMPLE_RATE / clock_rate > write_index)
+            if ((completed_cycles + 1) * AUDIO_SAMPLE_RATE / clock_rate > write_index)
             {
                 band_limit_samples (bandlimit_context_l, &sample_ring_l [write_index % PSG_RING_SIZE], &phase_ring_l [write_index % PSG_RING_SIZE], 1);
             }
@@ -339,7 +338,7 @@ void _psg_run_cycles (uint64_t cycles)
 
         /* Map from the amount of time emulated (completed cycles / clock rate) to the sound card sample rate */
         completed_cycles++;
-        write_index = completed_cycles * SAMPLE_RATE / clock_rate;
+        write_index = completed_cycles * AUDIO_SAMPLE_RATE / clock_rate;
     }
 
 #ifdef DEVELOPER_BUILD
@@ -376,7 +375,7 @@ void sn76489_get_samples (int16_t *stream, uint32_t count)
         int shortfall = count - (write_index - read_index);
 
         /* Note: We add one to the shortfall to account for integer division */
-        psg_run_cycles ((shortfall + 1) * (clock_rate << 4) / SAMPLE_RATE);
+        psg_run_cycles ((shortfall + 1) * (clock_rate << 4) / AUDIO_SAMPLE_RATE);
     }
 
     /* Take samples and pass them to the sound card */

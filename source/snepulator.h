@@ -8,6 +8,8 @@
 #define VIDEO_BUFFER_LINES 240
 #define VIDEO_TOP_BORDER_192 ((VIDEO_BUFFER_LINES - 192) / 2)
 
+#define AUDIO_SAMPLE_RATE 48000
+
 typedef enum Run_State_e {
     RUN_STATE_INIT,     /* No ROM has been loaded. */
     RUN_STATE_RUNNING,  /* A ROM has been loaded and is running. */

@@ -25,21 +25,7 @@ extern Snepulator_State state;
 #define M_PI (3.14159265358979323846)
 #endif
 
-#define SAMPLE_RATE 48000
-#define YM2413_RING_SIZE 4096
 #define BASE_VOLUME 100
-
-/* State */
-pthread_mutex_t ym2413_mutex = PTHREAD_MUTEX_INITIALIZER;
-
-/* TODO: Avoid globals, move these into the context. */
-static uint64_t write_index = 0;
-static uint64_t read_index = 0;
-static uint64_t completed_samples = 0; /* ym2413 samples, not sound card samples */
-static uint32_t clock_rate;
-
-static int16_t sample_ring [YM2413_RING_SIZE];
-static int16_t previous_output_level = 0;
 
 /* Use a special type definition to mark sign-magnitude numbers.
  * The most significant bit is used to indicate if the number is negative. */
@@ -372,7 +358,7 @@ void ym2413_data_write (YM2413_Context *context, uint8_t data)
 {
     uint8_t addr = context->state.addr_latch;
 
-    pthread_mutex_lock (&ym2413_mutex);
+    pthread_mutex_lock (&context->mutex);
 
     if (addr >= 0x00 && addr <= 0x07)
     {
@@ -440,7 +426,7 @@ void ym2413_data_write (YM2413_Context *context, uint8_t data)
         ym2413_handle_channel_update (context, addr - 0x30);
     }
 
-    pthread_mutex_unlock (&ym2413_mutex);
+    pthread_mutex_unlock (&context->mutex);
 }
 
 
@@ -987,13 +973,13 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
 
     /* Reset the ring buffer if the clock rate changes */
     if (state.console_context != NULL &&
-        clock_rate != state.get_clock_rate (state.console_context))
+        context->clock_rate != state.get_clock_rate (state.console_context))
     {
-        clock_rate = state.get_clock_rate (state.console_context);
+        context->clock_rate = state.get_clock_rate (state.console_context);
 
-        read_index = 0;
-        write_index = 0;
-        completed_samples = 0;
+        context->read_index = 0;
+        context->write_index = 0;
+        context->completed_samples = 0;
     }
 
     uint32_t melody_channels = (context->state.rhythm_mode) ? 6 : 9;
@@ -1029,18 +1015,18 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
 
         /* Propagate new samples into ring buffer.
          * Linear interpolation to get 48 kHz from 49.7… kHz */
-        if (completed_samples * SAMPLE_RATE * 72 > write_index * clock_rate)
+        if (context->completed_samples * AUDIO_SAMPLE_RATE * 72 > context->write_index * context->clock_rate)
         {
-            float portion = (float) ((write_index * clock_rate) % (SAMPLE_RATE * 72)) /
-                            (float) (SAMPLE_RATE * 72);
+            float portion = (float) ((context->write_index * context->clock_rate) % (AUDIO_SAMPLE_RATE * 72)) /
+                            (float) (AUDIO_SAMPLE_RATE * 72);
 
-            int16_t sample = roundf (portion * output_level + (1.0 - portion) * previous_output_level);
-            sample_ring [write_index % YM2413_RING_SIZE] = sample * 3;
-            write_index++;
+            int16_t sample = roundf (portion * output_level + (1.0 - portion) * context->previous_output_level);
+            context->sample_ring [context->write_index % YM2413_RING_SIZE] = sample * 3;
+            context->write_index++;
         }
 
-        previous_output_level = output_level;
-        completed_samples++;
+        context->previous_output_level = output_level;
+        context->completed_samples++;
     }
 }
 
@@ -1054,9 +1040,9 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
  */
 void ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
 {
-    pthread_mutex_lock (&ym2413_mutex);
+    pthread_mutex_lock (&context->mutex);
     _ym2413_run_cycles (context, cycles);
-    pthread_mutex_unlock (&ym2413_mutex);
+    pthread_mutex_unlock (&context->mutex);
 }
 
 
@@ -1066,25 +1052,25 @@ void ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
  */
 void ym2413_get_samples (YM2413_Context *context, int16_t *stream, uint32_t count)
 {
-    if (read_index + count > write_index)
+    if (context->read_index + count > context->write_index)
     {
-        int shortfall = count - (write_index - read_index);
+        int shortfall = count - (context->write_index - context->read_index);
 
         /* Note: We add one to the shortfall to account for integer division */
-        ym2413_run_cycles (context, (shortfall + 1) * clock_rate / SAMPLE_RATE);
+        ym2413_run_cycles (context, (shortfall + 1) * context->clock_rate / AUDIO_SAMPLE_RATE);
     }
 
     /* Take samples and pass them to the sound card */
-    uint32_t read_start = read_index % YM2413_RING_SIZE;
+    uint32_t read_start = context->read_index % YM2413_RING_SIZE;
 
     for (int i = 0; i < count; i++)
     {
         /* Left, Right */
-        stream [2 * i    ] = sample_ring [read_start + i];
-        stream [2 * i + 1] = sample_ring [read_start + i];
+        stream [2 * i    ] = context->sample_ring [read_start + i];
+        stream [2 * i + 1] = context->sample_ring [read_start + i];
     }
 
-    read_index += count;
+    context->read_index += count;
 }
 
 
@@ -1105,6 +1091,7 @@ YM2413_Context *ym2413_init (void)
     }
 
     YM2413_Context *context = calloc (1, sizeof (YM2413_Context));
+    pthread_mutex_init (&context->mutex, NULL);
     context->state.sd_lfsr = 0x000001;
     context->state.hh_lfsr = 0x000003;
 
@@ -1114,12 +1101,10 @@ YM2413_Context *ym2413_init (void)
         context->state.carrier [channel].eg_level = 127;
     }
 
-    memset (sample_ring, 0, sizeof (sample_ring));
-
-    completed_samples = 0;
-    write_index = 0;
-    read_index = 0;
-    clock_rate = 0;
+    context->completed_samples = 0;
+    context->write_index = 0;
+    context->read_index = 0;
+    context->clock_rate = 0;
 
     return context;
 }
