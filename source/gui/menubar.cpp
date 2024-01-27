@@ -22,6 +22,8 @@ extern "C" {
 #include "../gamepad.h"
 #include "../video/tms9928a.h"
 #include "../video/sms_vdp.h"
+#include "../sound/band_limit.h"
+#include "../sound/sn76489.h"
 #include "../sound/ym2413.h"
 #include "../cpu/z80.h"
 #include "../colecovision.h"

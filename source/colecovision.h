@@ -23,6 +23,7 @@ typedef struct ColecoVision_Context_s {
 
     Z80_Context *z80_context;
     TMS9928A_Context *vdp_context;
+    SN76489_Context *psg_context;
     ColecoVision_HW_State hw_state;
     uint64_t millicycles;
 

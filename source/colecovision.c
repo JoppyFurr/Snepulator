@@ -20,6 +20,7 @@
 #include "gamepad.h"
 #include "cpu/z80.h"
 #include "video/tms9928a.h"
+#include "sound/band_limit.h"
 #include "sound/sn76489.h"
 
 #include "colecovision.h"
@@ -47,7 +48,9 @@ static void     colecovision_update_settings (void *context_ptr);
  */
 static void colecovision_audio_callback (void *context_ptr, int16_t *stream, uint32_t count)
 {
-    sn76489_get_samples (stream, count);
+    ColecoVision_Context *context = (ColecoVision_Context *) context_ptr;
+
+    sn76489_get_samples (context->psg_context, stream, count);
 }
 
 
@@ -68,6 +71,21 @@ static void colecovision_cleanup (void *context_ptr)
     {
         free (context->vdp_context);
         context->vdp_context = NULL;
+    }
+
+    if (context->psg_context != NULL)
+    {
+        if (context->psg_context->bandlimit_context_l)
+        {
+            free (context->psg_context->bandlimit_context_l);
+        }
+        if (context->psg_context->bandlimit_context_r)
+        {
+            free (context->psg_context->bandlimit_context_r);
+        }
+
+        free (context->psg_context);
+        context->psg_context = NULL;
     }
 
     if (context->rom != NULL)
@@ -159,6 +177,7 @@ ColecoVision_Context *colecovision_init (void)
     ColecoVision_Context *context;
     Z80_Context *z80_context;
     TMS9928A_Context *vdp_context;
+    SN76489_Context *psg_context;
 
     context = calloc (1, sizeof (ColecoVision_Context));
     if (context == NULL)
@@ -183,7 +202,8 @@ ColecoVision_Context *colecovision_init (void)
     context->vdp_context = vdp_context;
 
     /* Initialise PSG */
-    sn76489_init ();
+    psg_context = sn76489_init ();
+    context->psg_context = psg_context;
 
     /* Pull in the settings */
     colecovision_update_settings (context);
@@ -439,7 +459,7 @@ static void colecovision_io_write (void *context_ptr, uint8_t addr, uint8_t data
     /* PSG */
     if (addr >= 0xe0 && addr <= 0xff)
     {
-        sn76489_data_write (data);
+        sn76489_data_write (context->psg_context, data);
     }
 }
 
@@ -464,7 +484,7 @@ static void colecovision_run (void *context_ptr, uint32_t ms)
 
         /* 228 CPU cycles per scanline */
         z80_run_cycles (context->z80_context, 228 + context->overclock);
-        psg_run_cycles (228);
+        psg_run_cycles (context->psg_context, 228);
         tms9928a_run_one_scanline (context->vdp_context);
     }
 }
@@ -546,7 +566,7 @@ static void colecovision_state_load (void *context_ptr, const char *filename)
         }
         else if (!strncmp (section_id, SECTION_ID_PSG, 4))
         {
-            sn76489_state_load (version, size, data);
+            sn76489_state_load (context->psg_context, version, size, data);
         }
         else
         {
@@ -577,7 +597,7 @@ static void colecovision_state_save (void *context_ptr, const char *filename)
     tms9928a_state_save (context->vdp_context);
     save_state_section_add (SECTION_ID_VRAM, 1, TMS9928A_VRAM_SIZE, context->vdp_context->vram);
 
-    sn76489_state_save ();
+    sn76489_state_save (context->psg_context);
 
     save_state_write (filename);
 }

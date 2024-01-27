@@ -1,6 +1,7 @@
 /*
  * API for the SN76489 PSG chip.
  */
+#define SN76489_RING_SIZE 4096
 
 typedef struct SN76489_State_s {
 
@@ -62,20 +63,43 @@ typedef struct SN76489_State_s {
 
 } SN76489_State;
 
+typedef struct SN76489_Context_s {
+
+    pthread_mutex_t mutex;
+    SN76489_State state;
+
+    /* Ring buffer */
+    int16_t sample_ring_l [SN76489_RING_SIZE];
+    int16_t sample_ring_r [SN76489_RING_SIZE];
+    uint16_t previous_sample_l;
+    uint16_t previous_sample_r;
+    uint64_t write_index;
+    uint64_t read_index;
+    uint64_t completed_cycles;
+    uint32_t clock_rate;
+
+    /* Band limiting */
+    Bandlimit_Context *bandlimit_context_l;
+    Bandlimit_Context *bandlimit_context_r;
+    int16_t phase_ring_l [SN76489_RING_SIZE];
+    int16_t phase_ring_r [SN76489_RING_SIZE];
+
+} SN76489_Context;
+
 /* Reset PSG to initial power-on state. */
-void sn76489_init (void);
+SN76489_Context *sn76489_init (void);
 
 /* Handle data writes sent to the PSG. */
-void sn76489_data_write (uint8_t data);
+void sn76489_data_write (SN76489_Context *context, uint8_t data);
 
 /* Retrieves a block of samples from the sample-ring. */
-void sn76489_get_samples (int16_t *stream, uint32_t len);
+void sn76489_get_samples (SN76489_Context *context, int16_t *stream, uint32_t len);
 
 /* Run the PSG for a number of CPU clock cycles. */
-void psg_run_cycles (uint64_t cycles);
+void psg_run_cycles (SN76489_Context *context, uint64_t cycles);
 
 /* Export sn76489 state. */
-void sn76489_state_save (void);
+void sn76489_state_save (SN76489_Context *context);
 
 /* Import sn76489 state. */
-void sn76489_state_load (uint32_t version, uint32_t size, void *data);
+void sn76489_state_load (SN76489_Context *context, uint32_t version, uint32_t size, void *data);

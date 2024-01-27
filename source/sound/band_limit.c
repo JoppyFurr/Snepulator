@@ -155,7 +155,7 @@ void band_limit_samples (Bandlimit_Context *context, int16_t *sample_buf, int16_
             /* Apply the transition */
             for (int j = 0; j < PHASE_SAMPLES; j++)
             {
-                context->diff_ring [(context->diff_ring_index + j) % DIFF_RING_SIZE] += step [phase][j] * delta;
+                context->diff_ring [(context->diff_ring_index + j) % DIFF_RING_SIZE] += step [phase] [j] * delta;
             }
         }
 

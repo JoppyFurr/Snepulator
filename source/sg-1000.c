@@ -19,6 +19,7 @@
 #include "gamepad.h"
 #include "cpu/z80.h"
 #include "video/tms9928a.h"
+#include "sound/band_limit.h"
 #include "sound/sn76489.h"
 
 #include "sg-1000.h"
@@ -46,8 +47,10 @@ static void     sg_1000_update_settings (void *context_ptr);
  */
 static void sg_1000_audio_callback (void *context_ptr, int16_t *stream, uint32_t count)
 {
+    SG_1000_Context *context = (SG_1000_Context *) context_ptr;
+
     /* Assuming little-endian host */
-    sn76489_get_samples (stream, count);
+    sn76489_get_samples (context->psg_context, stream, count);
 }
 
 
@@ -68,6 +71,21 @@ static void sg_1000_cleanup (void *context_ptr)
     {
         free (context->vdp_context);
         context->vdp_context = NULL;
+    }
+
+    if (context->psg_context != NULL)
+    {
+        if (context->psg_context->bandlimit_context_l)
+        {
+            free (context->psg_context->bandlimit_context_l);
+        }
+        if (context->psg_context->bandlimit_context_r)
+        {
+            free (context->psg_context->bandlimit_context_r);
+        }
+
+        free (context->psg_context);
+        context->psg_context = NULL;
     }
 
     if (context->rom != NULL)
@@ -153,6 +171,7 @@ SG_1000_Context *sg_1000_init (void)
     SG_1000_Context *context;
     Z80_Context *z80_context;
     TMS9928A_Context *vdp_context;
+    SN76489_Context *psg_context;
 
     context = calloc (1, sizeof (SG_1000_Context));
     if (context == NULL)
@@ -177,7 +196,8 @@ SG_1000_Context *sg_1000_init (void)
     context->vdp_context = vdp_context;
 
     /* Initialise PSG */
-    sn76489_init ();
+    psg_context = sn76489_init ();
+    context->psg_context = psg_context;
 
     /* Pull in the settings */
     sg_1000_update_settings (context);
@@ -299,7 +319,7 @@ static void sg_1000_io_write (void *context_ptr, uint8_t addr, uint8_t data)
     /* PSG */
     if (addr >= 0x40 && addr <= 0x7f)
     {
-        sn76489_data_write (data);
+        sn76489_data_write (context->psg_context, data);
     }
 
     /* VDP */
@@ -437,7 +457,7 @@ static void sg_1000_run (void *context_ptr, uint32_t ms)
 
         /* 228 CPU cycles per scanline */
         z80_run_cycles (context->z80_context, 228 + context->overclock);
-        psg_run_cycles (228);
+        psg_run_cycles (context->psg_context, 228);
         tms9928a_run_one_scanline (context->vdp_context);
     }
 }
@@ -533,7 +553,7 @@ static void sg_1000_state_load (void *context_ptr, const char *filename)
         }
         else if (!strncmp (section_id, SECTION_ID_PSG, 4))
         {
-            sn76489_state_load (version, size, data);
+            sn76489_state_load (context->psg_context, version, size, data);
         }
         else
         {
@@ -568,7 +588,7 @@ static void sg_1000_state_save (void *context_ptr, const char *filename)
     tms9928a_state_save (context->vdp_context);
     save_state_section_add (SECTION_ID_VRAM, 1, TMS9928A_VRAM_SIZE, context->vdp_context->vram);
 
-    sn76489_state_save ();
+    sn76489_state_save (context->psg_context);
 
     save_state_write (filename);
 }

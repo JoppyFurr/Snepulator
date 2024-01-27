@@ -22,6 +22,7 @@
 #include "cpu/z80.h"
 #include "video/tms9928a.h"
 #include "video/sms_vdp.h"
+#include "sound/band_limit.h"
 #include "sound/sn76489.h"
 #include "sound/ym2413.h"
 #include "sms.h"
@@ -85,7 +86,7 @@ static void sms_audio_callback (void *context_ptr, int16_t *stream, uint32_t cou
 {
     SMS_Context *context = (SMS_Context *) context_ptr;
 
-    sn76489_get_samples (stream, count);
+    sn76489_get_samples (context->psg_context, stream, count);
 
     if (state.fm_sound)
     {
@@ -121,6 +122,21 @@ static void sms_cleanup (void *context_ptr)
     {
         free (context->vdp_context);
         context->vdp_context = NULL;
+    }
+
+    if (context->psg_context != NULL)
+    {
+        if (context->psg_context->bandlimit_context_l)
+        {
+            free (context->psg_context->bandlimit_context_l);
+        }
+        if (context->psg_context->bandlimit_context_r)
+        {
+            free (context->psg_context->bandlimit_context_r);
+        }
+
+        free (context->psg_context);
+        context->psg_context = NULL;
     }
 
     if (context->ym2413_context != NULL)
@@ -312,6 +328,7 @@ SMS_Context *sms_init (void)
     SMS_Context *context;
     Z80_Context *z80_context;
     TMS9928A_Context *vdp_context;
+    SN76489_Context *psg_context;
     YM2413_Context *ym2413_context;
 
     context = calloc (1, sizeof (SMS_Context));
@@ -338,7 +355,8 @@ SMS_Context *sms_init (void)
     context->vdp_context = vdp_context;
 
     /* Initialise sound chips */
-    sn76489_init ();
+    psg_context = sn76489_init ();
+    context->psg_context = psg_context;
     /* TODO: Should we:
      * A) Always initialize the YM
      * B) Only initialize the YM if it's being used... */
@@ -736,7 +754,7 @@ static void sms_io_write (void *context_ptr, uint8_t addr, uint8_t data)
         if (addr == 0x06)
         {
             /* Stereo sound register */
-            sn76489_state.gg_stereo = data;
+            context->psg_context->state.gg_stereo = data;
         }
     }
 
@@ -786,7 +804,7 @@ static void sms_io_write (void *context_ptr, uint8_t addr, uint8_t data)
     /* PSG */
     else if (addr >= 0x40 && addr <= 0x7f)
     {
-        sn76489_data_write (data);
+        sn76489_data_write (context->psg_context, data);
     }
 
     /* VDP */
@@ -1285,7 +1303,7 @@ static void sms_run (void *context_ptr, uint32_t ms)
         z80_run_cycles (context->z80_context, 1);
         sms_vdp_update_line_interrupt (context->vdp_context);
         z80_run_cycles (context->z80_context, 201);
-        psg_run_cycles (228);
+        psg_run_cycles (context->psg_context, 228);
 
         if (state.fm_sound)
         {
@@ -1422,7 +1440,7 @@ static void sms_state_load (void *context_ptr, const char *filename)
         }
         else if (!strncmp (section_id, SECTION_ID_PSG, 4))
         {
-            sn76489_state_load (version, size, data);
+            sn76489_state_load (context->psg_context, version, size, data);
         }
         else
         {
@@ -1472,7 +1490,7 @@ static void sms_state_save (void *context_ptr, const char *filename)
     tms9928a_state_save (context->vdp_context);
     save_state_section_add (SECTION_ID_VRAM, 1, TMS9928A_VRAM_SIZE, context->vdp_context->vram);
 
-    sn76489_state_save ();
+    sn76489_state_save (context->psg_context);
 
     save_state_write (filename);
 }
