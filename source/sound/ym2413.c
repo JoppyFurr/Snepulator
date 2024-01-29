@@ -33,28 +33,6 @@ extern Snepulator_State state;
 #define MAG_BITS 0x7fff
 typedef uint16_t signmag16_t;
 
-/* TODO:
- * - Investigate behaviour of +0 and -0 in the DAC.
- *   Should they be the same value?
- *   If different, is their delta the same as other number pairs?
- *
- * - SMS Interface:
- *   I/O Port 0xf2 - Read bit 0 to detect if YM2413 is present (according to McDonald document)
- *                 - Write bits 1:0 to configure muting:
- *                   0 - Only SN76489 enabled
- *                   1 - Only YM2413 enabled
- *                   2 - Both disabled
- *                   3 - Both enabled
- *                   Note that, muting the SN76489 only works on Japanese consoles.
- *                   Reading: 7:4 - counter bits 11, 7, and 3 (ticked by C-Sync)
- *                            3:2 - always 0
- *                            1:0 - Last written values, 0 by default
- *                  If no YM2413 is present, reading from the audio control port returns varying results.
- *                   * It always returns %10 in the lowermost two bits on a non-japanese SMS.
- *                   * On a Mark III without FM unit, it returns the input from port 0.
- *                   * Writing to the audio control port has no effect if no YM2413 is present.
- */
-
 static uint32_t exp_table [256] = { };
 static uint32_t log_sin_table [256] = { };
 static uint32_t am_table [210] = { };
@@ -800,9 +778,8 @@ static int16_t ym2413_run_channel_sample (YM2413_Context *context, uint16_t chan
         modulator_value = instrument->modulator_waveform ? 0 : -(modulator_value & MAG_BITS);
     }
 
-    /* TODO: Check if historic feedback is stored before or after waveform flattening */
+    /* Feedback is stored after the waveform bit is applied. */
     context->state.feedback [channel] [context->state.global_counter % 2] = modulator_value;
-
 
     /* Carrier Phase */
     factor = factor_table [instrument->carrier_multiplication_factor];

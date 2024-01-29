@@ -77,9 +77,6 @@ static void sms_audio_callback (void *context_ptr, int16_t *stream, uint32_t cou
 
     if (state.fm_sound)
     {
-        /* TODO: We probably want some kind of mixing function for when
-         *       multiple sound chips are active. For now just add them
-         *       together. */
         int16_t fm_buffer [4096];
         ym2413_get_samples (context->ym2413_context, fm_buffer, count);
 
@@ -348,9 +345,6 @@ SMS_Context *sms_init (void)
     /* Initialise sound chips */
     psg_context = sn76489_init ();
     context->psg_context = psg_context;
-    /* TODO: Should we:
-     * A) Always initialize the YM
-     * B) Only initialize the YM if it's being used... */
     ym2413_context = ym2413_init ();
     context->ym2413_context = ym2413_context;
 
