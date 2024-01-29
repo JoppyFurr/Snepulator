@@ -225,15 +225,14 @@ void _psg_run_cycles (SN76489_Context *context, uint64_t cycles)
                 if (context->state.noise & (1 << 2))
                 {
                     /* White noise - Tap bits 0 and 3 */
-                    context->state.lfsr = (context->state.lfsr >> 1) |
-                                          (((context->state.lfsr & (1 << 0)) ? 0x8000 : 0) ^ ((context->state.lfsr & (1 << 3)) ? 0x8000 : 0));
-
+                    context->state.lfsr >>= 1;
+                    context->state.lfsr ^= (context->state.output_lfsr) ? 0x9000 : 0;
                 }
                 else
                 {
-                    /* Periodic noise  - Tap bit 0 */
-                    context->state.lfsr = (context->state.lfsr >> 1) |
-                                          ((context->state.lfsr & (1 << 0)) ? 0x8000 : 0);
+                    /* Periodic noise - Tap bit 0 */
+                    context->state.lfsr >>= 1;
+                    context->state.lfsr ^= (context->state.output_lfsr) ? 0x8000 : 0;
                 }
             }
         }
