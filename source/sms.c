@@ -66,19 +66,6 @@ static void        sms_state_save (void *context_ptr, const char *filename);
 static void        sms_sync (void *context_ptr);
 static void        sms_update_settings (void *context_ptr);
 
-/* TODO: The audio_control register is used to enable/disable
- *       the two sound chips on consoles that have FM capability.
- *       The lower two bits are used to enable/disable the chips,
- *       and is also used in the detection of the FM capability.
- *
- *       1. This should be within the console state. However, just
- *          putting it there may break save-state compatibility as
- *          the state size will change.
- *
- *       2. The muting should be implemented.
- */
-static uint8_t audio_control = 0;
-
 /*
  * Callback to supply audio frames.
  */
@@ -96,10 +83,14 @@ static void sms_audio_callback (void *context_ptr, int16_t *stream, uint32_t cou
         int16_t fm_buffer [4096];
         ym2413_get_samples (context->ym2413_context, fm_buffer, count);
 
-        for (uint32_t i = 0; i < count; i++)
+        /* The least significant bit of the audio control register is used to mute the YM2413. */
+        if (context->audio_control & 0x01)
         {
-            stream [2 * i    ] += fm_buffer [2 * i    ];
-            stream [2 * i + 1] += fm_buffer [2 * i + 1];
+            for (uint32_t i = 0; i < count; i++)
+            {
+                stream [2 * i    ] += fm_buffer [2 * i    ];
+                stream [2 * i + 1] += fm_buffer [2 * i + 1];
+            }
         }
     }
 }
@@ -368,7 +359,7 @@ SMS_Context *sms_init (void)
     context->export_paddle = false;
     context->sram_used = 0x0000;
     context->video_3d_field = SMS_3D_FIELD_NONE;
-    audio_control = 0;
+    context->audio_control = 0;
 
     /* Reset the mapper */
     context->hw_state.mapper = SMS_MAPPER_UNKNOWN;
@@ -734,7 +725,7 @@ static uint8_t sms_io_read (void *context_ptr, uint8_t addr)
         /* TODO: The upper nibble of the audio_control contains
          *       bits derived from a counter. Does anything
          *       rely on this? */
-        return audio_control & 0x03;
+        return (context->audio_control) & 0x03;
     }
 
     /* DEFAULT */
@@ -837,7 +828,7 @@ static void sms_io_write (void *context_ptr, uint8_t addr, uint8_t data)
 
         else if (addr == 0xf2)
         {
-            audio_control = (data & 0x03);
+            context->audio_control = (data & 0x03);
         }
     }
 

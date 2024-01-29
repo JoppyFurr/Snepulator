@@ -65,6 +65,10 @@ typedef struct SMS_Context_s {
     uint32_t reset_button_timeout;
     uint64_t millicycles;
 
+    /* TODO: Move the audio_control register into the state when updating the format.
+     *       for now it lives in the context to avoid changing the size of the state. */
+    uint8_t audio_control;
+
     /* Settings */
     Video_Format format;
     uint32_t overclock;
