@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,7 +15,8 @@
 #include "sn76489.h"
 extern Snepulator_State state;
 
-#define BASE_VOLUME 100
+/* Represents the level of a single channel at maximum volume */
+#define BASE_VOLUME 1536
 
 #define GG_CH0_RIGHT    BIT_0
 #define GG_CH1_RIGHT    BIT_1
@@ -24,6 +26,9 @@ extern Snepulator_State state;
 #define GG_CH1_LEFT     BIT_5
 #define GG_CH2_LEFT     BIT_6
 #define GG_CH3_LEFT     BIT_7
+
+/* Volume table, indexed by the volume (attenuation) register. */
+static int16_t volume_table [16] = { };
 
 
 /*
@@ -99,10 +104,33 @@ void sn76489_data_write (SN76489_Context *context, uint8_t data)
 
 
 /*
+ * Populate the volume table with the output levels for a single channel.
+ */
+static void sn76489_populate_volume_table (void)
+{
+    /* Only populate 15 volume levels, level 16 is silent. */
+    for (int i = 0; i < 15; i++)
+    {
+        /* 2 dB attenuation per step */
+        volume_table [i] = round (BASE_VOLUME * pow (10.0, (-2.0 * i) / 20.0));
+    }
+}
+
+
+/*
  * Reset PSG to initial power-on state.
  */
 SN76489_Context *sn76489_init (void)
 {
+    static bool first = true;
+
+    if (first)
+    {
+        /* Once-off initialisations */
+        first = false;
+        sn76489_populate_volume_table ();
+    }
+
     SN76489_Context *context = calloc (1, sizeof (SN76489_Context));
     pthread_mutex_init (&context->mutex, NULL);
 
@@ -241,10 +269,10 @@ void _psg_run_cycles (SN76489_Context *context, uint64_t cycles)
         if (state.console == CONSOLE_GAME_GEAR)
         {
             context->sample_ring_l [context->write_index % SN76489_RING_SIZE] =
-                (context->state.gg_stereo & GG_CH0_LEFT ? context->state.output_0    * (0x0f - context->state.vol_0) * BASE_VOLUME : 0)
-              + (context->state.gg_stereo & GG_CH1_LEFT ? context->state.output_1    * (0x0f - context->state.vol_1) * BASE_VOLUME : 0)
-              + (context->state.gg_stereo & GG_CH2_LEFT ? context->state.output_2    * (0x0f - context->state.vol_2) * BASE_VOLUME : 0)
-              + (context->state.gg_stereo & GG_CH3_LEFT ? context->state.output_lfsr * (0x0f - context->state.vol_3) * BASE_VOLUME : 0);
+                (context->state.gg_stereo & GG_CH0_LEFT ? context->state.output_0    * volume_table [context->state.vol_0] : 0)
+              + (context->state.gg_stereo & GG_CH1_LEFT ? context->state.output_1    * volume_table [context->state.vol_1] : 0)
+              + (context->state.gg_stereo & GG_CH2_LEFT ? context->state.output_2    * volume_table [context->state.vol_2] : 0)
+              + (context->state.gg_stereo & GG_CH3_LEFT ? context->state.output_lfsr * volume_table [context->state.vol_3] : 0);
 
             if (context->sample_ring_l [context->write_index % SN76489_RING_SIZE] != context->previous_sample_l)
             {
@@ -255,10 +283,10 @@ void _psg_run_cycles (SN76489_Context *context, uint64_t cycles)
             }
 
             context->sample_ring_r [context->write_index % SN76489_RING_SIZE] =
-                (context->state.gg_stereo & GG_CH0_RIGHT ? context->state.output_0    * (0x0f - context->state.vol_0) * BASE_VOLUME : 0)
-              + (context->state.gg_stereo & GG_CH1_RIGHT ? context->state.output_1    * (0x0f - context->state.vol_1) * BASE_VOLUME : 0)
-              + (context->state.gg_stereo & GG_CH2_RIGHT ? context->state.output_2    * (0x0f - context->state.vol_2) * BASE_VOLUME : 0)
-              + (context->state.gg_stereo & GG_CH3_RIGHT ? context->state.output_lfsr * (0x0f - context->state.vol_3) * BASE_VOLUME : 0);
+                (context->state.gg_stereo & GG_CH0_RIGHT ? context->state.output_0    * volume_table [context->state.vol_0] : 0)
+              + (context->state.gg_stereo & GG_CH1_RIGHT ? context->state.output_1    * volume_table [context->state.vol_1] : 0)
+              + (context->state.gg_stereo & GG_CH2_RIGHT ? context->state.output_2    * volume_table [context->state.vol_2] : 0)
+              + (context->state.gg_stereo & GG_CH3_RIGHT ? context->state.output_lfsr * volume_table [context->state.vol_3] : 0);
 
             if (context->sample_ring_r [context->write_index % SN76489_RING_SIZE] != context->previous_sample_r)
             {
@@ -280,10 +308,10 @@ void _psg_run_cycles (SN76489_Context *context, uint64_t cycles)
         else
         {
             context->sample_ring_l [context->write_index % SN76489_RING_SIZE] =
-                context->state.output_0    * (0x0f - context->state.vol_0) * BASE_VOLUME
-              + context->state.output_1    * (0x0f - context->state.vol_1) * BASE_VOLUME
-              + context->state.output_2    * (0x0f - context->state.vol_2) * BASE_VOLUME
-              + context->state.output_lfsr * (0x0f - context->state.vol_3) * BASE_VOLUME;
+                context->state.output_0    * volume_table [context->state.vol_0]
+              + context->state.output_1    * volume_table [context->state.vol_1]
+              + context->state.output_2    * volume_table [context->state.vol_2]
+              + context->state.output_lfsr * volume_table [context->state.vol_3];
 
             if (context->sample_ring_l [context->write_index % SN76489_RING_SIZE] != context->previous_sample_l)
             {
