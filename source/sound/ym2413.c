@@ -16,6 +16,7 @@
 #include "../snepulator_types.h"
 #include "../snepulator.h"
 #include "../util.h"
+#include "../save_state.h"
 
 extern Snepulator_State state;
 
@@ -1084,4 +1085,101 @@ YM2413_Context *ym2413_init (void)
     context->clock_rate = 0;
 
     return context;
+}
+
+
+/*
+ * Export YM2413 state.
+ */
+void ym2413_state_save (YM2413_Context *context)
+{
+    YM2413_State ym2413_state_be = {
+        .addr_latch = context->state.addr_latch,
+        .regs_custom = { .r00 = context->state.regs_custom.r00,
+                         .r01 = context->state.regs_custom.r01,
+                         .r02 = context->state.regs_custom.r02,
+                         .r03 = context->state.regs_custom.r03,
+                         .r04 = context->state.regs_custom.r04,
+                         .r05 = context->state.regs_custom.r05,
+                         .r06 = context->state.regs_custom.r06,
+                         .r07 = context->state.regs_custom.r07 },
+        .r0e_rhythm = context->state.r0e_rhythm,
+        .r0f_test = context->state.r0f_test,
+        .global_counter = util_hton32 (context->state.global_counter),
+        .am_counter = util_hton16 (context->state.am_counter),
+        .am_value = util_hton16 (context->state.am_value),
+        .sd_lfsr = util_hton32 (context->state.sd_lfsr),
+        .hh_lfsr = util_hton32 (context->state.hh_lfsr)
+    };
+
+    for (int channel = 0; channel < 9; channel++)
+    {
+        ym2413_state_be.r10_channel_params [channel].fnum               = context->state.r10_channel_params [channel].fnum;
+        ym2413_state_be.r20_channel_params [channel].r20_channel_params = context->state.r20_channel_params [channel].r20_channel_params;
+        ym2413_state_be.r30_channel_params [channel].r30_channel_params = context->state.r30_channel_params [channel].r30_channel_params;
+        ym2413_state_be.feedback [channel] [0]                          = util_hton16 (context->state.feedback [channel] [0]);
+        ym2413_state_be.feedback [channel] [1]                          = util_hton16 (context->state.feedback [channel] [1]);
+        ym2413_state_be.modulator [channel].eg_state                    = util_hton32 (context->state.modulator [channel].eg_state);
+        ym2413_state_be.modulator [channel].eg_level                    = context->state.modulator [channel].eg_level;
+        ym2413_state_be.modulator [channel].phase                       = util_hton32 (context->state.modulator [channel].phase);
+        ym2413_state_be.carrier [channel].eg_state                      = util_hton32 (context->state.carrier [channel].eg_state);
+        ym2413_state_be.carrier [channel].eg_level                      = context->state.carrier [channel].eg_level;
+        ym2413_state_be.carrier [channel].phase                         = util_hton32 (context->state.carrier [channel].phase);
+    }
+
+    save_state_section_add (SECTION_ID_YM2413, 1, sizeof (ym2413_state_be), &ym2413_state_be);
+}
+
+
+/*
+ * Import YM2413 state.
+ */
+void ym2413_state_load (YM2413_Context *context, uint32_t version, uint32_t size, void *data)
+{
+    YM2413_State ym2413_state_be;
+
+    if (size == sizeof (ym2413_state_be))
+    {
+        memcpy (&ym2413_state_be, data, sizeof (ym2413_state_be));
+
+        context->state.addr_latch      = ym2413_state_be.addr_latch;
+        context->state.regs_custom.r00 = ym2413_state_be.regs_custom.r00;
+        context->state.regs_custom.r01 = ym2413_state_be.regs_custom.r01;
+        context->state.regs_custom.r02 = ym2413_state_be.regs_custom.r02;
+        context->state.regs_custom.r03 = ym2413_state_be.regs_custom.r03;
+        context->state.regs_custom.r04 = ym2413_state_be.regs_custom.r04;
+        context->state.regs_custom.r05 = ym2413_state_be.regs_custom.r05;
+        context->state.regs_custom.r06 = ym2413_state_be.regs_custom.r06;
+        context->state.regs_custom.r07 = ym2413_state_be.regs_custom.r07;
+        context->state.r0e_rhythm      = ym2413_state_be.r0e_rhythm;
+        context->state.r0f_test        = ym2413_state_be.r0f_test;
+
+        context->state.global_counter  = util_ntoh32 (ym2413_state_be.global_counter);
+        context->state.am_counter      = util_ntoh16 (ym2413_state_be.am_counter);
+        context->state.am_value        = util_ntoh16 (ym2413_state_be.am_value);
+        context->state.sd_lfsr         = util_ntoh32 (ym2413_state_be.sd_lfsr);
+        context->state.hh_lfsr         = util_ntoh32 (ym2413_state_be.hh_lfsr);
+
+        for (int channel = 0; channel < 9; channel++)
+        {
+            context->state.r10_channel_params [channel].fnum               = ym2413_state_be.r10_channel_params [channel].fnum;
+            context->state.r20_channel_params [channel].r20_channel_params = ym2413_state_be.r20_channel_params [channel].r20_channel_params;
+            context->state.r30_channel_params [channel].r30_channel_params = ym2413_state_be.r30_channel_params [channel].r30_channel_params;
+            context->state.feedback [channel] [0]                          = util_ntoh16 (ym2413_state_be.feedback [channel] [0]);
+            context->state.feedback [channel] [1]                          = util_ntoh16 (ym2413_state_be.feedback [channel] [1]);
+            context->state.modulator [channel].eg_state                    = util_ntoh32 (ym2413_state_be.modulator [channel].eg_state);
+            context->state.modulator [channel].eg_level                    = ym2413_state_be.modulator [channel].eg_level;
+            context->state.modulator [channel].phase                       = util_ntoh32 (ym2413_state_be.modulator [channel].phase);
+            context->state.carrier [channel].eg_state                      = util_ntoh32 (ym2413_state_be.carrier [channel].eg_state);
+            context->state.carrier [channel].eg_level                      = ym2413_state_be.carrier [channel].eg_level;
+            context->state.carrier [channel].phase                         = util_ntoh32 (ym2413_state_be.carrier [channel].phase);
+
+            /* Calculate effective values */
+            ym2413_handle_channel_update (context, channel);
+        }
+    }
+    else
+    {
+        snepulator_error ("Error", "Save-state contains incorrect YM2413 size");
+    }
 }

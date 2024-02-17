@@ -25,6 +25,7 @@
 
 /* Sound Chips */
 #define SECTION_ID_PSG              "PSG"
+#define SECTION_ID_YM2413           "Y24"
 
 /* Video Chips */
 #define SECTION_ID_VDP              "VDP"

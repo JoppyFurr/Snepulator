@@ -214,3 +214,9 @@ void ym2413_run_cycles (YM2413_Context *context, uint64_t cycles);
 
 /* Initialise a new YM2413 context. */
 YM2413_Context *ym2413_init (void);
+
+/* Export YM2413 state. */
+void ym2413_state_save (YM2413_Context *context);
+
+/* Import YM2413 state. */
+void ym2413_state_load (YM2413_Context *context, uint32_t version, uint32_t size, void *data);

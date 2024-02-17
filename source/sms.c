@@ -1427,6 +1427,12 @@ static void sms_state_load (void *context_ptr, const char *filename)
         {
             sn76489_state_load (context->psg_context, version, size, data);
         }
+        else if (!strncmp (section_id, SECTION_ID_YM2413, 4))
+        {
+            ym2413_state_load (context->ym2413_context, version, size, data);
+            /* The YM2413 state was only included if it was enabled in the audio-control register */
+            context->audio_control = 0x01;
+        }
         else
         {
             printf ("Unknown Section: section_id=%s, version=%u, size=%u, data=%p.\n", section_id, version, size, data);
@@ -1476,6 +1482,12 @@ static void sms_state_save (void *context_ptr, const char *filename)
     save_state_section_add (SECTION_ID_VRAM, 1, TMS9928A_VRAM_SIZE, context->vdp_context->vram);
 
     sn76489_state_save (context->psg_context);
+
+    /* Only write the YM2413 state if FM sound is enabled and the chip is not muted. */
+    if (state.fm_sound && context->audio_control & 0x01)
+    {
+        ym2413_state_save (context->ym2413_context);
+    }
 
     save_state_write (filename);
 }

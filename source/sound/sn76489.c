@@ -431,6 +431,6 @@ void sn76489_state_load (SN76489_Context *context, uint32_t version, uint32_t si
     }
     else
     {
-        snepulator_error ("Error", "Save-state contains incorrect Z80 size");
+        snepulator_error ("Error", "Save-state contains incorrect SN76489 size");
     }
 }
