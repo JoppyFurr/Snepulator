@@ -460,7 +460,7 @@ void snepulator_audio_device_open (const char *device)
     desired_audiospec.freq = 48000;
     desired_audiospec.format = AUDIO_S16LSB;
     desired_audiospec.channels = 2;
-    desired_audiospec.samples = 1024;
+    desired_audiospec.samples = 512;
     desired_audiospec.callback = snepulator_audio_callback;
 
     audio_device_id = SDL_OpenAudioDevice (device, 0, &desired_audiospec, &obtained_audiospec,

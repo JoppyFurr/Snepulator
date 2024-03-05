@@ -2,7 +2,7 @@
  * API for the YM2413 synth chip.
  */
 
-#define YM2413_RING_SIZE 4096
+#define YM2413_RING_SIZE 2048
 
 typedef enum YM2413_Envelope_State_e {
     YM2413_STATE_DAMP = 0,
