@@ -962,6 +962,13 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
 
     uint32_t melody_channels = (context->state.rhythm_mode) ? 6 : 9;
 
+    /* If we're about to overwrite samples that haven't been read yet,
+     * skip the read_index forward to discard some of the backlog. */
+    if (context->write_index + (ym_samples * AUDIO_SAMPLE_RATE * 72 / context->clock_rate) >= context->read_index + YM2413_RING_SIZE)
+    {
+        context->read_index += YM2413_RING_SIZE / 4;
+    }
+
     while (ym_samples--)
     {
         int16_t output_level = 0;

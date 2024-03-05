@@ -175,32 +175,11 @@ void _psg_run_cycles (SN76489_Context *context, uint64_t cycles)
         context->completed_cycles = 0;
     }
 
-    /* keep track of how much buffer is free */
-    uint32_t used_buffer = context->write_index - context->read_index;
-
-    /* Try to avoid having more than two sound-card buffers worth of sound.
-     * The ring buffer can fit ~85 ms of sound.
-     * The sound card is configured to ask for sound in ~21 ms blocks. */
-    if ((psg_cycles * AUDIO_SAMPLE_RATE / context->clock_rate) + used_buffer > SN76489_RING_SIZE * 0.6)
+    /* If we're about to overwrite samples that haven't been read yet,
+     * skip the read_index forward to discard some of the backlog. */
+    if (context->write_index + (psg_cycles * AUDIO_SAMPLE_RATE / context->clock_rate) >= context->read_index + SN76489_RING_SIZE)
     {
-        if (psg_cycles > 1)
-        {
-            psg_cycles -= 1;
-        }
-    }
-
-    /* Limit the number of cycles we run to what will fit in the ring */
-    if ((psg_cycles * AUDIO_SAMPLE_RATE / context->clock_rate) + used_buffer > SN76489_RING_SIZE)
-    {
-        psg_cycles = (SN76489_RING_SIZE - used_buffer) * context->clock_rate / AUDIO_SAMPLE_RATE;
-    }
-
-    /* The read_index points to the next sample that will be passed to the sound card.
-     * Make sure that by the time we return, there is valid data at the read_index. */
-    if (context->write_index + (psg_cycles * AUDIO_SAMPLE_RATE / context->clock_rate) <= context->read_index)
-    {
-        /* An extra cycle is added to account for integer division losses */
-        psg_cycles = (context->read_index - context->write_index + 1) * context->clock_rate / AUDIO_SAMPLE_RATE + 1;
+        context->read_index += SN76489_RING_SIZE / 4;
     }
 
     while (psg_cycles--)
