@@ -26,7 +26,8 @@ extern Snepulator_State state;
 #define M_PI (3.14159265358979323846)
 #endif
 
-#define BASE_VOLUME 100
+/* Represents the level of a single melody channel at maximum volume */
+#define BASE_VOLUME 4096
 
 /* Use a special type definition to mark sign-magnitude numbers.
  * The most significant bit is used to indicate if the number is negative. */
@@ -1006,7 +1007,7 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
                             (float) (AUDIO_SAMPLE_RATE * 72);
 
             int16_t sample = roundf (portion * output_level + (1.0 - portion) * context->previous_output_level);
-            context->sample_ring [context->write_index % YM2413_RING_SIZE] = sample * 3;
+            context->sample_ring [context->write_index % YM2413_RING_SIZE] = BASE_VOLUME * sample / 2042;
             context->write_index++;
         }
 
