@@ -1046,13 +1046,13 @@ void ym2413_get_samples (YM2413_Context *context, int16_t *stream, uint32_t coun
     }
 
     /* Take samples and pass them to the sound card */
-    uint32_t read_start = context->read_index % YM2413_RING_SIZE;
-
     for (int i = 0; i < count; i++)
     {
+        size_t sample_index = (context->read_index + i) & (YM2413_RING_SIZE - 1);
+
         /* Left, Right */
-        stream [2 * i    ] = context->sample_ring [read_start + i];
-        stream [2 * i + 1] = context->sample_ring [read_start + i];
+        stream [2 * i    ] = context->sample_ring [sample_index];
+        stream [2 * i + 1] = context->sample_ring [sample_index];
     }
 
     context->read_index += count;
