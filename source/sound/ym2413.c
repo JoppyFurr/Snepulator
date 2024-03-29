@@ -416,9 +416,9 @@ void ym2413_data_write (YM2413_Context *context, uint8_t data)
 void ym2413_addr_write (YM2413_Context *context, uint8_t addr)
 {
     /* Register mirroring */
-    if ((addr <= 0x19 && addr >= 0x1f) ||
-        (addr <= 0x29 && addr >= 0x2f) ||
-        (addr <= 0x39 && addr >= 0x3f))
+    if ((addr >= 0x19 && addr <= 0x1f) ||
+        (addr >= 0x29 && addr <= 0x2f) ||
+        (addr >= 0x39 && addr <= 0x3f))
     {
         addr -= 0x09;
     }
