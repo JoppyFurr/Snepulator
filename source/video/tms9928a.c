@@ -158,7 +158,6 @@ uint8_t tms9928a_status_read (TMS9928A_Context *context)
 
     /* Clear on read */
     context->state.status = 0x00;
-    context->state.line_interrupt = false; /* "The flag remains set until the control port (IO port 0xbf) is read */
 
     return status;
 }
@@ -172,7 +171,7 @@ void tms9928a_control_write (TMS9928A_Context *context, uint8_t value)
     if (!context->state.first_byte_received) /* First byte */
     {
         context->state.first_byte_received = true;
-        context->state.address = (context->state.address & 0x3f00) | ((uint16_t) value << 0);
+        context->state.address = (context->state.address & 0x3f00) | value;
     }
     else /* Second byte */
     {
@@ -220,38 +219,71 @@ bool tms9928a_get_interrupt (TMS9928A_Context *context)
 /*
  * Render one line of an 8x8 pattern.
  */
-static void tms9928a_draw_pattern (TMS9928A_Context *context, uint16_t line, TMS9928A_Pattern *pattern_base,
-                                   uint8_t tile_colours, int32_Point_2D offset, bool sprite, bool magnify)
+static void tms9928a_draw_pattern_background (TMS9928A_Context *context, uint16_t line, TMS9928A_Pattern *pattern_base,
+                                              uint8_t tile_colours, int32_Point_2D offset)
 {
     uint8_t line_data;
 
     uint8_t background_colour = tile_colours & 0x0f;
     uint8_t foreground_colour = tile_colours >> 4;
 
-    line_data = pattern_base->data [(line - offset.y) >> magnify];
+    line_data = pattern_base->data [line - offset.y];
+
+    for (uint32_t x = 0; x < 8; x++)
+    {
+        /* Don't draw texture pixels that fall outside of the screen */
+        if (x + offset.x >= 256)
+            continue;
+
+        uint8_t colour_index = ((line_data & (0x80 >> x)) ? foreground_colour : background_colour);
+
+        if (colour_index == TMS9928A_COLOUR_TRANSPARENT)
+        {
+            colour_index = context->state.regs.background_colour & 0x0f;
+        }
+
+        uint_pixel pixel = context->palette [colour_index];
+        context->frame_buffer [(offset.x + x + VIDEO_SIDE_BORDER) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = pixel;
+    }
+}
+
+
+/*
+ * Render one line of an 8x8 pattern.
+ * Sprite version.
+ */
+static void tms9928a_draw_pattern_sprite (TMS9928A_Context *context, uint16_t line, TMS9928A_Pattern *pattern_base,
+                                          uint8_t tile_colours, int32_Point_2D position, bool magnify)
+{
+    uint8_t line_data;
+
+    uint8_t background_colour = tile_colours & 0x0f;
+    uint8_t foreground_colour = tile_colours >> 4;
+
+    line_data = pattern_base->data [(line - position.y) >> magnify];
 
     for (uint32_t x = 0; x < (8 << magnify); x++)
     {
         /* Don't draw texture pixels that fall outside of the screen */
-        if (x + offset.x >= 256)
+        if (x + position.x >= 256)
             continue;
 
         uint8_t colour_index = ((line_data & (0x80 >> (x >> magnify))) ? foreground_colour : background_colour);
 
         if (colour_index == TMS9928A_COLOUR_TRANSPARENT)
         {
-            if (sprite == true)
-            {
-                continue;
-            }
-            else
-            {
-                colour_index = context->state.regs.background_colour & 0x0f;
-            }
+            continue;
         }
 
+        /* Sprite collision detection */
+        if (context->state.collision_buffer [x + position.x])
+        {
+            context->state.status |= TMS9928A_SPRITE_COLLISION;
+        }
+        context->state.collision_buffer [x + position.x] = true;
+
         uint_pixel pixel = context->palette [colour_index];
-        context->frame_buffer [(offset.x + x + VIDEO_SIDE_BORDER) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = pixel;
+        context->frame_buffer [(position.x + x + VIDEO_SIDE_BORDER) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = pixel;
     }
 }
 
@@ -296,19 +328,26 @@ void tms9928a_draw_sprites (TMS9928A_Context *context, uint16_t line)
         /* If the sprite is on this line, add it to the buffer */
         if (line >= position.y && line < position.y + (sprite_size << magnify))
         {
-            /* TODO: Investigate exact behaviour on real hardware.
-             * -> What is the value when there is no overflow?
-             * -> What happens if the status register is not cleared?
-             * -> What happens if there are multiple lines with overflows?  */
+            /* Update the fifth-sprite number when setting the flag. */
+            /* Note: On real hardware with no overflow, the fifth-sprite-number
+             *       in the status register contains the number of sprites in
+             *       the sprite list. List length 31 and 32 share a value of 31.
+             *       Does anything rely on this behaviour? */
             if (line_sprite_count == 4 && !context->remove_sprite_limit)
             {
-                context->state.status |= TMS9928A_SPRITE_OVERFLOW;
-                context->state.status = (context->state.status & 0xe0) | i;
+                if (!(context->state.status & TMS9928A_SPRITE_OVERFLOW))
+                {
+                    context->state.status |= TMS9928A_SPRITE_OVERFLOW;
+                    context->state.status = (context->state.status & 0xe0) | i;
+                }
                 break;
             }
             line_sprite_buffer [line_sprite_count++] = sprite;
         }
     }
+
+    /* Clear the sprite collision buffer */
+    memset (context->state.collision_buffer, 0, sizeof (context->state.collision_buffer));
 
     /* Render the sprites in the line sprite buffer.
      * Done in reverse order so that the first sprite is the one left on the screen */
@@ -337,8 +376,6 @@ void tms9928a_draw_sprites (TMS9928A_Context *context, uint16_t line)
             position.y = sprite->y + 1;
         }
 
-        /* TODO: Sprite collisions */
-
         if (context->state.regs.ctrl_1_sprite_size)
         {
             pattern_index &= 0xfc;
@@ -349,13 +386,13 @@ void tms9928a_draw_sprites (TMS9928A_Context *context, uint16_t line)
             {
                 sub_position.x = position.x + ((i & 2) ? (8 << magnify) : 0);
                 sub_position.y = position.y + ((i & 1) ? (8 << magnify) : 0);
-                tms9928a_draw_pattern (context, line, pattern + i, sprite->colour_ec << 4, sub_position, true, magnify);
+                tms9928a_draw_pattern_sprite (context, line, pattern + i, sprite->colour_ec << 4, sub_position, magnify);
             }
         }
         else
         {
             pattern = (TMS9928A_Pattern *) &context->vram [pattern_generator_base + (pattern_index * sizeof (TMS9928A_Pattern))];
-            tms9928a_draw_pattern (context, line, pattern, sprite->colour_ec << 4, position, true, magnify);
+            tms9928a_draw_pattern_sprite (context, line, pattern, sprite->colour_ec << 4, position, magnify);
         }
     }
 }
@@ -387,7 +424,7 @@ void tms9928a_mode0_draw_background (TMS9928A_Context *context, uint16_t line)
 
         position.x = 8 * tile_x;
         position.y = 8 * tile_y;
-        tms9928a_draw_pattern (context, line, pattern, colours, position, false, false);
+        tms9928a_draw_pattern_background (context, line, pattern, colours, position);
     }
 }
 
@@ -431,7 +468,7 @@ void tms9928a_mode2_draw_background (TMS9928A_Context *context, uint16_t line)
 
         position.x = 8 * tile_x;
         position.y = 8 * tile_y;
-        tms9928a_draw_pattern (context, line, pattern, colours, position, false, false);
+        tms9928a_draw_pattern_background (context, line, pattern, colours, position);
     }
 }
 
