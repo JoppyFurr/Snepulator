@@ -300,7 +300,10 @@ static uint8_t sg_1000_io_read (void *context_ptr, uint8_t addr)
                    (gamepad [2].state [GAMEPAD_DIRECTION_RIGHT] ? 0 : BIT_1) |
                    (gamepad [2].state [GAMEPAD_BUTTON_1]        ? 0 : BIT_2) |
                    (gamepad [2].state [GAMEPAD_BUTTON_2]        ? 0 : BIT_3) |
-                   (                                                  BIT_4);
+                   ( /* Cartridge Pin B11 */                          BIT_4) |
+                   ( /* SC-3000 Serial Printer FAULT */               BIT_5) |
+                   ( /* SC-3000 Serial Printer BUSY */                BIT_6) |
+                   ( /* SC-3000 Cassette Input */                     BIT_7);
         }
     }
 
