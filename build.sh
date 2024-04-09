@@ -129,7 +129,8 @@ done
 mkdir -p work
 
 # Remove previous artefacts.
-rm work/*.o
+# Ignore return code, as the files may not exist.
+rm -f work/*.o
 
 # Compile the various components.
 build_snepulator
