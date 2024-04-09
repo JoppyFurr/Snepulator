@@ -97,6 +97,34 @@ static void sg_1000_cleanup (void *context_ptr)
 
 
 /*
+ * Display diagnostic information.
+ */
+#ifdef DEVELOPER_BUILD
+static void sg_1000_diagnostics_show (void)
+{
+    SG_1000_Context *context = state.console_context;
+    Z80_Context *z80_context = context->z80_context;
+    TMS9928A_Context *vdp_context = context->vdp_context;
+
+    state.diagnostics_print ("SG-1000");
+
+    state.diagnostics_print ("---");
+    state.diagnostics_print ("CPU");
+    state.diagnostics_print ("PC : %04x    SP : %04x", z80_context->state.pc, z80_context->state.sp);
+    state.diagnostics_print ("AF : %04x    BC : %04x", z80_context->state.af, z80_context->state.bc);
+    state.diagnostics_print ("DE : %04x    HL : %04x", z80_context->state.de, z80_context->state.hl);
+    state.diagnostics_print ("IX : %04x    IY : %04x", z80_context->state.ix, z80_context->state.iy);
+    state.diagnostics_print ("IM :  %3u    IFF: %d,%d", z80_context->state.im, z80_context->state.iff1, z80_context->state.iff2);
+
+    state.diagnostics_print ("---");
+    state.diagnostics_print ("Video");
+    state.diagnostics_print ("Mode : %s", tms9928a_mode_name_get (tms9928a_get_mode (context->vdp_context)));
+    state.diagnostics_print ("Frame interrupts : %s", vdp_context->state.regs.ctrl_1_frame_int_en ? "Enabled" : "Disabled");
+}
+#endif
+
+
+/*
  * Process a frame completion by the VDP.
  */
 static void sg_1000_frame_done (void *context_ptr)
@@ -248,6 +276,9 @@ SG_1000_Context *sg_1000_init (void)
     state.state_load = sg_1000_state_load;
     state.state_save = sg_1000_state_save;
     state.update_settings = sg_1000_update_settings;
+#ifdef DEVELOPER_BUILD
+    state.diagnostics_show = sg_1000_diagnostics_show;
+#endif
 
     /* Begin emulation */
     state.run = RUN_STATE_RUNNING;

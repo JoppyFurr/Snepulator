@@ -227,6 +227,9 @@ void tms9928a_run_one_scanline (TMS9928A_Context *context);
 /* Check if the tms9928a is currently requesting an interrupt. */
 bool tms9928a_get_interrupt (TMS9928A_Context *context);
 
+/* Assemble the three mode-bits. */
+uint8_t tms9928a_get_mode (TMS9928A_Context *context);
+
 /* Reset the tms9928a registers and memory to power-on defaults. */
 TMS9928A_Context *tms9928a_init (void *parent, void (* frame_done) (void *));
 

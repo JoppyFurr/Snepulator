@@ -476,7 +476,7 @@ void tms9928a_mode2_draw_background (TMS9928A_Context *context, uint16_t line)
 /*
  * Assemble the three mode-bits.
  */
-static uint8_t tms9928a_mode_get (TMS9928A_Context *context)
+uint8_t tms9928a_get_mode (TMS9928A_Context *context)
 {
     return (context->state.regs.ctrl_1_mode_1 ? BIT_0 : 0) +
            (context->state.regs.ctrl_0_mode_2 ? BIT_1 : 0) +
@@ -565,7 +565,7 @@ void tms9928a_render_line (TMS9928A_Context *context, uint16_t line)
 static void tms9928a_vdp_update_mode (TMS9928A_Context *context)
 {
     const TMS9928A_ModeInfo *config;
-    TMS9928A_Mode mode = tms9928a_mode_get (context);
+    TMS9928A_Mode mode = tms9928a_get_mode (context);
 
     switch (mode)
     {
