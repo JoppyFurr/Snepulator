@@ -1036,15 +1036,15 @@ static void sms_memory_write (void *context_ptr, uint16_t addr, uint8_t data)
         }
         else if (addr == 0xfffd)
         {
-            context->hw_state.mapper_bank [0] = data & 0x3f;
+            context->hw_state.mapper_bank [0] = data;
         }
         else if (addr == 0xfffe)
         {
-            context->hw_state.mapper_bank [1] = data & 0x3f;
+            context->hw_state.mapper_bank [1] = data;
         }
         else if (addr == 0xffff)
         {
-            context->hw_state.mapper_bank [2] = data & 0x3f;
+            context->hw_state.mapper_bank [2] = data;
         }
     }
 
