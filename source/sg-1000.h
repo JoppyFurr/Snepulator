@@ -5,7 +5,10 @@
 #define SG_1000_CLOCK_RATE_PAL  3546893
 #define SG_1000_CLOCK_RATE_NTSC 3579545
 
-#define SG_1000_RAM_SIZE (1 << 10)
+/* Note: The actual SG-1000 has only 1 KiB of RAM.
+ *       However, the SC-3000 has 2 KiB of RAM.
+ *       Some homebrew expects this extra memory. */
+#define SG_1000_RAM_SIZE (2 << 10)
 #define SG_1000_SRAM_SIZE (8 << 10)
 
 typedef enum SG_Mapper_e {
