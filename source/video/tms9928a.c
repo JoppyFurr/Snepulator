@@ -1,5 +1,6 @@
 /*
- * Implementation of the TI TMS9928A / TMS9929A video chip.
+ * Snepulator
+ * TI TMS99xx video chip implementation.
  */
 
 #include <stdbool.h>

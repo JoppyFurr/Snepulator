@@ -1,5 +1,6 @@
 /*
- * Snepulator common header file.
+ * Snepulator
+ * State, enums, and prototypes.
  */
 
 #define VIDEO_SIDE_BORDER 8

@@ -1,5 +1,6 @@
 /*
- * lists the names of each Z80 instruction.
+ * Snepulator
+ * Z80 instruction names.
  */
 
 const char *z80_instruction_name[256] = {

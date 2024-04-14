@@ -1,5 +1,6 @@
 /*
- * Common types for Snepulator.
+ * Snepulator
+ * Types and constants
  */
 
 #define HASH_LENGTH 12

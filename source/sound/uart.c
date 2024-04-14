@@ -1,4 +1,6 @@
 /*
+ * Snepulator
+ *
  * Utility to pass sn76489 and YM2413 register writes
  * to real chips over UART. A micro-controller needs
  * to interpret the written bytes and pass them along

@@ -1,3 +1,7 @@
+/*
+ * Snepulator
+ * Snepulator logo.
+ */
 
 #include <pthread.h>
 #include <stdbool.h>

@@ -1,3 +1,8 @@
+/*
+ * Snepulator
+ * Band-limited sound synthesis implementation.
+ */
+
 #include <math.h>
 #include <stdbool.h>
 #include <stdint.h>

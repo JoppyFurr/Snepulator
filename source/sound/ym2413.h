@@ -1,5 +1,6 @@
 /*
- * API for the YM2413 synth chip.
+ * Snepulator
+ * YM2413 FM synthesizer chip header.
  */
 
 #define YM2413_RING_SIZE 2048

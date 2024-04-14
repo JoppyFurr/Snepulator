@@ -1,6 +1,8 @@
 /*
- * API for the SN76489 PSG chip.
+ * Snepulator
+ * TI SN76489 PSG header.
  */
+
 #define SN76489_RING_SIZE 2048
 
 typedef struct SN76489_State_s {

@@ -1,4 +1,5 @@
 /*
+ * Snepulator
  * Sega Master System implementation.
  */
 

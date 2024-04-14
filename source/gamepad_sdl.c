@@ -1,3 +1,7 @@
+/*
+ * Snepulator
+ * SDL gamepad support implementation.
+ */
 
 #include <stdbool.h>
 #include <stdint.h>

@@ -1,5 +1,6 @@
 /*
- * Input configuration modal
+ * Snepulator
+ * ImGui Input configuration modal header
  */
 
 /* Initialise the input dialogue. */

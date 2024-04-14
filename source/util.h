@@ -1,5 +1,6 @@
 /*
- * Common utilities.
+ * Snepulator
+ * Utility functions header.
  */
 
 #define ENFORCE_MINIMUM(VAR, MIN) VAR = (VAR > MIN) ? VAR : MIN

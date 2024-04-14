@@ -1,3 +1,7 @@
+/*
+ * Snepulator
+ * UART Sound Chip Interface
+ */
 
 /* Write to an sn76489 register. */
 void uart_write_sn76489 (uint8_t data);

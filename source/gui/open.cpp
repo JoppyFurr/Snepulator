@@ -1,5 +1,6 @@
 /*
- * File open modal.
+ * Snepulator
+ * ImGui File open modal implementation.
  */
 
 #include <dirent.h>

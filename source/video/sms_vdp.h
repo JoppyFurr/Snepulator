@@ -1,5 +1,6 @@
 /*
- * SMS VDP API
+ * Snepulator
+ * Sega Master System VDP header
  */
 
 /* Enums */

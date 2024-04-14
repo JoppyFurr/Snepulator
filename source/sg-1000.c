@@ -1,4 +1,5 @@
 /*
+ * Snepulator
  * Sega SG-1000 implementation.
  */
 

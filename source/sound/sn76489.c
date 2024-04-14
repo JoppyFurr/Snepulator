@@ -1,3 +1,8 @@
+/*
+ * Snepulator
+ * TI SN76489 PSG implementation.
+ */
+
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>

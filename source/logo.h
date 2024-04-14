@@ -1,4 +1,5 @@
 /*
+ * Snepulator
  * Snepulator Logo.
  */
 typedef struct Logo_Context_s {

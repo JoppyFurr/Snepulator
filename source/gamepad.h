@@ -1,5 +1,6 @@
 /*
- * Gamepad input.
+ * Snepulator
+ * Gamepad support header.
  */
 
 #define GAMEPAD_ID_NONE     -1

@@ -1,5 +1,6 @@
 /*
- * Common utilities.
+ * Snepulator
+ * Utility functions implementation
  */
 
 #include <errno.h>

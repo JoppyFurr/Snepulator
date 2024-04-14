@@ -1,5 +1,6 @@
 /*
- * Path handling.
+ * Snepulator
+ * Path handling header.
  */
 
 /* Get the directory that the snepulator files reside in. */

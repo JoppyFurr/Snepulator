@@ -1,5 +1,6 @@
 /*
- * Gamepad input implementation.
+ * Snepulator
+ * Gamepad support implementation.
  *
  * This file deals with taking input inputs, and provides an abstract
  * Snepulator_Gamepad interface to be used in the emulated consoles.

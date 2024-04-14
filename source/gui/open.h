@@ -1,5 +1,6 @@
 /*
- * File opening modal
+ * Snepulator
+ * ImGui File opening modal header
  */
 
 typedef struct File_Open_State_s {

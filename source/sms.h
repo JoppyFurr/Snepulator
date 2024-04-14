@@ -1,5 +1,6 @@
 /*
- * Sega Master System
+ * Snepulator
+ * Sega Master System header.
  */
 
 #define SMS_CLOCK_RATE_PAL  3546895

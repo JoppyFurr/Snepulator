@@ -1,5 +1,6 @@
 /*
- * Sega SG-1000
+ * Snepulator
+ * ColecoVision header
  */
 
 #define COLECOVISION_CLOCK_RATE_PAL  3546895

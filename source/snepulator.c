@@ -1,6 +1,5 @@
 /*
  * Snepulator
- *
  * Main OS-independent code
  */
 

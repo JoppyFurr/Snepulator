@@ -1,5 +1,6 @@
 /*
- * Main Menu-bar
+ * Snepulator
+ * ImGui Main Menu-bar header
  */
 
 /* Render the menubar */

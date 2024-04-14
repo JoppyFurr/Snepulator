@@ -1,4 +1,5 @@
 /*
+ * Snepulator
  * Configuration file implementation.
  */
 

@@ -1,5 +1,6 @@
 /*
- * Implementation for the Sega Master System VDP chip.
+ * Snepulator
+ * Sega Master System VDP implementation.
  */
 
 #include <math.h>

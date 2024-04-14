@@ -1,3 +1,7 @@
+/*
+ * Snepulator
+ * SDL gamepad support header.
+ */
 
 /* Set up function pointers. */
 void gamepad_sdl_init (void);

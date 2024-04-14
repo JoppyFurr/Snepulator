@@ -1,3 +1,7 @@
+/*
+ * Snepulator
+ * GLSL Shader header
+ */
 
 /* Sets up a pair of triangles and compiles the shaders. */
 void snepulator_shader_setup (void);

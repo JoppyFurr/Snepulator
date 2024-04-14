@@ -1,5 +1,6 @@
 /*
- * Sega SG-1000
+ * Snepulator
+ * Sega SG-1000 header
  */
 
 #define SG_1000_CLOCK_RATE_PAL  3546893

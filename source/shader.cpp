@@ -1,4 +1,9 @@
 /*
+ * Snepulator
+ * GLSL Shader setup
+ */
+
+/*
  * Video path:
  *
  *   ╭────────────────────────╮

@@ -1,5 +1,6 @@
 /*
- * Band-limiting.
+ * Snepulator
+ * Band-limited sound synthesis header.
  */
 
 #define DIFF_RING_SIZE 48

@@ -1,3 +1,7 @@
+/*
+ * Snepulator
+ * Save state implementation.
+ */
 
 #include <stdbool.h>
 #include <stdint.h>

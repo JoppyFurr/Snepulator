@@ -1,5 +1,6 @@
 /*
- * TMS9928A / TMS9928A video chip.
+ * Snepulator
+ * TI TMS99xx video chip header.
  */
 
 #define TMS9928A_VRAM_SIZE (16 << 10)

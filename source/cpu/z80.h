@@ -1,5 +1,6 @@
 /*
- * Z80 API
+ * Snepulator
+ * Zilog Z80 header
  */
 
 /* Structs */

@@ -1,5 +1,6 @@
 /*
- * Save-state support.
+ * Snepulator
+ * Save-state header.
  */
 
 #define SAVE_STATE_MAGIC            "SNEPSAVE"
