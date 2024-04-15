@@ -122,13 +122,11 @@ void snepulator_render_error ()
  */
 void snepulator_audio_callback (void *userdata, uint8_t *stream, int len)
 {
+    memset (stream, 0, len);
+
     if (state.audio_callback != NULL && state.run == RUN_STATE_RUNNING)
     {
         state.audio_callback (state.console_context, (int16_t *)stream, len / 4);
-    }
-    else
-    {
-        memset (stream, 0, len);
     }
 }
 

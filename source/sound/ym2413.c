@@ -1053,8 +1053,8 @@ void ym2413_get_samples (YM2413_Context *context, int16_t *stream, uint32_t coun
         size_t sample_index = (context->read_index + i) & (YM2413_RING_SIZE - 1);
 
         /* Left, Right */
-        stream [2 * i    ] = context->sample_ring [sample_index];
-        stream [2 * i + 1] = context->sample_ring [sample_index];
+        stream [2 * i    ] += context->sample_ring [sample_index];
+        stream [2 * i + 1] += context->sample_ring [sample_index];
     }
 
     context->read_index += count;

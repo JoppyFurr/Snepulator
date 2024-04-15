@@ -362,13 +362,13 @@ void sn76489_get_samples (SN76489_Context *context, int16_t *stream, uint32_t co
         /* Left, Right */
         if (state.console == CONSOLE_GAME_GEAR)
         {
-            stream [2 * i    ] = context->sample_ring_l [sample_index];
-            stream [2 * i + 1] = context->sample_ring_r [sample_index];
+            stream [2 * i    ] += context->sample_ring_l [sample_index];
+            stream [2 * i + 1] += context->sample_ring_r [sample_index];
         }
         else
         {
-            stream [2 * i    ] = context->sample_ring_l [sample_index];
-            stream [2 * i + 1] = context->sample_ring_l [sample_index];
+            stream [2 * i    ] += context->sample_ring_l [sample_index];
+            stream [2 * i + 1] += context->sample_ring_l [sample_index];
         }
     }
 

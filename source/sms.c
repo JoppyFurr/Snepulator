@@ -76,20 +76,10 @@ static void sms_audio_callback (void *context_ptr, int16_t *stream, uint32_t cou
 
     sn76489_get_samples (context->psg_context, stream, count);
 
-    if (state.fm_sound)
+    /* The least significant bit of the audio control register is used to mute the YM2413. */
+    if (state.fm_sound && context->audio_control & 0x01)
     {
-        int16_t fm_buffer [4096];
-        ym2413_get_samples (context->ym2413_context, fm_buffer, count);
-
-        /* The least significant bit of the audio control register is used to mute the YM2413. */
-        if (context->audio_control & 0x01)
-        {
-            for (uint32_t i = 0; i < count; i++)
-            {
-                stream [2 * i    ] += fm_buffer [2 * i    ];
-                stream [2 * i + 1] += fm_buffer [2 * i + 1];
-            }
-        }
+        ym2413_get_samples (context->ym2413_context, stream, count);
     }
 }
 
