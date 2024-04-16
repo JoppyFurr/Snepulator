@@ -15,7 +15,10 @@ void util_delay (uint32_t ticks);
 /* Use BLAKE3 to make a 12-byte hash for the current ROM. */
 void util_hash_rom (const uint8_t *rom, uint32_t rom_size, uint8_t rom_hash [HASH_LENGTH]);
 
-/* Load a rom file into a buffer. The buffer should be freed when no-longer needed. */
+/* Load a file into a buffer. The buffer should be freed when no-longer needed. */
+int32_t util_load_file (uint8_t **buffer, uint32_t *file_size, char *filename);
+
+/* Load a rom file into a power-of-two sized buffer. The buffer should be freed when no-longer needed. */
 int32_t util_load_rom (uint8_t **buffer, uint32_t *rom_size, char *filename);
 
 /* Take a screenshot. */

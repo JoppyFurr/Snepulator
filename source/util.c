@@ -159,6 +159,49 @@ void util_hash_rom (const uint8_t *rom, uint32_t rom_size, uint8_t rom_hash [HAS
 
 
 /*
+ * Load a file into a buffer.
+ * The buffer should be freed when no-longer needed.
+ */
+int32_t util_load_file (uint8_t **buffer, uint32_t *file_size, char *filename)
+{
+    uint32_t bytes_read = 0;
+    uint32_t size;
+
+    /* Open the file */
+    FILE *file = fopen (filename, "rb");
+    if (!file)
+    {
+        snepulator_error ("Load Error", strerror (errno));
+        return -1;
+    }
+
+    /* Get file size */
+    fseek (file, 0, SEEK_END);
+    size = ftell (file);
+    fseek (file, 0, SEEK_SET);
+
+    /* Allocate memory */
+    *buffer = (uint8_t *) calloc (size, 1);
+    if (!*buffer)
+    {
+        snepulator_error ("Load Error", strerror (errno));
+        return -1;
+    }
+
+    /* Copy to memory */
+    while (bytes_read < size)
+    {
+        bytes_read += fread (*buffer + bytes_read, 1, size - bytes_read, file);
+    }
+
+    *file_size = size;
+    fclose (file);
+
+    return EXIT_SUCCESS;
+}
+
+
+/*
  * Load a rom file into a buffer.
  * If the rom is not a power-of-two size, the buffer will be rounded up and
  * padded with zeros. The buffer should be freed when no-longer needed.
