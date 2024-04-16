@@ -145,7 +145,7 @@ eval $CXX $CXXFLAGS $GUIFLAGS \
     work/imgui/*.o \
     $OSFLAGS \
     $(sdl2-config --libs) \
-    -ldl -lpng -lm -lpthread \
+    -ldl -lpng -lz -lm -lpthread \
     -o Snepulator
 
 echo "Done."

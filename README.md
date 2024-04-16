@@ -20,3 +20,4 @@ Developed in Ōtautahi, Aotearoa.
 * [OpenGL 3](https://www.opengl.org/)
 * [SDL 2](https://www.libsdl.org/index.php)
 * [SDL SavePNG](https://github.com/driedfruit/SDL_SavePNG)
+* zlib

@@ -13,6 +13,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <sys/time.h>
+#include <zlib.h>
 
 #include <SDL2/SDL.h>
 
@@ -196,6 +197,50 @@ int32_t util_load_file (uint8_t **buffer, uint32_t *file_size, char *filename)
 
     *file_size = size;
     fclose (file);
+
+    return EXIT_SUCCESS;
+}
+
+
+/*
+ * Load a gzip-compressed file into a buffer.
+ * The buffer should be freed when no-longer needed.
+ */
+int32_t util_load_gzip_file (uint8_t **buffer, uint32_t *content_size, char *filename)
+{
+    uint8_t scratch [128] = { 0 }; /* Temporary decompression area, for getting the decompressed size */
+    uint32_t bytes_read = 0;
+    uint32_t size;
+
+    /* Open the file */
+    gzFile file = gzopen (filename, "rb");
+    if (!file)
+    {
+        snepulator_error ("Load Error", strerror (errno));
+        return -1;
+    }
+
+    /* Use a 128 byte buffer to decompress the file, to get the size */
+    while (gzread (file, scratch, 128) == 128);
+    size = gztell (file);
+    gzrewind (file);
+
+    /* Allocate memory */
+    *buffer = (uint8_t *) calloc (size, 1);
+    if (!*buffer)
+    {
+        snepulator_error ("Load Error", strerror (errno));
+        return -1;
+    }
+
+    /* Copy to memory */
+    while (bytes_read < size)
+    {
+        bytes_read += gzread (file, *buffer + bytes_read, size - bytes_read);
+    }
+
+    *content_size = size;
+    gzclose (file);
 
     return EXIT_SUCCESS;
 }
