@@ -30,7 +30,6 @@
 
 extern Snepulator_State state;
 extern Snepulator_Gamepad gamepad [3];
-extern SN76489_State sn76489_state;
 extern pthread_mutex_t video_mutex;
 
 /* 0: Output, 1: Input */
