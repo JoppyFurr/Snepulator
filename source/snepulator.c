@@ -23,10 +23,11 @@
 #include "sound/band_limit.h"
 #include "sound/sn76489.h"
 #include "sound/ym2413.h"
+#include "colecovision.h"
 #include "logo.h"
 #include "sg-1000.h"
 #include "sms.h"
-#include "colecovision.h"
+#include "vgm_player.h"
 
 /* Images */
 #include "../images/snepulator_paused.c"
@@ -261,7 +262,12 @@ void snepulator_console_set_from_path (const char *path)
         }
     }
 
-    if (strcmp (extension, ".col") == 0)
+    if (strcmp (extension, ".vgm") == 0 ||
+        strcmp (extension, ".vgz") == 0)
+    {
+        state.console = CONSOLE_VGM_PLAYER;
+    }
+    else if (strcmp (extension, ".col") == 0)
     {
         state.console = CONSOLE_COLECOVISION;
     }
@@ -639,6 +645,10 @@ void snepulator_system_init (void)
     {
         case CONSOLE_LOGO:
             state.console_context = logo_init ();
+            break;
+
+        case CONSOLE_VGM_PLAYER:
+            state.console_context = vgm_player_init ();
             break;
 
         case CONSOLE_COLECOVISION:

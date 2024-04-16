@@ -21,6 +21,7 @@ typedef enum Run_State_e {
 typedef enum Console_e {
     CONSOLE_NONE = 0,
     CONSOLE_LOGO,
+    CONSOLE_VGM_PLAYER,
     CONSOLE_COLECOVISION,
     CONSOLE_GAME_GEAR,
     CONSOLE_MASTER_SYSTEM,
