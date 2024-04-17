@@ -19,7 +19,27 @@
 #include "sound/ym2413.h"
 #include "vgm_player.h"
 
+/* Colours for visualisation */
+static const uint_pixel bright_red    = { .r = 255, .g =   0, .b =   0 };
+static const uint_pixel dim_red       = { .r = 170, .g =   0, .b =   0 };
+static const uint_pixel bright_yellow = { .r = 255, .g = 255, .b =   0 };
+static const uint_pixel dim_yellow    = { .r = 170, .g = 170, .b =   0 };
+static const uint_pixel bright_green  = { .r =   0, .g = 255, .b =   0 };
+static const uint_pixel dim_green     = { .r =   0, .g = 170, .b =   0 };
+static const uint_pixel white         = { .r = 255, .g = 255, .b = 255 };
+static const uint_pixel light_grey    = { .r = 170, .g = 170, .b = 170 };
+static const uint_pixel dark_grey     = { .r =  85, .g =  85, .b =  85 };
+
+static const uint_pixel colours_peak [15] = { bright_green, bright_green,  bright_green,  bright_green, bright_green,
+                                              bright_green, bright_green,  bright_green,  bright_green, bright_green,
+                                              bright_green, bright_yellow, bright_yellow, bright_red,   bright_red };
+
+static const uint_pixel colours_base [15] = { dim_green, dim_green,  dim_green,  dim_green, dim_green,
+                                              dim_green, dim_green,  dim_green,  dim_green, dim_green,
+                                              dim_green, dim_yellow, dim_yellow, dim_red,   dim_red };
+
 extern Snepulator_State state;
+extern pthread_mutex_t video_mutex;
 
 
 /*
@@ -74,6 +94,138 @@ static void vgm_player_cleanup (void *context_ptr)
         free (context->vgm);
         context->vgm = NULL;
     }
+}
+
+
+/*
+ * Draw a filled rectangle.
+ */
+static void draw_rect (VGM_Player_Context *context,
+                       uint32_t x, uint32_t y, uint32_t w, uint32_t h,
+                       uint_pixel colour)
+{
+    const uint32_t start_x = x + state.video_start_x;
+    const uint32_t start_y = y + state.video_start_y;
+    const uint32_t end_x = start_x + w;
+    const uint32_t end_y = start_y + h;
+
+    for (uint32_t y = start_y; y < end_y; y++)
+    {
+        for (uint32_t x = start_x; x < end_x; x++)
+        {
+            context->frame_buffer [x + y * VIDEO_BUFFER_WIDTH] = colour;
+        }
+    }
+}
+
+
+/*
+ * Draw a frame of the visualisation.
+ */
+static void vgm_player_draw_frame (VGM_Player_Context *context)
+{
+    uint32_t bar_count = 0;
+    uint32_t bar_value [15] = { };
+
+    if (context->sn76489_clock)
+    {
+        bar_value [bar_count++] = 15 - context->sn76489_context->state.vol_0;
+        bar_value [bar_count++] = 15 - context->sn76489_context->state.vol_1;
+        bar_value [bar_count++] = 15 - context->sn76489_context->state.vol_2;
+        bar_value [bar_count++] = 15 - context->sn76489_context->state.vol_3;
+    }
+
+    /* Some ym2413 tunes regularly switch between melody and
+     * rhythm modes so always show the higher number of channels */
+    if (context->ym2413_clock)
+    {
+        uint32_t melody_channels = (context->ym2413_context->state.rhythm_mode) ? 6 : 9;
+
+        for (uint32_t channel = 0; channel < melody_channels; channel++)
+        {
+            uint16_t volume  = context->ym2413_context->state.r30_channel_params [channel].volume;
+            uint16_t eg_level = context->ym2413_context->state.carrier [channel].eg_level;
+            uint16_t attenuation = volume + (eg_level >> 3);
+
+            bar_value [bar_count++] = (attenuation >= 15) ? 0 : 15 - attenuation;
+        }
+
+        if (context->ym2413_context->state.rhythm_mode)
+        {
+            uint16_t volume;
+            uint16_t eg_level;
+            uint16_t attenuation;
+
+            /* Bass Drum */
+            volume = context->ym2413_context->state.rhythm_volume_bd;
+            eg_level = context->ym2413_context->state.carrier [YM2413_BASS_DRUM_CH].eg_level;
+            attenuation = volume + (eg_level >> 3);
+            bar_value [bar_count++] = (attenuation >= 15) ? 0 : 15 - attenuation;
+
+            /* High Hat */
+            volume = context->ym2413_context->state.rhythm_volume_hh;
+            eg_level = context->ym2413_context->state.modulator [YM2413_HIGH_HAT_CH].eg_level;
+            attenuation = volume + (eg_level >> 3);
+            bar_value [bar_count++] = (attenuation >= 15) ? 0 : 15 - attenuation;
+
+            /* Snare Drum */
+            volume = context->ym2413_context->state.rhythm_volume_sd;
+            eg_level = context->ym2413_context->state.carrier [YM2413_SNARE_DRUM_CH].eg_level;
+            attenuation = volume + (eg_level >> 3);
+            bar_value [bar_count++] = (attenuation >= 15) ? 0 : 15 - attenuation;
+
+            /* Tom Tom */
+            volume = context->ym2413_context->state.rhythm_volume_tt;
+            eg_level = context->ym2413_context->state.modulator [YM2413_TOM_TOM_CH].eg_level;
+            attenuation = volume + (eg_level >> 3);
+            bar_value [bar_count++] = (attenuation >= 15) ? 0 : 15 - attenuation;
+
+            /* Top Cymbal */
+            volume = context->ym2413_context->state.rhythm_volume_tc;
+            eg_level = context->ym2413_context->state.carrier [YM2413_TOP_CYMBAL_CH].eg_level;
+            attenuation = volume + (eg_level >> 3);
+            bar_value [bar_count++] = (attenuation >= 15) ? 0 : 15 - attenuation;
+        }
+        else
+        {
+            bar_count += 2;
+        }
+    }
+
+    /* Adjust the bar width and spacing based on the number of channels */
+    uint32_t bar_width = (bar_count >= 13) ? 10 :
+                         (bar_count >=  9) ? 12 : 16;
+    uint32_t bar_gap =   (bar_count >= 15) ?  5 :
+                         (bar_count >= 11) ?  8 : 16;
+
+    /* Bars */
+    uint32_t bar_area_width = bar_width * bar_count + bar_gap * (bar_count - 1);
+    uint32_t first_bar = (state.video_width - bar_area_width) / 2;
+
+    for (uint32_t i = 0; i < bar_count; i++)
+    {
+        for (uint32_t segment = bar_value [i]; segment > 0; segment--)
+        {
+            draw_rect (context, first_bar + i * (bar_width + bar_gap), 120 - 4 * segment, bar_width, 2,
+                       (segment == bar_value [i]) ? colours_peak [segment - 1] : colours_base [segment - 1]);
+        }
+    }
+
+    /* Underline */
+    draw_rect (context, first_bar - 8, 122, bar_area_width + 16, 1, white);
+
+    /* Progress Bar */
+    draw_rect (context, 32, 176, 192, 1, dark_grey);
+    uint32_t progress = context->current_sample * (uint64_t) 184 / context->total_samples;
+    draw_rect (context, 32 + progress, 176, 8, 1, light_grey);
+
+    /* Pass the completed frame on for rendering */
+    pthread_mutex_lock (&video_mutex);
+    memcpy (state.video_out_data, context->frame_buffer, sizeof (context->frame_buffer));
+    pthread_mutex_unlock (&video_mutex);
+
+    /* Clear the buffer for the next frame. */
+    memset (context->frame_buffer, 0, sizeof (context->frame_buffer));
 }
 
 
@@ -153,6 +305,7 @@ static void vgm_player_run_until_delay (VGM_Player_Context *context)
             /* End of sound data */
             case 0x66:
                 context->index = context->vgm_loop;
+                context->current_sample = context->total_samples - context->loop_samples;
                 break;
 
             /* 0x7n: Wait n+1 samples */
@@ -224,6 +377,17 @@ static void vgm_player_run (void *context_ptr, uint32_t ms)
         {
             context->delay--;
         }
+
+        /* Keep track of how much we've played for the progress bar */
+        context->current_sample++;
+    }
+
+    /* Check if we need a new visualizer frame. 60 fps. */
+    context->usecs += ms * 1000;
+    if (context->usecs > (1000000 / 60))
+    {
+        context->usecs -= 1000000 / 60;
+        vgm_player_draw_frame (context);
     }
 }
 
@@ -290,7 +454,9 @@ VGM_Player_Context *vgm_player_init (void)
     context->version       = *(uint32_t *) (&context->vgm [0x08]);
     context->sn76489_clock = *(uint32_t *) (&context->vgm [0x0c]);
     context->ym2413_clock  = *(uint32_t *) (&context->vgm [0x10]);
+    context->total_samples = *(uint32_t *) (&context->vgm [0x18]);
     context->vgm_loop      = *((uint32_t *) (&context->vgm [0x1c])) + 0x1c;
+    context->loop_samples  = *(uint32_t *) (&context->vgm [0x20]);
 
     if (context->version >= 0x150)
     {
