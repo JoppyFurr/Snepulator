@@ -48,20 +48,19 @@ build_imgui ()
     mkdir -p work/imgui
 
     # Early return if ImGui hasn't been changed.
-    if [ -e work/imgui/imgui.o -a libraries/imgui-1.83/imgui.cpp -ot work/imgui/imgui.o ]
+    if [ -e work/imgui/imgui.o -a libraries/imgui-1.86/imgui.cpp -ot work/imgui/imgui.o ]
     then
         return
     fi
 
     echo "Compiling ImGui..."
-    eval $CXX $CXXFLAGS $GUIFLAGS -c libraries/imgui-1.83/imgui.cpp                       -o work/imgui/imgui.o
-    eval $CXX $CXXFLAGS $GUIFLAGS -c libraries/imgui-1.83/imgui_demo.cpp                  -o work/imgui/imgui_demo.o
-    eval $CXX $CXXFLAGS $GUIFLAGS -c libraries/imgui-1.83/imgui_draw.cpp                  -o work/imgui/imgui_draw.o
-    eval $CXX $CXXFLAGS $GUIFLAGS -c libraries/imgui-1.83/imgui_tables.cpp                -o work/imgui/imgui_tables.o
-    eval $CXX $CXXFLAGS $GUIFLAGS -c libraries/imgui-1.83/imgui_widgets.cpp               -o work/imgui/imgui_widgets.o
-    eval $CXX $CXXFLAGS $GUIFLAGS -c libraries/imgui-1.83/backends/imgui_impl_opengl3.cpp -o work/imgui/imgui_impl_opengl3.o
-    eval $CXX $CXXFLAGS $GUIFLAGS -c libraries/imgui-1.83/backends/imgui_impl_sdl.cpp     -o work/imgui/imgui_impl_sdl.o
-    eval $CXX $CXXFLAGS $GUIFLAGS -c libraries/imgui-1.83/examples/libs/gl3w/GL/gl3w.c    -o work/imgui/imgui_gl3w.o
+    eval $CXX $CXXFLAGS $GUIFLAGS -c libraries/imgui-1.86/imgui.cpp                       -o work/imgui/imgui.o
+    eval $CXX $CXXFLAGS $GUIFLAGS -c libraries/imgui-1.86/imgui_demo.cpp                  -o work/imgui/imgui_demo.o
+    eval $CXX $CXXFLAGS $GUIFLAGS -c libraries/imgui-1.86/imgui_draw.cpp                  -o work/imgui/imgui_draw.o
+    eval $CXX $CXXFLAGS $GUIFLAGS -c libraries/imgui-1.86/imgui_tables.cpp                -o work/imgui/imgui_tables.o
+    eval $CXX $CXXFLAGS $GUIFLAGS -c libraries/imgui-1.86/imgui_widgets.cpp               -o work/imgui/imgui_widgets.o
+    eval $CXX $CXXFLAGS $GUIFLAGS -c libraries/imgui-1.86/backends/imgui_impl_opengl3.cpp -o work/imgui/imgui_impl_opengl3.o
+    eval $CXX $CXXFLAGS $GUIFLAGS -c libraries/imgui-1.86/backends/imgui_impl_sdl.cpp     -o work/imgui/imgui_impl_sdl.o
 }
 
 
@@ -97,16 +96,18 @@ fi
 CFLAGS="-std=c11 -O2 -Wall -Werror -D_POSIX_C_SOURCE=200809L"
 CXXFLAGS="-std=c++11 -O2 -Wall -Werror"
 GUIFLAGS="$(sdl2-config --cflags) \
-          -DIMGUI_IMPL_OPENGL_LOADER_GL3W \
           -DBUILD_DATE=\\\"$DATE\\\" \
-          -I libraries/imgui-1.83/ \
-          -I libraries/imgui-1.83/backends/ \
-          -I libraries/imgui-1.83/examples/libs/gl3w/"
+          -I libraries/imgui-1.86/ \
+          -I libraries/imgui-1.86/backends/"
 
 # Parameters
 while [ ${#} -gt 0 ]
 do
     case ${1} in
+        clean)
+            echo "Clean build"
+            rm -r work/imgui
+            ;;
         clang)
             echo "Using Clang"
             CC=clang

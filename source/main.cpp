@@ -10,8 +10,9 @@
 #include <errno.h>
 #include <pthread.h>
 
-#include <GL/gl3w.h>
+#define GL_GLEXT_PROTOTYPES
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_opengl.h>
 
 #include "imgui.h"
 #include "imgui_impl_sdl.h"
@@ -317,7 +318,7 @@ int main_gui_loop (void)
 
         /* Start the Dear ImGui frame. */
         ImGui_ImplOpenGL3_NewFrame ();
-        ImGui_ImplSDL2_NewFrame (window);
+        ImGui_ImplSDL2_NewFrame ();
         ImGui::NewFrame ();
 
         if (state.show_gui)
@@ -551,14 +552,6 @@ int main (int argc, char **argv)
     }
     SDL_GL_MakeCurrent (window, glcontext);
     SDL_GL_SetSwapInterval (1);
-
-    /* GL Loader */
-    if (gl3wInit () != 0)
-    {
-        snepulator_error ("GL Error", "gl3wInit () fails");
-        SDL_Quit ();
-        return EXIT_FAILURE;
-    }
 
     /* Set icon */
     SDL_Surface *icon = SDL_CreateRGBSurfaceFrom ((void *) snepulator_icon.pixel_data, snepulator_icon.width, snepulator_icon.height,
