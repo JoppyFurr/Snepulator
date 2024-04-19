@@ -99,6 +99,16 @@ static const TMS9928A_ModeInfo Mode2_NTSC = {
     .lines_active = 192,
     .lines_total = 262,
 };
+static const TMS9928A_ModeInfo Mode3_PAL = {
+    .mode = TMS9928A_MODE_3,
+    .lines_active = 192,
+    .lines_total = 313,
+};
+static const TMS9928A_ModeInfo Mode3_NTSC = {
+    .mode = TMS9928A_MODE_3,
+    .lines_active = 192,
+    .lines_total = 262,
+};
 
 
 /*
@@ -475,6 +485,49 @@ void tms9928a_mode2_draw_background (TMS9928A_Context *context, uint16_t line)
 
 
 /*
+ * Render one line of the mode3 background layer.
+ */
+void tms9928a_mode3_draw_background (TMS9928A_Context *context, uint16_t line)
+{
+    uint16_t name_table_base;
+    uint16_t pattern_generator_base;
+    uint32_t tile_y = line / 8;
+
+    name_table_base = (((uint16_t) context->state.regs.name_table_base) << 10) & 0x3c00;
+    pattern_generator_base = (((uint16_t) context->state.regs.background_pg_base) << 11) & 0x3800;
+
+    for (uint32_t tile_x = 0; tile_x < 32; tile_x++)
+    {
+        uint16_t tile = context->vram [name_table_base + ((tile_y << 5) | tile_x)];
+
+        TMS9928A_Pattern *pattern = (TMS9928A_Pattern *) &context->vram [pattern_generator_base + (tile * sizeof (TMS9928A_Pattern))];
+        uint8_t colour_left  = pattern->data [((tile_y & 0x03) << 1) + ((line / 4) & 1)] >> 4;
+        uint8_t colour_right = pattern->data [((tile_y & 0x03) << 1) + ((line / 4) & 1)] & 0x0f;
+
+        if (colour_left == TMS9928A_COLOUR_TRANSPARENT)
+        {
+            colour_left = context->state.regs.background_colour & 0x0f;
+        }
+        uint_pixel pixel_left = context->palette [colour_left];
+        context->frame_buffer [(8 * tile_x + 0 + VIDEO_SIDE_BORDER) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = pixel_left;
+        context->frame_buffer [(8 * tile_x + 1 + VIDEO_SIDE_BORDER) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = pixel_left;
+        context->frame_buffer [(8 * tile_x + 2 + VIDEO_SIDE_BORDER) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = pixel_left;
+        context->frame_buffer [(8 * tile_x + 3 + VIDEO_SIDE_BORDER) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = pixel_left;
+
+        if (colour_right == TMS9928A_COLOUR_TRANSPARENT)
+        {
+            colour_right = context->state.regs.background_colour & 0x0f;
+        }
+        uint_pixel pixel_right = context->palette [colour_right];
+        context->frame_buffer [(8 * tile_x + 4 + VIDEO_SIDE_BORDER) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = pixel_right;
+        context->frame_buffer [(8 * tile_x + 5 + VIDEO_SIDE_BORDER) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = pixel_right;
+        context->frame_buffer [(8 * tile_x + 6 + VIDEO_SIDE_BORDER) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = pixel_right;
+        context->frame_buffer [(8 * tile_x + 7 + VIDEO_SIDE_BORDER) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = pixel_right;
+    }
+}
+
+
+/*
  * Assemble the three mode-bits.
  */
 uint8_t tms9928a_get_mode (TMS9928A_Context *context)
@@ -557,6 +610,11 @@ void tms9928a_render_line (TMS9928A_Context *context, uint16_t line)
         tms9928a_mode2_draw_background (context, line);
         tms9928a_draw_sprites (context, line);
     }
+    else if (context->mode & TMS9928A_MODE_3)
+    {
+        tms9928a_mode3_draw_background (context, line);
+        tms9928a_draw_sprites (context, line);
+    }
 }
 
 
@@ -576,6 +634,10 @@ static void tms9928a_vdp_update_mode (TMS9928A_Context *context)
 
         case TMS9928A_MODE_2: /* Mode 2: 32 × 24 8-byte tiles, sprites enabled, three colour/pattern tables */
             config = (context->format == VIDEO_FORMAT_NTSC) ? &Mode2_NTSC : &Mode2_PAL;
+            break;
+
+        case TMS9928A_MODE_3: /* Mode 3: "Multicolour" Mode, 4×4 pixel blocks, sprites enabled */
+            config = (context->format == VIDEO_FORMAT_NTSC) ? &Mode3_NTSC : &Mode3_PAL;
             break;
 
         default:
