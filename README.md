@@ -14,10 +14,13 @@ The following systems are supported:
 
 Developed in Ōtautahi, Aotearoa.
 
-## Libraries Used
+## Included libraries
 * [BLAKE3](https://github.com/BLAKE3-team/BLAKE3)
 * [Dear ImGui](https://github.com/ocornut/imgui)
-* [OpenGL 3](https://www.opengl.org/)
-* [SDL 2](https://www.libsdl.org/index.php)
+* [gl3w](https://github.com/skaslev/gl3w)
 * [SDL SavePNG](https://github.com/driedfruit/SDL_SavePNG)
+
+## Dependencies
+* [SDL 2](https://www.libsdl.org/index.php)
 * zlib
+* libpng

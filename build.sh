@@ -73,6 +73,7 @@ build_libraries ()
     eval $CC $CFLAGS -DBLAKE3_NO_SSE2 -DBLAKE3_NO_SSE41 -DBLAKE3_NO_AVX2 -DBLAKE3_NO_AVX512 \
                      -c libraries/BLAKE3/blake3_dispatch.c -o work/blake3_dispatch.o
     eval $CC $CFLAGS -c libraries/SDL_SavePNG/savepng.c    -o work/SDL_SavePNG.o
+    eval $CC $CFLAGS -c libraries/gl3w/GL/gl3w.c           -o work/gl3w.o
 }
 
 
@@ -93,8 +94,10 @@ else
     OSFLAGS="$(pkg-config --libs gl)"
 fi
 
-CFLAGS="-std=c11 -O2 -Wall -Werror -D_POSIX_C_SOURCE=200809L"
-CXXFLAGS="-std=c++11 -O2 -Wall -Werror"
+CFLAGS="-std=c11 -O2 -Wall -Werror -D_POSIX_C_SOURCE=200809L \
+        -I libraries/gl3w/"
+CXXFLAGS="-std=c++11 -O2 -Wall -Werror \
+          -I libraries/gl3w/"
 GUIFLAGS="$(sdl2-config --cflags) \
           -DBUILD_DATE=\\\"$DATE\\\" \
           -I libraries/imgui-1.86/ \

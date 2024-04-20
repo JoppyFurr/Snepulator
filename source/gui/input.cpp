@@ -16,9 +16,8 @@
 #include <string>
 #include <vector>
 
-#define GL_GLEXT_PROTOTYPES
+#include <GL/gl3w.h>
 #include <SDL2/SDL.h>
-#include <SDL2/SDL_opengl.h>
 
 #include "imgui.h"
 
