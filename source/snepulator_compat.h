@@ -9,9 +9,15 @@
 #include <direct.h>
 
 /* Definitions */
+#define USER_DIR "APPDATA"
 #define CLOCK_MONOTONIC_RAW CLOCK_MONOTONIC
 
 /* Functions */
 #define mkdir(PATH,FLAGS) _mkdir (PATH)
+
+#else
+
+/* Definitions */
+#define USER_DIR "HOME"
 
 #endif

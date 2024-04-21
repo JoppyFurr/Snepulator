@@ -28,12 +28,12 @@ int32_t path_base (char **path_ptr)
     if (path == NULL)
     {
         struct stat  stat_buf;
-        char *home = getenv ("HOME");
+        char *home = getenv (USER_DIR);
         int len;
 
         if (home == NULL)
         {
-            snepulator_error ("Environment Error", "${HOME} not defined.");
+            snepulator_error ("Environment Error", "${" USER_DIR "} not defined.");
             return -1;
         }
 
