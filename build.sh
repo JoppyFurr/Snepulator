@@ -3,6 +3,15 @@
 # Exit on first error.
 set -e
 
+
+# Defaults
+CC=gcc
+CXX=g++
+SDL2_CONFIG="sdl2-config"
+
+EXTRA_FLAGS=""
+EXTRA_LINKS=""
+
 # Compile Snepulator emulator core.
 build_snepulator ()
 {
@@ -34,11 +43,11 @@ build_snepulator ()
 build_snepulator_gui ()
 {
     echo "Compiling GUI..."
-    eval $CXX $CXXFLAGS $GUIFLAGS -c source/main.cpp        -o work/main.o
-    eval $CXX $CXXFLAGS $GUIFLAGS -c source/shader.cpp      -o work/shader.o
-    eval $CXX $CXXFLAGS $GUIFLAGS -c source/gui/input.cpp   -o work/input.o
-    eval $CXX $CXXFLAGS $GUIFLAGS -c source/gui/menubar.cpp -o work/menubar.o
-    eval $CXX $CXXFLAGS $GUIFLAGS -c source/gui/open.cpp    -o work/open.o
+    eval $CXX $CXXFLAGS -c source/main.cpp        -o work/main.o
+    eval $CXX $CXXFLAGS -c source/shader.cpp      -o work/shader.o
+    eval $CXX $CXXFLAGS -c source/gui/input.cpp   -o work/input.o
+    eval $CXX $CXXFLAGS -c source/gui/menubar.cpp -o work/menubar.o
+    eval $CXX $CXXFLAGS -c source/gui/open.cpp    -o work/open.o
 }
 
 
@@ -54,13 +63,13 @@ build_imgui ()
     fi
 
     echo "Compiling ImGui..."
-    eval $CXX $CXXFLAGS $GUIFLAGS -c libraries/imgui-1.86/imgui.cpp                       -o work/imgui/imgui.o
-    eval $CXX $CXXFLAGS $GUIFLAGS -c libraries/imgui-1.86/imgui_demo.cpp                  -o work/imgui/imgui_demo.o
-    eval $CXX $CXXFLAGS $GUIFLAGS -c libraries/imgui-1.86/imgui_draw.cpp                  -o work/imgui/imgui_draw.o
-    eval $CXX $CXXFLAGS $GUIFLAGS -c libraries/imgui-1.86/imgui_tables.cpp                -o work/imgui/imgui_tables.o
-    eval $CXX $CXXFLAGS $GUIFLAGS -c libraries/imgui-1.86/imgui_widgets.cpp               -o work/imgui/imgui_widgets.o
-    eval $CXX $CXXFLAGS $GUIFLAGS -c libraries/imgui-1.86/backends/imgui_impl_opengl3.cpp -o work/imgui/imgui_impl_opengl3.o
-    eval $CXX $CXXFLAGS $GUIFLAGS -c libraries/imgui-1.86/backends/imgui_impl_sdl.cpp     -o work/imgui/imgui_impl_sdl.o
+    eval $CXX $CXXFLAGS -c libraries/imgui-1.86/imgui.cpp                       -o work/imgui/imgui.o
+    eval $CXX $CXXFLAGS -c libraries/imgui-1.86/imgui_demo.cpp                  -o work/imgui/imgui_demo.o
+    eval $CXX $CXXFLAGS -c libraries/imgui-1.86/imgui_draw.cpp                  -o work/imgui/imgui_draw.o
+    eval $CXX $CXXFLAGS -c libraries/imgui-1.86/imgui_tables.cpp                -o work/imgui/imgui_tables.o
+    eval $CXX $CXXFLAGS -c libraries/imgui-1.86/imgui_widgets.cpp               -o work/imgui/imgui_widgets.o
+    eval $CXX $CXXFLAGS -c libraries/imgui-1.86/backends/imgui_impl_opengl3.cpp -o work/imgui/imgui_impl_opengl3.o
+    eval $CXX $CXXFLAGS -c libraries/imgui-1.86/backends/imgui_impl_sdl.cpp     -o work/imgui/imgui_impl_sdl.o
 }
 
 
@@ -77,31 +86,18 @@ build_libraries ()
 }
 
 
-# Defaults
-CC=gcc
-CXX=g++
-
-
-# OS-specific compiler options
+# Build-host options
 if [ $(uname) = "Darwin" ]
 then
     # MacOS
     DATE=$(date "+%Y-%m-%d")
-    OSFLAGS="-framework OpenGL -framework CoreFoundation"
+    EXTRA_LINKS="-framework OpenGL -framework CoreFoundation"
 else
     # Linux
     DATE=$(date --rfc-3339=date)
-    OSFLAGS="$(pkg-config --libs gl)"
+    EXTRA_LINKS="$(pkg-config --libs gl)"
 fi
 
-CFLAGS="-std=c11 -O2 -Wall -Werror -D_POSIX_C_SOURCE=200809L \
-        -I libraries/gl3w/"
-CXXFLAGS="-std=c++11 -O2 -Wall -Werror \
-          -I libraries/gl3w/"
-GUIFLAGS="$(sdl2-config --cflags) \
-          -DBUILD_DATE=\\\"$DATE\\\" \
-          -I libraries/imgui-1.86/ \
-          -I libraries/imgui-1.86/backends/"
 
 # Parameters
 while [ ${#} -gt 0 ]
@@ -116,10 +112,20 @@ do
             CC=clang
             CXX=clang++
             ;;
+        windows)
+            echo "Windows build (x86_64)"
+            #TODO: Create a build_id file eg, "gcc,imgui-1.83", "mingw,imgui-1.86"
+            #      Force a clean build when changing between targets.
+            rm -rf work/imgui
+            CC=x86_64-w64-mingw32-gcc
+            CXX=x86_64-w64-mingw32-g++
+            SDL2_CONFIG="/usr/x86_64-w64-mingw32/bin/sdl2-config"
+            EXTRA_FLAGS="${EXTRA_FLAGS} -DTARGET_WINDOWS"
+            EXTRA_LINKS="-lopengl32 -static-libgcc -static-libstdc++"
+            ;;
         dev*)
             echo "Developer options enabled"
-            CFLAGS="${CFLAGS} -DDEVELOPER_BUILD"
-            CXXFLAGS="${CXXFLAGS} -DDEVELOPER_BUILD"
+            EXTRA_FLAGS="${EXTRA_FLAGS} -DDEVELOPER_BUILD"
             ;;
         *)
             echo "Unknown option ${1}, aborting."
@@ -129,6 +135,20 @@ do
 
     shift
 done
+
+CFLAGS="-std=c11 -O2 -Wall -Werror -D_POSIX_C_SOURCE=200809L \
+        $(${SDL2_CONFIG} --cflags) \
+        -I libraries/gl3w/ \
+        -DBUILD_DATE=\\\"$DATE\\\" \
+        ${EXTRA_FLAGS}"
+
+CXXFLAGS="-std=c++11 -O2 -Wall -Werror \
+          $(${SDL2_CONFIG} --cflags) \
+          -I libraries/gl3w/ \
+          -I libraries/imgui-1.86/ \
+          -I libraries/imgui-1.86/backends/ \
+          -DBUILD_DATE=\\\"$DATE\\\" \
+          ${EXTRA_FLAGS}"
 
 # Create a build directory if it does not already exist.
 mkdir -p work
@@ -143,14 +163,14 @@ build_snepulator_gui
 build_imgui
 build_libraries
 
-# Create executible.
+# Create executable.
 echo "Linking..."
-eval $CXX $CXXFLAGS $GUIFLAGS \
+eval $CXX $CXXFLAGS \
     work/*.o \
     work/imgui/*.o \
-    $OSFLAGS \
-    $(sdl2-config --libs) \
-    -ldl -lpng -lz -lm -lpthread \
+    $(${SDL2_CONFIG} --libs) \
+    -lpng -lz -lm -lpthread \
+    ${EXTRA_LINKS} \
     -o Snepulator
 
 echo "Done."

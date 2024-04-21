@@ -17,6 +17,7 @@
 
 #include <SDL2/SDL.h>
 
+#include "snepulator_compat.h"
 #include "snepulator_types.h"
 #include "snepulator.h"
 

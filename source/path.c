@@ -8,9 +8,11 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdint.h>
+
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include "snepulator_compat.h"
 #include "snepulator_types.h"
 #include "snepulator.h"
 

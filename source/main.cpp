@@ -170,6 +170,7 @@ void *main_emulation_loop (void *data)
     }
 
     pthread_exit (NULL);
+    return NULL;
 }
 
 

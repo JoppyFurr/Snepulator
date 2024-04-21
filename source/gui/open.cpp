@@ -38,7 +38,9 @@ extern Snepulator_State state;
 File_Open_State open_state = { .title = "Open" };
 
 /* Current path */
+#ifndef TARGET_WINDOWS
 static char path [MAX_STRING_SIZE] = { '\0' };
+#endif
 
 
 /*
@@ -56,6 +58,7 @@ void snepulator_set_open_regex (const char *regex)
  */
 void snepulator_open_modal_render (void)
 {
+#ifndef TARGET_WINDOWS
     /* Layout calculations */
     uint32_t width = state.host_width - 64;
     uint32_t height = state.host_height - 64;
@@ -270,4 +273,5 @@ void snepulator_open_modal_render (void)
 
         ImGui::EndPopup ();
     }
+#endif
 }
