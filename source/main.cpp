@@ -456,7 +456,6 @@ void snepulator_audio_device_close ()
 void snepulator_audio_device_open (const char *device)
 {
     SDL_AudioSpec desired_audiospec = { };
-    SDL_AudioSpec obtained_audiospec;
 
     /* First, close any previous audio device */
     snepulator_audio_device_close ();
@@ -467,8 +466,7 @@ void snepulator_audio_device_open (const char *device)
     desired_audiospec.samples = 512;
     desired_audiospec.callback = snepulator_audio_callback;
 
-    audio_device_id = SDL_OpenAudioDevice (device, 0, &desired_audiospec, &obtained_audiospec,
-                                           SDL_AUDIO_ALLOW_FREQUENCY_CHANGE | SDL_AUDIO_ALLOW_FORMAT_CHANGE | SDL_AUDIO_ALLOW_CHANNELS_CHANGE);
+    audio_device_id = SDL_OpenAudioDevice (device, 0, &desired_audiospec, NULL, 0);
     SDL_PauseAudioDevice (audio_device_id, 0);
 }
 
