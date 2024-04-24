@@ -8,9 +8,38 @@ set -e
 CC=gcc
 CXX=g++
 SDL2_CONFIG="sdl2-config"
+IMGUI_VERSION="imgui-1.86"
+CLEAN_BUILD="false"
 
 EXTRA_FLAGS=""
 EXTRA_LINKS=""
+IMGUI_PATH="libraries/${IMGUI_VERSION}"
+
+# Remove old artefacts
+build_prepare ()
+{
+    # Create a build directory if it does not already exist.
+    mkdir -p work
+
+    # If there is no build_id.txt, or it is different, then do a clean build.
+    if [ ! -e "build_id.txt" ]
+    then
+        CLEAN_BUILD="true"
+    elif [ "${BUILD_ID}" != "$(cat build_id.txt)" ]
+    then
+        CLEAN_BUILD="true"
+    fi
+
+    if [ "${CLEAN_BUILD}" = "true" ]
+    then
+        # Re-build Snepulator and ImGui
+        rm -rf work/imgui
+        rm -f work/*.o
+    else
+        # Only re-build Snepulator
+        rm -f work/*.o
+    fi
+}
 
 # Compile Snepulator emulator core.
 build_snepulator ()
@@ -56,20 +85,20 @@ build_imgui ()
 {
     mkdir -p work/imgui
 
-    # Early return if ImGui hasn't been changed.
-    if [ -e work/imgui/imgui.o -a libraries/imgui-1.86/imgui.cpp -ot work/imgui/imgui.o ]
+    # Early return if ImGui has already been built.
+    if [ -e work/imgui/imgui.o -a ${IMGUI_PATH}/imgui.cpp -ot work/imgui/imgui.o ]
     then
         return
     fi
 
     echo "Compiling ImGui..."
-    eval $CXX $CXXFLAGS -c libraries/imgui-1.86/imgui.cpp                       -o work/imgui/imgui.o
-    eval $CXX $CXXFLAGS -c libraries/imgui-1.86/imgui_demo.cpp                  -o work/imgui/imgui_demo.o
-    eval $CXX $CXXFLAGS -c libraries/imgui-1.86/imgui_draw.cpp                  -o work/imgui/imgui_draw.o
-    eval $CXX $CXXFLAGS -c libraries/imgui-1.86/imgui_tables.cpp                -o work/imgui/imgui_tables.o
-    eval $CXX $CXXFLAGS -c libraries/imgui-1.86/imgui_widgets.cpp               -o work/imgui/imgui_widgets.o
-    eval $CXX $CXXFLAGS -c libraries/imgui-1.86/backends/imgui_impl_opengl3.cpp -o work/imgui/imgui_impl_opengl3.o
-    eval $CXX $CXXFLAGS -c libraries/imgui-1.86/backends/imgui_impl_sdl.cpp     -o work/imgui/imgui_impl_sdl.o
+    eval $CXX $CXXFLAGS -c ${IMGUI_PATH}/imgui.cpp                       -o work/imgui/imgui.o
+    eval $CXX $CXXFLAGS -c ${IMGUI_PATH}/imgui_demo.cpp                  -o work/imgui/imgui_demo.o
+    eval $CXX $CXXFLAGS -c ${IMGUI_PATH}/imgui_draw.cpp                  -o work/imgui/imgui_draw.o
+    eval $CXX $CXXFLAGS -c ${IMGUI_PATH}/imgui_tables.cpp                -o work/imgui/imgui_tables.o
+    eval $CXX $CXXFLAGS -c ${IMGUI_PATH}/imgui_widgets.cpp               -o work/imgui/imgui_widgets.o
+    eval $CXX $CXXFLAGS -c ${IMGUI_PATH}/backends/imgui_impl_opengl3.cpp -o work/imgui/imgui_impl_opengl3.o
+    eval $CXX $CXXFLAGS -c ${IMGUI_PATH}/backends/imgui_impl_sdl.cpp     -o work/imgui/imgui_impl_sdl.o
 }
 
 
@@ -105,18 +134,15 @@ do
     case ${1} in
         clean)
             echo "Clean build"
-            rm -r work/imgui
+            CLEAN_BUILD="true"
             ;;
         clang)
             echo "Using Clang"
-            CC=clang
-            CXX=clang++
+            CC="clang"
+            CXX="clang++"
             ;;
         windows)
             echo "Windows build (x86_64)"
-            #TODO: Create a build_id file eg, "gcc,imgui-1.83", "mingw,imgui-1.86"
-            #      Force a clean build when changing between targets.
-            rm -rf work/imgui
             CC=x86_64-w64-mingw32-gcc
             CXX=x86_64-w64-mingw32-g++
             SDL2_CONFIG="/usr/x86_64-w64-mingw32/bin/sdl2-config"
@@ -145,17 +171,16 @@ CFLAGS="-std=c11 -O2 -Wall -Werror -D_POSIX_C_SOURCE=200809L \
 CXXFLAGS="-std=c++11 -O2 -Wall -Werror \
           $(${SDL2_CONFIG} --cflags) \
           -I libraries/gl3w/ \
-          -I libraries/imgui-1.86/ \
-          -I libraries/imgui-1.86/backends/ \
+          -I ${IMGUI_PATH}/ \
+          -I ${IMGUI_PATH}/backends/ \
           -DBUILD_DATE=\\\"$DATE\\\" \
           ${EXTRA_FLAGS}"
 
-# Create a build directory if it does not already exist.
-mkdir -p work
-
-# Remove previous artefacts.
-# Ignore return code, as the files may not exist.
-rm -f work/*.o
+# Keep track of the compiler name and imgui version.
+# If they change, we can force a clean build.
+BUILD_ID="${CC},${IMGUI_VERSION}"
+build_prepare
+echo ${BUILD_ID} > build_id.txt
 
 # Compile the various components.
 build_snepulator
