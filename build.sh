@@ -121,6 +121,7 @@ then
     # MacOS
     DATE=$(date "+%Y-%m-%d")
     EXTRA_LINKS="-framework OpenGL -framework CoreFoundation"
+    EXTRA_FLAGS="-DTARGET_DARWIN"
 else
     # Linux
     DATE=$(date --rfc-3339=date)

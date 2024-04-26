@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <time.h>
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -18,31 +19,43 @@
 
 
 /*
- * Get the directory that the snepulator files reside in.
+ * Get the directory that the snepulator internal files reside in.
  * The returned string should not be freed.
+ *
+ * Linux: ${USER}/.snepulator/
+ * Windows: %{AppData}/Snepulator/
  */
 int32_t path_base (char **path_ptr)
 {
     static char *path = NULL;
 
+    /*
+     * Linux: $HOME/.snepulator/
+     * Windows $AppData/Snepulator/
+     */
+
     if (path == NULL)
     {
-        struct stat  stat_buf;
-        char *home = getenv (USER_DIR);
+#ifdef TARGET_WINDOWS
+        char *parent = getenv ("AppData");
+        char *name = "Snepulator";
+#else
+        char *parent = getenv ("HOME");
+        char *name = ".snepulator";
+#endif
+        struct stat stat_buf;
         int len;
 
-        if (home == NULL)
+        if (parent == NULL)
         {
-            snepulator_error ("Environment Error", "${" USER_DIR "} not defined.");
+            snepulator_error ("Environment Error", "Missing environment variable.");
             return -1;
         }
 
-        /* Get the path length */
-        len = snprintf (NULL, 0, "%s/.snepulator", home) + 1;
-
         /* Create the string */
+        len = snprintf (NULL, 0, "%s/%s", parent, name) + 1;
         path = calloc (len, 1);
-        snprintf (path, len, "%s/.snepulator", home);
+        snprintf (path, len, "%s/%s", parent, name);
 
         /* Create the directory if it doesn't exist */
         if (stat (path, &stat_buf) == -1)
@@ -51,7 +64,7 @@ int32_t path_base (char **path_ptr)
             {
                 if (mkdir (path, S_IRWXU) == -1)
                 {
-                    snepulator_error ("Filesystem Error", "Unable to create .snepulator directory.");
+                    snepulator_error ("Filesystem Error", "Unable to create configuration directory.");
                 }
             }
             else
@@ -111,6 +124,69 @@ static int32_t path_get_dir (char **path_ptr, char *name)
     *path_ptr = path;
 
     return 0;
+}
+
+
+/*
+ * Generate a timestamped path for a screenshot.
+ * This string needs to be freed.
+ *
+ * Linux: ${HOME}/Snepulator/Screenshot 2024-01-01 10:00:00.png
+ * Windows ${USERPROFILE}/Documents/Snepulator/Screenshot 2024-01-01 10_00_00.png
+ */
+char *path_screenshot (void)
+{
+    time_t time_val;
+    time (&time_val);
+    struct tm *time_ptr = localtime (&time_val);
+    struct stat stat_buf;
+
+    /* Create the containing directory string */
+#ifdef TARGET_WINDOWS
+    char *parent = getenv ("USERPROFILE");
+    int len = snprintf (NULL, 0, "%s/Documents/Snepulator", parent) + 1;
+    char *directory = calloc (len, 1);
+    snprintf (directory, len, "%s/Documents/Snepulator", parent);
+#else
+    char *parent = getenv ("HOME");
+    int len = snprintf (NULL, 0, "%s/Snepulator", parent) + 1;
+    char *directory = calloc (len, 1);
+    snprintf (directory, len, "%s/Snepulator", parent);
+#endif
+
+    /* Create the directory if it doesn't exist */
+    if (stat (directory, &stat_buf) == -1)
+    {
+        if (errno == ENOENT)
+        {
+            if (mkdir (directory, S_IRWXU) == -1)
+            {
+                snepulator_error ("Filesystem Error", "Unable to create screenshot directory.");
+            }
+        }
+        else
+        {
+            snepulator_error ("Filesystem Error", "Unable to stat screenshot directory.");
+            return NULL;
+        }
+    }
+
+    /* Create the full path string */
+    len = snprintf (NULL, 0, "%s/Screenshot 2024-01-01 10:00:00.png", directory) + 1;
+    char *path = calloc (len, 1);
+    snprintf (path, len,
+#if defined (TARGET_WINDOWS) || defined (TARGET_DARWIN)
+              "%s/Screenshot %04d-%02d-%02d %02d_%02d_%02d.png",
+#else
+              "%s/Screenshot %04d-%02d-%02d %02d:%02d:%02d.png",
+#endif
+              directory,
+              time_ptr->tm_year + 1900, time_ptr->tm_mon + 1, time_ptr->tm_mday,
+              time_ptr->tm_hour, time_ptr->tm_min, time_ptr->tm_sec);
+
+    free (directory);
+
+    return path;
 }
 
 

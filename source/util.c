@@ -20,6 +20,7 @@
 #include "snepulator_compat.h"
 #include "snepulator_types.h"
 #include "snepulator.h"
+#include "path.h"
 
 #include "blake3.h"
 #include "spng.h"
@@ -324,25 +325,10 @@ void util_take_screenshot (void)
         .bit_depth = 8
     };
 
-    uint8_t *buffer;
-    char    *home = getenv ("HOME");
-    char     path [80] = { '\0' };
-
-    if (home == NULL)
-    {
-        snepulator_error ("Environment Error", "${HOME} not defined.");
-        return;
-    }
-
-    /* Include the date in the filename */
-    time_t time_val;
-    time (&time_val);
-    struct tm *time_ptr = localtime (&time_val);
-    snprintf (path, 79, "%s/Snepulator %04d-%02d-%02d %02d:%02d:%02d.png", home,
-              time_ptr->tm_year + 1900, time_ptr->tm_mon + 1, time_ptr->tm_mday,
-              time_ptr->tm_hour, time_ptr->tm_min, time_ptr->tm_sec);
-
+    /* Open the output file */
+    char *path = path_screenshot ();
     FILE *output_file = fopen (path, "wb");
+    free (path);
     if (output_file == NULL)
     {
         snepulator_error ("File Error", "Cannot open screenshot file");
@@ -358,7 +344,7 @@ void util_take_screenshot (void)
 
     /* Allocate with 24-bits per pixel */
     uint32_t image_size = ihdr.width * ihdr.height * 3;
-    buffer = malloc (image_size);
+    uint8_t *buffer = malloc (image_size);
 
     /* Fill the newly allocated buffer */
     for (uint32_t y = 0; y < ihdr.height; y++)
