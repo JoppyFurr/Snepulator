@@ -191,6 +191,14 @@ build_snepulator_gui
 build_imgui
 build_libraries
 
+# For Windows, bake in the icon
+if [ "${CC}" == "x86_64-w64-mingw32-gcc" ]
+then
+    echo 'id ICON "images/snepulator_icon.ico"' > "work/icon.rc"
+    x86_64-w64-mingw32-windres "work/icon.rc" -O coff -o "work/icon.o"
+fi
+
+
 # Create executable.
 echo "Linking..."
 eval $CXX $CXXFLAGS \
