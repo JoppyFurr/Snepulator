@@ -21,8 +21,8 @@
 #include "snepulator_types.h"
 #include "snepulator.h"
 
-#include "../libraries/BLAKE3/blake3.h"
-#include "../libraries/SDL_SavePNG/savepng.h"
+#include "blake3.h"
+#include "spng.h"
 
 /* Global state */
 extern Snepulator_State state;
@@ -314,11 +314,15 @@ int32_t util_load_rom (uint8_t **buffer, uint32_t *rom_size, char *filename)
  */
 void util_take_screenshot (void)
 {
-    uint32_t width = state.video_width;
-    uint32_t height = state.video_height;
     uint32_t stride = VIDEO_BUFFER_WIDTH;
     uint32_t start_x = state.video_start_x;
     uint32_t start_y = state.video_start_y;
+    struct spng_ihdr ihdr = {
+        .width = state.video_width,
+        .height = state.video_height,
+        .color_type = SPNG_COLOR_TYPE_TRUECOLOR,
+        .bit_depth = 8
+    };
 
     uint8_t *buffer;
     char    *home = getenv ("HOME");
@@ -330,30 +334,6 @@ void util_take_screenshot (void)
         return;
     }
 
-    /* Crop out the blank column */
-    if (state.console == CONSOLE_MASTER_SYSTEM)
-    {
-        start_x += state.video_blank_left;
-        width -= state.video_blank_left;
-    }
-
-    /* 24-bits per pixel */
-    buffer = malloc (state.video_width * state.video_height * 3);
-
-    /* Crop video_data_out to remove borders */
-    for (uint32_t y = 0; y < height; y++)
-    {
-        for (uint32_t x = 0; x < width; x++)
-        {
-            buffer [(x + y * width) * 3 + 0] = state.video_out_data [start_x + x + (start_y + y) * stride].r;
-            buffer [(x + y * width) * 3 + 1] = state.video_out_data [start_x + x + (start_y + y) * stride].g;
-            buffer [(x + y * width) * 3 + 2] = state.video_out_data [start_x + x + (start_y + y) * stride].b;
-        }
-    }
-
-    SDL_Surface *screenshot_surface = SDL_CreateRGBSurfaceFrom (buffer, width, height,
-                                      24, width * 3, 0xff << 0, 0xff << 8, 0xff << 16, 0x00);
-
     /* Include the date in the filename */
     time_t time_val;
     time (&time_val);
@@ -362,12 +342,48 @@ void util_take_screenshot (void)
               time_ptr->tm_year + 1900, time_ptr->tm_mon + 1, time_ptr->tm_mday,
               time_ptr->tm_hour, time_ptr->tm_min, time_ptr->tm_sec);
 
-    if (SDL_SavePNG (screenshot_surface, path) < 0)
+    FILE *output_file = fopen (path, "wb");
+    if (output_file == NULL)
     {
-        snepulator_error ("SDL Error", SDL_GetError ());
+        snepulator_error ("File Error", "Cannot open screenshot file");
+        return;
     }
 
-    SDL_FreeSurface (screenshot_surface);
+    /* Calculate the size of the image buffer size */
+    if (state.console == CONSOLE_MASTER_SYSTEM)
+    {
+        start_x += state.video_blank_left;
+        ihdr.width -= state.video_blank_left;
+    }
+
+    /* Allocate with 24-bits per pixel */
+    uint32_t image_size = ihdr.width * ihdr.height * 3;
+    buffer = malloc (image_size);
+
+    /* Fill the newly allocated buffer */
+    for (uint32_t y = 0; y < ihdr.height; y++)
+    {
+        for (uint32_t x = 0; x < ihdr.width; x++)
+        {
+            buffer [(x + y * ihdr.width) * 3 + 0] = state.video_out_data [start_x + x + (start_y + y) * stride].r;
+            buffer [(x + y * ihdr.width) * 3 + 1] = state.video_out_data [start_x + x + (start_y + y) * stride].g;
+            buffer [(x + y * ihdr.width) * 3 + 2] = state.video_out_data [start_x + x + (start_y + y) * stride].b;
+        }
+    }
+
+    /* Encode the image with libspng */
+    spng_ctx *spng_context = spng_ctx_new (SPNG_CTX_ENCODER);
+    spng_set_png_file (spng_context, output_file);
+    spng_set_ihdr (spng_context, &ihdr);
+    int ret = spng_encode_image (spng_context, buffer, image_size, SPNG_FMT_PNG, SPNG_ENCODE_FINALIZE);
+
+    if (ret != 0)
+    {
+        snepulator_error ("File Error", "Failed to encode screenshot");
+    }
+
+    spng_ctx_free (spng_context);
+    fclose (output_file);
     free (buffer);
 }
 

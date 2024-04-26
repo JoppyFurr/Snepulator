@@ -18,9 +18,8 @@ Developed in Ōtautahi, Aotearoa.
 * [BLAKE3](https://github.com/BLAKE3-team/BLAKE3)
 * [Dear ImGui](https://github.com/ocornut/imgui)
 * [gl3w](https://github.com/skaslev/gl3w)
-* [SDL SavePNG](https://github.com/driedfruit/SDL_SavePNG)
+* [libspng](https://github.com/randy408/libspng)
 
 ## Dependencies
 * [SDL 2](https://www.libsdl.org/index.php)
 * zlib
-* libpng

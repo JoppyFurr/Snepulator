@@ -110,8 +110,8 @@ build_libraries ()
     eval $CC $CFLAGS -c libraries/BLAKE3/blake3_portable.c -o work/blake3_portable.o
     eval $CC $CFLAGS -DBLAKE3_NO_SSE2 -DBLAKE3_NO_SSE41 -DBLAKE3_NO_AVX2 -DBLAKE3_NO_AVX512 \
                      -c libraries/BLAKE3/blake3_dispatch.c -o work/blake3_dispatch.o
-    eval $CC $CFLAGS -c libraries/SDL_SavePNG/savepng.c    -o work/SDL_SavePNG.o
     eval $CC $CFLAGS -c libraries/gl3w/GL/gl3w.c           -o work/gl3w.o
+    eval $CC $CFLAGS -c libraries/libspng-0.7.4/spng.c     -o work/spng.o
 }
 
 
@@ -146,7 +146,7 @@ do
             CC=x86_64-w64-mingw32-gcc
             CXX=x86_64-w64-mingw32-g++
             SDL2_CONFIG="/usr/x86_64-w64-mingw32/bin/sdl2-config"
-            EXTRA_FLAGS="${EXTRA_FLAGS} -DTARGET_WINDOWS"
+            EXTRA_FLAGS="${EXTRA_FLAGS} -DSPNG_STATIC -DTARGET_WINDOWS"
             EXTRA_LINKS="-lopengl32 -static-libgcc -static-libstdc++"
             ;;
         dev*)
@@ -164,7 +164,9 @@ done
 
 CFLAGS="-std=c11 -O2 -Wall -Werror -D_POSIX_C_SOURCE=200809L \
         $(${SDL2_CONFIG} --cflags) \
+        -I libraries/BLAKE3/ \
         -I libraries/gl3w/ \
+        -I libraries/libspng-0.7.4/ \
         -DBUILD_DATE=\\\"$DATE\\\" \
         ${EXTRA_FLAGS}"
 
@@ -194,7 +196,7 @@ eval $CXX $CXXFLAGS \
     work/*.o \
     work/imgui/*.o \
     $(${SDL2_CONFIG} --libs) \
-    -lpng -lz -lm -lpthread \
+    -lz -lm -lpthread \
     ${EXTRA_LINKS} \
     -o Snepulator
 
