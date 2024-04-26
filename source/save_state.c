@@ -120,7 +120,7 @@ void save_state_write (const char *filename)
         return;
     }
 
-    state_file = fopen (filename, "w");
+    state_file = fopen (filename, "wb");
     if (state_file == NULL)
     {
         /* TODO: This error should not be fatal */
