@@ -3,6 +3,10 @@
  * ImGui File open modal implementation.
  */
 
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,6 +14,8 @@
 #include <stdbool.h>
 #include <errno.h>
 #include <unistd.h>
+
+#include <sys/stat.h>
 
 #include <algorithm>
 #include <regex>
@@ -29,8 +35,6 @@ extern "C" {
 
 #include "open.h"
 
-#define MAX_STRING_SIZE 1024
-
 /* Global state */
 extern Snepulator_State state;
 
@@ -38,9 +42,9 @@ extern Snepulator_State state;
 File_Open_State open_state = { .title = "Open" };
 
 /* Current path */
-#ifndef TARGET_WINDOWS
-static char path [MAX_STRING_SIZE] = { '\0' };
-#endif
+#undef PATH_MAX
+#define PATH_MAX 4096
+static char path [PATH_MAX] = { '\0' };
 
 
 /*
@@ -58,7 +62,6 @@ void snepulator_set_open_regex (const char *regex)
  */
 void snepulator_open_modal_render (void)
 {
-#ifndef TARGET_WINDOWS
     /* Layout calculations */
     uint32_t width = state.host_width - 64;
     uint32_t height = state.host_height - 64;
@@ -106,11 +109,26 @@ void snepulator_open_modal_render (void)
             /* Fallback to home directory */
             if (dir == NULL)
             {
+#ifdef TARGET_WINDOWS
+                char *home_path = getenv ("USERPROFILE");
+#else
                 char *home_path = getenv ("HOME");
+#endif
 
                 if (home_path != NULL)
                 {
                     sprintf (path, "%s/", home_path);
+
+#ifdef TARGET_WINDOWS
+                    /* For now, use only '/' as a path separator */
+                    for (uint32_t i = 0; i < strlen (path); i++)
+                    {
+                        if (path [i] == '\\')
+                        {
+                            path [i] = '/';
+                        }
+                    }
+#endif
                 }
                 else
                 {
@@ -127,6 +145,8 @@ void snepulator_open_modal_render (void)
 
             if (dir != NULL)
             {
+                struct stat stat_buf;
+
                 for (entry = readdir (dir); entry != NULL; entry = readdir (dir))
                 {
                     /* Ignore "." directory */
@@ -141,10 +161,23 @@ void snepulator_open_modal_render (void)
                         continue;
                     }
 
+                    /* Not all systems have entry->d_type, so use stat
+                     * to find out if this is a file or a directory. */
+                    char *stat_path = NULL;
+                    asprintf (&stat_path, "%s%s", path, entry->d_name);
+                    int ret = stat (stat_path, &stat_buf);
+                    free (stat_path);
+
+                    /* Skip anything that stat can't read */
+                    if (ret < 0)
+                    {
+                        continue;
+                    }
+
                     entry_string = std::string (entry->d_name);
 
                     /* Show directories as ending with '/' */
-                    if (entry->d_type == DT_DIR)
+                    if (S_ISDIR (stat_buf.st_mode))
                     {
                         entry_string += '/';
                         dir_list.push_back (entry_string);
@@ -226,7 +259,7 @@ void snepulator_open_modal_render (void)
             /* Directory */
             if (file_list [selected_file].back () == '/')
             {
-                char new_path [MAX_STRING_SIZE] = { '\0' };
+                char new_path [PATH_MAX] = { '\0' };
 
                 if (strcmp (file_list [selected_file].c_str (), "../") == 0)
                 {
@@ -261,7 +294,7 @@ void snepulator_open_modal_render (void)
             /* ROM */
             else
             {
-                char new_path [MAX_STRING_SIZE] = { '\0' };
+                char new_path [PATH_MAX] = { '\0' };
                 sprintf (new_path, "%s%s", path, file_list [selected_file].c_str ());
 
                 open_state.callback (new_path);
@@ -273,5 +306,4 @@ void snepulator_open_modal_render (void)
 
         ImGui::EndPopup ();
     }
-#endif
 }
