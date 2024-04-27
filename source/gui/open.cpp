@@ -35,16 +35,24 @@ extern "C" {
 
 #include "open.h"
 
+#undef PATH_MAX
+#define PATH_MAX 4096
+
 /* Global state */
 extern Snepulator_State state;
 
 /* Open-dialogue state */
 File_Open_State open_state = { .title = "Open" };
-
-/* Current path */
-#undef PATH_MAX
-#define PATH_MAX 4096
 static char path [PATH_MAX] = { '\0' };
+
+#ifdef TARGET_WINDOWS
+#define DRIVES_MAX 32
+#include <windows.h>
+static char drive_letters_raw [PATH_MAX];
+static char *drive_letters [DRIVES_MAX];
+static uint32_t drive_count = 0;
+static uint32_t drive_selected = 0;
+#endif
 
 
 /*
@@ -54,6 +62,41 @@ void snepulator_set_open_regex (const char *regex)
 {
     open_state.regex = regex;
     open_state.path_cached = false;
+
+    /* Piggy back off this as a good time to update the list of drive letters */
+#ifdef TARGET_WINDOWS
+    int count = GetLogicalDriveStrings (PATH_MAX, drive_letters_raw);
+    if (count <= 0)
+    {
+        snepulator_error ("Error", "Unable to list drive letters.");
+    }
+
+    drive_count = 0;
+    char *ptr = &drive_letters_raw [0];
+    for (int i = 0; *ptr != '\0' && i < count; i++)
+    {
+        drive_letters [drive_count++] = ptr;
+        ptr = strchr (ptr, '\0') + 1;
+
+        if (drive_count == DRIVES_MAX)
+        {
+            break;
+        }
+    }
+
+    /* For now, use only '/' as a path separator */
+    for (uint32_t drive = 0; drive < drive_count; drive++)
+    {
+        for (uint32_t i = 0; i < strlen (drive_letters [drive]); i++)
+        {
+            if (drive_letters [drive] [i] == '\\')
+            {
+                drive_letters [drive] [i] = '/';
+            }
+        }
+    }
+
+#endif
 }
 
 
@@ -138,6 +181,18 @@ void snepulator_open_modal_render (void)
 
                 dir = opendir (path);
             }
+
+#ifdef TARGET_WINDOWS
+            /* Show the correct drive letter for the current path */
+            for (uint32_t i = 0; i < drive_count; i++)
+            {
+                if (strncmp (path, drive_letters [i], 3) == 0)
+                {
+                    drive_selected = i;
+                    break;
+                }
+            }
+#endif
 
             /* File listing */
             struct dirent *entry = NULL;
@@ -240,6 +295,26 @@ void snepulator_open_modal_render (void)
 
         }
         ImGui::EndChild ();
+
+#ifdef TARGET_WINDOWS
+        /* Drive letter */
+        ImGui::PushItemWidth (96);
+        if (ImGui::BeginCombo ("##Drive", drive_letters [drive_selected]))
+        {
+            for (uint32_t i = 0; i < drive_count; i++)
+            {
+                if (ImGui::Selectable (drive_letters [i], i == drive_selected))
+                {
+                    drive_selected = i;
+                    strcpy (path, drive_letters [i]);
+                    open_state.path_cached = false;
+                }
+            }
+            ImGui::EndCombo ();
+        }
+        ImGui::PopItemWidth ();
+        ImGui::SameLine ();
+#endif
 
         /* Buttons */
         ImGui::Spacing ();
