@@ -271,6 +271,11 @@ int32_t util_load_rom (uint8_t **buffer, uint32_t *rom_size, char *filename)
     fseek (rom_file, 0, SEEK_END);
     file_size = ftell (rom_file);
 
+    /* TODO: Move this somewhere SMS-specific.
+     *       Or, at least, check if we're a power-of-two
+     *       first, otherwise, this could trigger on a
+     *       512-byte intro.  */
+
     /* Some ROM files begin with a 512 byte header, possibly added when dumped by
      * a Super Magic Drive. Only the first two bytes of this header are nonzero. */
     if ((file_size & 0x3ff) == 512)

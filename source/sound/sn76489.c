@@ -224,6 +224,9 @@ void _psg_run_cycles (SN76489_Context *context, uint64_t cycles)
             context->state.output_3 *= -1;
 
             /* On transition from -1 to 1, shift the LFSR */
+            /* TODO: Allow selection of Sega LFSR vs TI LFSR.
+             * Sega: 16-bit tap 0 & 3
+             * TI:   15-bit tap 0 & 1 */
             if (context->state.output_3 == 1)
             {
                 context->state.output_lfsr = (context->state.lfsr & 0x0001);
@@ -313,6 +316,7 @@ void _psg_run_cycles (SN76489_Context *context, uint64_t cycles)
         }
 
         /* Map from the amount of time emulated (completed cycles / clock rate) to the sound card sample rate */
+        /* TODO: Consider storing the real non-shifted clock_rate, and re-ordering the equations to avoid lost precision */
         context->completed_cycles++;
         context->write_index = context->completed_cycles * AUDIO_SAMPLE_RATE / context->clock_rate;
     }
