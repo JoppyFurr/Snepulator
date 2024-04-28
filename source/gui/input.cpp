@@ -140,11 +140,20 @@ void snepulator_input_modal_render (void)
         }
         ImGui::PopItemWidth ();
 
-        /* Master System gamepad */
-        ImGui::BeginChild ("SMS Gamepad", ImVec2 (width - 16, height - (titlebar_height + above_box + below_box)), true);
+        /* Master System gamepad and configuration labels */
+        int config_box_width = width - 16;
+        int config_box_height = height - titlebar_height - above_box - below_box;
+        ImGui::BeginChild ("SMS Gamepad", ImVec2 (config_box_width, config_box_height), true);
         {
             ImVec2 origin = ImGui::GetCursorScreenPos ();
             float scale = (width - 64);
+
+            /* For wide screens, limit the controller diagram to 2/3 the box height */
+            if (scale > config_box_height * 5 / 3)
+            {
+                scale = config_box_height * 5 / 3;
+            }
+
             origin.x += 16;
             origin.y += 10;
 
@@ -310,10 +319,10 @@ void snepulator_input_modal_render (void)
             ImGui::SetCursorScreenPos (ImVec2 (origin.x + scale * 0.5, origin.y + scale * 0.4 + 16));
             ImGui::TextColored ((gamepad_remap_step == GAMEPAD_BUTTON_1 )         ? ButtonWaiting_V : White_V,
                                 "  Button 1:  %s", button_mapping_to_string (remap_config.mapping [GAMEPAD_BUTTON_1]));
-            ImGui::SetCursorScreenPos (ImVec2 (origin.x + scale * 0.5, origin.y + scale * 0.4 + 33));
+            ImGui::SetCursorScreenPos (ImVec2 (origin.x + scale * 0.5, origin.y + scale * 0.4 + 42));
             ImGui::TextColored ((gamepad_remap_step == GAMEPAD_BUTTON_2 )         ? ButtonWaiting_V : White_V,
                                 "  Button 2:  %s", button_mapping_to_string (remap_config.mapping [GAMEPAD_BUTTON_2]));
-            ImGui::SetCursorScreenPos (ImVec2 (origin.x + scale * 0.5, origin.y + scale * 0.4 + 50));
+            ImGui::SetCursorScreenPos (ImVec2 (origin.x + scale * 0.5, origin.y + scale * 0.4 + 68));
             ImGui::TextColored ((gamepad_remap_step == GAMEPAD_BUTTON_START )     ? ButtonWaiting_V : White_V,
                                 "  Pause:     %s", button_mapping_to_string (remap_config.mapping [GAMEPAD_BUTTON_START]));
         }
