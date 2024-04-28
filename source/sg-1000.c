@@ -281,6 +281,12 @@ SG_1000_Context *sg_1000_init (void)
     state.diagnostics_show = sg_1000_diagnostics_show;
 #endif
 
+    /* Switch to Interrupt Mode 1
+     * This doesn't happen on a real SG-1000, normally it needs
+     * to be set by the game. However, some homebrew may only be
+     * tested on a Master System, which has a BIOS that sets IM 1. */
+    z80_context->state.im = 1;
+
     /* Begin emulation */
     state.run = RUN_STATE_RUNNING;
 
