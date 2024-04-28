@@ -210,8 +210,9 @@ void snepulator_open_modal_render (void)
                         continue;
                     }
 
-                    /* Hide ".." directory if we're already at the root */
-                    if ((strcmp (path, "/") == 0) && (strcmp (entry->d_name, "..") == 0))
+                    /* Hide ".." directory if we're already at the root. */
+                    if (strcmp (entry->d_name, "..") == 0 &&
+                        strchr (path, '/') == strrchr (path, '/'))
                     {
                         continue;
                     }
