@@ -138,16 +138,22 @@ void snepulator_audio_callback (void *userdata, uint8_t *stream, int len)
  */
 void *main_emulation_loop (void *data)
 {
-    uint32_t ticks;
-
     while (state.run != RUN_STATE_EXIT)
     {
-        ticks = util_get_ticks ();
+        uint32_t ticks_now = util_get_ticks ();
+        uint32_t ticks_to_run = ticks_now - state.ticks_previous;
+
+        /* If we miss a large amount of time, the host may have been
+         * put into standby mode and then woken up. Skip the extra time. */
+        if (ticks_to_run > 2000)
+        {
+            ticks_to_run = 1;
+        }
 
         pthread_mutex_lock (&run_mutex);
         if (state.run == RUN_STATE_RUNNING || state.console == CONSOLE_LOGO)
         {
-            state.run_callback (state.console_context, ticks - state.ticks_previous);
+            state.run_callback (state.console_context, ticks_to_run);
         }
         else if (state.run == RUN_STATE_PAUSED)
         {
@@ -163,7 +169,7 @@ void *main_emulation_loop (void *data)
         }
         pthread_mutex_unlock (&run_mutex);
 
-        state.ticks_previous = ticks;
+        state.ticks_previous = ticks_now;
 
         /* Sleep */
         util_delay (1);
