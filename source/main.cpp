@@ -509,7 +509,8 @@ int main (int argc, char **argv)
     }
 
     /* Initialise SDL */
-    if (SDL_Init (SDL_INIT_EVERYTHING) == -1)
+    if (SDL_Init (SDL_INIT_TIMER | SDL_INIT_AUDIO | SDL_INIT_VIDEO |
+                  SDL_INIT_EVENTS | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER) == -1)
     {
         snepulator_error ("SDL Error", SDL_GetError ());
         return EXIT_FAILURE;
