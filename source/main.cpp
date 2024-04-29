@@ -566,7 +566,8 @@ int main (int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    /* Set icon */
+    /* Set the icon for non-Windows targets */
+#ifndef TARGET_WINDOWS
     SDL_Surface *icon = SDL_CreateRGBSurfaceFrom ((void *) snepulator_icon.pixel_data, snepulator_icon.width, snepulator_icon.height,
                                                   snepulator_icon.bytes_per_pixel * 8, snepulator_icon.bytes_per_pixel * snepulator_icon.width,
                                                   0xff << 0, 0xff << 8, 0xff << 16, 0xff << 24);
@@ -578,6 +579,7 @@ int main (int argc, char **argv)
     }
     SDL_SetWindowIcon (window, icon);
     SDL_FreeSurface (icon);
+#endif
 
     /* Setup ImGui binding */
     ImGui::CreateContext ();
