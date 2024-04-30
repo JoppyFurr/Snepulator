@@ -35,6 +35,10 @@ extern "C" {
 extern Snepulator_Gamepad gamepad [3];
 }
 
+#ifdef TARGET_WINDOWS
+#include <windows.h>
+#endif
+
 #include "gui/input.h"
 #include "gui/menubar.h"
 #include "gui/open.h"
@@ -513,6 +517,11 @@ int main (int argc, char **argv)
     {
         return EXIT_FAILURE;
     }
+
+#ifdef TARGET_WINDOWS
+    /* If we don't claim DPI-awareness, then Windows will blurry-scale the window :( */
+    SetProcessDPIAware ();
+#endif
 
     /* Initialise SDL */
     if (SDL_Init (SDL_INIT_TIMER | SDL_INIT_AUDIO | SDL_INIT_VIDEO |
