@@ -148,7 +148,7 @@ do
             CXX=x86_64-w64-mingw32-g++
             SDL2_CONFIG="/usr/x86_64-w64-mingw32/bin/sdl2-config"
             EXTRA_FLAGS="${EXTRA_FLAGS} -DSPNG_STATIC -DTARGET_WINDOWS"
-            EXTRA_LINKS="-lopengl32 -static-libgcc -static-libstdc++"
+            EXTRA_LINKS="-lopengl32 -static-libgcc -static-libstdc++ -s"
             ;;
         dev*)
             echo "Developer options enabled"
