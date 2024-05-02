@@ -521,7 +521,10 @@ void snepulator_reset (void)
     }
 
     /* Mark the system as not-ready. */
-    state.run = RUN_STATE_INIT;
+    if (state.run == RUN_STATE_RUNNING || state.run == RUN_STATE_PAUSED)
+    {
+        state.run = RUN_STATE_INIT;
+    }
 
     /* Don't free resources in the middle of the run_callback */
     pthread_mutex_lock (&run_mutex);

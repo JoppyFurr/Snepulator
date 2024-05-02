@@ -69,7 +69,10 @@ bool input_modal_create = false;
  */
 void snepulator_error (const char *title, const char *message)
 {
-    state.run = RUN_STATE_INIT;
+    if (state.run == RUN_STATE_RUNNING || state.run == RUN_STATE_PAUSED)
+    {
+        state.run = RUN_STATE_INIT;
+    }
     state.show_gui = true;
 
     /* All errors get printed to console */
