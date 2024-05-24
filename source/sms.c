@@ -407,10 +407,6 @@ SMS_Context *sms_init (void)
         {
             context->hw_state.mapper = SMS_MAPPER_JANGGUN;
         }
-        else if (context->rom_size <= SIZE_48K)
-        {
-            context->hw_state.mapper = SMS_MAPPER_NONE;
-        }
     }
 
     /* Some unlicensed games depend on an 0xf0 pattern being left in uninitialised
