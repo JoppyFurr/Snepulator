@@ -28,6 +28,9 @@
 /* Global state */
 extern Snepulator_State state;
 
+/* File state */
+static struct timespec time_start;
+
 /*
  * 16-bit endian conversion - Host to network.
  * Assumes a little-endian host.
@@ -77,26 +80,44 @@ uint32_t util_ntoh32 (uint32_t n)
 
 
 /*
- * Get the number of ticks that have passed.
+ * Set the start time for util_get_ticks.
+ */
+void util_ticks_init (void)
+{
+    clock_gettime (CLOCK_MONOTONIC_RAW, &time_start);
+}
+
+
+/*
+ * Get the number of 1ms ticks that have passed.
  *
  * Based on SDL_GetTicks ()
  * Assumes that monotonic time is supported.
  */
 uint32_t util_get_ticks (void)
 {
-    static struct timespec start;
-    static bool ticks_started = false;
     struct timespec now;
     uint32_t ticks;
 
-    if (!ticks_started)
-    {
-        ticks_started = true;
-        clock_gettime (CLOCK_MONOTONIC_RAW, &start);
-    }
+    clock_gettime (CLOCK_MONOTONIC_RAW, &now);
+    ticks = (uint32_t) ((now.tv_sec  - time_start.tv_sec) * 1000
+                      + (now.tv_nsec - time_start.tv_nsec) / 1000000);
+
+    return ticks;
+}
+
+
+/*
+ * Get the number of 1us ticks that have passed.
+ */
+uint64_t util_get_ticks_us (void)
+{
+    struct timespec now;
+    uint64_t ticks;
 
     clock_gettime (CLOCK_MONOTONIC_RAW, &now);
-    ticks = (uint32_t) ((now.tv_sec - start.tv_sec) * 1000 + (now.tv_nsec - start.tv_nsec) / 1000000);
+    ticks = ((now.tv_sec  - time_start.tv_sec) * 1000000
+           + (now.tv_nsec - time_start.tv_nsec) / 1000);
 
     return ticks;
 }

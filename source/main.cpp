@@ -593,6 +593,9 @@ int main (int argc, char **argv)
     SDL_FreeSurface (icon);
 #endif
 
+    /* Initialize timers */
+    util_ticks_init ();
+
     /* Setup ImGui binding */
     ImGui::CreateContext ();
     ImGui::GetIO ().IniFilename = NULL;

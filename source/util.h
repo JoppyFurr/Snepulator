@@ -6,8 +6,15 @@
 #define ENFORCE_MINIMUM(VAR, MIN) VAR = (VAR > MIN) ? VAR : MIN
 #define ENFORCE_MAXIMUM(VAR, MAX) VAR = (VAR > MAX) ? MAX : VAR
 
+
+/* Set the start time for util_get_ticks. */
+void util_ticks_init (void);
+
 /* Get the number of ticks that have passed */
 uint32_t util_get_ticks (void);
+
+/* Get the number of ticks that have passed */
+uint64_t util_get_ticks_us (void);
 
 /* Delay for a number of ticks */
 void util_delay (uint32_t ticks);
