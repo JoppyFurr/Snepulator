@@ -546,7 +546,6 @@ void snepulator_reset (void)
     /* Clear callback functions */
     state.audio_callback = NULL;
     state.cleanup = NULL;
-    state.get_clock_rate = NULL;
     state.get_rom_hash = NULL;
     state.run_callback = NULL;
     state.get_rom_hash = NULL;
@@ -577,6 +576,7 @@ void snepulator_reset (void)
 
     /* Reset the tick counter */
     state.ticks_previous = util_get_ticks ();
+    state.clock_rate = 0;
 }
 
 

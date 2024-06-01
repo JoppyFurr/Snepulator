@@ -171,9 +171,9 @@ void _psg_run_cycles (SN76489_Context *context, uint64_t cycles)
 
     /* Reset the ring buffer if the clock rate changes */
     if (state.console_context != NULL &&
-        context->clock_rate != (state.get_clock_rate (state.console_context) >> 4))
+        context->clock_rate != (state.clock_rate >> 4))
     {
-        context->clock_rate = state.get_clock_rate (state.console_context) >> 4;
+        context->clock_rate = state.clock_rate >> 4;
 
         context->read_index = 0;
         context->write_index = 0;

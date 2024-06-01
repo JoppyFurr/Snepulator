@@ -953,9 +953,9 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
 
     /* Reset the ring buffer if the clock rate changes */
     if (state.console_context != NULL &&
-        context->clock_rate != state.get_clock_rate (state.console_context))
+        context->clock_rate != state.clock_rate)
     {
-        context->clock_rate = state.get_clock_rate (state.console_context);
+        context->clock_rate = state.clock_rate;
 
         context->read_index = 0;
         context->write_index = 0;

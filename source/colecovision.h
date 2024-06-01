@@ -3,9 +3,6 @@
  * ColecoVision header
  */
 
-#define COLECOVISION_CLOCK_RATE_PAL  3546895
-#define COLECOVISION_CLOCK_RATE_NTSC 3579545
-
 #define COLECOVISION_RAM_SIZE (1 << 10)
 
 /* Stores the controller interface state */

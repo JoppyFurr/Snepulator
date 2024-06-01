@@ -146,22 +146,6 @@ static void sg_1000_frame_done (void *context_ptr)
 
 
 /*
- * Returns the SG-1000 clock-rate in Hz.
- */
-static uint32_t sg_1000_get_clock_rate (void *context_ptr)
-{
-    SG_1000_Context *context = (SG_1000_Context *) context_ptr;
-
-    if (context->format == VIDEO_FORMAT_PAL)
-    {
-        return SG_1000_CLOCK_RATE_PAL;
-    }
-
-    return SG_1000_CLOCK_RATE_NTSC;
-}
-
-
-/*
  * Returns true if there is an interrupt.
  */
 static bool sg_1000_get_int (void *context_ptr)
@@ -271,7 +255,6 @@ SG_1000_Context *sg_1000_init (void)
     /* Hook up the callbacks */
     state.audio_callback = sg_1000_audio_callback;
     state.cleanup = sg_1000_cleanup;
-    state.get_clock_rate = sg_1000_get_clock_rate;
     state.get_rom_hash = sg_1000_get_rom_hash;
     state.run_callback = sg_1000_run;
     state.state_load = sg_1000_state_load;
@@ -488,7 +471,7 @@ static void sg_1000_run (void *context_ptr, uint32_t ms)
     uint64_t lines;
 
     /* Convert the time into lines to run, storing the remainder as millicycles. */
-    context->millicycles += (uint64_t) ms * sg_1000_get_clock_rate (context);
+    context->millicycles += (uint64_t) ms * state.clock_rate;
     lines = context->millicycles / 228000;
     context->millicycles -= lines * 228000;
 
@@ -654,6 +637,9 @@ static void sg_1000_update_settings (void *context_ptr)
     {
         context->format = state.format;
     }
+
+    /* Update clock rate */
+    state.clock_rate = (context->format == VIDEO_FORMAT_PAL) ? PAL_COLOURBURST_4_5_FREQ : NTSC_COLOURBURST_FREQ;
 
     /* Update VDP */
     context->vdp_context->format              = context->format;

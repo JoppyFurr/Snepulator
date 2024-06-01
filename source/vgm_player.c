@@ -229,25 +229,6 @@ static void vgm_player_draw_frame (VGM_Player_Context *context)
 }
 
 
-/*
- * Returns the clock-rate in Hz.
- * For now, assumes all chips share the same clock rate.
- */
-static uint32_t vgm_player_get_clock_rate (void *context_ptr)
-{
-    VGM_Player_Context *context = (VGM_Player_Context *) context_ptr;
-
-    if (context->sn76489_clock)
-    {
-        return context->sn76489_clock;
-    }
-    else
-    {
-        return context->ym2413_clock;
-    }
-}
-
-
 static void vgm_player_run_until_delay (VGM_Player_Context *context)
 {
     uint8_t command;
@@ -477,11 +458,11 @@ VGM_Player_Context *vgm_player_init (void)
     /* Hook up callbacks */
     state.audio_callback = vgm_player_audio_callback;
     state.cleanup = vgm_player_cleanup;
-    state.get_clock_rate = vgm_player_get_clock_rate;
     state.run_callback = vgm_player_run;
 
     /* Start playing */
     context->index = context->vgm_start;
+    state.clock_rate = context->sn76489_clock ? context->sn76489_clock : context->ym2413_clock;
     state.run = RUN_STATE_RUNNING;
 
     return context;

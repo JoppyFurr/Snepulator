@@ -245,22 +245,6 @@ static void sms_frame_done (void *context_ptr)
 
 
 /*
- * Returns the SMS clock-rate in Hz.
- */
-static uint32_t sms_get_clock_rate (void *context_ptr)
-{
-    SMS_Context *context = (SMS_Context *) context_ptr;
-
-    if (context->format == VIDEO_FORMAT_PAL)
-    {
-        return SMS_CLOCK_RATE_PAL;
-    }
-
-    return SMS_CLOCK_RATE_NTSC;
-}
-
-
-/*
  * Returns true if there is an interrupt.
  */
 static bool sms_get_int (void *context_ptr)
@@ -491,7 +475,6 @@ SMS_Context *sms_init (void)
     /* Hook up callbacks */
     state.audio_callback = sms_audio_callback;
     state.cleanup = sms_cleanup;
-    state.get_clock_rate = sms_get_clock_rate;
     state.get_rom_hash = sms_get_rom_hash;
     state.run_callback = sms_run;
     state.soft_reset = sms_soft_reset;
@@ -1253,7 +1236,7 @@ static void sms_run (void *context_ptr, uint32_t ms)
     uint32_t lines;
 
     /* Convert the time into lines to run, storing the remainder as millicycles. */
-    context->millicycles += (uint64_t) ms * sms_get_clock_rate (context);
+    context->millicycles += (uint64_t) ms * state.clock_rate;
     lines = context->millicycles / 228000;
     context->millicycles -= lines * 228000;
 
@@ -1551,6 +1534,9 @@ static void sms_update_settings (void *context_ptr)
     {
         context->format = state.format;
     }
+
+    /* Update clock rate */
+    state.clock_rate = (context->format == VIDEO_FORMAT_PAL) ? PAL_COLOURBURST_4_5_FREQ : NTSC_COLOURBURST_FREQ;
 
     /* Update VDP */
     context->vdp_context->format              = context->format;

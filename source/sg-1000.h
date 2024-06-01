@@ -3,9 +3,6 @@
  * Sega SG-1000 header
  */
 
-#define SG_1000_CLOCK_RATE_PAL  3546893
-#define SG_1000_CLOCK_RATE_NTSC 3579545
-
 /* Note: The actual SG-1000 has only 1 KiB of RAM.
  *       However, the SC-3000 has 2 KiB of RAM.
  *       Some homebrew expects this extra memory. */

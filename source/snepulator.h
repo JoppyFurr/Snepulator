@@ -11,6 +11,10 @@
 
 #define AUDIO_SAMPLE_RATE 48000
 
+/* Clock Rates */
+#define NTSC_COLOURBURST_FREQ       3579545
+#define PAL_COLOURBURST_4_5_FREQ    3546895
+
 typedef enum Run_State_e {
     RUN_STATE_INIT,     /* No ROM has been loaded. */
     RUN_STATE_RUNNING,  /* A ROM has been loaded and is running. */
@@ -94,10 +98,10 @@ typedef struct Snepulator_State_s {
 
     /* Console API */
     Console   console;
+    uint32_t  clock_rate;
     void     *console_context;
     void      (*audio_callback) (void *, int16_t *stream, uint32_t count);
     void      (*cleanup) (void *);
-    uint32_t  (*get_clock_rate) (void *);
     uint8_t * (*get_rom_hash) (void *);
     void      (*run_callback) (void *, uint32_t ms);
     void      (*soft_reset) (void);

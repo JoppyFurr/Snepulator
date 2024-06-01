@@ -3,9 +3,6 @@
  * Sega Master System header.
  */
 
-#define SMS_CLOCK_RATE_PAL  3546895
-#define SMS_CLOCK_RATE_NTSC 3579545
-
 #define SMS_RAM_SIZE        SIZE_8K
 #define SMS_SRAM_SIZE       SIZE_32K
 #define SMS_SRAM_SIZE_MIN   SIZE_128
