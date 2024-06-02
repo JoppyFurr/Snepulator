@@ -5,9 +5,6 @@
 
 typedef struct VGM_Player_Context_s {
 
-    uint64_t time_ds; /* Remaining time to carry over to the next call of vgm_player_run, in deci-samples of 44.1 kHz */
-    uint32_t usecs; /* Time for updating the visualisation */
-
     uint8_t *vgm;
     uint32_t vgm_size;
     uint32_t index;
@@ -30,6 +27,7 @@ typedef struct VGM_Player_Context_s {
     uint64_t ym2413_millicycles; /* Remaining time to carry over to the next run of the chip. */
 
     /* Visualisation */
+    uint32_t frame_sample_counter; /* Time for updating the visualisation */
     uint_pixel frame_buffer [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
 
 } VGM_Player_Context;

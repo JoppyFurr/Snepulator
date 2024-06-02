@@ -943,7 +943,7 @@ static int16_t ym2413_run_rhythm_sample (YM2413_Context *context)
 /*
  * Run the YM2413 for a number of CPU clock cycles.
  */
-void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
+void _ym2413_run_cycles (YM2413_Context *context, uint32_t clock_rate, uint32_t cycles)
 {
     /* The YM2413 takes 72 cycles to update all 18 operators */
     static uint32_t excess = 0;
@@ -953,10 +953,9 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
 
     /* Reset the ring buffer if the clock rate changes */
     if (state.console_context != NULL &&
-        context->clock_rate != state.clock_rate)
+        clock_rate != context->clock_rate)
     {
-        context->clock_rate = state.clock_rate;
-
+        context->clock_rate = clock_rate;
         context->read_index = 0;
         context->write_index = 0;
         context->completed_samples = 0;
@@ -1025,10 +1024,10 @@ void _ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
  *  1. The emulation loop, this is the usual case.
  *  2. Additional samples needed to keep the sound card from running out.
  */
-void ym2413_run_cycles (YM2413_Context *context, uint64_t cycles)
+void ym2413_run_cycles (YM2413_Context *context, uint32_t clock_rate, uint32_t cycles)
 {
     pthread_mutex_lock (&context->mutex);
-    _ym2413_run_cycles (context, cycles);
+    _ym2413_run_cycles (context, clock_rate, cycles);
     pthread_mutex_unlock (&context->mutex);
 }
 
@@ -1041,10 +1040,10 @@ void ym2413_get_samples (YM2413_Context *context, int16_t *stream, uint32_t coun
 {
     if (context->read_index + count > context->write_index)
     {
-        int shortfall = count - (context->write_index - context->read_index);
+        uint64_t shortfall = count - (context->write_index - context->read_index);
 
         /* Note: We add one to the shortfall to account for integer division */
-        ym2413_run_cycles (context, (shortfall + 1) * context->clock_rate / AUDIO_SAMPLE_RATE);
+        ym2413_run_cycles (context, context->clock_rate, (shortfall + 1) * context->clock_rate / AUDIO_SAMPLE_RATE);
     }
 
     /* Take samples and pass them to the sound card */

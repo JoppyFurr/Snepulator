@@ -286,12 +286,13 @@ void gamepad_process_key_event (int32_t key, bool key_down)
  *       * Mouse support?
  *       * Direct vs relative?
  */
-void gamepad_paddle_tick (uint32_t ms)
+void gamepad_paddle_tick (uint32_t cycles)
 {
     static float remainder = 0.0;
     float paddle_speed = 250.0;
     float delta;
     int16_t new_position = gamepad [1].paddle_position;
+    float time = (float) cycles / state.clock_rate;
 
     /* Temporary™ digital-only support */
     if (gamepad [1].state [GAMEPAD_DIRECTION_LEFT])
@@ -308,7 +309,7 @@ void gamepad_paddle_tick (uint32_t ms)
     }
 
     /* Calculate and apply movement */
-    delta = gamepad [1].paddle_velocity * paddle_speed * (ms * 0.001) + remainder;
+    delta = gamepad [1].paddle_velocity * paddle_speed * time + remainder;
     new_position += (int16_t) delta;
     remainder = fmodf (delta, 1.0);
 

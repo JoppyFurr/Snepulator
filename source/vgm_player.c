@@ -322,16 +322,11 @@ static void vgm_player_run_until_delay (VGM_Player_Context *context)
  * Emulate the VGM player for the specified length of time.
  * Called with the run_mutex held.
  */
-static void vgm_player_run (void *context_ptr, uint32_t ms)
+static void vgm_player_run (void *context_ptr, uint32_t samples)
 {
     VGM_Player_Context *context = (VGM_Player_Context *) context_ptr;
-    uint32_t samples;
 
-    /* Convert the time into 44.1 kHz samples to run. This is the internal sample rate in the VGM specification. */
-    /* Spare time is stored as deci-samples in time_ds. */
-    context->time_ds += ms * 441;
-    samples = context->time_ds / 10;
-    context->time_ds -= samples * 10;
+    context->frame_sample_counter += samples;
 
     while (samples--)
     {
@@ -342,7 +337,7 @@ static void vgm_player_run (void *context_ptr, uint32_t ms)
             context->sn76489_millicycles += context->sn76489_clock * 1000 / 44100;
             uint32_t cycles = context->sn76489_millicycles / 1000;
             context->sn76489_millicycles -= cycles * 1000;
-            psg_run_cycles (context->sn76489_context, cycles);
+            sn76489_run_cycles (context->sn76489_context, context->sn76489_clock, cycles);
         }
 
         if (context->ym2413_clock)
@@ -350,7 +345,7 @@ static void vgm_player_run (void *context_ptr, uint32_t ms)
             context->ym2413_millicycles += context->ym2413_clock * 1000 / 44100;
             uint32_t cycles = context->ym2413_millicycles / 1000;
             context->ym2413_millicycles -= cycles * 1000;
-            ym2413_run_cycles (context->ym2413_context, cycles);
+            ym2413_run_cycles (context->ym2413_context, context->ym2413_clock, cycles);
         }
 
         /* Subtract this sample's delay */
@@ -364,10 +359,9 @@ static void vgm_player_run (void *context_ptr, uint32_t ms)
     }
 
     /* Check if we need a new visualizer frame. 60 fps. */
-    context->usecs += ms * 1000;
-    if (context->usecs > (1000000 / 60))
+    if (context->frame_sample_counter >= 735)
     {
-        context->usecs -= 1000000 / 60;
+        context->frame_sample_counter -= 735;
         vgm_player_draw_frame (context);
     }
 }
@@ -462,7 +456,7 @@ VGM_Player_Context *vgm_player_init (void)
 
     /* Start playing */
     context->index = context->vgm_start;
-    state.clock_rate = context->sn76489_clock ? context->sn76489_clock : context->ym2413_clock;
+    state.clock_rate = 44100;
     state.run = RUN_STATE_RUNNING;
 
     return context;

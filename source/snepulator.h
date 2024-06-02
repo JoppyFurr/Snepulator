@@ -12,6 +12,7 @@
 #define AUDIO_SAMPLE_RATE 48000
 
 /* Clock Rates */
+#define CLOCK_1_MHZ                 1000000
 #define NTSC_COLOURBURST_FREQ       3579545
 #define PAL_COLOURBURST_4_5_FREQ    3546895
 
@@ -103,7 +104,7 @@ typedef struct Snepulator_State_s {
     void      (*audio_callback) (void *, int16_t *stream, uint32_t count);
     void      (*cleanup) (void *);
     uint8_t * (*get_rom_hash) (void *);
-    void      (*run_callback) (void *, uint32_t ms);
+    void      (*run_callback) (void *, uint32_t cycles);
     void      (*soft_reset) (void);
     void      (*sync) (void *);
     void      (*state_save) (void *, const char *filename);

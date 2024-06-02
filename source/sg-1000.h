@@ -28,7 +28,7 @@ typedef struct SG_1000_Context_s {
     TMS9928A_Context *vdp_context;
     SN76489_Context *psg_context;
     SG_1000_HW_State hw_state;
-    uint64_t millicycles;
+    uint32_t pending_cycles;
 
     /* Settings */
     Video_Format format;

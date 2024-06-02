@@ -98,7 +98,7 @@ void sn76489_data_write (SN76489_Context *context, uint8_t data);
 void sn76489_get_samples (SN76489_Context *context, int16_t *stream, uint32_t len);
 
 /* Run the PSG for a number of CPU clock cycles. */
-void psg_run_cycles (SN76489_Context *context, uint64_t cycles);
+void sn76489_run_cycles (SN76489_Context *context, uint32_t clock_rate, uint32_t cycles);
 
 /* Export sn76489 state. */
 void sn76489_state_save (SN76489_Context *context);

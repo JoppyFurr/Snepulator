@@ -65,16 +65,16 @@ static void logo_draw_frame (Logo_Context *context)
 /*
  * Run the logo for the specified length of time.
  */
-static void logo_run (void *context_ptr, uint32_t ms)
+static void logo_run (void *context_ptr, uint32_t usecs)
 {
     Logo_Context *context = (Logo_Context *) context_ptr;
-    static uint32_t usecs = 0;
+    static uint32_t pending_usecs = 0;
 
-    usecs += ms * 1000;
+    pending_usecs += usecs;
 
-    if (usecs > 16666)
+    if (pending_usecs > 16666)
     {
-        usecs -= 16666;
+        pending_usecs -= 16666;
         logo_draw_frame (context);
     }
 }
@@ -102,6 +102,7 @@ Logo_Context *logo_init (void)
 
     /* Hook up callbacks */
     state.run_callback = logo_run;
+    state.clock_rate = CLOCK_1_MHZ;
 
     /* Begin animation */
     // state.run = RUN_STATE_RUNNING;

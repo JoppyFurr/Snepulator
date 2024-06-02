@@ -160,7 +160,13 @@ void *main_emulation_loop (void *data)
         pthread_mutex_lock (&run_mutex);
         if (state.run == RUN_STATE_RUNNING || state.console == CONSOLE_LOGO)
         {
-            state.run_callback (state.console_context, ticks_to_run);
+            /*
+             * Note: Care is not taken here for remainders of integer division.
+             *       Emulation and GUI are soon going to be rolled into the same
+             *       thread. When that happens, the division will be done properly.
+             */
+            uint32_t clocks_to_run = state.clock_rate * ticks_to_run / 1000;
+            state.run_callback (state.console_context, clocks_to_run);
         }
         else if (state.run == RUN_STATE_PAUSED)
         {

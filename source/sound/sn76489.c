@@ -161,7 +161,7 @@ SN76489_Context *sn76489_init (void)
 /*
  * Run the PSG for a number of CPU clock cycles
  */
-void _psg_run_cycles (SN76489_Context *context, uint64_t cycles)
+void _sn76489_run_cycles (SN76489_Context *context, uint32_t clock_rate, uint32_t cycles)
 {
     /* Divide the system clock by 16, store the excess cycles for next time */
     static uint32_t excess = 0;
@@ -171,10 +171,9 @@ void _psg_run_cycles (SN76489_Context *context, uint64_t cycles)
 
     /* Reset the ring buffer if the clock rate changes */
     if (state.console_context != NULL &&
-        context->clock_rate != (state.clock_rate >> 4))
+        clock_rate != context->clock_rate)
     {
-        context->clock_rate = state.clock_rate >> 4;
-
+        context->clock_rate = clock_rate;
         context->read_index = 0;
         context->write_index = 0;
         context->completed_cycles = 0;
@@ -182,7 +181,7 @@ void _psg_run_cycles (SN76489_Context *context, uint64_t cycles)
 
     /* If we're about to overwrite samples that haven't been read yet,
      * skip the read_index forward to discard some of the backlog. */
-    if (context->write_index + (psg_cycles * AUDIO_SAMPLE_RATE / context->clock_rate) >= context->read_index + SN76489_RING_SIZE)
+    if (context->write_index + ((uint64_t) psg_cycles * AUDIO_SAMPLE_RATE / (context->clock_rate >> 4)) >= context->read_index + SN76489_RING_SIZE)
     {
         context->read_index += SN76489_RING_SIZE / 4;
     }
@@ -264,7 +263,7 @@ void _psg_run_cycles (SN76489_Context *context, uint64_t cycles)
             {
                 /* Phase ranges from 0 (no delay) to 31 (0.97 samples delay) */
                 context->phase_ring_l [context->write_index % SN76489_RING_SIZE] =
-                    (context->completed_cycles * AUDIO_SAMPLE_RATE * 32 / context->clock_rate) % 32;
+                    (context->completed_cycles * AUDIO_SAMPLE_RATE * 32 / (context->clock_rate >> 4)) % 32;
                 context->previous_sample_l = context->sample_ring_l [context->write_index % SN76489_RING_SIZE];
             }
 
@@ -278,12 +277,12 @@ void _psg_run_cycles (SN76489_Context *context, uint64_t cycles)
             {
                 /* Phase ranges from 0 (no delay) to 31 (0.97 samples delay) */
                 context->phase_ring_r [context->write_index % SN76489_RING_SIZE] =
-                    (context->completed_cycles * AUDIO_SAMPLE_RATE * 32 / context->clock_rate) % 32;
+                    (context->completed_cycles * AUDIO_SAMPLE_RATE * 32 / (context->clock_rate >> 4)) % 32;
                 context->previous_sample_r = context->sample_ring_r [context->write_index % SN76489_RING_SIZE];
             }
 
             /* If this is the final value for this sample, pass it to the band limiter */
-            if ((context->completed_cycles + 1) * AUDIO_SAMPLE_RATE / context->clock_rate > context->write_index)
+            if ((context->completed_cycles + 1) * AUDIO_SAMPLE_RATE / (context->clock_rate >> 4) > context->write_index)
             {
                 band_limit_samples (context->bandlimit_context_l, &context->sample_ring_l [context->write_index % SN76489_RING_SIZE],
                                                                   &context->phase_ring_l [context->write_index % SN76489_RING_SIZE], 1);
@@ -303,12 +302,12 @@ void _psg_run_cycles (SN76489_Context *context, uint64_t cycles)
             {
                 /* Phase ranges from 0 (no delay) to 31 (0.97 samples delay) */
                 context->phase_ring_l [context->write_index % SN76489_RING_SIZE] =
-                    (context->completed_cycles * AUDIO_SAMPLE_RATE * 32 / context->clock_rate) % 32;
+                    (context->completed_cycles * AUDIO_SAMPLE_RATE * 32 / (context->clock_rate >> 4)) % 32;
                 context->previous_sample_l = context->sample_ring_l [context->write_index % SN76489_RING_SIZE];
             }
 
             /* If this is the final value for this sample, pass it to the band limiter */
-            if ((context->completed_cycles + 1) * AUDIO_SAMPLE_RATE / context->clock_rate > context->write_index)
+            if ((context->completed_cycles + 1) * AUDIO_SAMPLE_RATE / (context->clock_rate >> 4) > context->write_index)
             {
                 band_limit_samples (context->bandlimit_context_l, &context->sample_ring_l [context->write_index % SN76489_RING_SIZE],
                                                                   &context->phase_ring_l [context->write_index % SN76489_RING_SIZE], 1);
@@ -316,9 +315,8 @@ void _psg_run_cycles (SN76489_Context *context, uint64_t cycles)
         }
 
         /* Map from the amount of time emulated (completed cycles / clock rate) to the sound card sample rate */
-        /* TODO: Consider storing the real non-shifted clock_rate, and re-ordering the equations to avoid lost precision */
         context->completed_cycles++;
-        context->write_index = context->completed_cycles * AUDIO_SAMPLE_RATE / context->clock_rate;
+        context->write_index = context->completed_cycles * AUDIO_SAMPLE_RATE / (context->clock_rate >> 4);
     }
 
 #ifdef DEVELOPER_BUILD
@@ -336,10 +334,10 @@ void _psg_run_cycles (SN76489_Context *context, uint64_t cycles)
  *  1. The emulation loop, this is the usual case.
  *  2. SDL may request additional samples to keep the sound card from running out.
  */
-void psg_run_cycles (SN76489_Context *context, uint64_t cycles)
+void sn76489_run_cycles (SN76489_Context *context, uint32_t clock_rate, uint32_t cycles)
 {
     pthread_mutex_lock (&context->mutex);
-    _psg_run_cycles (context, cycles);
+    _sn76489_run_cycles (context, clock_rate, cycles);
     pthread_mutex_unlock (&context->mutex);
 }
 
@@ -352,10 +350,10 @@ void sn76489_get_samples (SN76489_Context *context, int16_t *stream, uint32_t co
 {
     if (context->read_index + count > context->write_index)
     {
-        int shortfall = count - (context->write_index - context->read_index);
+        uint64_t shortfall = count - (context->write_index - context->read_index);
 
         /* Note: We add one to the shortfall to account for integer division */
-        psg_run_cycles (context, (shortfall + 1) * (context->clock_rate << 4) / AUDIO_SAMPLE_RATE);
+        sn76489_run_cycles (context, context->clock_rate, (shortfall + 1) * context->clock_rate / AUDIO_SAMPLE_RATE);
     }
 
     /* Take samples and pass them to the sound card */

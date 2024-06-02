@@ -449,18 +449,18 @@ static void colecovision_io_write (void *context_ptr, uint8_t addr, uint8_t data
 
 
 /*
- * Emulate the ColecoVision for the specified length of time.
+ * Emulate the ColecoVision for the specified number of clock cycles.
  * Called with the run_mutex held.
  */
-static void colecovision_run (void *context_ptr, uint32_t ms)
+static void colecovision_run (void *context_ptr, uint32_t cycles)
 {
     ColecoVision_Context *context = (ColecoVision_Context *) context_ptr;
-    uint64_t lines;
+    uint32_t lines;
 
-    /* Convert the time into lines to run, storing the remainder as millicycles. */
-    context->millicycles += (uint64_t) ms * state.clock_rate;
-    lines = context->millicycles / 228000;
-    context->millicycles -= lines * 228000;
+    /* Convert cycles into lines to run, storing the remainder for next time. */
+    context->pending_cycles += cycles;
+    lines = context->pending_cycles / 228;
+    context->pending_cycles -= lines * 228;
 
     while (lines--)
     {
@@ -468,7 +468,7 @@ static void colecovision_run (void *context_ptr, uint32_t ms)
 
         /* 228 CPU cycles per scanline */
         z80_run_cycles (context->z80_context, 228 + context->overclock);
-        psg_run_cycles (context->psg_context, 228);
+        sn76489_run_cycles (context->psg_context, state.clock_rate, 228);
         tms9928a_run_one_scanline (context->vdp_context);
     }
 }

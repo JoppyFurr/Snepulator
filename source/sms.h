@@ -61,7 +61,7 @@ typedef struct SMS_Context_s {
     bool export_paddle;
     bool reset_button;
     uint32_t reset_button_timeout;
-    uint64_t millicycles;
+    uint64_t pending_cycles;
 
     /* TODO: Move the audio_control register into the state when updating the format.
      *       for now it lives in the context to avoid changing the size of the state. */

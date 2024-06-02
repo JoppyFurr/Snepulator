@@ -1227,22 +1227,22 @@ static void sms_process_3d_field (SMS_Context *context)
 
 
 /*
- * Emulate the SMS for the specified length of time.
+ * Emulate the SMS for the specified number of clock cycles.
  * Called with the run_mutex held.
  */
-static void sms_run (void *context_ptr, uint32_t ms)
+static void sms_run (void *context_ptr, uint32_t cycles)
 {
     SMS_Context *context = (SMS_Context *) context_ptr;
     uint32_t lines;
 
-    /* Convert the time into lines to run, storing the remainder as millicycles. */
-    context->millicycles += (uint64_t) ms * state.clock_rate;
-    lines = context->millicycles / 228000;
-    context->millicycles -= lines * 228000;
+    /* Convert cycles into lines to run, storing the remainder for next time. */
+    context->pending_cycles += cycles;
+    lines = context->pending_cycles / 228;
+    context->pending_cycles -= lines * 228;
 
     if (gamepad [1].type == GAMEPAD_TYPE_SMS_PADDLE)
     {
-        gamepad_paddle_tick (ms);
+        gamepad_paddle_tick (cycles);
     }
 
     while (lines--)
@@ -1257,11 +1257,11 @@ static void sms_run (void *context_ptr, uint32_t ms)
         z80_run_cycles (context->z80_context, 1);
         sms_vdp_update_line_interrupt (context->vdp_context);
         z80_run_cycles (context->z80_context, 201);
-        psg_run_cycles (context->psg_context, 228);
+        sn76489_run_cycles (context->psg_context, state.clock_rate, 228);
 
         if (state.fm_sound)
         {
-            ym2413_run_cycles (context->ym2413_context, 228);
+            ym2413_run_cycles (context->ym2413_context, state.clock_rate, 228);
         }
 
         if (context->overclock)
