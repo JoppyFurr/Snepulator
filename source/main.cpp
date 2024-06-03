@@ -306,6 +306,12 @@ int main_gui_loop (void)
             }
         }
 
+        /* Animate the pause screen. */
+        if (state.run == RUN_STATE_PAUSED)
+        {
+            snepulator_pause_animate ();
+        }
+
         /* Scale the image to a multiple of SMS resolution */
         state.video_scale = (state.host_width / state.video_width) > (state.host_height / state.video_height) ?
                             (state.host_height / state.video_height) : (state.host_width  / state.video_width);
@@ -378,12 +384,6 @@ int main_gui_loop (void)
 
         /* Keep track of when ImGui wants the mouse input */
         state.cursor_in_gui = ImGui::GetIO ().WantCaptureMouse;
-
-        /* Animate the pause screen. */
-        if (state.run == RUN_STATE_PAUSED)
-        {
-            snepulator_pause_animate ();
-        }
 
         /* Video-out display area. */
         ImGui::PushStyleVar (ImGuiStyleVar_WindowPadding, ImVec2 (0.0, 0.0));
