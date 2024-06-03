@@ -3,7 +3,6 @@
  * Sega SG-1000 implementation.
  */
 
-#include <assert.h>
 #include <pthread.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -477,8 +476,6 @@ static void sg_1000_run (void *context_ptr, uint32_t cycles)
 
     while (lines--)
     {
-        assert (lines >= 0);
-
         /* 228 CPU cycles per scanline */
         z80_run_cycles (context->z80_context, 228 + context->overclock);
         sn76489_run_cycles (context->psg_context, state.clock_rate, 228);

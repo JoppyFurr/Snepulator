@@ -3,7 +3,6 @@
  * Sega Master System implementation.
  */
 
-#include <assert.h>
 #include <errno.h>
 #include <pthread.h>
 #include <stdio.h>
@@ -1247,8 +1246,6 @@ static void sms_run (void *context_ptr, uint32_t cycles)
 
     while (lines--)
     {
-        assert (lines >= 0);
-
         /* 228 CPU cycles per scanline */
         z80_run_cycles (context->z80_context, 14);
         sms_vdp_update_x_scroll_latch (context->vdp_context);
