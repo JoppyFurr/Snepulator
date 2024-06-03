@@ -903,16 +903,16 @@ void sms_vdp_run_one_scanline (TMS9928A_Context *context)
 #if DEVELOPER_BUILD
         /* Update statistics (rolling average) */
         /* TODO: Move into a common "frame complete" function */
-        static int vdp_previous_completion_time = 0;
-        static int vdp_current_time = 0;
-        vdp_current_time = util_get_ticks ();
-        int frame_time_taken = vdp_current_time - vdp_previous_completion_time;
-        if (frame_time_taken != 0)
+        static int64_t vdp_previous_completion_time = 0;
+        static int64_t vdp_current_time = 0;
+        vdp_current_time = util_get_ticks_us ();
+        if (vdp_previous_completion_time)
         {
-            state.vdp_framerate *= 0.95;
-            state.vdp_framerate += 0.05 * (1000.0 / frame_time_taken);
+            state.vdp_framerate *= 0.98;
+            state.vdp_framerate += 0.02 * (1000000.0 / (vdp_current_time - vdp_previous_completion_time));
         }
         vdp_previous_completion_time = vdp_current_time;
+
 #endif
     }
 

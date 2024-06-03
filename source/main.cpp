@@ -417,13 +417,13 @@ int main_gui_loop (void)
 
 #if DEVELOPER_BUILD
         /* Update statistics (rolling average) */
-        static int host_previous_completion_time = 0;
-        static int host_current_time = 0;
-        host_current_time = util_get_ticks ();
+        static uint64_t host_previous_completion_time = 0;
+        static uint64_t host_current_time = 0;
+        host_current_time = util_get_ticks_us ();
         if (host_previous_completion_time)
         {
-            state.host_framerate *= 0.95;
-            state.host_framerate += 0.05 * (1000.0 / (host_current_time - host_previous_completion_time));
+            state.host_framerate *= 0.98;
+            state.host_framerate += 0.02 * (1000000.0 / (host_current_time - host_previous_completion_time));
         }
         host_previous_completion_time = host_current_time;
 #endif
