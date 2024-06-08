@@ -138,6 +138,8 @@ SN76489_Context *sn76489_init (void)
     SN76489_Context *context = calloc (1, sizeof (SN76489_Context));
     pthread_mutex_init (&context->mutex, NULL);
 
+    context->clock_rate = NTSC_COLOURBURST_FREQ;
+
     context->state.vol_0 = 0x0f;
     context->state.vol_1 = 0x0f;
     context->state.vol_2 = 0x0f;
@@ -349,7 +351,7 @@ void sn76489_get_samples (SN76489_Context *context, int16_t *stream, uint32_t co
 {
     if (context->read_index + count > context->write_index)
     {
-        uint64_t shortfall = count - (context->write_index - context->read_index);
+        uint32_t shortfall = count - (context->write_index - context->read_index);
 
         /* Note: We add one to the shortfall to account for integer division */
         sn76489_run_cycles (context, context->clock_rate, (shortfall + 1) * context->clock_rate / AUDIO_SAMPLE_RATE);

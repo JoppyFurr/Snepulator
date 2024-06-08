@@ -1040,7 +1040,7 @@ void ym2413_get_samples (YM2413_Context *context, int16_t *stream, uint32_t coun
 {
     if (context->read_index + count > context->write_index)
     {
-        uint64_t shortfall = count - (context->write_index - context->read_index);
+        uint32_t shortfall = count - (context->write_index - context->read_index);
 
         /* Note: We add one to the shortfall to account for integer division */
         ym2413_run_cycles (context, context->clock_rate, (shortfall + 1) * context->clock_rate / AUDIO_SAMPLE_RATE);
@@ -1078,6 +1078,9 @@ YM2413_Context *ym2413_init (void)
 
     YM2413_Context *context = calloc (1, sizeof (YM2413_Context));
     pthread_mutex_init (&context->mutex, NULL);
+
+    context->clock_rate = NTSC_COLOURBURST_FREQ;
+
     context->state.sd_lfsr = 0x000001;
     context->state.hh_lfsr = 0x000003;
 
