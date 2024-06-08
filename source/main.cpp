@@ -31,8 +31,6 @@ extern "C" {
 #include "sound/ym2413.h"
 #include "sms.h"
 #include "colecovision.h"
-
-extern Snepulator_Gamepad gamepad [3];
 }
 
 #ifdef TARGET_WINDOWS
@@ -51,7 +49,6 @@ extern Snepulator_Gamepad gamepad [3];
 /* Global state */
 Snepulator_State state;
 pthread_mutex_t video_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t run_mutex = PTHREAD_MUTEX_INITIALIZER;
 bool config_capture_events = false;
 SDL_Window *window = NULL;
 SDL_GLContext glcontext = NULL;
@@ -139,57 +136,38 @@ void snepulator_audio_callback (void *userdata, uint8_t *stream, int len)
 
 
 /*
- * Thread to run the actual console emulation.
+ * Callback made regularly to keep the emulation ticking.
  *
- * Completely separated from the GUI, time is kept using util_get_ticks ().
+ * This should keep time passing and audio generated smoothly; even when the
+ * GUI is busy with things like window resizing or controller detection.
  */
-void *main_emulation_loop (void *data)
+uint32_t emulation_callback (uint32_t interval, void *param)
 {
-    while (state.run != RUN_STATE_EXIT)
+    if (state.run == RUN_STATE_EXIT)
     {
-        uint32_t ticks_now = util_get_ticks ();
-        uint32_t ticks_to_run = ticks_now - state.ticks_previous;
-
-        /* If we miss a large amount of time, the host may have been
-         * put into standby mode and then woken up. Skip the extra time. */
-        if (ticks_to_run > 2000)
-        {
-            ticks_to_run = 1;
-        }
-
-        pthread_mutex_lock (&run_mutex);
-        if (state.run == RUN_STATE_RUNNING || state.console == CONSOLE_LOGO)
-        {
-            /*
-             * Note: Care is not taken here for remainders of integer division.
-             *       Emulation and GUI are soon going to be rolled into the same
-             *       thread. When that happens, the division will be done properly.
-             */
-            uint32_t clocks_to_run = state.clock_rate * ticks_to_run / 1000;
-            state.run_callback (state.console_context, clocks_to_run);
-        }
-        else if (state.run == RUN_STATE_PAUSED)
-        {
-            /* Allow the console pause button to unpause emulation */
-            static bool pause_prev = false;
-            bool pause_now = gamepad [1].state [GAMEPAD_BUTTON_START];
-
-            if (pause_now && !pause_prev)
-            {
-                snepulator_pause_set (false);
-            }
-            pause_prev = pause_now;
-        }
-        pthread_mutex_unlock (&run_mutex);
-
-        state.ticks_previous = ticks_now;
-
-        /* Sleep */
-        util_delay (1);
+        return 0;
     }
 
-    pthread_exit (NULL);
-    return NULL;
+    /* Work out how much time to emulate. */
+    uint64_t run_time = util_get_ticks_us ();
+    uint64_t time_us = run_time - state.run_timer;
+    state.run_timer = run_time;
+
+    /* If we miss a large amount of time, the host may have
+     * been put into standby mode and then woken up. */
+    if (time_us > 2000000)
+    {
+        time_us = 1000;
+    }
+
+    /* Convert time into cycles. */
+    state.micro_clocks += time_us * state.clock_rate;
+    uint64_t clocks_to_run = state.micro_clocks / 1000000;
+    state.micro_clocks -= clocks_to_run * 1000000;
+
+    snepulator_run (clocks_to_run);
+
+    return interval;
 }
 
 
@@ -209,7 +187,7 @@ void toggle_fullscreen (void)
 /*
  * Main GUI loop.
  */
-int main_gui_loop (void)
+int main_loop (void)
 {
     /* Create the video-out texture, initialise with an empty image */
     glGenTextures (1, &video_out_texture);
@@ -641,19 +619,14 @@ int main (int argc, char **argv)
 
     /* Start emulation, or the logo animation */
     snepulator_system_init ();
+    SDL_TimerID emulation_timer = SDL_AddTimer (1, emulation_callback, NULL);
 
-    /* Create the emulation thread */
-    pthread_t emulation_thread;
-    if (pthread_create (&emulation_thread, NULL, main_emulation_loop, NULL) != 0)
-    {
-        snepulator_error ("pThread Error", "Unable to create emulation_thread.");
-    }
+    /* Run the main loop until the user quits. */
+    main_loop ();
 
-    /* Run the main GUI loop until the user quits. */
-    main_gui_loop ();
-
+    /* Tidy up */
+    SDL_RemoveTimer (emulation_timer);
     snepulator_reset ();
-    pthread_join (emulation_thread, NULL);
 
     if (state.error_title)
     {

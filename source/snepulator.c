@@ -32,9 +32,12 @@
 /* Images */
 #include "../images/snepulator_paused.c"
 
+pthread_mutex_t run_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+#include "gamepad.h"
 extern Snepulator_State state;
 extern pthread_mutex_t video_mutex;
-extern pthread_mutex_t run_mutex;
+extern Snepulator_Gamepad gamepad [3];
 
 
 /*
@@ -575,7 +578,8 @@ void snepulator_reset (void)
     }
 
     /* Reset the tick counter */
-    state.ticks_previous = util_get_ticks ();
+    state.run_timer = util_get_ticks_us ();
+    state.micro_clocks = 0;
     state.clock_rate = 0;
 }
 
@@ -598,6 +602,36 @@ void snepulator_rom_set (const char *path)
 
     snepulator_system_init ();
 }
+
+
+/*
+ * Run emulation for the specified amount of time.
+ */
+void snepulator_run (uint32_t cycles)
+{
+    pthread_mutex_lock (&run_mutex);
+
+    if (state.run == RUN_STATE_PAUSED)
+    {
+        /* Allow the console pause button to unpause emulation */
+        static bool pause_prev = false;
+        bool pause_now = gamepad [1].state [GAMEPAD_BUTTON_START];
+
+        if (pause_now && !pause_prev)
+        {
+            snepulator_pause_set (false);
+        }
+        pause_prev = pause_now;
+    }
+
+    if (state.run == RUN_STATE_RUNNING || state.console == CONSOLE_LOGO)
+    {
+        state.run_callback (state.console_context, cycles);
+    }
+
+    pthread_mutex_unlock (&run_mutex);
+}
+
 
 
 /*

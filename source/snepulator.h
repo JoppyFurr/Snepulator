@@ -68,7 +68,8 @@ typedef struct Snepulator_State_s {
     uint32_t mouse_time;
 
     /* Timing */
-    uint32_t ticks_previous;
+    uint64_t run_timer;
+    uint64_t micro_clocks;
     uint32_t sync_time;
 
     /* Files */
@@ -192,6 +193,9 @@ void snepulator_reset (void);
 
 /* Set the currently running ROM and initialise the system. */
 void snepulator_rom_set (const char *path);
+
+/* Run emulation for the specified amount of time. */
+void snepulator_run (uint32_t cycles);
 
 /* Load the console state from file. */
 void snepulator_state_load (void *context, const char *filename);
