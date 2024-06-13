@@ -132,15 +132,13 @@ static void sg_1000_frame_done (void *context_ptr)
     SG_1000_Context *context = (SG_1000_Context *) context_ptr;
     TMS9928A_Context *vdp_context = context->vdp_context;
 
-    pthread_mutex_lock (&video_mutex);
+    snepulator_frame_done (vdp_context->frame_buffer);
 
-    memcpy (state.video_out_data, vdp_context->frame_buffer, sizeof (vdp_context->frame_buffer));
+    /* TODO: Make these parameters */
     state.video_start_x = vdp_context->video_start_x;
     state.video_start_y = vdp_context->video_start_y;
     state.video_width   = vdp_context->video_width;
     state.video_height  = vdp_context->video_height;
-
-    pthread_mutex_unlock (&video_mutex);
 }
 
 

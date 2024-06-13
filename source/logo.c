@@ -53,10 +53,7 @@ static void logo_draw_frame (Logo_Context *context)
             }
         }
 
-        pthread_mutex_lock (&video_mutex);
-        memcpy (state.video_out_data, context->frame_buffer, sizeof (context->frame_buffer));
-        pthread_mutex_unlock (&video_mutex);
-
+        snepulator_frame_done (context->frame_buffer);
         context->frame++;
     }
 }

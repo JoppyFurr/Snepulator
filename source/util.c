@@ -14,6 +14,7 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include <zlib.h>
+#include <pthread.h>
 
 #include <SDL2/SDL.h>
 
@@ -27,6 +28,7 @@
 
 /* Global state */
 extern Snepulator_State state;
+extern pthread_mutex_t video_mutex;
 
 /* File state */
 static struct timespec time_start;
@@ -373,15 +375,18 @@ void util_take_screenshot (void)
     uint8_t *buffer = malloc (image_size);
 
     /* Fill the newly allocated buffer */
+    pthread_mutex_lock (&video_mutex);
+    uint_pixel *frame_buffer = snepulator_get_current_frame ();
     for (uint32_t y = 0; y < ihdr.height; y++)
     {
         for (uint32_t x = 0; x < ihdr.width; x++)
         {
-            buffer [(x + y * ihdr.width) * 3 + 0] = state.video_out_data [start_x + x + (start_y + y) * stride].r;
-            buffer [(x + y * ihdr.width) * 3 + 1] = state.video_out_data [start_x + x + (start_y + y) * stride].g;
-            buffer [(x + y * ihdr.width) * 3 + 2] = state.video_out_data [start_x + x + (start_y + y) * stride].b;
+            buffer [(x + y * ihdr.width) * 3 + 0] = frame_buffer [start_x + x + (start_y + y) * stride].r;
+            buffer [(x + y * ihdr.width) * 3 + 1] = frame_buffer [start_x + x + (start_y + y) * stride].g;
+            buffer [(x + y * ihdr.width) * 3 + 2] = frame_buffer [start_x + x + (start_y + y) * stride].b;
         }
     }
+    pthread_mutex_unlock (&video_mutex);
 
     /* Encode the image with libspng */
     spng_ctx *spng_context = spng_ctx_new (SPNG_CTX_ENCODER);

@@ -29,7 +29,6 @@
 
 extern Snepulator_State state;
 extern Snepulator_Gamepad gamepad [3];
-extern pthread_mutex_t video_mutex;
 
 /* 0: Output, 1: Input */
 #define SMS_IO_TR_A_DIRECTION (1 << 0)
@@ -222,24 +221,22 @@ static void sms_frame_done (void *context_ptr)
         }
     }
 
-    pthread_mutex_lock (&video_mutex);
-
     if (context->video_3d_field != SMS_3D_FIELD_NONE)
     {
         sms_process_3d_field (context);
+        snepulator_frame_done (context->frame_buffer_3d);
     }
     else
     {
-        memcpy (state.video_out_data, vdp_context->frame_buffer, sizeof (vdp_context->frame_buffer));
+        snepulator_frame_done (vdp_context->frame_buffer);
     }
 
+    /* TODO: Have these as a parameter for snepulator_frame_done? */
     state.video_start_x     = vdp_context->video_start_x;
     state.video_start_y     = vdp_context->video_start_y;
     state.video_width       = vdp_context->video_width;
     state.video_height      = vdp_context->video_height;
     state.video_blank_left  = vdp_context->video_blank_left;
-
-    pthread_mutex_unlock (&video_mutex);
 }
 
 
@@ -1205,21 +1202,21 @@ static void sms_process_3d_field (SMS_Context *context)
 
         if (update_red)
         {
-            state.video_out_data [i].r = pixel.r;
+            context->frame_buffer_3d [i].r = pixel.r;
         }
         if (update_green)
         {
-            state.video_out_data [i].g = pixel.g;
+            context->frame_buffer_3d [i].g = pixel.g;
         }
         if (update_blue)
         {
-            state.video_out_data [i].b = pixel.b;
+            context->frame_buffer_3d [i].b = pixel.b;
         }
 
         /* Special case where blue is not used */
         if (state.video_3d_mode == VIDEO_3D_RED_GREEN)
         {
-            state.video_out_data [i].b = 0.0;
+            context->frame_buffer_3d [i].b = 0.0;
         }
     }
 }

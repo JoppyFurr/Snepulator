@@ -57,7 +57,6 @@ typedef struct SMS_Context_s {
     TMS9928A_Context *vdp_context;
     SN76489_Context *psg_context;
     YM2413_Context *ym2413_context;
-    SMS_3D_Field video_3d_field;
     bool export_paddle;
     bool reset_button;
     uint32_t reset_button_timeout;
@@ -66,6 +65,10 @@ typedef struct SMS_Context_s {
     /* TODO: Move the audio_control register into the state when updating the format.
      *       for now it lives in the context to avoid changing the size of the state. */
     uint8_t audio_control;
+
+    /* 3D Support */
+    SMS_3D_Field video_3d_field;
+    uint_pixel frame_buffer_3d [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
 
     /* Settings */
     Video_Format format;

@@ -48,7 +48,6 @@ extern "C" {
 
 /* Global state */
 Snepulator_State state;
-pthread_mutex_t video_mutex = PTHREAD_MUTEX_INITIALIZER;
 bool config_capture_events = false;
 SDL_Window *window = NULL;
 SDL_GLContext glcontext = NULL;
@@ -103,7 +102,7 @@ void snepulator_render_error ()
         ImGui::Spacing ();
         ImGui::SameLine (ImGui::GetContentRegionAvail().x + 16 - 128);
         if (ImGui::Button ("Close", ImVec2 (120,0))) {
-            snepulator_clear_screen ();
+            snepulator_clear_video ();
             ImGui::CloseCurrentPopup ();
 
             /* Reset the error popup */
@@ -201,7 +200,7 @@ int main_loop (void)
                   0, GL_RGB, GL_FLOAT, NULL);
 
     /* Set up the GLSL shaders */
-    snepulator_clear_screen ();
+    snepulator_clear_video ();
     snepulator_shader_setup ();
 
     /* Main loop */
@@ -291,6 +290,8 @@ int main_loop (void)
         }
 
         /* Scale the image to a multiple of SMS resolution */
+        /* TODO: While it generally doesn't change mid-game, the video width
+         *       and height should be tied to the particular frame in the ring. */
         state.video_scale = (state.host_width / state.video_width) > (state.host_height / state.video_height) ?
                             (state.host_height / state.video_height) : (state.host_width  / state.video_width);
 

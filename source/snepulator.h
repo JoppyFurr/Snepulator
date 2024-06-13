@@ -117,7 +117,18 @@ typedef struct Snepulator_State_s {
 #endif
 
     /* Console video output */
-    uint_pixel  video_out_data [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
+    /* Note: Unlike the audio rings, in this case the read index is not
+     *       the next frame to be read; but rather the frame currently
+     *       being shown. This is because the frame may be shown a second
+     *       time, but we don't want to wait for another memcpy.
+     *       To simplify the comparisons, the write index will also point
+     *       to the most recently written frame rather than the next frame
+     *       to be written.
+     *       This should change to match the audio rings when we start
+     *       passing pointers instead of copying buffers. */
+    uint_pixel  video_ring [3] [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
+    uint32_t    video_read_index;
+    uint32_t    video_write_index;
     uint32_t    video_start_x;              /* Start of active area. */
     uint32_t    video_start_y;
     uint32_t    video_width;                /* Size of the active area. */
@@ -156,7 +167,7 @@ typedef struct Snepulator_State_s {
 void snepulator_bios_set (const char *path);
 
 /* Clear the screen. */
-void snepulator_clear_screen (void);
+void snepulator_clear_video (void);
 
 /* Import settings from configuration from file. */
 int snepulator_config_import (void);
@@ -169,6 +180,15 @@ void snepulator_disable_blanking_set (bool disable_blanking);
 
 /* Enable the FM Sound Unit for the SMS. */
 void snepulator_fm_sound_set (bool enable);
+
+/* Send a completed frame for display. */
+void snepulator_frame_done (uint_pixel *frame);
+
+/* Get a pointer to the currently displayed frame. */
+uint_pixel *snepulator_get_current_frame (void);
+
+/* Get a pointer to the currently displayed frame. */
+uint_pixel *snepulator_get_next_frame (void);
 
 /* Set whether or not to overclock. */
 void snepulator_overclock_set (bool overclock);

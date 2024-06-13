@@ -220,9 +220,7 @@ static void vgm_player_draw_frame (VGM_Player_Context *context)
     draw_rect (context, 32 + progress, 176, 8, 1, light_grey);
 
     /* Pass the completed frame on for rendering */
-    pthread_mutex_lock (&video_mutex);
-    memcpy (state.video_out_data, context->frame_buffer, sizeof (context->frame_buffer));
-    pthread_mutex_unlock (&video_mutex);
+    snepulator_frame_done (context->frame_buffer);
 
     /* Clear the buffer for the next frame. */
     memset (context->frame_buffer, 0, sizeof (context->frame_buffer));

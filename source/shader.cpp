@@ -11,7 +11,7 @@
  *   ╰───────────┬────────────╯
  *               │ memcpy
  *   ╭───────────┴────────────╮
- *   │  state.video_out_data  │
+ *   │    state.video_ring    │
  *   ╰───────────┬────────────╯
  *               │ glTexImage2D
  *   ╭───────────┴────────────╮
@@ -40,7 +40,6 @@ const char *fragment_shader_source =
 
 extern Snepulator_State state;
 extern GLuint video_out_texture;
-extern pthread_mutex_t video_mutex;
 GLuint shader_program = 0;
 GLuint vertex_array = 0;
 
@@ -145,14 +144,10 @@ void snepulator_shader_callback (const ImDrawList *parent_list, const ImDrawCmd 
     glUseProgram (shader_program);
 
     /* Copy the most recent frame into video_out_texture */
-    /* TODO: Should this happen when the frame is complete instead of here? */
-
     glBindTexture (GL_TEXTURE_2D, video_out_texture);
-    pthread_mutex_lock (&video_mutex);
     glTexImage2D (GL_TEXTURE_2D, 0, GL_RGB,
                   VIDEO_BUFFER_WIDTH, VIDEO_BUFFER_LINES,
-                  0, GL_RGB, GL_UNSIGNED_BYTE, state.video_out_data);
-    pthread_mutex_unlock (&video_mutex);
+                  0, GL_RGB, GL_UNSIGNED_BYTE, snepulator_get_next_frame ());
 
     /* Set the uniforms */
     location = glGetUniformLocation (shader_program, "video_resolution");
