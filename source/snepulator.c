@@ -154,20 +154,20 @@ int snepulator_config_import (void)
     }
 
     /* Video Filter - Defaults to Scanlines */
-    state.video_filter = VIDEO_FILTER_SCANLINES;
+    state.shader = SHADER_SCANLINES;
     if (config_string_get ("video", "filter", &string) == 0)
     {
         if (strcmp (string, "Dot Matrix") == 0)
         {
-            state.video_filter = VIDEO_FILTER_DOT_MATRIX;
+            state.shader = SHADER_DOT_MATRIX;
         }
         else if (strcmp (string, "Linear") == 0)
         {
-            state.video_filter = VIDEO_FILTER_LINEAR;
+            state.shader = SHADER_LINEAR;
         }
         else if (strcmp (string, "Nearest") == 0)
         {
-            state.video_filter = VIDEO_FILTER_NEAREST;
+            state.shader = SHADER_NEAREST;
         }
     }
 
@@ -618,7 +618,6 @@ void snepulator_reset (void)
     state.video_start_y = VIDEO_TOP_BORDER_192;
     state.video_width = 256;
     state.video_height = 192;
-    state.video_has_border = false;
     state.video_blank_left = 0;
 
     /* Auto format default to NTSC */
@@ -810,26 +809,26 @@ void snepulator_video_3d_saturation_set (double saturation)
 /*
  * Set the console video filter.
  */
-void snepulator_video_filter_set (Video_Filter filter)
+void snepulator_video_filter_set (Shader shader)
 {
-    if (filter == VIDEO_FILTER_NEAREST)
+    if (shader == SHADER_NEAREST)
     {
-        state.video_filter = VIDEO_FILTER_NEAREST;
+        state.shader = SHADER_NEAREST;
         config_string_set ("video", "filter", "Nearest");
     }
-    else if (filter == VIDEO_FILTER_LINEAR)
+    else if (shader == SHADER_LINEAR)
     {
-        state.video_filter = VIDEO_FILTER_LINEAR;
+        state.shader = SHADER_LINEAR;
         config_string_set ("video", "filter", "Linear");
     }
-    else if (filter == VIDEO_FILTER_SCANLINES)
+    else if (shader == SHADER_SCANLINES)
     {
-        state.video_filter = VIDEO_FILTER_SCANLINES;
+        state.shader = SHADER_SCANLINES;
         config_string_set ("video", "filter", "Scanlines");
     }
-    else if (filter == VIDEO_FILTER_DOT_MATRIX)
+    else if (shader == SHADER_DOT_MATRIX)
     {
-        state.video_filter = VIDEO_FILTER_DOT_MATRIX;
+        state.shader = SHADER_DOT_MATRIX;
         config_string_set ("video", "filter", "Dot Matrix");
     }
 

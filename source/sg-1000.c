@@ -247,7 +247,6 @@ SG_1000_Context *sg_1000_init (void)
     state.video_start_y    = vdp_context->video_start_y;
     state.video_width      = vdp_context->video_width;
     state.video_height     = vdp_context->video_height;
-    state.video_has_border = true;
 
     /* Hook up the callbacks */
     state.audio_callback = sg_1000_audio_callback;

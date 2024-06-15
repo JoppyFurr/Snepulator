@@ -31,16 +31,28 @@ extern "C" {
 }
 
 /* Shader source code */
-const char *vertex_shader_source =
-    #include "shader.vert"
+static const char *vertex_shader_source =
+    #include "shaders/shader.vert"
 ;
-const char *fragment_shader_source =
-    #include "shader.frag"
-;
+
+static const char *fragment_shader_source [SHADER_COUNT] =
+{
+    [SHADER_NEAREST] =
+        #include "shaders/nearest.frag"
+        ,
+    [SHADER_LINEAR] =
+        #include "shaders/linear.frag"
+        ,
+    [SHADER_SCANLINES] =
+        #include "shaders/scanlines.frag"
+        ,
+    [SHADER_DOT_MATRIX] =
+        #include "shaders/dot_matrix.frag"
+};
 
 extern Snepulator_State state;
 extern GLuint video_out_texture;
-GLuint shader_program = 0;
+GLuint shader_programs [SHADER_COUNT] = { };
 GLuint vertex_array = 0;
 
 
@@ -75,11 +87,8 @@ void snepulator_shader_setup (void)
     glVertexAttribPointer (0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof (GLfloat), (void *) 0);
     glEnableVertexAttribArray (0);
 
-    /*********************
-     **  Vertex Shader  **
-     *********************/
-    GLuint vertex_shader = 0;
-    vertex_shader = glCreateShader (GL_VERTEX_SHADER);
+    /* Compile the common vertex shader */
+    GLuint vertex_shader = glCreateShader (GL_VERTEX_SHADER);
     glShaderSource (vertex_shader, 1, &vertex_shader_source, NULL);
     glCompileShader (vertex_shader);
 
@@ -91,40 +100,40 @@ void snepulator_shader_setup (void)
         snepulator_error ("Vertex Shader", info_log);
     }
 
-    /***********************
-     **  Fragment Shader  **
-     ***********************/
-    GLuint fragment_shader = 0;
-    fragment_shader = glCreateShader (GL_FRAGMENT_SHADER);
-    glShaderSource (fragment_shader, 1, &fragment_shader_source, NULL);
-    glCompileShader (fragment_shader);
-
-    glGetShaderiv (fragment_shader, GL_COMPILE_STATUS, &gl_success);
-    if (!gl_success)
+    for (uint32_t i = 0; i < 4; i++)
     {
-        char info_log [512] = { '\0' };
-        glGetShaderInfoLog (fragment_shader, 512, NULL, info_log);
-        snepulator_error ("Fragment Shader:", info_log);
-    }
+        /* Compile fragment shader */
+        GLuint fragment_shader = glCreateShader (GL_FRAGMENT_SHADER);
+        glShaderSource (fragment_shader, 1, &fragment_shader_source [i], NULL);
+        glCompileShader (fragment_shader);
 
-    /**********************
-     **  Shader Program  **
-     **********************/
-    shader_program = glCreateProgram ();
-    glAttachShader (shader_program, vertex_shader);
-    glAttachShader (shader_program, fragment_shader);
-    glLinkProgram (shader_program);
+        glGetShaderiv (fragment_shader, GL_COMPILE_STATUS, &gl_success);
+        if (!gl_success)
+        {
+            char info_log [512] = { '\0' };
+            glGetShaderInfoLog (fragment_shader, 512, NULL, info_log);
+            snepulator_error ("Fragment Shader:", info_log);
+        }
 
-    glGetProgramiv (shader_program, GL_LINK_STATUS, &gl_success);
-    if (!gl_success)
-    {
-        char info_log [512] = { '\0' };
-        glGetShaderInfoLog (shader_program, 512, NULL, info_log);
-        snepulator_error ("GLSL", info_log);
+        /* Link fragment shader with common vertex shader */
+        GLuint shader_program = glCreateProgram ();
+        glAttachShader (shader_program, vertex_shader);
+        glAttachShader (shader_program, fragment_shader);
+        glLinkProgram (shader_program);
+
+        glGetProgramiv (shader_program, GL_LINK_STATUS, &gl_success);
+        if (!gl_success)
+        {
+            char info_log [512] = { '\0' };
+            glGetShaderInfoLog (shader_program, 512, NULL, info_log);
+            snepulator_error ("GLSL", info_log);
+        }
+
+        shader_programs [i] = shader_program;
+        glDeleteShader (fragment_shader);
     }
 
     glDeleteShader (vertex_shader);
-    glDeleteShader (fragment_shader);
 }
 
 
@@ -140,6 +149,8 @@ void snepulator_shader_callback (const ImDrawList *parent_list, const ImDrawCmd 
     /* Save the state that we're about to modify */
     glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
     glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &last_vertex_array);
+
+    GLuint shader_program = shader_programs [state.shader];
 
     glUseProgram (shader_program);
 
@@ -171,7 +182,7 @@ void snepulator_shader_callback (const ImDrawList *parent_list, const ImDrawCmd 
     location = glGetUniformLocation (shader_program, "options");
     if (location != -1)
     {
-        glUniform3i (location, state.video_filter, state.video_show_border, state.video_blank_left);
+        glUniform3i (location, 0, 0, state.video_blank_left);
     }
 
     location = glGetUniformLocation (shader_program, "scale");

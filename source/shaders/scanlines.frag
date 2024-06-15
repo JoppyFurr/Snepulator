@@ -4,13 +4,8 @@ R"(#version 330 core
 #define VIDEO_BUFFER_WIDTH      (256 + (2 * VIDEO_SIDE_BORDER))
 #define VIDEO_BUFFER_LINES      240
 
-#define VIDEO_FILTER_NEAREST    0
-#define VIDEO_FILTER_LINEAR     1
-#define VIDEO_FILTER_SCANLINES  2
-#define VIDEO_FILTER_DOT_MATRIX 3
-
-#define OPTION_VIDEO_FILTER     (options.x)
-#define OPTION_SHOW_BORDER      (options.y)
+#define OPTION_UNUSED_X         (options.x)
+#define OPTION_UNUSED_Y         (options.y)
 #define OPTION_BLANK_LEFT       (options.z)
 
 #define BLACK                   vec4 (0.0, 0.0, 0.0, 1.0)
@@ -21,7 +16,7 @@ uniform sampler2D video_out;
 uniform ivec2 video_resolution;
 uniform ivec2 video_start;
 uniform ivec2 output_resolution;
-uniform ivec3 options; /* x = video_filter, y = show_border, z = blank_left */
+uniform ivec3 options; /* x = unused, y = show_border, z = blank_left */
 uniform int scale;
 
 
@@ -47,12 +42,9 @@ vec4 get_pixel (int x, int y)
     {
         return texelFetch (video_out, ivec2 (x, y), 0);
     }
-    else if (bool (OPTION_SHOW_BORDER))
-    {
-        return mix (BLACK, texelFetch (video_out, ivec2 (x, y), 0), 0.5);
-    }
 
-    return BLACK;
+    /* Dim the border area */
+    return mix (BLACK, texelFetch (video_out, ivec2 (x, y), 0), 0.5);
 }
 
 
@@ -141,12 +133,12 @@ void main()
         video_x = VIDEO_BUFFER_WIDTH - 2;
     }
 
-    /* Top border. */
+    /* Extend top border. */
     if (video_y < 1)
     {
         video_y = 1;
     }
-    /* Active area. */
+    /* Extend bottom border. */
     else if (video_y > VIDEO_BUFFER_LINES - 2)
     {
         video_y = VIDEO_BUFFER_LINES - 2;
@@ -155,52 +147,13 @@ void main()
     float x_mix;
     float y_mix;
 
-    switch (OPTION_VIDEO_FILTER)
-    {
-        case VIDEO_FILTER_LINEAR:
-            x_mix = float (mod_x) / float (scale);
-            y_mix = float (mod_y) / float (scale);
+    /* Interpolate in the X axis */
+    x_mix = smoothstep (0.0, 1.0, float (mod_x) / float (scale));
+    vec4 pixel_l = get_pixel (video_x,     video_y);
+    vec4 pixel_r = get_pixel (video_x + 1, video_y);
+    pixel = mix (pixel_l, pixel_r, x_mix);
 
-            /* Fetch the four pixels to interpolate between */
-            vec4 pixel_tl = get_pixel (video_x,     video_y    );
-            vec4 pixel_tr = get_pixel (video_x + 1, video_y    );
-            vec4 pixel_bl = get_pixel (video_x,     video_y + 1);
-            vec4 pixel_br = get_pixel (video_x + 1, video_y + 1);
-
-            /* Interpolate */
-            vec4 pixel_t = mix (pixel_tl, pixel_tr, x_mix);
-            vec4 pixel_b = mix (pixel_bl, pixel_br, x_mix);
-            pixel        = mix (pixel_t,  pixel_b,  y_mix);
-            break;
-
-        case VIDEO_FILTER_SCANLINES:
-
-            /* Interpolate in the X axis */
-            x_mix = smoothstep (0.0, 1.0, float (mod_x) / float (scale));
-            vec4 pixel_l = get_pixel (video_x,     video_y);
-            vec4 pixel_r = get_pixel (video_x + 1, video_y);
-            pixel = mix (pixel_l, pixel_r, x_mix);
-
-            /* Apply scanlines */
-            pixel = mix (BLACK, pixel, scanline_mix (mod_y));
-
-            break;
-
-        case VIDEO_FILTER_DOT_MATRIX:
-            if ((mod_x == 0) || (mod_y == 0))
-            {
-                pixel = BLACK;
-            }
-            else
-            {
-                pixel = get_pixel (video_x, video_y);
-            }
-            break;
-
-        case VIDEO_FILTER_NEAREST:
-        default:
-            pixel = get_pixel (video_x, video_y);
-            break;
-    }
+    /* Apply scanlines */
+    pixel = mix (BLACK, pixel, scanline_mix (mod_y));
 }
 )"

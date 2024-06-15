@@ -440,21 +440,21 @@ static void snepulator_video_menu (void)
 
         if (ImGui::BeginMenu ("Filter"))
         {
-            if (ImGui::MenuItem ("Nearest Neighbour", NULL, state.video_filter == VIDEO_FILTER_NEAREST))
+            if (ImGui::MenuItem ("Nearest Neighbour", NULL, state.shader == SHADER_NEAREST))
             {
-                snepulator_video_filter_set (VIDEO_FILTER_NEAREST);
+                snepulator_video_filter_set (SHADER_NEAREST);
             }
-            if (ImGui::MenuItem ("Linear Interpolation",  NULL, state.video_filter == VIDEO_FILTER_LINEAR))
+            if (ImGui::MenuItem ("Linear Interpolation",  NULL, state.shader == SHADER_LINEAR))
             {
-                snepulator_video_filter_set (VIDEO_FILTER_LINEAR);
+                snepulator_video_filter_set (SHADER_LINEAR);
             }
-            if (ImGui::MenuItem ("Scanlines",  NULL, state.video_filter == VIDEO_FILTER_SCANLINES))
+            if (ImGui::MenuItem ("Scanlines",  NULL, state.shader == SHADER_SCANLINES))
             {
-                snepulator_video_filter_set (VIDEO_FILTER_SCANLINES);
+                snepulator_video_filter_set (SHADER_SCANLINES);
             }
-            if (ImGui::MenuItem ("Dot Matrix",  NULL, state.video_filter == VIDEO_FILTER_DOT_MATRIX))
+            if (ImGui::MenuItem ("Dot Matrix",  NULL, state.shader == SHADER_DOT_MATRIX))
             {
-                snepulator_video_filter_set (VIDEO_FILTER_DOT_MATRIX);
+                snepulator_video_filter_set (SHADER_DOT_MATRIX);
             }
             ImGui::EndMenu ();
         }

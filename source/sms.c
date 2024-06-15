@@ -459,14 +459,6 @@ SMS_Context *sms_init (void)
     state.video_start_y = vdp_context->video_start_y;
     state.video_width   = vdp_context->video_width;
     state.video_height  = vdp_context->video_height;
-    if (state.console == CONSOLE_GAME_GEAR)
-    {
-        state.video_has_border = false;
-    }
-    else
-    {
-        state.video_has_border = true;
-    }
 
     /* Hook up callbacks */
     state.audio_callback = sms_audio_callback;

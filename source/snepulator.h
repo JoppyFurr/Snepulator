@@ -33,12 +33,13 @@ typedef enum Console_e {
     CONSOLE_SG_1000
 } Console;
 
-typedef enum Video_Filter_e {
-    VIDEO_FILTER_NEAREST = 0,
-    VIDEO_FILTER_LINEAR,
-    VIDEO_FILTER_SCANLINES,
-    VIDEO_FILTER_DOT_MATRIX
-} Video_Filter;
+typedef enum Shader_e {
+    SHADER_NEAREST = 0,
+    SHADER_LINEAR,
+    SHADER_SCANLINES,
+    SHADER_DOT_MATRIX,
+    SHADER_COUNT
+} Shader;
 
 typedef enum Video_Format_e {
     VIDEO_FORMAT_NTSC = 0,
@@ -134,7 +135,6 @@ typedef struct Snepulator_State_s {
     uint32_t    video_width;                /* Size of the active area. */
     uint32_t    video_height;
     uint32_t    video_blank_left;
-    bool        video_has_border;
     int16_t     cursor_x;                   /* User's cursor coordinate within active area. */
     int16_t     cursor_y;
     bool        cursor_button;
@@ -144,9 +144,8 @@ typedef struct Snepulator_State_s {
     uint_pixel   video_pause_data [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
     int          host_width;
     int          host_height;
-    Video_Filter video_filter;
+    Shader       shader;
     int16_t      video_scale;
-    bool         video_show_border;
 
     /* Statistics */
 #ifdef DEVELOPER_BUILD
@@ -233,7 +232,7 @@ void snepulator_video_3d_mode_set (Video_3D_Mode mode);
 void snepulator_video_3d_saturation_set (double saturation);
 
 /* Set the console video filter. */
-void snepulator_video_filter_set (Video_Filter filter);
+void snepulator_video_filter_set (Shader shader);
 
 /* Set the console video format. */
 void snepulator_video_format_set (Video_Format format);

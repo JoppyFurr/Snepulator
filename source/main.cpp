@@ -300,26 +300,6 @@ int main_loop (void)
             state.video_scale = 1;
         }
 
-        switch (state.video_filter)
-        {
-            case VIDEO_FILTER_NEAREST:
-            case VIDEO_FILTER_LINEAR:
-            case VIDEO_FILTER_SCANLINES:
-                if (state.video_has_border)
-                {
-                    state.video_show_border = true;
-                }
-                else
-                {
-                    state.video_show_border = false;
-                }
-                break;
-
-            case VIDEO_FILTER_DOT_MATRIX:
-                state.video_show_border = false;
-                break;
-        }
-
         /* Start the Dear ImGui frame. */
         ImGui_ImplOpenGL3_NewFrame ();
         ImGui_ImplSDL2_NewFrame ();

@@ -421,7 +421,6 @@ VGM_Player_Context *vgm_player_init (void)
     state.video_start_y = (VIDEO_BUFFER_LINES - 192) / 2;
     state.video_width   = 256;
     state.video_height  = 192;
-    state.video_has_border = false;
 
     /* Read header */
     context->version       = *(uint32_t *) (&context->vgm [0x08]);
