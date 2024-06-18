@@ -111,7 +111,8 @@ void snepulator_shader_setup (void)
         if (!gl_success)
         {
             char info_log [512] = { '\0' };
-            glGetShaderInfoLog (fragment_shader, 512, NULL, info_log);
+            int len = sprintf (info_log, "Shader [%d]:\n", i);
+            glGetShaderInfoLog (fragment_shader, 512 - len, NULL, &info_log [len]);
             snepulator_error ("Fragment Shader:", info_log);
         }
 
