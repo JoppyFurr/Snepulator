@@ -153,6 +153,13 @@ int snepulator_config_import (void)
         state.disable_blanking = uint;
     }
 
+    /* Video Integer Scaling - Defaults to true */
+    state.integer_scaling = true;
+    if (config_uint_get ("video", "integer-scaling", &uint) == 0)
+    {
+        state.integer_scaling = uint;
+    }
+
     /* Video Filter - Defaults to Scanlines */
     state.shader = SHADER_SCANLINES;
     if (config_string_get ("video", "filter", &string) == 0)
@@ -371,6 +378,21 @@ uint_pixel *snepulator_get_next_frame (void)
     pthread_mutex_unlock (&video_mutex);
 
     return state.video_ring [state.video_read_index % 3];
+}
+
+
+/*
+ * Enable integer scaling.
+ *
+ * When enabled, the output video resolution is an
+ * integer multiple of the console native resolution.
+ */
+void snepulator_integer_scaling_set (bool integer_scaling)
+{
+    state.integer_scaling = integer_scaling;
+    config_uint_set ("video", "integer-scaling", integer_scaling);
+
+    config_write ();
 }
 
 

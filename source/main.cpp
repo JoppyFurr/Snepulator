@@ -292,13 +292,13 @@ int main_loop (void)
         /* Scale the image to a multiple of SMS resolution */
         /* TODO: While it generally doesn't change mid-game, the video width
          *       and height should be tied to the particular frame in the ring. */
-        state.video_scale = (state.host_width / state.video_width) > (state.host_height / state.video_height) ?
-                            (state.host_height / state.video_height) : (state.host_width  / state.video_width);
-
-        if (state.video_scale < 1)
+        state.video_scale = ((float) state.host_width / state.video_width) < ((float) state.host_height / state.video_height) ?
+                            ((float) state.host_width / state.video_width) : ((float) state.host_height / state.video_height);
+        if (state.integer_scaling)
         {
-            state.video_scale = 1;
+            state.video_scale = floorf (state.video_scale);
         }
+        state.video_scale = fmaxf (1.0, state.video_scale);
 
         /* Start the Dear ImGui frame. */
         ImGui_ImplOpenGL3_NewFrame ();

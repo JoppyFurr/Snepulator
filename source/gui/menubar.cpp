@@ -438,6 +438,11 @@ static void snepulator_video_menu (void)
     {
         state.mouse_time = util_get_ticks ();
 
+        if (ImGui::MenuItem ("Integer Scaling", NULL, state.integer_scaling))
+        {
+            snepulator_integer_scaling_set (!state.integer_scaling);
+        }
+
         if (ImGui::BeginMenu ("Filter"))
         {
             if (ImGui::MenuItem ("Nearest Neighbour", NULL, state.shader == SHADER_NEAREST))

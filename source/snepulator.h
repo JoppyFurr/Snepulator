@@ -141,11 +141,12 @@ typedef struct Snepulator_State_s {
     bool        cursor_in_gui;              /* Cursor is interacting with the GUI. */
 
     /* Host video output */
-    uint_pixel   video_pause_data [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
-    int          host_width;
-    int          host_height;
-    Shader       shader;
-    int16_t      video_scale;
+    uint_pixel  video_pause_data [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
+    int         host_width;
+    int         host_height;
+    Shader      shader;
+    bool        integer_scaling;
+    float       video_scale;
 
     /* Statistics */
 #ifdef DEVELOPER_BUILD
@@ -188,6 +189,9 @@ uint_pixel *snepulator_get_current_frame (void);
 
 /* Get a pointer to the currently displayed frame. */
 uint_pixel *snepulator_get_next_frame (void);
+
+/* Enable integer scaling. */
+void snepulator_integer_scaling_set (bool integer_scaling);
 
 /* Set whether or not to overclock. */
 void snepulator_overclock_set (bool overclock);
