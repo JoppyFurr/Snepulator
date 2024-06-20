@@ -1,7 +1,7 @@
 R"(#version 330 core
 
 #define VIDEO_SIDE_BORDER       8
-#define VIDEO_BUFFER_WIDTH      (256 + (2 * VIDEO_SIDE_BORDER))
+#define VIDEO_BUFFER_WIDTH      272
 #define VIDEO_BUFFER_LINES      240
 
 #define OPTION_UNUSED_X         (options.x)
@@ -17,8 +17,9 @@ uniform ivec2 video_resolution;
 uniform ivec2 video_start;
 uniform ivec2 output_resolution;
 uniform ivec3 options; /* x = unused, y = unused, z = blank_left */
-uniform int scale;
+uniform float scale;
 
+layout (origin_upper_left, pixel_center_integer) in vec4 gl_FragCoord;
 
 /*
  * Given a pixel coordinate into the video-out, return the colour value.
@@ -26,25 +27,21 @@ uniform int scale;
  */
 vec4 get_pixel (int x, int y)
 {
-    bool active_area;
+    x = clamp (x, 0, VIDEO_BUFFER_WIDTH - 1);
+    y = clamp (y, 0, VIDEO_BUFFER_LINES - 1);
 
+    /* Active area */
     if (x >= video_start.x + OPTION_BLANK_LEFT && x < (video_start.x + video_resolution.x) &&
         y >= video_start.y                     && y < (video_start.y + video_resolution.y))
-    {
-        active_area = true;
-    }
-    else
-    {
-        active_area = false;
-    }
-
-    if (active_area)
     {
         return texelFetch (video_out, ivec2 (x, y), 0);
     }
 
-    /* Dim the border area */
-    return mix (BLACK, texelFetch (video_out, ivec2 (x, y), 0), 0.5);
+    /* Backdrop is dimmed to 50% */
+    else
+    {
+        return mix (BLACK, texelFetch (video_out, ivec2 (x, y), 0), 0.5);
+    }
 }
 
 
@@ -53,62 +50,27 @@ vec4 get_pixel (int x, int y)
  */
 void main()
 {
-    /* Screen location of this fragment. */
-    int x = int (gl_FragCoord.x);
-    int y = (output_resolution.y - 1) - int (gl_FragCoord.y);
+    /* Calculote the top-left screen-pixel that lands on the video_out texture area. */
+    float start_x = floor ((float (output_resolution.x) / 2.0) - ((VIDEO_BUFFER_WIDTH / 2.0) * scale));
+    float start_y = floor ((float (output_resolution.y) / 2.0) - ((VIDEO_BUFFER_LINES / 2.0) * scale));
 
-    /* First screen-pixel of the video_out texture area. */
-    int start_x = output_resolution.x / 2 - (VIDEO_BUFFER_WIDTH * scale) / 2;
-    int start_y = output_resolution.y / 2 - (VIDEO_BUFFER_LINES * scale) / 2;
-
-    /* Index into the source texture. */
-    /* TODO: Consider division behaviour when crossing the negative boundary */
-    int video_x = (x - start_x) / scale;
-    int video_y = (y - start_y) / scale;
-
-    /* Counts how many screen-pixels we are into this video-pixel */
-    int mod_x = ((output_resolution.x * scale) + (x - start_x)) % scale;
-    int mod_y = ((output_resolution.y * scale) + (y - start_y)) % scale;
-
-    /* For areas outside the video_out texture area, select the pixel a column
-       inward from the edge of the texture. This makes it safe to sample the
-       surrounding pixels. */
-    if (video_x < 1)
-    {
-        video_x = 1;
-    }
-    else if (video_x > VIDEO_BUFFER_WIDTH - 2)
-    {
-        video_x = VIDEO_BUFFER_WIDTH - 2;
-    }
-
-    /* Extend top border. */
-    if (video_y < 1)
-    {
-        video_y = 1;
-    }
-    /* Extend bottom border. */
-    else if (video_y > VIDEO_BUFFER_LINES - 2)
-    {
-        video_y = VIDEO_BUFFER_LINES - 2;
-    }
-
-    float x_mix;
-    float y_mix;
-
-    x_mix = float (mod_x) / float (scale);
-    y_mix = float (mod_y) / float (scale);
+    /* Calculate the location of the current pixel in video_out texture coordinates. */
+    float video_x = (gl_FragCoord.x - start_x) / scale;
+    float video_y = (gl_FragCoord.y - start_y) / scale;
 
     /* Fetch the four pixels to interpolate between */
-    vec4 pixel_tl = get_pixel (video_x,     video_y    );
-    vec4 pixel_tr = get_pixel (video_x + 1, video_y    );
-    vec4 pixel_bl = get_pixel (video_x,     video_y + 1);
-    vec4 pixel_br = get_pixel (video_x + 1, video_y + 1);
+    video_x -= 0.5;
+    video_y -= 0.5;
+    vec4 pixel_tl = get_pixel (int (video_x),     int (video_y)    );
+    vec4 pixel_tr = get_pixel (int (video_x) + 1, int (video_y)    );
+    vec4 pixel_bl = get_pixel (int (video_x),     int (video_y) + 1);
+    vec4 pixel_br = get_pixel (int (video_x) + 1, int (video_y) + 1);
 
-    /* Interpolate */
-    vec4 pixel_t = mix (pixel_tl, pixel_tr, x_mix);
-    vec4 pixel_b = mix (pixel_bl, pixel_br, x_mix);
-    pixel        = mix (pixel_t,  pixel_b,  y_mix);
+    /* Interpolate. Note that we do not convert to linear colour for the
+       conversion, as that causes the image to appear more blurry than expected. */
+    vec4 pixel_t = mix (pixel_tl, pixel_tr, fract (video_x));
+    vec4 pixel_b = mix (pixel_bl, pixel_br, fract (video_x));
+    pixel        = mix (pixel_t,  pixel_b,  fract (video_y));
 
 }
 )"
