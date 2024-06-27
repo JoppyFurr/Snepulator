@@ -40,6 +40,9 @@ static const char *fragment_shader_source [SHADER_COUNT] =
     [SHADER_NEAREST] =
         #include "shaders/nearest.frag"
         ,
+    [SHADER_NEAREST_SOFT] =
+        #include "shaders/nearest-soft.frag"
+        ,
     [SHADER_LINEAR] =
         #include "shaders/linear.frag"
         ,
@@ -100,7 +103,7 @@ void snepulator_shader_setup (void)
         snepulator_error ("Vertex Shader", info_log);
     }
 
-    for (uint32_t i = 0; i < 4; i++)
+    for (uint32_t i = 0; i < SHADER_COUNT; i++)
     {
         /* Compile fragment shader */
         GLuint fragment_shader = glCreateShader (GL_FRAGMENT_SHADER);

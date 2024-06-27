@@ -35,6 +35,7 @@ typedef enum Console_e {
 
 typedef enum Shader_e {
     SHADER_NEAREST = 0,
+    SHADER_NEAREST_SOFT,
     SHADER_LINEAR,
     SHADER_SCANLINES,
     SHADER_DOT_MATRIX,

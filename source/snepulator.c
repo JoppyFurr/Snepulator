@@ -176,6 +176,10 @@ int snepulator_config_import (void)
         {
             state.shader = SHADER_NEAREST;
         }
+        else if (strcmp (string, "Nearest-soft") == 0)
+        {
+            state.shader = SHADER_NEAREST_SOFT;
+        }
     }
 
     /* TMS9928a Palette - Defaults to TMS9928a */
@@ -837,6 +841,11 @@ void snepulator_video_filter_set (Shader shader)
     {
         state.shader = SHADER_NEAREST;
         config_string_set ("video", "filter", "Nearest");
+    }
+    else if (shader == SHADER_NEAREST_SOFT)
+    {
+        state.shader = SHADER_NEAREST_SOFT;
+        config_string_set ("video", "filter", "Nearest-soft");
     }
     else if (shader == SHADER_LINEAR)
     {

@@ -449,6 +449,10 @@ static void snepulator_video_menu (void)
             {
                 snepulator_video_filter_set (SHADER_NEAREST);
             }
+            if (ImGui::MenuItem ("Nearest Neighbour (soft pixels)", NULL, state.shader == SHADER_NEAREST_SOFT))
+            {
+                snepulator_video_filter_set (SHADER_NEAREST_SOFT);
+            }
             if (ImGui::MenuItem ("Linear Interpolation",  NULL, state.shader == SHADER_LINEAR))
             {
                 snepulator_video_filter_set (SHADER_LINEAR);
