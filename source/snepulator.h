@@ -53,6 +53,13 @@ typedef enum Console_Region_t {
     REGION_JAPAN
 } Console_Region;
 
+typedef enum Video_PAR_e {
+    VIDEO_PAR_1_1 = 0,
+    VIDEO_PAR_8_7,
+    VIDEO_PAR_6_5,
+    VIDEO_PAR_11_8
+} Video_PAR;
+
 typedef enum Video_3D_Mode_e {
     VIDEO_3D_RED_CYAN = 0,
     VIDEO_3D_RED_GREEN,
@@ -148,6 +155,8 @@ typedef struct Snepulator_State_s {
     Shader      shader;
     bool        integer_scaling;
     float       video_scale;
+    Video_PAR   video_par_setting;
+    float       video_par;
 
     /* Statistics */
 #ifdef DEVELOPER_BUILD
@@ -241,6 +250,9 @@ void snepulator_video_filter_set (Shader shader);
 
 /* Set the console video format. */
 void snepulator_video_format_set (Video_Format format);
+
+/* Set the pixel aspect ratio. */
+void snepulator_video_par_set (Video_PAR par);
 
 /***************************
  *  Implemented in main.c  *

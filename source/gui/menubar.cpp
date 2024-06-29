@@ -468,6 +468,30 @@ static void snepulator_video_menu (void)
             ImGui::EndMenu ();
         }
 
+        if (ImGui::BeginMenu ("Pixel Aspect Ratio"))
+        {
+            if (ImGui::MenuItem ("1:1  (Default)", NULL, state.video_par_setting == VIDEO_PAR_1_1))
+            {
+                snepulator_video_par_set (VIDEO_PAR_1_1);
+            }
+            if (ImGui::MenuItem ("8:7  (NTSC SMS)", NULL, state.video_par_setting == VIDEO_PAR_8_7))
+            {
+                snepulator_video_par_set (VIDEO_PAR_8_7);
+            }
+            if (ImGui::MenuItem ("6:5  (Game Gear)", NULL, state.video_par_setting == VIDEO_PAR_6_5))
+            {
+                snepulator_video_par_set (VIDEO_PAR_6_5);
+            }
+            if (ImGui::MenuItem ("11:8 (PAL SMS)", NULL, state.video_par_setting == VIDEO_PAR_11_8))
+            {
+                snepulator_video_par_set (VIDEO_PAR_11_8);
+            }
+
+            ImGui::EndMenu ();
+        }
+
+        ImGui::Separator ();
+
         if (ImGui::BeginMenu ("TMS Mode Palette"))
         {
             if (ImGui::MenuItem ("Auto", NULL, state.override_tms_palette == NULL)) {

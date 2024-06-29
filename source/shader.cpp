@@ -192,7 +192,7 @@ void snepulator_shader_callback (const ImDrawList *parent_list, const ImDrawCmd 
     location = glGetUniformLocation (shader_program, "scale");
     if (location != -1)
     {
-        glUniform1f (location, state.video_scale);
+        glUniform2f (location, state.video_scale * state.video_par, state.video_scale);
     }
 
     glBindVertexArray (vertex_array);

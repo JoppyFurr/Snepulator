@@ -261,8 +261,8 @@ int main_loop (void)
             /* Use the mouse coordinates for the light phaser target */
             if (event.type == SDL_MOUSEMOTION && state.video_scale >= 1)
             {
-                int32_t cursor_x = (event.motion.x - (state.host_width  / 2 - (VIDEO_BUFFER_WIDTH * state.video_scale) / 2))
-                                   / state.video_scale - VIDEO_SIDE_BORDER;
+                int32_t cursor_x = (event.motion.x - (state.host_width  / 2 - (VIDEO_BUFFER_WIDTH * state.video_scale * state.video_par) / 2))
+                                   / (state.video_scale * state.video_par) - VIDEO_SIDE_BORDER;
                 int32_t cursor_y = (event.motion.y - (state.host_height / 2 - (VIDEO_BUFFER_LINES * state.video_scale) / 2))
                                    / state.video_scale - state.video_start_y;
 
@@ -292,8 +292,8 @@ int main_loop (void)
         /* Scale the image to a multiple of SMS resolution */
         /* TODO: While it generally doesn't change mid-game, the video width
          *       and height should be tied to the particular frame in the ring. */
-        state.video_scale = ((float) state.host_width / state.video_width) < ((float) state.host_height / state.video_height) ?
-                            ((float) state.host_width / state.video_width) : ((float) state.host_height / state.video_height);
+        state.video_scale = ((float) state.host_width / (state.video_width * state.video_par)) < ((float) state.host_height / state.video_height) ?
+                            ((float) state.host_width / (state.video_width * state.video_par)) : ((float) state.host_height / state.video_height);
         if (state.integer_scaling)
         {
             state.video_scale = floorf (state.video_scale);
@@ -517,7 +517,8 @@ int main (int argc, char **argv)
     /* TODO: Make dialogues fit (full-screen?) */
     /* TODO: Check if we're running on a small-screened device and use a lower window size */
     window = SDL_CreateWindow ("Snepulator", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-                      VIDEO_BUFFER_WIDTH * 3, VIDEO_BUFFER_LINES * 3, SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL);
+                               VIDEO_BUFFER_WIDTH * 3 * state.video_par, VIDEO_BUFFER_LINES * 3,
+                               SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL);
     if (window == NULL)
     {
         snepulator_error ("SDL Error", SDL_GetError ());

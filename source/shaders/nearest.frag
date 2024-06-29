@@ -17,7 +17,7 @@ uniform ivec2 video_resolution;
 uniform ivec2 video_start;
 uniform ivec2 output_resolution;
 uniform ivec3 options; /* x = unused, y = unused, z = blank_left */
-uniform float scale;
+uniform vec2 scale;
 
 layout (origin_upper_left, pixel_center_integer) in vec4 gl_FragCoord;
 
@@ -88,20 +88,20 @@ vec4 from_linear (vec4 colour)
 void main()
 {
     /* Calculote the top-left screen-pixel that lands on the video_out texture area. */
-    float start_x = floor ((float (output_resolution.x) / 2.0) - ((VIDEO_BUFFER_WIDTH / 2.0) * scale));
-    float start_y = floor ((float (output_resolution.y) / 2.0) - ((VIDEO_BUFFER_LINES / 2.0) * scale));
+    float start_x = floor ((float (output_resolution.x) / 2.0) - ((VIDEO_BUFFER_WIDTH / 2.0) * scale.x));
+    float start_y = floor ((float (output_resolution.y) / 2.0) - ((VIDEO_BUFFER_LINES / 2.0) * scale.y));
 
     /* Calculate the location of the current pixel in video_out texture coordinates.
      * This location is calculated as if video_out were already integer scaled.
      * For non-integer scales, linear interpolation is used to cover the final bit of stretching. */
-    float video_x = (gl_FragCoord.x - start_x) * floor (scale) / scale;
-    float video_y = (gl_FragCoord.y - start_y) * floor (scale) / scale;
+    float video_x = (gl_FragCoord.x - start_x) * floor (scale.x) / scale.x;
+    float video_y = (gl_FragCoord.y - start_y) * floor (scale.y) / scale.y;
 
     /* Fetch the four pixels to interpolate between */
-    vec4 pixel_tl = get_pixel (int (video_x    ) / int (scale), int (video_y    ) / int (scale));
-    vec4 pixel_tr = get_pixel (int (video_x + 1) / int (scale), int (video_y    ) / int (scale));
-    vec4 pixel_bl = get_pixel (int (video_x    ) / int (scale), int (video_y + 1) / int (scale));
-    vec4 pixel_br = get_pixel (int (video_x + 1) / int (scale), int (video_y + 1) / int (scale));
+    vec4 pixel_tl = get_pixel (int (video_x    ) / int (scale.x), int (video_y    ) / int (scale.y));
+    vec4 pixel_tr = get_pixel (int (video_x + 1) / int (scale.x), int (video_y    ) / int (scale.y));
+    vec4 pixel_bl = get_pixel (int (video_x    ) / int (scale.x), int (video_y + 1) / int (scale.y));
+    vec4 pixel_br = get_pixel (int (video_x + 1) / int (scale.x), int (video_y + 1) / int (scale.y));
 
     /* Interpolate,
      * If scale is an integer, then fract() should be zero for hard pixel edges. */

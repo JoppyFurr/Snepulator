@@ -17,7 +17,7 @@ uniform ivec2 video_resolution;
 uniform ivec2 video_start;
 uniform ivec2 output_resolution;
 uniform ivec3 options; /* x = unused, y = show_border, z = blank_left */
-uniform float scale;
+uniform vec2 scale;
 
 layout (origin_upper_left, pixel_center_integer) in vec4 gl_FragCoord;
 
@@ -52,12 +52,12 @@ vec4 get_pixel (int x, int y)
 void main()
 {
     /* Calculote the top-left screen-pixel that lands on the video_out texture area. */
-    float start_x = floor ((float (output_resolution.x) / 2.0) - ((VIDEO_BUFFER_WIDTH / 2.0) * scale));
-    float start_y = floor ((float (output_resolution.y) / 2.0) - ((VIDEO_BUFFER_LINES / 2.0) * scale));
+    float start_x = floor ((float (output_resolution.x) / 2.0) - ((VIDEO_BUFFER_WIDTH / 2.0) * scale.x));
+    float start_y = floor ((float (output_resolution.y) / 2.0) - ((VIDEO_BUFFER_LINES / 2.0) * scale.y));
 
     /* Calculate the location of the current pixel in video_out texture coordinates. */
-    float video_x = (gl_FragCoord.x - start_x) / scale;
-    float video_y = (gl_FragCoord.y - start_y) / scale;
+    float video_x = (gl_FragCoord.x - start_x) / scale.x;
+    float video_y = (gl_FragCoord.y - start_y) / scale.y;
 
     /* Interpolate the X axis with smoothstep. */
     video_x -= 0.5;

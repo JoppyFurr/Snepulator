@@ -160,6 +160,28 @@ int snepulator_config_import (void)
         state.integer_scaling = uint;
     }
 
+    /* Video pixel aspect ratio - Defaults to 1:1 */
+    state.video_par_setting = VIDEO_PAR_1_1;
+    state.video_par = 1.0;
+    if (config_string_get ("video", "pixel-aspect-ratio", &string) == 0)
+    {
+        if (strcmp (string, "8:7") == 0)
+        {
+            state.video_par_setting = VIDEO_PAR_8_7;
+            state.video_par = 8.0 / 7.0;
+        }
+        else if (strcmp (string, "6:5") == 0)
+        {
+            state.video_par_setting = VIDEO_PAR_6_5;
+            state.video_par = 6.0 / 5.0;
+        }
+        else if (strcmp (string, "11:8") == 0)
+        {
+            state.video_par_setting = VIDEO_PAR_11_8;
+            state.video_par = 11.0 / 8.0;
+        }
+    }
+
     /* Video Filter - Defaults to Scanlines */
     state.shader = SHADER_SCANLINES;
     if (config_string_get ("video", "filter", &string) == 0)
@@ -893,6 +915,40 @@ void snepulator_video_format_set (Video_Format format)
     if (state.update_settings != NULL)
     {
         state.update_settings (state.console_context);
+    }
+
+    config_write ();
+}
+
+
+/*
+ * Set the pixel aspect ratio.
+ */
+void snepulator_video_par_set (Video_PAR par)
+{
+    if (par == VIDEO_PAR_1_1)
+    {
+        state.video_par_setting = par;
+        state.video_par = 1.0;
+        config_string_set ("video", "pixel-aspect-ratio", "1:1");
+    }
+    else if (par == VIDEO_PAR_8_7)
+    {
+        state.video_par_setting = par;
+        state.video_par = 8.0 / 7.0;
+        config_string_set ("video", "pixel-aspect-ratio", "8:7");
+    }
+    else if (par == VIDEO_PAR_6_5)
+    {
+        state.video_par_setting = par;
+        state.video_par = 6.0 / 5.0;
+        config_string_set ("video", "pixel-aspect-ratio", "6:5");
+    }
+    else if (par == VIDEO_PAR_11_8)
+    {
+        state.video_par_setting = par;
+        state.video_par = 11.0 / 8.0;
+        config_string_set ("video", "pixel-aspect-ratio", "11:8");
     }
 
     config_write ();
