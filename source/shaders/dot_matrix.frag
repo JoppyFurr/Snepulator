@@ -1,25 +1,22 @@
 R"(#version 330 core
 
-#define VIDEO_SIDE_BORDER       8
-#define VIDEO_BUFFER_WIDTH      272
-#define VIDEO_BUFFER_LINES      240
-
 #define OPTION_UNUSED_X         (options.x)
 #define OPTION_UNUSED_Y         (options.y)
 #define OPTION_BLANK_LEFT       (options.z)
 
-#define BLACK                   vec4 (0.0, 0.0, 0.0, 1.0)
+layout (origin_upper_left, pixel_center_integer) in vec4 gl_FragCoord;
 
-out vec4 pixel;
+const vec2 buffer_size = vec2 (272, 240);
+const vec4 black = vec4 (0.0, 0.0, 0.0, 1.0);
 
 uniform sampler2D video_out;
 uniform ivec2 video_resolution;
 uniform ivec2 video_start;
-uniform ivec2 output_resolution;
+uniform vec2 output_resolution;
 uniform ivec3 options; /* x = unused, y = unused, z = blank_left */
 uniform vec2 scale;
 
-layout (origin_upper_left, pixel_center_integer) in vec4 gl_FragCoord;
+out vec4 pixel;
 
 
 /*
@@ -29,28 +26,26 @@ layout (origin_upper_left, pixel_center_integer) in vec4 gl_FragCoord;
  * We fake a resolution that is int(scale) times bigger than the true
  * resolution, with the grid lines applied.
  */
-vec4 get_pixel (int x, int y)
+vec4 get_pixel (vec2 position)
 {
-    if (mod (x, int(scale.x)) == 0 ||
-        mod (y, int(scale.y)) == 0)
+    if (mod (floor (position.x), floor(scale.x)) == 0 ||
+        mod (floor (position.y), floor(scale.y)) == 0)
     {
-        return BLACK;
+        return black;
     }
 
-    x /= int(scale.x);
-    y /= int(scale.y);
+    position /= floor (scale);
 
-    x = clamp (x, 0, VIDEO_BUFFER_WIDTH - 1);
-    y = clamp (y, 0, VIDEO_BUFFER_LINES - 1);
+    position = clamp (position, ivec2 (0, 0), buffer_size - 1);
 
     /* Active area */
-    if (x >= video_start.x + OPTION_BLANK_LEFT && x < (video_start.x + video_resolution.x) &&
-        y >= video_start.y                     && y < (video_start.y + video_resolution.y))
+    if (position.x >= video_start.x + OPTION_BLANK_LEFT && position.x < (video_start.x + video_resolution.x) &&
+        position.y >= video_start.y                     && position.y < (video_start.y + video_resolution.y))
     {
-        return texelFetch (video_out, ivec2 (x, y), 0);
+        return texelFetch (video_out, ivec2 (position), 0);
     }
 
-    return BLACK;
+    return black;
 }
 
 
@@ -100,28 +95,26 @@ void main()
      *                                 3, linear to finish
      *                                  , prefer none instead of black for 1x? */
 
-    /* Calculote the top-left screen-pixel that lands on the video_out texture area. */
-    float start_x = floor ((float (output_resolution.x) / 2.0) - ((VIDEO_BUFFER_WIDTH / 2.0) * scale.x));
-    float start_y = floor ((float (output_resolution.y) / 2.0) - ((VIDEO_BUFFER_LINES / 2.0) * scale.y));
+    /* Calculate the top-left screen-pixel that lands on the video_out texture area. */
+    vec2 start = floor ((output_resolution / 2.0) - (buffer_size * scale / 2.0));
 
     /* Calculate the location of the current pixel in video_out texture coordinates.
      * This location is calculated as if video_out were already integer scaled.
      * For non-integer scales, linear interpolation is used to cover the final bit of stretching. */
-    float video_x = (gl_FragCoord.x - start_x) * floor (scale.x) / scale.x;
-    float video_y = (gl_FragCoord.y - start_y) * floor (scale.y) / scale.y;
+    vec2 texture_position = (gl_FragCoord.xy - start) * floor (scale) / scale;
 
     /* Fetch the four pixels to interpolate between */
-    vec4 pixel_tl = get_pixel (int (video_x    ), int (video_y    ));
-    vec4 pixel_tr = get_pixel (int (video_x + 1), int (video_y    ));
-    vec4 pixel_bl = get_pixel (int (video_x    ), int (video_y + 1));
-    vec4 pixel_br = get_pixel (int (video_x + 1), int (video_y + 1));
+    vec4 pixel_tl = get_pixel (texture_position              );
+    vec4 pixel_tr = get_pixel (texture_position + vec2 (1, 0));
+    vec4 pixel_bl = get_pixel (texture_position + vec2 (0, 1));
+    vec4 pixel_br = get_pixel (texture_position + vec2 (1, 1));
 
     /* Interpolate.
      * Conversion to linear colour is needed to keep the darkness of the grid lines consistent.
      * If scale is an integer, then fract() should be zero for hard pixel edges. */
-    vec4 pixel_t = mix (to_linear (pixel_tl), to_linear (pixel_tr), fract (video_x));
-    vec4 pixel_b = mix (to_linear (pixel_bl), to_linear (pixel_br), fract (video_x));
-    pixel        = from_linear (mix (pixel_t,  pixel_b,  fract (video_y)));
+    vec4 pixel_t = mix (to_linear (pixel_tl), to_linear (pixel_tr), fract (texture_position.x));
+    vec4 pixel_b = mix (to_linear (pixel_bl), to_linear (pixel_br), fract (texture_position.x));
+    pixel        = from_linear (mix (pixel_t,  pixel_b,  fract (texture_position.y)));
 
     /* TODO: Consider something closer to the scanlines shader. While the single-pixel grid separation
              looks decent on phones, it's never looked quite right on computer monitors.

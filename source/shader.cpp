@@ -180,7 +180,7 @@ void snepulator_shader_callback (const ImDrawList *parent_list, const ImDrawCmd 
     location = glGetUniformLocation (shader_program, "output_resolution");
     if (location != -1)
     {
-        glUniform2i (location, state.host_width, state.host_height);
+        glUniform2f (location, state.host_width, state.host_height);
     }
 
     location = glGetUniformLocation (shader_program, "options");
