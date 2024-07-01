@@ -232,11 +232,10 @@ static void sms_frame_done (void *context_ptr)
     }
 
     /* TODO: Have these as a parameter for snepulator_frame_done? */
-    state.video_start_x     = vdp_context->video_start_x;
+    state.video_start_x     = vdp_context->video_start_x + vdp_context->video_blank_left;
     state.video_start_y     = vdp_context->video_start_y;
-    state.video_width       = vdp_context->video_width;
+    state.video_width       = vdp_context->video_width - vdp_context->video_blank_left;
     state.video_height      = vdp_context->video_height;
-    state.video_blank_left  = vdp_context->video_blank_left;
 }
 
 

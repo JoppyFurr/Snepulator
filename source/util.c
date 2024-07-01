@@ -363,13 +363,6 @@ void util_take_screenshot (void)
         return;
     }
 
-    /* Calculate the size of the image buffer size */
-    if (state.console == CONSOLE_MASTER_SYSTEM)
-    {
-        start_x += state.video_blank_left;
-        ihdr.width -= state.video_blank_left;
-    }
-
     /* Allocate with 24-bits per pixel */
     uint32_t image_size = ihdr.width * ihdr.height * 3;
     uint8_t *buffer = malloc (image_size);

@@ -666,7 +666,6 @@ void snepulator_reset (void)
     state.video_start_y = VIDEO_TOP_BORDER_192;
     state.video_width = 256;
     state.video_height = 192;
-    state.video_blank_left = 0;
 
     /* Auto format default to NTSC */
     if (state.format_auto)

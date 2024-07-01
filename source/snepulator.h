@@ -142,7 +142,6 @@ typedef struct Snepulator_State_s {
     uint32_t    video_start_y;
     uint32_t    video_width;                /* Size of the active area. */
     uint32_t    video_height;
-    uint32_t    video_blank_left;
     int16_t     cursor_x;                   /* User's cursor coordinate within active area. */
     int16_t     cursor_y;
     bool        cursor_button;

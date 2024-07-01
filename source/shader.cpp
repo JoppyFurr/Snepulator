@@ -183,12 +183,6 @@ void snepulator_shader_callback (const ImDrawList *parent_list, const ImDrawCmd 
         glUniform2f (location, state.host_width, state.host_height);
     }
 
-    location = glGetUniformLocation (shader_program, "options");
-    if (location != -1)
-    {
-        glUniform3i (location, 0, 0, state.video_blank_left);
-    }
-
     location = glGetUniformLocation (shader_program, "scale");
     if (location != -1)
     {
