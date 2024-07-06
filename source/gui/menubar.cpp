@@ -4,9 +4,7 @@
  */
 
 #include <stdarg.h>
-#include <stdint.h>
 #include <stdio.h>
-#include <pthread.h>
 
 #include <vector>
 
@@ -15,7 +13,6 @@
 #include "imgui.h"
 
 extern "C" {
-#include "../snepulator_types.h"
 #include "../snepulator.h"
 #include "../path.h"
 #include "../util.h"

@@ -10,8 +10,6 @@
 #include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
-#include <stdbool.h>
 #include <errno.h>
 #include <unistd.h>
 
@@ -28,7 +26,6 @@
 #include "imgui.h"
 
 extern "C" {
-#include "../snepulator_types.h"
 #include "../snepulator.h"
 #include "../config.h"
 }
@@ -47,7 +44,6 @@ static char path [PATH_MAX] = { '\0' };
 
 #ifdef TARGET_WINDOWS
 #define DRIVES_MAX 32
-#include <windows.h>
 static char drive_letters_raw [PATH_MAX];
 static char *drive_letters [DRIVES_MAX];
 static uint32_t drive_count = 0;

@@ -3,13 +3,9 @@
  * Snepulator logo.
  */
 
-#include <pthread.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "snepulator_types.h"
 #include "snepulator.h"
 #include "util.h"
 
@@ -18,7 +14,6 @@
 #include <stdio.h> /* debug */
 
 extern Snepulator_State state;
-extern pthread_mutex_t video_mutex;
 
 
 /*

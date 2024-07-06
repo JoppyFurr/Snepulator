@@ -3,14 +3,10 @@
  * VGM Player implementation.
  */
 
-#include <pthread.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "snepulator_types.h"
 #include "snepulator.h"
 #include "util.h"
 
@@ -39,7 +35,6 @@ static const uint_pixel colours_base [15] = { dim_green, dim_green,  dim_green, 
                                               dim_green, dim_yellow, dim_yellow, dim_red,   dim_red };
 
 extern Snepulator_State state;
-extern pthread_mutex_t video_mutex;
 
 
 /*

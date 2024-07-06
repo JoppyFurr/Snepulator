@@ -5,13 +5,13 @@
 
 #ifdef TARGET_WINDOWS
 
-/* Extra Includes */
+#include <windows.h>
 #include <direct.h>
 
-/* Definitions */
+/* Definition overrides */
 #define CLOCK_MONOTONIC_RAW CLOCK_MONOTONIC
 
-/* Functions */
+/* Function overrides */
 #define mkdir(PATH,FLAGS) _mkdir (PATH)
 
 #endif

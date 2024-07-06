@@ -18,7 +18,6 @@
  *   │      GLSL Shader       │
  *   ╰────────────────────────╯
  */
-#include <pthread.h>
 
 #include <GL/gl3w.h>
 #include <SDL2/SDL.h>
@@ -26,7 +25,6 @@
 #include "imgui.h"
 
 extern "C" {
-#include "snepulator_types.h"
 #include "snepulator.h"
 }
 

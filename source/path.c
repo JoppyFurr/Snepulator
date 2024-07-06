@@ -6,15 +6,11 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <time.h>
 
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include "snepulator_compat.h"
-#include "snepulator_types.h"
 #include "snepulator.h"
 
 

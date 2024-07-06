@@ -6,8 +6,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
-#include <stdbool.h>
 #include <errno.h>
 #include <unistd.h>
 
@@ -22,7 +20,6 @@
 #include "imgui.h"
 
 extern "C" {
-#include "../snepulator_types.h"
 #include "../snepulator.h"
 #include "../gamepad.h"
 

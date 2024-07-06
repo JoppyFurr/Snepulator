@@ -5,10 +5,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
-#include <stdbool.h>
 #include <errno.h>
-#include <pthread.h>
 
 #include <GL/gl3w.h>
 #include <SDL2/SDL.h>
@@ -18,7 +15,6 @@
 #include "imgui_impl_opengl3.h"
 
 extern "C" {
-#include "snepulator_types.h"
 #include "snepulator.h"
 #include "util.h"
 #include "config.h"
@@ -32,10 +28,6 @@ extern "C" {
 #include "sms.h"
 #include "colecovision.h"
 }
-
-#ifdef TARGET_WINDOWS
-#include <windows.h>
-#endif
 
 #include "gui/input.h"
 #include "gui/menubar.h"
@@ -559,7 +551,11 @@ int main (int argc, char **argv)
     SDL_FreeSurface (icon);
 #endif
 
-    /* Initialize timers */
+    /* Initialise mutexes */
+    pthread_mutex_init (&state.run_mutex, NULL);
+    pthread_mutex_init (&state.video_mutex, NULL);
+
+    /* Initialise timers */
     util_ticks_init ();
 
     /* Setup ImGui binding */

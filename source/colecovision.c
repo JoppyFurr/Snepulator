@@ -3,16 +3,12 @@
  * ColecoVision implementation
  */
 
-#include <pthread.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include <SDL2/SDL.h>
 
-#include "snepulator_types.h"
 #include "snepulator.h"
 #include "util.h"
 #include "save_state.h"
@@ -27,7 +23,6 @@
 
 extern Snepulator_State state;
 extern Snepulator_Gamepad gamepad [3];
-extern pthread_mutex_t video_mutex;
 
 
 /*

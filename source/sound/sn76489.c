@@ -7,11 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdint.h>
-#include <stdbool.h>
-#include <pthread.h>
 
-#include "../snepulator_types.h"
 #include "../snepulator.h"
 #include "../util.h"
 #include "../save_state.h"

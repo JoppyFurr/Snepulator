@@ -5,8 +5,6 @@
 
 #include <errno.h>
 #include <math.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,12 +12,9 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include <zlib.h>
-#include <pthread.h>
 
 #include <SDL2/SDL.h>
 
-#include "snepulator_compat.h"
-#include "snepulator_types.h"
 #include "snepulator.h"
 #include "path.h"
 
@@ -28,7 +23,6 @@
 
 /* Global state */
 extern Snepulator_State state;
-extern pthread_mutex_t video_mutex;
 
 /* File state */
 static struct timespec time_start;
@@ -368,7 +362,7 @@ void util_take_screenshot (void)
     uint8_t *buffer = malloc (image_size);
 
     /* Fill the newly allocated buffer */
-    pthread_mutex_lock (&video_mutex);
+    pthread_mutex_lock (&state.video_mutex);
     uint_pixel *frame_buffer = snepulator_get_current_frame ();
     for (uint32_t y = 0; y < ihdr.height; y++)
     {
@@ -379,7 +373,7 @@ void util_take_screenshot (void)
             buffer [(x + y * ihdr.width) * 3 + 2] = frame_buffer [start_x + x + (start_y + y) * stride].b;
         }
     }
-    pthread_mutex_unlock (&video_mutex);
+    pthread_mutex_unlock (&state.video_mutex);
 
     /* Encode the image with libspng */
     spng_ctx *spng_context = spng_ctx_new (SPNG_CTX_ENCODER);

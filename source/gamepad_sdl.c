@@ -3,13 +3,10 @@
  * SDL gamepad support implementation.
  */
 
-#include <stdbool.h>
-#include <stdint.h>
 #include <string.h>
 
 #include <SDL2/SDL.h>
 
-#include "snepulator_types.h"
 #include "snepulator.h"
 #include "gamepad.h"
 

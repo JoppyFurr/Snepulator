@@ -3,11 +3,8 @@
  * SG-1000 ROM Database.
  */
 
-#include <stdbool.h>
-#include <stdint.h>
 #include <string.h>
 
-#include "../snepulator_types.h"
 #include "../snepulator.h"
 #include "sg_db.h"
 

@@ -3,14 +3,10 @@
  * Sega SG-1000 implementation.
  */
 
-#include <pthread.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "snepulator_types.h"
 #include "snepulator.h"
 #include "util.h"
 #include "database/sg_db.h"
@@ -26,7 +22,6 @@
 
 extern Snepulator_State state;
 extern Snepulator_Gamepad gamepad [3];
-extern pthread_mutex_t video_mutex;
 
 
 /*

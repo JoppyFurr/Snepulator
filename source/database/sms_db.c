@@ -5,11 +5,8 @@
  * PAL-Only list comes from SMS Power.
  */
 
-#include <stdbool.h>
-#include <stdint.h>
 #include <string.h>
 
-#include "../snepulator_types.h"
 #include "../snepulator.h"
 #include "sms_db.h"
 

@@ -6,13 +6,8 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
-#include <inttypes.h>
-#include <stdbool.h>
 #include <string.h>
-#include <pthread.h>
 
-#include "../snepulator_types.h"
 #include "../snepulator.h"
 #include "../util.h"
 #include "../gamepad.h"

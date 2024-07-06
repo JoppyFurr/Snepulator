@@ -5,13 +5,9 @@
 
 #include <ctype.h>
 #include <math.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <pthread.h>
 
-#include "snepulator_types.h"
 #include "snepulator.h"
 #include "util.h"
 #include "config.h"
@@ -32,11 +28,8 @@
 /* Images */
 #include "../images/snepulator_paused.c"
 
-pthread_mutex_t run_mutex = PTHREAD_MUTEX_INITIALIZER;
-
 #include "gamepad.h"
 extern Snepulator_State state;
-pthread_mutex_t video_mutex = PTHREAD_MUTEX_INITIALIZER;
 extern Snepulator_Gamepad gamepad [3];
 
 
@@ -270,11 +263,11 @@ int snepulator_config_import (void)
  */
 void snepulator_clear_video (void)
 {
-    pthread_mutex_lock (&video_mutex);
+    pthread_mutex_lock (&state.video_mutex);
     memset (state.video_ring, 0, sizeof (state.video_ring));
     state.video_read_index = 0;
     state.video_write_index = 0;
-    pthread_mutex_unlock (&video_mutex);
+    pthread_mutex_unlock (&state.video_mutex);
 }
 
 
@@ -372,13 +365,13 @@ void snepulator_frame_done (uint_pixel *frame)
     /* Queue the frame.
      *  -> If there are already two frames queued, replace the last frame.
      *  -> Otherwise, append the new frame to the queue. */
-    pthread_mutex_lock (&video_mutex);
+    pthread_mutex_lock (&state.video_mutex);
     if (state.video_write_index < state.video_read_index + 2)
     {
         state.video_write_index++;
     }
     memcpy (state.video_ring [state.video_write_index % 3], frame, sizeof (state.video_ring [0]));
-    pthread_mutex_unlock (&video_mutex);
+    pthread_mutex_unlock (&state.video_mutex);
 }
 
 
@@ -396,12 +389,12 @@ uint_pixel *snepulator_get_current_frame (void)
  */
 uint_pixel *snepulator_get_next_frame (void)
 {
-    pthread_mutex_lock (&video_mutex);
+    pthread_mutex_lock (&state.video_mutex);
     if (state.video_read_index < state.video_write_index)
     {
         state.video_read_index++;
     }
-    pthread_mutex_unlock (&video_mutex);
+    pthread_mutex_unlock (&state.video_mutex);
 
     return state.video_ring [state.video_read_index % 3];
 }
@@ -628,7 +621,7 @@ void snepulator_reset (void)
     }
 
     /* Don't free resources in the middle of the run_callback */
-    pthread_mutex_lock (&run_mutex);
+    pthread_mutex_lock (&state.run_mutex);
 
     /* Free any console-specific resources */
     if (state.cleanup != NULL)
@@ -642,7 +635,7 @@ void snepulator_reset (void)
     }
     state.console = CONSOLE_NONE;
 
-    pthread_mutex_unlock (&run_mutex);
+    pthread_mutex_unlock (&state.run_mutex);
 
     /* Clear callback functions */
     state.audio_callback = NULL;
@@ -705,7 +698,7 @@ void snepulator_rom_set (const char *path)
  */
 void snepulator_run (uint32_t cycles)
 {
-    pthread_mutex_lock (&run_mutex);
+    pthread_mutex_lock (&state.run_mutex);
 
     if (state.run == RUN_STATE_PAUSED)
     {
@@ -725,7 +718,7 @@ void snepulator_run (uint32_t cycles)
         state.run_callback (state.console_context, cycles);
     }
 
-    pthread_mutex_unlock (&run_mutex);
+    pthread_mutex_unlock (&state.run_mutex);
 }
 
 
@@ -735,14 +728,14 @@ void snepulator_run (uint32_t cycles)
  */
 void snepulator_state_load (void *context, const char *filename)
 {
-    pthread_mutex_lock (&run_mutex);
+    pthread_mutex_lock (&state.run_mutex);
 
     if (state.state_load != NULL)
     {
         state.state_load (context, filename);
     }
 
-    pthread_mutex_unlock (&run_mutex);
+    pthread_mutex_unlock (&state.run_mutex);
 }
 
 
@@ -751,14 +744,14 @@ void snepulator_state_load (void *context, const char *filename)
  */
 void snepulator_state_save (void *context, const char *filename)
 {
-    pthread_mutex_lock (&run_mutex);
+    pthread_mutex_lock (&state.run_mutex);
 
     if (state.state_load != NULL)
     {
         state.state_save (context, filename);
     }
 
-    pthread_mutex_unlock (&run_mutex);
+    pthread_mutex_unlock (&state.run_mutex);
 }
 
 
@@ -770,7 +763,7 @@ void snepulator_system_init (void)
     snepulator_reset ();
 
     /* Lock to ensure that initialization is complete before emulation starts. */
-    pthread_mutex_lock (&run_mutex);
+    pthread_mutex_lock (&state.run_mutex);
 
     snepulator_console_set_from_path (state.cart_filename);
 
@@ -799,7 +792,7 @@ void snepulator_system_init (void)
             state.console_context = sms_init ();
             break;
     }
-    pthread_mutex_unlock (&run_mutex);
+    pthread_mutex_unlock (&state.run_mutex);
 }
 
 

@@ -1,7 +1,15 @@
 /*
  * Snepulator
- * State, enums, and prototypes.
+ * Global state, enums, and prototypes.
  */
+
+/* Headers that supply the types used in this file. */
+#include <pthread.h>
+#include <stdbool.h>
+#include <stdint.h>
+
+#include "snepulator_compat.h"
+#include "snepulator_types.h"
 
 #define VIDEO_SIDE_BORDER 8
 #define VIDEO_BUFFER_WIDTH (256 + 2 * VIDEO_SIDE_BORDER)
@@ -71,6 +79,8 @@ typedef enum Video_3D_Mode_e {
 
 typedef struct Snepulator_State_s {
     Run_State run;
+    pthread_mutex_t run_mutex;
+    pthread_mutex_t video_mutex;
 
     /* Interface */
     bool show_gui;

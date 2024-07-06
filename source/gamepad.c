@@ -7,12 +7,9 @@
  */
 
 #include <math.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
-#include "snepulator_types.h"
 #include "snepulator.h"
 #include "gamepad.h"
 #include "config.h"
