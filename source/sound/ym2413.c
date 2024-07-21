@@ -1086,11 +1086,6 @@ YM2413_Context *ym2413_init (void)
         context->state.carrier [channel].eg_level = 127;
     }
 
-    context->completed_samples = 0;
-    context->write_index = 0;
-    context->read_index = 0;
-    context->clock_rate = 0;
-
     return context;
 }
 
