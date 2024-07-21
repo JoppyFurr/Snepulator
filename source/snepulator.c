@@ -168,10 +168,10 @@ int snepulator_config_import (void)
             state.video_par_setting = VIDEO_PAR_6_5;
             state.video_par = 6.0 / 5.0;
         }
-        else if (strcmp (string, "11:8") == 0)
+        else if (strcmp (string, "18:13") == 0)
         {
-            state.video_par_setting = VIDEO_PAR_11_8;
-            state.video_par = 11.0 / 8.0;
+            state.video_par_setting = VIDEO_PAR_18_13;
+            state.video_par = 18.0 / 13.0;
         }
     }
 
@@ -936,11 +936,11 @@ void snepulator_video_par_set (Video_PAR par)
         state.video_par = 6.0 / 5.0;
         config_string_set ("video", "pixel-aspect-ratio", "6:5");
     }
-    else if (par == VIDEO_PAR_11_8)
+    else if (par == VIDEO_PAR_18_13)
     {
         state.video_par_setting = par;
-        state.video_par = 11.0 / 8.0;
-        config_string_set ("video", "pixel-aspect-ratio", "11:8");
+        state.video_par = 18.0 / 13.0;
+        config_string_set ("video", "pixel-aspect-ratio", "18:13");
     }
 
     config_write ();

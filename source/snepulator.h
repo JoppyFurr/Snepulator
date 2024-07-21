@@ -65,7 +65,7 @@ typedef enum Video_PAR_e {
     VIDEO_PAR_1_1 = 0,
     VIDEO_PAR_8_7,
     VIDEO_PAR_6_5,
-    VIDEO_PAR_11_8
+    VIDEO_PAR_18_13
 } Video_PAR;
 
 typedef enum Video_3D_Mode_e {

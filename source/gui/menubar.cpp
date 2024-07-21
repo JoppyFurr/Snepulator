@@ -479,9 +479,9 @@ static void snepulator_video_menu (void)
             {
                 snepulator_video_par_set (VIDEO_PAR_6_5);
             }
-            if (ImGui::MenuItem ("11:8 (PAL SMS)", NULL, state.video_par_setting == VIDEO_PAR_11_8))
+            if (ImGui::MenuItem ("18:13 (PAL SMS)", NULL, state.video_par_setting == VIDEO_PAR_18_13))
             {
-                snepulator_video_par_set (VIDEO_PAR_11_8);
+                snepulator_video_par_set (VIDEO_PAR_18_13);
             }
 
             ImGui::EndMenu ();
