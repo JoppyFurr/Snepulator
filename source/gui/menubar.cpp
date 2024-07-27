@@ -267,13 +267,13 @@ static void snepulator_console_menu ()
  */
 static void snepulator_state_menu (void)
 {
-    bool running_or_paused = (state.run == RUN_STATE_RUNNING || state.run == RUN_STATE_PAUSED);
+    bool can_save_state = (state.run == RUN_STATE_RUNNING || state.run == RUN_STATE_PAUSED) && state.state_save != NULL;
 
     if (ImGui::BeginMenu ("State"))
     {
         state.mouse_time = util_get_ticks ();
 
-        if (ImGui::BeginMenu ("Save State", running_or_paused))
+        if (ImGui::BeginMenu ("Save State", can_save_state))
         {
             if (ImGui::MenuItem ("Save to Slot 1", NULL))
             {
@@ -296,7 +296,7 @@ static void snepulator_state_menu (void)
             ImGui::EndMenu ();
         }
 
-        if (ImGui::BeginMenu ("Load State", running_or_paused))
+        if (ImGui::BeginMenu ("Load State", can_save_state))
         {
             if (ImGui::MenuItem ("Load from Slot 1", NULL))
             {
