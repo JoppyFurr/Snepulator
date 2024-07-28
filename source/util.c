@@ -179,10 +179,51 @@ void util_hash_rom (const uint8_t *rom, uint32_t rom_size, uint8_t rom_hash [HAS
 
 
 /*
+ * Read chosen bytes from a file into a provided buffer.
+ */
+int32_t util_file_read_bytes (uint8_t *buffer, uint32_t offset, uint32_t count, const char *filename)
+{
+    uint32_t bytes_read = 0;
+    uint32_t size;
+
+    /* Open the file */
+    FILE *file = fopen (filename, "rb");
+    if (!file)
+    {
+        snepulator_error ("Load Error", strerror (errno));
+        return -1;
+    }
+
+    /* Get file size */
+    fseek (file, 0, SEEK_END);
+    size = ftell (file);
+    fseek (file, 0, SEEK_SET);
+
+    /* Check the file is large enough for the requested bytes */
+    if (size < offset + count - 1)
+    {
+        fclose (file);
+        return -1;
+    }
+
+    /* Copy to memory */
+    fseek (file, offset, SEEK_SET);
+    while (bytes_read < count)
+    {
+        bytes_read += fread (buffer + bytes_read, 1, count - bytes_read, file);
+    }
+
+    fclose (file);
+
+    return EXIT_SUCCESS;
+}
+
+
+/*
  * Load a file into a buffer.
  * The buffer should be freed when no-longer needed.
  */
-int32_t util_load_file (uint8_t **buffer, uint32_t *file_size, char *filename)
+int32_t util_load_file (uint8_t **buffer, uint32_t *file_size, const char *filename)
 {
     uint32_t bytes_read = 0;
     uint32_t size;
@@ -225,7 +266,7 @@ int32_t util_load_file (uint8_t **buffer, uint32_t *file_size, char *filename)
  * Load a gzip-compressed file into a buffer.
  * The buffer should be freed when no-longer needed.
  */
-int32_t util_load_gzip_file (uint8_t **buffer, uint32_t *content_size, char *filename)
+int32_t util_load_gzip_file (uint8_t **buffer, uint32_t *content_size, const char *filename)
 {
     uint8_t scratch [128] = { 0 }; /* Temporary decompression area, for getting the decompressed size */
     uint32_t bytes_read = 0;
@@ -270,7 +311,7 @@ int32_t util_load_gzip_file (uint8_t **buffer, uint32_t *content_size, char *fil
  * If the rom is not a power-of-two size, the buffer will be rounded up and
  * padded with zeros. The buffer should be freed when no-longer needed.
  */
-int32_t util_load_rom (uint8_t **buffer, uint32_t *rom_size, char *filename)
+int32_t util_load_rom (uint8_t **buffer, uint32_t *rom_size, const char *filename)
 {
     uint32_t bytes_read = 0;
     uint32_t skip = 0;

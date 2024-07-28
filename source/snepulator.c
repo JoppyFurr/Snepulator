@@ -48,7 +48,7 @@ void snepulator_bios_set (const char *path)
         state.cart_filename = NULL;
     }
 
-    snepulator_console_set_from_path (path);
+    state.console = snepulator_select_console_for_rom (path);
 
     switch (state.console)
     {
@@ -272,51 +272,64 @@ void snepulator_clear_video (void)
 
 
 /*
- * Set state.console using the file extension.
+ * Set state.console using the ROM file.
  */
-void snepulator_console_set_from_path (const char *path)
+Console snepulator_select_console_for_rom (const char *path)
 {
-    char extension[16] = { '\0' };
-    char *extension_ptr = NULL;
-
     /* If no ROM is selected, display the logo. */
     if (path == NULL)
     {
-        state.console = CONSOLE_LOGO;
-        return;
+        return CONSOLE_LOGO;
     }
 
-    extension_ptr = strrchr (path, '.');
+    /* First priority: Check for a known console-specific file extension */
+    char *extension_ptr = strrchr (path, '.');
     if (extension_ptr != NULL)
     {
+        char extension[16] = { '\0' };
         for (int i = 0; i < 15 && extension_ptr[i] != '\0'; i++)
         {
             extension [i] = tolower (extension_ptr [i]);
         }
+
+        if (strcmp (extension, ".sms") == 0)
+        {
+            return CONSOLE_MASTER_SYSTEM;
+        }
+        else if (strcmp (extension, ".gg") == 0)
+        {
+            return CONSOLE_GAME_GEAR;
+        }
+        else if (strcmp (extension, ".sg") == 0)
+        {
+            return CONSOLE_SG_1000;
+        }
+        else if (strcmp (extension, ".col") == 0)
+        {
+            return CONSOLE_COLECOVISION;
+        }
+        else if (strcmp (extension, ".vgm") == 0 ||
+                 strcmp (extension, ".vgz") == 0)
+        {
+            return CONSOLE_VGM_PLAYER;
+        }
     }
 
-    if (strcmp (extension, ".vgm") == 0 ||
-        strcmp (extension, ".vgz") == 0)
+    /* Second priority: Check if the ROM matches any known headers */
+    uint16_t first_word;
+    if (util_file_read_bytes ((void *) &first_word, 0, 2, path) == EXIT_SUCCESS)
     {
-        state.console = CONSOLE_VGM_PLAYER;
+        if (first_word == 0xaa55 || first_word == 0x55aa)
+        {
+            return CONSOLE_COLECOVISION;
+        }
     }
-    else if (strcmp (extension, ".col") == 0)
-    {
-        state.console = CONSOLE_COLECOVISION;
-    }
-    else if (strcmp (extension, ".gg") == 0)
-    {
-        state.console = CONSOLE_GAME_GEAR;
-    }
-    else if (strcmp (extension, ".sg") == 0)
-    {
-        state.console = CONSOLE_SG_1000;
-    }
-    else
-    {
-        /* Default to Master System */
-        state.console = CONSOLE_MASTER_SYSTEM;
-    }
+
+    /* TODO: Eventually, check for SMS and Super Magic Drive headers.
+     *       For now this can be skipped as Master System is the default. */
+
+    /* No clear match - default to Master System */
+    return CONSOLE_MASTER_SYSTEM;
 }
 
 
@@ -385,7 +398,8 @@ uint_pixel *snepulator_get_current_frame (void)
 
 
 /*
- * Get a pointer to the currently displayed frame.
+ * Advance the video_read_index and get a pointer
+ * to the new frame.
  */
 uint_pixel *snepulator_get_next_frame (void)
 {
@@ -765,7 +779,7 @@ void snepulator_system_init (void)
     /* Lock to ensure that initialization is complete before emulation starts. */
     pthread_mutex_lock (&state.run_mutex);
 
-    snepulator_console_set_from_path (state.cart_filename);
+    state.console = snepulator_select_console_for_rom (state.cart_filename);
 
     switch (state.console)
     {

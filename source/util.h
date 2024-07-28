@@ -22,14 +22,17 @@ void util_delay (uint32_t ticks);
 /* Use BLAKE3 to make a 12-byte hash for the current ROM. */
 void util_hash_rom (const uint8_t *rom, uint32_t rom_size, uint8_t rom_hash [HASH_LENGTH]);
 
+/* Read chosen bytes from a file into a provided buffer. */
+int32_t util_file_read_bytes (uint8_t *buffer, uint32_t offset, uint32_t count, const char *filename);
+
 /* Load a file into a buffer. The buffer should be freed when no-longer needed. */
-int32_t util_load_file (uint8_t **buffer, uint32_t *file_size, char *filename);
+int32_t util_load_file (uint8_t **buffer, uint32_t *file_size, const char *filename);
 
 /* Load a gzip-compressed file into a buffer. The buffer should be freed when no-longer needed. */
-int32_t util_load_gzip_file (uint8_t **buffer, uint32_t *content_size, char *filename);
+int32_t util_load_gzip_file (uint8_t **buffer, uint32_t *content_size, const char *filename);
 
 /* Load a rom file into a power-of-two sized buffer. The buffer should be freed when no-longer needed. */
-int32_t util_load_rom (uint8_t **buffer, uint32_t *rom_size, char *filename);
+int32_t util_load_rom (uint8_t **buffer, uint32_t *rom_size, const char *filename);
 
 /* Take a screenshot. */
 void util_take_screenshot (void);

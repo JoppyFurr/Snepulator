@@ -191,8 +191,8 @@ void snepulator_clear_video (void);
 /* Import settings from configuration from file. */
 int snepulator_config_import (void);
 
-/* Set state.console using the file extension. */
-void snepulator_console_set_from_path (const char *path);
+/* Find the appropriate Console for a given ROM file. */
+Console snepulator_select_console_for_rom (const char *path);
 
 /* Disable screen blanking when the blanking bit is set. */
 void snepulator_disable_blanking_set (bool disable_blanking);
