@@ -54,6 +54,7 @@ build_snepulator ()
     eval $CC $CFLAGS -c source/sound/ym2413.c       -o work/ym2413.o
     eval $CC $CFLAGS -c source/video/tms9928a.c     -o work/tms9928a.o
     eval $CC $CFLAGS -c source/video/sms_vdp.c      -o work/sms_vdp.o
+    eval $CC $CFLAGS -c source/video/smd_vdp.c      -o work/smd_vdp.o
     eval $CC $CFLAGS -c source/colecovision.c       -o work/colecovision.o
     eval $CC $CFLAGS -c source/config.c             -o work/config.o
     eval $CC $CFLAGS -c source/gamepad.c            -o work/gamepad.o
