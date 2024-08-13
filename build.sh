@@ -45,6 +45,7 @@ build_prepare ()
 build_snepulator ()
 {
     echo "Compiling emulator..."
+    eval $CC $CFLAGS -c source/cpu/m68k.c           -o work/m68k.o
     eval $CC $CFLAGS -c source/cpu/z80.c            -o work/z80.o
     eval $CC $CFLAGS -c source/database/sg_db.c     -o work/sg_db.o
     eval $CC $CFLAGS -c source/database/sms_db.c    -o work/sms_db.o
