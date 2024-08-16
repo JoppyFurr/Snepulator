@@ -132,7 +132,7 @@ SN76489_Context *sn76489_init (void)
     }
 
     SN76489_Context *context = calloc (1, sizeof (SN76489_Context));
-    pthread_mutex_init (&context->mutex, NULL);
+    pthread_mutex_init (&context->mutex, NULL); /* TODO: mutex_destroy */
 
     context->clock_rate = NTSC_COLOURBURST_FREQ;
 

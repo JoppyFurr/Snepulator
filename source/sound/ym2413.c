@@ -1073,7 +1073,7 @@ YM2413_Context *ym2413_init (void)
     }
 
     YM2413_Context *context = calloc (1, sizeof (YM2413_Context));
-    pthread_mutex_init (&context->mutex, NULL);
+    pthread_mutex_init (&context->mutex, NULL); /* TODO: mutex_destroy */
 
     context->clock_rate = NTSC_COLOURBURST_FREQ;
 

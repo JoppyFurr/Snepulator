@@ -5514,7 +5514,7 @@ static void z80_run_instruction (Z80_Context *context)
 
 
 /*
- * Simulate the Z80 for the specified number of clock cycles.
+ * Run the Z80 for the specified number of clock cycles.
  */
 void z80_run_cycles (Z80_Context *context, int64_t cycles)
 {

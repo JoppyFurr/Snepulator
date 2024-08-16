@@ -118,7 +118,7 @@ void gamepad_init (void);
 void gamepad_list_update (void);
 
 /* Called to simulate gamepad hardware. (paddle) */
-void gamepad_paddle_tick (uint32_t ms);
+void gamepad_paddle_tick (uint32_t cycles);
 
 /* Return the number of players using the specified joystick id. */
 uint32_t gamepad_joystick_user_count (uint32_t id);
