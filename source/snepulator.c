@@ -13,9 +13,11 @@
 #include "config.h"
 #include "database/sms_db.h"
 
+#include "cpu/m68k.h"
 #include "cpu/z80.h"
 #include "video/tms9928a.h"
 #include "video/sms_vdp.h"
+#include "video/smd_vdp.h"
 #include "sound/band_limit.h"
 #include "sound/sn76489.h"
 #include "sound/ym2413.h"
@@ -23,6 +25,7 @@
 #include "logo.h"
 #include "sg-1000.h"
 #include "sms.h"
+#include "smd.h"
 #include "vgm_player.h"
 
 /* Images */
@@ -292,7 +295,20 @@ Console snepulator_select_console_for_rom (const char *path)
             extension [i] = tolower (extension_ptr [i]);
         }
 
-        if (strcmp (extension, ".sms") == 0)
+        if (strcmp (extension, ".vgm") == 0 ||
+            strcmp (extension, ".vgz") == 0)
+        {
+            return CONSOLE_VGM_PLAYER;
+        }
+        else if (strcmp (extension, ".col") == 0)
+        {
+            return CONSOLE_COLECOVISION;
+        }
+        else if (strcmp (extension, ".sg") == 0)
+        {
+            return CONSOLE_SG_1000;
+        }
+        else if (strcmp (extension, ".sms") == 0)
         {
             return CONSOLE_MASTER_SYSTEM;
         }
@@ -300,18 +316,11 @@ Console snepulator_select_console_for_rom (const char *path)
         {
             return CONSOLE_GAME_GEAR;
         }
-        else if (strcmp (extension, ".sg") == 0)
+        else if (strcmp (extension, ".md") == 0 ||
+                 strcmp (extension, ".gen") == 0)
         {
-            return CONSOLE_SG_1000;
-        }
-        else if (strcmp (extension, ".col") == 0)
-        {
-            return CONSOLE_COLECOVISION;
-        }
-        else if (strcmp (extension, ".vgm") == 0 ||
-                 strcmp (extension, ".vgz") == 0)
-        {
-            return CONSOLE_VGM_PLAYER;
+            /* TODO: Support for .smd roms */
+            return CONSOLE_MEGA_DRIVE;
         }
     }
 
@@ -801,6 +810,13 @@ void snepulator_system_init (void)
 
         case CONSOLE_MASTER_SYSTEM:
         case CONSOLE_GAME_GEAR:
+            state.console_context = sms_init ();
+            break;
+
+        case CONSOLE_MEGA_DRIVE:
+            state.console_context = smd_init ();
+            break;
+
         default:
             /* Default to Master System */
             state.console_context = sms_init ();

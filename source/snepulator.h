@@ -36,9 +36,10 @@ typedef enum Console_e {
     CONSOLE_LOGO,
     CONSOLE_VGM_PLAYER,
     CONSOLE_COLECOVISION,
-    CONSOLE_GAME_GEAR,
+    CONSOLE_SG_1000,
     CONSOLE_MASTER_SYSTEM,
-    CONSOLE_SG_1000
+    CONSOLE_GAME_GEAR,
+    CONSOLE_MEGA_DRIVE
 } Console;
 
 typedef enum Shader_e {

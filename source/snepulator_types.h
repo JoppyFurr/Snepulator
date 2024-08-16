@@ -33,6 +33,7 @@
 #define SIZE_16K    (16 << 10)
 #define SIZE_32K    (32 << 10)
 #define SIZE_48K    (48 << 10)
+#define SIZE_64K    (64 << 10)
 
 typedef union uint16_t_Split_u {
     uint16_t w;
