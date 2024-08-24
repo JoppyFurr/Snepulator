@@ -397,6 +397,7 @@ SMD_Context *smd_init (void)
     state.clock_rate = SMD_NTSC_MASTER_CLOCK;
 
     /* Begin emulation */
+    m68k_reset (m68k_context);
     state.run = RUN_STATE_RUNNING;
 
     return context;
