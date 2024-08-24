@@ -51,6 +51,161 @@ static void smd_frame_done (void *context_ptr)
 
 
 /*
+ * Handle 16-bit memory reads.
+ */
+static uint16_t smd_memory_read_16 (void *context_ptr, uint32_t addr)
+{
+    SMD_Context *context = (SMD_Context *) context_ptr;
+
+    /* Cartridge ROM */
+    if (addr <= 0x3fffff)
+    {
+        if (context->rom != NULL)
+        {
+            return * (uint16_t *) &context->rom [addr & context->rom_mask];
+        }
+        else
+        {
+            return 0xffff;
+        }
+    }
+
+    /* Unused areas */
+    else if (addr <= 0x9fffff)
+    {
+        printf ("[%s] Unused address %06x not implemented.\n", __func__, addr);
+        return 0xffff;
+    }
+
+    /* Z80 Address Space */
+    else if (addr <= 0xa0ffff)
+    {
+        printf ("[%s] Z80 address-pace %06x not implemented.\n", __func__, addr);
+        return 0xffff;
+    }
+
+    /* I/O */
+    else if (addr <= 0xa1001f)
+    {
+        switch (addr & 0xfffffe)
+        {
+            /* TODO: What is the correct behaviour for a 16-bit read?
+             * Should the value be repeated in both bytes?
+             * What about a non-aligned 16-bit read? */
+            case 0xa10008: /* Player 1 - Control Register */
+                return context->state.port1_ctrl;
+            case 0xa1000a: /* Player 1 - Control Register */
+                return context->state.port2_ctrl;
+            case 0xa1000c: /* Player 1 - Control Register */
+                return context->state.ext_ctrl;
+            default:
+                printf ("[%s] I/O address %06x not implemented.\n", __func__, addr);
+        }
+    }
+
+    /* Internal Registers and Expansion */
+    else if (addr <= 0xbfffff)
+    {
+        printf ("[%s] Internal registers / expansion address %06x not implemented.\n", __func__, addr);
+    }
+
+    /* VDP */
+    else if (addr <= 0xdfffff)
+    {
+        printf ("[%s] VDP address %06x not implemented.\n", __func__, addr);
+    }
+
+    /* RAM */
+    else
+    {
+        return * (uint16_t *) &context->ram [addr & 0x00ffff];
+    }
+
+    printf ("[%s] Unmapped address %06x.\n", __func__, addr);
+    return 0xffff;
+}
+
+
+/*
+ * Handle 8-bit memory reads.
+ * TODO: Duplication between 8-bit and 16-bit reads. Can we do better?
+ */
+static uint8_t smd_memory_read_8 (void *context_ptr, uint32_t addr)
+{
+    SMD_Context *context = (SMD_Context *) context_ptr;
+
+    /* Cartridge ROM */
+    if (addr <= 0x3fffff)
+    {
+        if (context->rom != NULL)
+        {
+            return context->rom [addr & context->rom_mask];
+        }
+        else
+        {
+            return 0xff;
+        }
+    }
+
+    /* Unused areas */
+    else if (addr <= 0x9fffff)
+    {
+        printf ("[%s] Unused address %06x not implemented.\n", __func__, addr);
+        return 0xff;
+    }
+
+    /* Z80 Address Space */
+    else if (addr <= 0xa0ffff)
+    {
+        printf ("[%s] Z80 address-pace %06x not implemented.\n", __func__, addr);
+        return 0xff;
+    }
+
+    /* I/O */
+    else if (addr <= 0xa1001f)
+    {
+        /* Last bit is masked out; register is available at even and odd addresses. */
+        switch (addr & 0xfffffe)
+        {
+            case 0xa10000: /* Version Register */
+                return 0xa1; /* Export NTSC console with no expansion unit. */
+            case 0xa10008: /* Player 1 - Control Register */
+                return context->state.port1_ctrl;
+            case 0xa1000a: /* Player 1 - Control Register */
+                return context->state.port2_ctrl;
+            case 0xa1000c: /* Player 1 - Control Register */
+                return context->state.ext_ctrl;
+            default:
+                printf ("[%s] I/O address %06x not implemented.\n", __func__, addr);
+        }
+    }
+
+    /* Internal Registers and Expansion */
+    else if (addr <= 0xbfffff)
+    {
+        printf ("[%s] Internal registers / expansion address %06x not implemented.\n", __func__, addr);
+        return 0xff;
+    }
+
+    /* VDP */
+    else if (addr <= 0xdfffff)
+    {
+        printf ("[%s] VDP address %06x not implemented.\n", __func__, addr);
+        return 0xff;
+    }
+
+    /* RAM */
+    else
+    {
+        return * (uint16_t *) &context->ram [addr & 0x00ffff];
+    }
+
+    printf ("[%s] Unmapped address %06x.\n", __func__, addr);
+    return 0xff;
+}
+
+
+/*
  * Emulate the Mega Drive for the specified number of clock cycles.
  * Called with the run_mutex held.
  */
@@ -185,7 +340,10 @@ SMD_Context *smd_init (void)
     }
 
     /* Initialise CPUs */
-    m68k_context = m68k_init (context, NULL, NULL, smd_get_int);
+    m68k_context = m68k_init (context,
+                              smd_memory_read_16, NULL,
+                              smd_memory_read_8, NULL,
+                              smd_get_int);
     context->m68k_context = m68k_context;
 
     z80_context = z80_init (context, NULL, NULL, NULL, NULL, NULL, NULL);

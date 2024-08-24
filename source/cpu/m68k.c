@@ -22,8 +22,10 @@ void m68k_run_cycles (M68000_Context *context, int64_t cycles)
  * Create the 68000 context with power-on defaults.
  */
 M68000_Context *m68k_init (void *parent,
-                           uint16_t (* memory_read) (void *, uint16_t),
-                           void     (* memory_write)(void *, uint16_t, uint16_t),
+                           uint16_t (* memory_read_16)  (void *, uint32_t),
+                           void     (* memory_write_16) (void *, uint32_t, uint16_t),
+                           uint8_t  (* memory_read_8)   (void *, uint32_t),
+                           void     (* memory_write_8)  (void *, uint32_t, uint8_t),
                            uint8_t  (* get_int)     (void *))
 {
     M68000_Context *context;
@@ -35,12 +37,14 @@ M68000_Context *m68k_init (void *parent,
         return NULL;
     }
 
+    context->parent          = parent;
+    context->memory_read_16  = memory_read_16;
+    context->memory_write_16 = memory_write_16;
+    context->memory_read_8   = memory_read_8;
+    context->memory_write_8  = memory_write_8;
+    context->get_int         = get_int;
     /* TODO: power-on defaults */
 
-    context->parent       = parent;
-    context->memory_read  = memory_read;
-    context->memory_write = memory_write;
-    context->get_int      = get_int;
 
     return context;
 }

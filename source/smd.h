@@ -12,7 +12,9 @@
 
 typedef struct SMD_State_s {
 
-    uint16_t placeholder;
+    uint8_t port1_ctrl;
+    uint8_t port2_ctrl;
+    uint8_t ext_ctrl;
 
 } SMD_State;
 
