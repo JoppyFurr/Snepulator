@@ -51,82 +51,6 @@ static void smd_frame_done (void *context_ptr)
 
 
 /*
- * Handle 16-bit memory reads.
- */
-static uint16_t smd_memory_read_16 (void *context_ptr, uint32_t addr)
-{
-    SMD_Context *context = (SMD_Context *) context_ptr;
-
-    /* Cartridge ROM */
-    if (addr <= 0x3fffff)
-    {
-        if (context->rom != NULL)
-        {
-            return * (uint16_t *) &context->rom [addr & context->rom_mask];
-        }
-        else
-        {
-            return 0xffff;
-        }
-    }
-
-    /* Unused areas */
-    else if (addr <= 0x9fffff)
-    {
-        printf ("[%s] Unused address %06x not implemented.\n", __func__, addr);
-        return 0xffff;
-    }
-
-    /* Z80 Address Space */
-    else if (addr <= 0xa0ffff)
-    {
-        printf ("[%s] Z80 address-pace %06x not implemented.\n", __func__, addr);
-        return 0xffff;
-    }
-
-    /* I/O */
-    else if (addr <= 0xa1001f)
-    {
-        switch (addr & 0xfffffe)
-        {
-            /* TODO: What is the correct behaviour for a 16-bit read?
-             * Should the value be repeated in both bytes?
-             * What about a non-aligned 16-bit read? */
-            case 0xa10008: /* Player 1 - Control Register */
-                return context->state.port1_ctrl;
-            case 0xa1000a: /* Player 1 - Control Register */
-                return context->state.port2_ctrl;
-            case 0xa1000c: /* Player 1 - Control Register */
-                return context->state.ext_ctrl;
-            default:
-                printf ("[%s] I/O address %06x not implemented.\n", __func__, addr);
-        }
-    }
-
-    /* Internal Registers and Expansion */
-    else if (addr <= 0xbfffff)
-    {
-        printf ("[%s] Internal registers / expansion address %06x not implemented.\n", __func__, addr);
-    }
-
-    /* VDP */
-    else if (addr <= 0xdfffff)
-    {
-        printf ("[%s] VDP address %06x not implemented.\n", __func__, addr);
-    }
-
-    /* RAM */
-    else
-    {
-        return * (uint16_t *) &context->ram [addr & 0x00ffff];
-    }
-
-    printf ("[%s] Unmapped address %06x.\n", __func__, addr);
-    return 0xffff;
-}
-
-
-/*
  * Handle 8-bit memory reads.
  * TODO: Duplication between 8-bit and 16-bit reads. Can we do better?
  */
@@ -202,6 +126,136 @@ static uint8_t smd_memory_read_8 (void *context_ptr, uint32_t addr)
 
     printf ("[%s] Unmapped address %06x.\n", __func__, addr);
     return 0xff;
+}
+
+
+/*
+ * Handle 16-bit memory reads.
+ */
+static uint16_t smd_memory_read_16 (void *context_ptr, uint32_t addr)
+{
+    SMD_Context *context = (SMD_Context *) context_ptr;
+
+    /* Cartridge ROM */
+    if (addr <= 0x3fffff)
+    {
+        if (context->rom != NULL)
+        {
+            return * (uint16_t *) &context->rom [addr & context->rom_mask];
+        }
+        else
+        {
+            return 0xffff;
+        }
+    }
+
+    /* Unused areas */
+    else if (addr <= 0x9fffff)
+    {
+        printf ("[%s] Unused address %06x not implemented.\n", __func__, addr);
+        return 0xffff;
+    }
+
+    /* Z80 Address Space */
+    else if (addr <= 0xa0ffff)
+    {
+        printf ("[%s] Z80 address-pace %06x not implemented.\n", __func__, addr);
+        return 0xffff;
+    }
+
+    /* I/O */
+    else if (addr <= 0xa1001f)
+    {
+        switch (addr & 0xfffffe)
+        {
+            /* TODO: What is the correct behaviour for a 16-bit read?
+             * Should the value be repeated in both bytes?
+             * What about a non-aligned 16-bit read? */
+            case 0xa10008: /* Player 1 - Control Register */
+                return context->state.port1_ctrl;
+            case 0xa1000a: /* Player 1 - Control Register */
+                return context->state.port2_ctrl;
+            case 0xa1000c: /* Player 1 - Control Register */
+                return context->state.ext_ctrl;
+            default:
+                printf ("[%s] I/O address %06x not implemented.\n", __func__, addr);
+        }
+    }
+
+    /* Internal Registers and Expansion */
+    else if (addr <= 0xbfffff)
+    {
+        printf ("[%s] Internal registers / expansion address %06x not implemented.\n", __func__, addr);
+        return 0xffff;
+    }
+
+    /* VDP */
+    else if (addr <= 0xdfffff)
+    {
+        printf ("[%s] VDP address %06x not implemented.\n", __func__, addr);
+        return 0xffff;
+    }
+
+    /* RAM */
+    else
+    {
+        return * (uint16_t *) &context->ram [addr & 0x00ffff];
+    }
+
+    printf ("[%s] Unmapped address %06x.\n", __func__, addr);
+    return 0xffff;
+}
+
+
+/*
+ * Handle 8-bit memory writes.
+ */
+static void smd_memory_write_8 (void *context_ptr, uint32_t addr, uint8_t data)
+{
+    printf ("[%s] Unmapped address %06x.\n", __func__, addr);
+}
+
+
+/*
+ * Handle 16-bit memory writes.
+ */
+static void smd_memory_write_16 (void *context_ptr, uint32_t addr, uint16_t data)
+{
+    SMD_Context *context = (SMD_Context *) context_ptr;
+
+    /* Z80 Address Space access */
+    if (addr >= 0xa00000 && addr <= 0xa0ffff)
+    {
+        printf ("[%s] Z80 address-space access %06x not implemented.\n", __func__, addr);
+    }
+
+    /* I/O */
+    if (addr >= 0xa10000 && addr <= 0xa1001f)
+    {
+        printf ("[%s] I/O access %06x not implemented.\n", __func__, addr);
+    }
+
+    /* Internal Registers and Expansion */
+    if (addr >= 0xa10020 && addr <= 0xbfffff)
+    {
+        /* TMSS register */
+        if (addr == 0xa14000 || addr == 0xa14002)
+            return;
+
+        printf ("[%s] Internal register / expansion access %06x not implemented.\n", __func__, addr);
+    }
+
+    /* VDP */
+    if (addr >= 0xc00000 && addr <= 0xdfffff)
+    {
+        printf ("[%s] VDP access %06x not implemented.\n", __func__, addr);
+    }
+
+    /* RAM */
+    if (addr >= 0xe00000 && addr <= 0xffffff)
+    {
+        * (uint16_t *) &context->ram [addr & 0x00ffff] = data;
+    }
 }
 
 
@@ -341,8 +395,8 @@ SMD_Context *smd_init (void)
 
     /* Initialise CPUs */
     m68k_context = m68k_init (context,
-                              smd_memory_read_16, NULL,
-                              smd_memory_read_8, NULL,
+                              smd_memory_read_16, smd_memory_write_16,
+                              smd_memory_read_8, smd_memory_write_8,
                               smd_get_int);
     context->m68k_context = m68k_context;
 
