@@ -15,7 +15,7 @@ static uint32_t (*m68k_instruction [SIZE_64K]) (M68000_Context *, uint16_t) = { 
 
 
 /*
- * Read a 8-bit byte from memory.
+ * Read an 8-bit byte from memory.
  */
 static inline uint8_t read_byte (M68000_Context *context, uint32_t addr)
 {
@@ -41,6 +41,34 @@ static inline uint32_t read_long (M68000_Context *context, uint32_t addr)
     value.h = read_word (context, addr);
     value.l = read_word (context, addr + 2);
     return value.dw;
+}
+
+
+/*
+ * Write an 8-bit byte from memory.
+ */
+static inline void write_byte (M68000_Context *context, uint32_t addr, uint8_t data)
+{
+    context->memory_write_8 (context->parent, addr & 0x00ffffff, data);
+}
+
+
+/*
+ * Write a 16-bit word from memory, converting it to little-endian.
+ */
+static inline void write_word (M68000_Context *context, uint32_t addr, uint16_t data)
+{
+    context->memory_write_16 (context->parent, addr & 0x00ffffff, util_hton16 (data));
+}
+
+
+/*
+ * Write a 32-bit dword from memory, converting it to little-endian.
+ */
+static inline void write_long (M68000_Context *context, uint32_t addr, uint32_t data)
+{
+    write_word (context, addr,     data >> 16);
+    write_word (context, addr + 2, data & 0xffff);
 }
 
 
