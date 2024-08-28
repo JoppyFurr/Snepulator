@@ -43,13 +43,16 @@ typedef union uint16_t_Split_u {
     };
 } uint16_t_Split;
 
-typedef union uint32_t_Split_u {
-    uint32_t dw;
+typedef union uint32_reg_u {
+    uint32_t l;
     struct {
-        uint16_t l;
-        uint16_t h;
+        uint16_t w_low;
+        uint16_t w_high;
     };
-} uint32_t_Split;
+    uint16_t w;
+    uint8_t b;
+} uint32_reg;
+
 
 typedef struct int32_Point_2D_s {
     int32_t x;

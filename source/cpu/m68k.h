@@ -10,7 +10,7 @@ typedef struct M68000_State_s {
      *       There are actually two of it, one for the supervisor and one
      *       for the user. If we switch between the two modes, we'll need
      *       to swap the a[7] values. */
-    uint32_t d[8];
+    uint32_reg d[8];
     uint32_t a[8];
 
     union {

@@ -37,10 +37,10 @@ static inline uint16_t read_word (M68000_Context *context, uint32_t addr)
  */
 static inline uint32_t read_long (M68000_Context *context, uint32_t addr)
 {
-    uint32_t_Split value;
-    value.h = read_word (context, addr);
-    value.l = read_word (context, addr + 2);
-    return value.dw;
+    uint32_reg value;
+    value.w_high = read_word (context, addr);
+    value.w_low  = read_word (context, addr + 2);
+    return value.l;
 }
 
 
@@ -88,14 +88,32 @@ static inline uint16_t read_extension (M68000_Context *context)
  */
 static inline uint32_t read_extenison_long (M68000_Context *context)
 {
-    uint32_t_Split addr;
-    addr.h = read_extension (context);
-    addr.l = read_extension (context);
-    return addr.dw;
+    uint32_reg addr;
+    addr.w_high = read_extension (context);
+    addr.w_low  = read_extension (context);
+    return addr.l;
 }
 
 
-/* TODO: Come up with consistent function name suffix for each addressing mode */
+/* andi.b Dn ← #xxxx */
+static uint32_t m68k_0200_andi_b_dn (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint16_t imm = read_extension (context);
+
+    uint8_t result = imm & context->state.d [reg].b;
+    context->state.d [reg].b = result;
+
+    context->state.ccr_negative = ((int8_t) result < 0);
+    context->state.ccr_zero = (result == 0);
+    context->state.ccr_overflow = 0;
+    context->state.ccr_carry = 0;
+
+    printf ("andi.b d%d ← #%02x\n", reg, imm & 0xff);
+    return 0;
+}
+
+
 /* move.b Dn ← d(An) */
 static uint32_t m68k_1028_move_b_dn_dan (M68000_Context *context, uint16_t instruction)
 {
@@ -104,10 +122,7 @@ static uint32_t m68k_1028_move_b_dn_dan (M68000_Context *context, uint16_t instr
     uint16_t displacement = read_extension (context);
 
     uint8_t value = read_byte (context, context->state.a [source_reg] + (int16_t) displacement);
-
-    /* Only the least-significant byte is updated */
-    context->state.d [dest_reg] &= 0xffffff00;
-    context->state.d [dest_reg] |= value;
+    context->state.d [dest_reg].b = value;
 
     context->state.ccr_negative = ((int8_t) value < 0);
     context->state.ccr_zero = (value == 0);
@@ -119,15 +134,46 @@ static uint32_t m68k_1028_move_b_dn_dan (M68000_Context *context, uint16_t instr
 }
 
 
-/* tst:
- *  4a 00 <effective-address> - tst.b
- *  4a 01 <effective-address> - tst.w
- *  4a 10 <effective-address> - tst.l
- */
+/* move.l d(An) ← #xxxx */
+static uint32_t m68k_217c_move_l_dan_imm (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+    uint32_t imm = read_extenison_long (context);
+    uint16_t displacement = read_extension (context);
+
+    write_long (context, context->state.a [dest_reg] + (int16_t) displacement, imm);
+
+    context->state.ccr_negative = ((int32_t) imm < 0);
+    context->state.ccr_zero = (imm == 0);
+    context->state.ccr_overflow = 0;
+    context->state.ccr_carry = 0;
+
+    printf ("move.l %04x(a%d) ← #%08x\n", displacement, dest_reg, imm);
+    return 0;
+}
 
 
-/* tst.w (xxx).l
- * 4a 79 */
+/* move.w Dn ← (An) */
+static uint32_t m68k_3010_move_w_dn_an (M68000_Context *context, uint16_t instruction)
+{
+    /* TODO: Consider, instruction union/struct, to pick out the fields */
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+    uint16_t source_reg = instruction & 0x07;
+
+    uint16_t value = read_word (context, context->state.a [source_reg]);
+    context->state.d [dest_reg].w = value;
+
+    context->state.ccr_negative = ((int16_t) value < 0);
+    context->state.ccr_zero = (value == 0);
+    context->state.ccr_overflow = 0;
+    context->state.ccr_carry = 0;
+
+    printf ("move.w d%d ← (a%d)\n", dest_reg, source_reg);
+    return 0;
+}
+
+
+/* tst.w (xxx).l */
 static uint32_t m68k_4a79_tst_w_al (M68000_Context *context, uint16_t instruction)
 {
     uint32_t addr = read_extenison_long (context);
@@ -143,8 +189,7 @@ static uint32_t m68k_4a79_tst_w_al (M68000_Context *context, uint16_t instructio
 }
 
 
-/* tst.l (xxx).l
- * 4a b9 */
+/* tst.l (xxx).l */
 static uint32_t m68k_4ab9_tst_l_al (M68000_Context *context, uint16_t instruction)
 {
     uint32_t addr = read_extenison_long (context);
@@ -162,7 +207,7 @@ static uint32_t m68k_4ab9_tst_l_al (M68000_Context *context, uint16_t instructio
 
 /* lea d(PC) */
 /* TODO: Replace 'x' in function names with lowest possible value for same instruction */
-static uint32_t m68k_4xfa_lea_pcd (M68000_Context *context, uint16_t instruction)
+static uint32_t m68k_4xfa_lea_dpc (M68000_Context *context, uint16_t instruction)
 {
     uint16_t dest_reg = (instruction >> 9) & 0x07;
     uint32_t pc = context->state.pc;
@@ -176,7 +221,7 @@ static uint32_t m68k_4xfa_lea_pcd (M68000_Context *context, uint16_t instruction
 
 
 /* movem.w memory-to-register (An)+ */
-static uint32_t m68k_4c98_movem_w_arip (M68000_Context *context, uint16_t instruction)
+static uint32_t m68k_4c98_movem_w_anp (M68000_Context *context, uint16_t instruction)
 {
     uint32_t reg = instruction & 0x07;
     uint16_t mask = read_extension (context);
@@ -188,7 +233,7 @@ static uint32_t m68k_4c98_movem_w_arip (M68000_Context *context, uint16_t instru
         {
             if (i < 8)
             {
-                context->state.d [i] = (int16_t) read_word (context, context->state.a [reg]);
+                context->state.d [i].l = (int16_t) read_word (context, context->state.a [reg]);
                 context->state.a [reg] += 2;
             }
             else
@@ -199,13 +244,13 @@ static uint32_t m68k_4c98_movem_w_arip (M68000_Context *context, uint16_t instru
         }
     }
 
-    printf ("movem.w (an)+\n");
+    printf ("movem.w (a%d)+\n", reg);
     return 0;
 }
 
 
 /* movem.l memory-to-register (An)+ */
-static uint32_t m68k_4cd8_movem_l_arip (M68000_Context *context, uint16_t instruction)
+static uint32_t m68k_4cd8_movem_l_anp (M68000_Context *context, uint16_t instruction)
 {
     uint32_t reg = instruction & 0x07;
     uint16_t mask = read_extension (context);
@@ -217,7 +262,7 @@ static uint32_t m68k_4cd8_movem_l_arip (M68000_Context *context, uint16_t instru
         {
             if (i < 8)
             {
-                context->state.d [i] = read_long (context, context->state.a [reg]);
+                context->state.d [i].l = read_long (context, context->state.a [reg]);
                 context->state.a [reg] += 4;
             }
             else
@@ -228,7 +273,7 @@ static uint32_t m68k_4cd8_movem_l_arip (M68000_Context *context, uint16_t instru
         }
     }
 
-    printf ("movem.l (an)+\n");
+    printf ("movem.l (a%d)+\n", reg);
     return 0;
 }
 
@@ -261,42 +306,73 @@ static uint32_t m68k_66_bne (M68000_Context *context, uint16_t instruction)
 }
 
 
+/* beq */
+static uint32_t m68k_67_beq (M68000_Context *context, uint16_t instruction)
+{
+    if (context->state.ccr_zero)
+    {
+        int8_t offset = instruction & 0xff;
+        context->state.pc += offset;
+        printf ("beq %+d\n", offset);
+    }
+    else
+    {
+        printf ("beq (not taken).\n");
+    }
+
+    return 0;
+}
+
+
 /*
  * Initialise the instruction array.
  * TODO: This only needs to happen once
  */
 static void m68k_init_instructions (void)
 {
+
+    /* andi */
+    for (uint16_t dn = 0; dn < 8; dn++)
+    {
+        m68k_instruction [0x0200 | dn] = m68k_0200_andi_b_dn;
+    }
+
     /* move */
     for (uint16_t dn = 0; dn < 8; dn++)
     {
         for (uint16_t an = 0; an < 8; an++)
         {
             m68k_instruction [0x1028 | (dn << 9) | an] = m68k_1028_move_b_dn_dan;
+            m68k_instruction [0x3010 | (dn << 9) | an] = m68k_3010_move_w_dn_an;
         }
+    }
+    for (uint16_t an = 0; an < 8; an++)
+    {
+        m68k_instruction [0x217c | an << 9] = m68k_217c_move_l_dan_imm;
     }
 
     m68k_instruction [0x4a79] = m68k_4a79_tst_w_al;
     m68k_instruction [0x4ab9] = m68k_4ab9_tst_l_al;
 
     /* movem */
-    for (uint16_t i = 0; i < 8; i++)
+    for (uint16_t an = 0; an < 8; an++)
     {
-        m68k_instruction [0x4c98 | i] = m68k_4c98_movem_w_arip;
-        m68k_instruction [0x4cd8 | i] = m68k_4cd8_movem_l_arip;
+        m68k_instruction [0x4c98 | an] = m68k_4c98_movem_w_anp;
+        m68k_instruction [0x4cd8 | an] = m68k_4cd8_movem_l_anp;
     }
 
     /* lea */
-    for (uint16_t i = 0; i < 8; i++)
+    for (uint16_t an = 0; an < 8; an++)
     {
-        m68k_instruction [0x41fa | (i << 9)] = m68k_4xfa_lea_pcd;
+        m68k_instruction [0x41fa | (an << 9)] = m68k_4xfa_lea_dpc;
     }
 
     /* Bcc/BSR/BRA */
-    for (uint16_t i = 0x01; i <= 0xff; i++)
+    for (uint16_t d = 0x01; d <= 0xff; d++)
     {
-        m68k_instruction [0x6000 | i] = m68k_60_bra;
-        m68k_instruction [0x6600 | i] = m68k_66_bne;
+        m68k_instruction [0x6000 | d] = m68k_60_bra;
+        m68k_instruction [0x6600 | d] = m68k_66_bne;
+        m68k_instruction [0x6700 | d] = m68k_67_beq;
     }
 
     /* An estimate of progress, note, opcodes beginning with 1010 and 1111
