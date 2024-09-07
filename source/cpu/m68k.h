@@ -13,6 +13,9 @@ typedef struct M68000_State_s {
     uint32_reg d[8];
     uint32_t a[8];
 
+    /* TODO: For now, we assume supervisor mode, so keep usp separate. */
+    uint32_t usp;
+
     union {
         struct {
             uint32_t pc;
