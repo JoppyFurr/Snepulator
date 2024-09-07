@@ -92,6 +92,7 @@ static uint8_t smd_memory_read_8 (void *context_ptr, uint32_t addr)
         switch (addr & 0xfffffe)
         {
             case 0xa10000: /* Version Register */
+                /* TODO: Value is different on PAL */
                 return 0xa1; /* Export NTSC console with no expansion unit. */
             case 0xa10008: /* Player 1 - Control Register */
                 return context->state.port1_ctrl;
@@ -192,8 +193,16 @@ static uint16_t smd_memory_read_16 (void *context_ptr, uint32_t addr)
     /* VDP */
     else if (addr <= 0xdfffff)
     {
-        printf ("[%s] VDP address %06x not implemented.\n", __func__, addr);
-        return 0xffff;
+        switch (addr)
+        {
+            case 0xc00004:
+                return smd_vdp_status_read (context->vdp_context);
+
+                break;
+            default:
+                printf ("[%s] VDP address %06x not implemented.\n", __func__, addr);
+                return 0xffff;
+        }
     }
 
     /* RAM */

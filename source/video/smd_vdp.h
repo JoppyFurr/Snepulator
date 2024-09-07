@@ -27,6 +27,9 @@ typedef struct SMD_VDP_Context_s {
 
 } SMD_VDP_Context;
 
+/* Read the VDP status register. */
+uint16_t smd_vdp_status_read (SMD_VDP_Context *context);
+
 /* Run one scanline on the VDP. */
 void smd_vdp_run_one_scanline (SMD_VDP_Context *context);
 

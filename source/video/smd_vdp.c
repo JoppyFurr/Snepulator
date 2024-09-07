@@ -9,6 +9,16 @@
 #include "smd_vdp.h"
 
 /*
+ * Read the VDP status register.
+ */
+uint16_t smd_vdp_status_read (SMD_VDP_Context *context)
+{
+    /* TODO: Bit 0 for PAL */
+    return 0x0000;
+}
+
+
+/*
  * Run one scanline on the VDP.
  */
 void smd_vdp_run_one_scanline (SMD_VDP_Context *context)
