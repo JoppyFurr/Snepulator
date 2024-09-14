@@ -139,9 +139,9 @@ static uint32_t m68k_1028_move_b_dn_dan (M68000_Context *context, uint16_t instr
 {
     uint16_t dest_reg = (instruction >> 9) & 0x07;
     uint16_t source_reg = instruction & 0x07;
-    uint16_t displacement = read_extension (context);
+    int16_t displacement = read_extension (context);
 
-    uint8_t value = read_byte (context, context->state.a [source_reg] + (int16_t) displacement);
+    uint8_t value = read_byte (context, context->state.a [source_reg] + displacement);
     context->state.d [dest_reg].b = value;
 
     context->state.ccr_negative = ((int8_t) value < 0);
@@ -172,9 +172,9 @@ static uint32_t m68k_217c_move_l_dan_imm (M68000_Context *context, uint16_t inst
 {
     uint16_t dest_reg = (instruction >> 9) & 0x07;
     uint32_t imm = read_extenison_long (context);
-    uint16_t displacement = read_extension (context);
+    int16_t displacement = read_extension (context);
 
-    write_long (context, context->state.a [dest_reg] + (int16_t) displacement, imm);
+    write_long (context, context->state.a [dest_reg] + displacement, imm);
 
     context->state.ccr_negative = ((int32_t) imm < 0);
     context->state.ccr_zero = (imm == 0);
@@ -264,9 +264,9 @@ static uint32_t m68k_41fa_lea_dpc (M68000_Context *context, uint16_t instruction
 {
     uint16_t dest_reg = (instruction >> 9) & 0x07;
     uint32_t pc = context->state.pc;
-    uint16_t displacement = read_extension (context);
+    int16_t displacement = read_extension (context);
 
-    context->state.a [dest_reg] = pc + (int16_t) displacement;
+    context->state.a [dest_reg] = pc + displacement;
 
     printf ("lea a%d ← d(pc)\n", dest_reg);
     return 0;
@@ -357,9 +357,29 @@ static uint32_t m68k_4e68_move_usp_an (M68000_Context *context, uint16_t instruc
 }
 
 
+/* dbf Dn, #xxxx */
+static uint32_t m68k_51c8_dbf (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    int16_t displacement = read_extension (context);
+
+    context->state.d [reg].w--;
+    if (context->state.d [reg].w != 0xffff)
+    {
+        context->state.pc = context->state.pc - 2 + displacement;
+        printf ("dbf d%d, %+d\n", reg, displacement);
+    }
+    else
+    {
+        printf ("dbf d%d (termination)\n", reg);
+    }
+
+    return 0;
+}
+
+
 /* bra */
-/* TODO: For consistency, use four hex digits for all instruction names */
-static uint32_t m68k_60_bra (M68000_Context *context, uint16_t instruction)
+static uint32_t m68k_6000_bra (M68000_Context *context, uint16_t instruction)
 {
     int8_t offset = instruction & 0xff;
     context->state.pc += offset;
@@ -369,7 +389,7 @@ static uint32_t m68k_60_bra (M68000_Context *context, uint16_t instruction)
 
 
 /* bne */
-static uint32_t m68k_66_bne (M68000_Context *context, uint16_t instruction)
+static uint32_t m68k_6600_bne (M68000_Context *context, uint16_t instruction)
 {
     if (!context->state.ccr_zero)
     {
@@ -387,7 +407,7 @@ static uint32_t m68k_66_bne (M68000_Context *context, uint16_t instruction)
 
 
 /* beq */
-static uint32_t m68k_67_beq (M68000_Context *context, uint16_t instruction)
+static uint32_t m68k_6700_beq (M68000_Context *context, uint16_t instruction)
 {
     if (context->state.ccr_zero)
     {
@@ -405,7 +425,7 @@ static uint32_t m68k_67_beq (M68000_Context *context, uint16_t instruction)
 
 
 /* moveq Dn ← #xxxx */
-static uint32_t m68k_70_moveq (M68000_Context *context, uint16_t instruction)
+static uint32_t m68k_7000_moveq (M68000_Context *context, uint16_t instruction)
 {
     uint16_t reg = (instruction >> 9) & 0x07;
     int8_t data = instruction & 0xff;
@@ -494,12 +514,18 @@ static void m68k_init_instructions (void)
         m68k_instruction [0x41fa | (an << 9)] = m68k_41fa_lea_dpc;
     }
 
+    /* dbcc */
+    for (uint16_t dn = 0; dn < 8; dn++)
+    {
+        m68k_instruction [0x51c8 | dn] = m68k_51c8_dbf;
+    }
+
     /* Bcc/BSR/BRA */
     for (uint16_t d = 0x01; d <= 0xff; d++)
     {
-        m68k_instruction [0x6000 | d] = m68k_60_bra;
-        m68k_instruction [0x6600 | d] = m68k_66_bne;
-        m68k_instruction [0x6700 | d] = m68k_67_beq;
+        m68k_instruction [0x6000 | d] = m68k_6000_bra;
+        m68k_instruction [0x6600 | d] = m68k_6600_bne;
+        m68k_instruction [0x6700 | d] = m68k_6700_beq;
     }
 
     /* moveq */
@@ -507,7 +533,7 @@ static void m68k_init_instructions (void)
     {
         for (uint16_t data = 0x00; data < 0xff; data++)
         {
-            m68k_instruction [0x7000 | (dn << 9) | data] = m68k_70_moveq;
+            m68k_instruction [0x7000 | (dn << 9) | data] = m68k_7000_moveq;
         }
     }
 
