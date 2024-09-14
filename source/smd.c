@@ -195,7 +195,11 @@ static uint16_t smd_memory_read_16 (void *context_ptr, uint32_t addr)
     {
         switch (addr)
         {
+            case 0xc00000:
+            case 0xc00002:
+                return smd_vdp_data_read (context->vdp_context);
             case 0xc00004:
+            case 0xc00006:
                 return smd_vdp_status_read (context->vdp_context);
 
                 break;
@@ -257,7 +261,18 @@ static void smd_memory_write_16 (void *context_ptr, uint32_t addr, uint16_t data
     /* VDP */
     if (addr >= 0xc00000 && addr <= 0xdfffff)
     {
-        printf ("[%s] VDP access %06x not implemented.\n", __func__, addr);
+        switch (addr)
+        {
+            case 0xc00000:
+            case 0xc00002:
+                return smd_vdp_data_write (context->vdp_context, data);
+            case 0xc00004:
+            case 0xc00006:
+                smd_vdp_control_write (context->vdp_context, data);
+                return;
+            default:
+                printf ("[%s] VDP access %06x not implemented.\n", __func__, addr);
+        }
     }
 
     /* RAM */
