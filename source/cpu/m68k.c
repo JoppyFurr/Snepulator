@@ -669,7 +669,7 @@ static uint32_t m68k_run_instruction (M68000_Context *context)
     }
 
     /* TODO: Instruction timing */
-    return 5000; /* placeholder */
+    return 10; /* placeholder */
 }
 
 
