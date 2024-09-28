@@ -142,7 +142,7 @@ static uint16_t smd_memory_read_16 (void *context_ptr, uint32_t addr)
     {
         if (context->rom != NULL)
         {
-            return * (uint16_t *) &context->rom [addr & context->rom_mask];
+            return util_ntoh16 (* (uint16_t *) &context->rom [addr & context->rom_mask]);
         }
         else
         {
@@ -208,7 +208,7 @@ static uint16_t smd_memory_read_16 (void *context_ptr, uint32_t addr)
     /* RAM */
     else
     {
-        return * (uint16_t *) &context->ram [addr & 0x00ffff];
+        return util_ntoh16 (* (uint16_t *) &context->ram [addr & 0x00ffff]);
     }
 
     printf ("[%s] Unmapped address %06x.\n", __func__, addr);
@@ -263,7 +263,7 @@ static void smd_memory_write_16 (void *context_ptr, uint32_t addr, uint16_t data
     /* RAM */
     if (addr >= 0xe00000 && addr <= 0xffffff)
     {
-        * (uint16_t *) &context->ram [addr & 0x00ffff] = data;
+        * (uint16_t *) &context->ram [addr & 0x00ffff] = util_hton16 (data);
     }
 }
 

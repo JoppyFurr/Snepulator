@@ -28,7 +28,7 @@ static inline uint8_t read_byte (M68000_Context *context, uint32_t addr)
  */
 static inline uint16_t read_word (M68000_Context *context, uint32_t addr)
 {
-    return util_ntoh16 (context->memory_read_16 (context->parent, addr & 0x00ffffff));
+    return context->memory_read_16 (context->parent, addr & 0x00ffffff);
 }
 
 
@@ -58,7 +58,7 @@ static inline void write_byte (M68000_Context *context, uint32_t addr, uint8_t d
  */
 static inline void write_word (M68000_Context *context, uint32_t addr, uint16_t data)
 {
-    context->memory_write_16 (context->parent, addr & 0x00ffffff, util_hton16 (data));
+    context->memory_write_16 (context->parent, addr & 0x00ffffff, data);
 }
 
 
