@@ -16,6 +16,9 @@ typedef struct SMD_State_s {
     uint8_t port2_ctrl;
     uint8_t ext_ctrl;
 
+    bool z80_reset_n;
+    bool z80_busreq;
+
 } SMD_State;
 
 typedef struct SMD_Context_s {

@@ -20,6 +20,14 @@
 
 extern Snepulator_State state;
 
+
+/*
+ * Declarations.
+ */
+static uint8_t smd_z80_memory_read (void *context_ptr, uint16_t addr);
+static void    smd_z80_memory_write (void *context_ptr, uint16_t addr, uint8_t data);
+
+
 /*
  * Callback to supply audio frames.
  */
@@ -108,6 +116,12 @@ static uint8_t smd_memory_read_8 (void *context_ptr, uint32_t addr)
     /* Internal Registers and Expansion */
     else if (addr <= 0xbfffff)
     {
+        /* Z80 Bus Request */
+        if (addr == 0xa11100)
+        {
+            return !context->state.z80_busreq;
+        }
+
         printf ("[%s] Internal registers / expansion address %06x not implemented.\n", __func__, addr);
         return 0xff;
     }
@@ -225,7 +239,17 @@ static uint16_t smd_memory_read_16 (void *context_ptr, uint32_t addr)
  */
 static void smd_memory_write_8 (void *context_ptr, uint32_t addr, uint8_t data)
 {
-    printf ("[%s] Unmapped address %06x.\n", __func__, addr);
+    SMD_Context *context = (SMD_Context *) context_ptr;
+
+    /* Z80 Address Space access */
+    if (addr >= 0xa00000 && addr <= 0xa0ffff)
+    {
+        smd_z80_memory_write (context, addr, data);
+    }
+    else
+    {
+        printf ("[%s] Unmapped address %06x.\n", __func__, addr);
+    }
 }
 
 
@@ -253,9 +277,33 @@ static void smd_memory_write_16 (void *context_ptr, uint32_t addr, uint16_t data
     {
         /* TMSS register */
         if (addr == 0xa14000 || addr == 0xa14002)
+        {
             return;
+        }
 
-        printf ("[%s] Internal register / expansion access %06x not implemented.\n", __func__, addr);
+        /* Z80 Bus Request */
+        else if (addr == 0xa11100)
+        {
+            context->state.z80_busreq = (data >> 8) & 0x01;
+            printf ("[%s] z80_busreq ← %d.\n", __func__, context->state.z80_busreq);
+        }
+
+        /* Z80 and YM2612 Reset */
+        else if (addr == 0xa11200)
+        {
+            context->state.z80_reset_n = (data >> 8) & 0x01;
+
+            if (!context->state.z80_reset_n)
+            {
+                z80_reset (context->z80_context);
+            }
+            printf ("[%s] z80_reset_n ← %d.\n", __func__, context->state.z80_reset_n);
+        }
+
+        else
+        {
+            printf ("[%s] Internal register / expansion access %06x not implemented.\n", __func__, addr);
+        }
     }
 
     /* VDP */
@@ -280,6 +328,82 @@ static void smd_memory_write_16 (void *context_ptr, uint32_t addr, uint16_t data
     {
         * (uint16_t *) &context->ram [addr & 0x00ffff] = util_hton16 (data);
     }
+}
+
+
+/*
+ * Handle Z80 address-space memory writes.
+ */
+static void smd_z80_memory_write (void *context_ptr, uint16_t addr, uint8_t data)
+{
+    SMD_Context *context = (SMD_Context *) context_ptr;
+
+    /* RAM */
+    if (addr >= 0x0000 && addr <= 0x1fff)
+    {
+        context->z80_ram [addr & (SMD_Z80_RAM_SIZE - 1)] = data;
+    }
+    else
+    {
+        printf ("[%s] Unmapped Z80 address %04x.\n", __func__, addr);
+    }
+}
+
+
+/*
+ * Handle Z80 address-space memory reads.
+ */
+static uint8_t smd_z80_memory_read (void *context_ptr, uint16_t addr)
+{
+    SMD_Context *context = (SMD_Context *) context_ptr;
+
+    /* RAM */
+    if (addr >= 0x0000 && addr <= 0x1fff)
+    {
+        return context->z80_ram [addr & (SMD_Z80_RAM_SIZE - 1)];
+    }
+    else
+    {
+        printf ("[%s] Unmapped Z80 address %04x.\n", __func__, addr);
+        return 0xff;
+    }
+}
+
+
+/*
+ * Handle Z80 I/O writes.
+ */
+static void smd_z80_io_write (void *context_ptr, uint8_t addr, uint8_t data)
+{
+    printf ("[%s] Z80 I/O write [%02x] not implemented.\n", __func__, addr);
+}
+
+
+/*
+ * Handle Z80 I/O reads.
+ */
+static uint8_t smd_z80_io_read (void *context_ptr, uint8_t addr)
+{
+    printf ("[%s] Z80 I/O read [%02x] not implemented.\n", __func__, addr);
+    return 0xff;
+}
+
+
+/*
+ * Returns true if there is an interrupt for the Z80.
+ */
+static bool smd_z80_get_int (void *context_ptr)
+{
+    return false;
+}
+
+
+/*
+ * Returns true if there is a non-maskable interrupt for the Z80.
+ */
+static bool smd_z80_get_nmi (void *context_ptr)
+{
+    return false;
 }
 
 
@@ -321,6 +445,12 @@ static void smd_run (void *context_ptr, uint32_t cycles)
          *       cycles to a pool and subtract as mayn full m68k cycles as we can,
          *       saving any leftovers for the next line. */
         m68k_run_cycles (context->m68k_context, 489);
+
+        if (context->state.z80_reset_n && !context->state.z80_busreq)
+        {
+            z80_run_cycles (context->z80_context, 228);
+        }
+
         smd_vdp_run_one_scanline (context->vdp_context);
 
         /* TODO: Variable clock rate when able to switch between PAL and NTSC */
@@ -418,14 +548,20 @@ SMD_Context *smd_init (void)
     }
 
     /* Initialise CPUs */
+    /* TODO: Could we combine the 16-bit and 8-bit memory accesses? */
     m68k_context = m68k_init (context,
                               smd_memory_read_16, smd_memory_write_16,
                               smd_memory_read_8, smd_memory_write_8,
                               smd_get_int);
     context->m68k_context = m68k_context;
 
-    z80_context = z80_init (context, NULL, NULL, NULL, NULL, NULL, NULL);
+    z80_context = z80_init (context, smd_z80_memory_read, smd_z80_memory_write,
+                            smd_z80_io_read, smd_z80_io_write,
+                            smd_z80_get_int, smd_z80_get_nmi);
     context->z80_context = z80_context;
+
+    context->state.z80_reset_n = false;
+    context->state.z80_busreq = false;
 
     /* Initialise VDP */
     /* TODO: Instead of centering the image on a fixed-size canvas, it may
