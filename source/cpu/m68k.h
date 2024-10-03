@@ -27,7 +27,7 @@ typedef struct M68000_State_s {
     };
 
     union {
-        uint16_t ccr;
+        uint16_t sr;
         struct {
             uint8_t ccr_carry:1;
             uint8_t ccr_overflow:1;
