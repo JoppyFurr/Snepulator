@@ -120,6 +120,9 @@ typedef struct Z80_Context_s {
 #define Z80_FLAG_SIGN       BIT_7
 #define Z80_FLAG_NONE       0x00
 
+/* Restore registers to default values. */
+void z80_reset (Z80_Context *context);
+
 /* Create the Z80 context with power-on defaults. */
 Z80_Context *z80_init (void *parent,
                        uint8_t (* memory_read) (void *, uint16_t),

@@ -42,6 +42,24 @@ static const uint8_t uint8_even_parity [256] = {
 
 
 /*
+ * Restore registers to default values.
+ */
+void z80_reset (Z80_Context *context)
+{
+    context->state.af = 0xffff;
+    context->state.sp = 0xffff;
+    context->state.ir = 0x0000;
+    context->state.pc = 0x0000;
+
+    context->state.im = 0;
+    context->state.iff1 = 0;
+    context->state.iff2 = 0;
+    context->state.wait_after_ei = 0;
+    context->state.halt = 0;
+}
+
+
+/*
  * Create the Z80 context with power-on defaults.
  */
 Z80_Context *z80_init (void *parent,
@@ -69,8 +87,7 @@ Z80_Context *z80_init (void *parent,
     context->get_int      = get_int;
     context->get_nmi      = get_nmi;
 
-    context->state.af = 0xffff;
-    context->state.sp = 0xffff;
+    z80_reset (context);
 
     return context;
 }
