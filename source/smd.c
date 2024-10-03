@@ -246,6 +246,13 @@ static void smd_memory_write_8 (void *context_ptr, uint32_t addr, uint8_t data)
     {
         smd_z80_memory_write (context, addr, data);
     }
+
+    /* PSG */
+    if (addr == 0xc00011 || addr == 0xc00013)
+    {
+        sn76489_data_write (context->psg_context, data);
+    }
+
     else
     {
         printf ("[%s] Unmapped address %06x.\n", __func__, addr);
