@@ -125,9 +125,42 @@ void smd_vdp_data_write (SMD_VDP_Context *context, uint16_t data)
             context->state.address += context->state.auto_increment;
         }
     }
+
+    /* VRAM Write */
+    else if (context->state.code == 0x01)
+    {
+        printf ("[%s] VRAM Write not implemented.\n", __func__);
+    }
+
+    /* CRAM Write */
+    else if (context->state.code == 0x03)
+    {
+        uint32_t index = (context->state.address >> 1) & 0x3f;
+        context->state.address += context->state.auto_increment;
+
+        context->state.cram [index] = (uint_pixel) { .r = ((data >> 1) & 0x07) * 0xff / 7,
+                                                     .g = ((data >> 5) & 0x07) * 0xff / 7,
+                                                     .b = ((data >> 9) & 0x07) * 0xff / 7};
+
+        /* TODO: Wait until nonzero colours get written before implementing drawing */
+        printf ("[%s] cram [%d] = rgb (%d, %d, %d)\n", __func__, index,
+                 (data >> 1) & 0x07, (data >> 5) & 0x07, (data >> 9) & 0x07);
+    }
+
+    /* VSRAM write */
+    else if (context->state.code == 0x05)
+    {
+        uint32_t index = (context->state.address >> 1) & 0x3f;
+        context->state.address += context->state.auto_increment;
+        if (index < 40)
+        {
+            context->state.vsram [index] = data & 0x03ff;
+        }
+    }
+
     else
     {
-        printf ("[%s] VDP data port write not implemented.\n", __func__);
+        printf ("[%s] VDP data port write for code %02x not implemented.\n", __func__, context->state.code);
     }
 }
 
