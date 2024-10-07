@@ -55,13 +55,21 @@ bool input_modal_create = false;
 /*
  * Display an error message.
  */
-void snepulator_error (const char *title, const char *message)
+void snepulator_error (const char *title, const char *format, ...)
 {
+    va_list args;
+    char message [240] = { '\0' };
+    int len = 0;
+
     if (state.run == RUN_STATE_RUNNING || state.run == RUN_STATE_PAUSED)
     {
         state.run = RUN_STATE_INIT;
     }
     state.show_gui = true;
+
+    va_start (args, format);
+    len += vsnprintf (message, 240, format, args);
+    va_end (args);
 
     /* All errors get printed to console */
     fprintf (stderr, "%s: %s\n", title, message);

@@ -272,7 +272,7 @@ void snepulator_video_par_set (Video_PAR par);
 void snepulator_audio_device_open (const char *device);
 
 /* Display an error message */
-void snepulator_error (const char *title, const char *message);
+void snepulator_error (const char *title, const char *format, ...);
 
 
 
