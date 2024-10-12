@@ -82,14 +82,14 @@ static uint8_t smd_memory_read_8 (void *context_ptr, uint32_t addr)
     /* Unused areas */
     else if (addr <= 0x9fffff)
     {
-        printf ("[%s] Unused address %06x not implemented.\n", __func__, addr);
+        snepulator_error (__func__, "Unused address %06x not implemented.", addr);
         return 0xff;
     }
 
     /* Z80 Address Space */
     else if (addr <= 0xa0ffff)
     {
-        printf ("[%s] Z80 address-pace %06x not implemented.\n", __func__, addr);
+        snepulator_error (__func__, "Z80 address-space %06x not implemented.", addr);
         return 0xff;
     }
 
@@ -109,7 +109,7 @@ static uint8_t smd_memory_read_8 (void *context_ptr, uint32_t addr)
             case 0xa1000c: /* Player 1 - Control Register */
                 return context->state.ext_ctrl;
             default:
-                printf ("[%s] I/O address %06x not implemented.\n", __func__, addr);
+                snepulator_error (__func__, "I/O address %06x not implemented.", addr);
         }
     }
 
@@ -122,14 +122,14 @@ static uint8_t smd_memory_read_8 (void *context_ptr, uint32_t addr)
             return !context->state.z80_busreq;
         }
 
-        printf ("[%s] Internal registers / expansion address %06x not implemented.\n", __func__, addr);
+        snepulator_error (__func__, "Internal registers / expansion address %06x not implemented.", addr);
         return 0xff;
     }
 
     /* VDP */
     else if (addr <= 0xdfffff)
     {
-        printf ("[%s] VDP address %06x not implemented.\n", __func__, addr);
+        snepulator_error (__func__, "VDP address %06x not implemented.", addr);
         return 0xff;
     }
 
@@ -139,7 +139,7 @@ static uint8_t smd_memory_read_8 (void *context_ptr, uint32_t addr)
         return * (uint16_t *) &context->ram [addr & 0x00ffff];
     }
 
-    printf ("[%s] Unmapped address %06x.\n", __func__, addr);
+    snepulator_error (__func__, "Unmapped address %06x.", addr);
     return 0xff;
 }
 
@@ -167,14 +167,14 @@ static uint16_t smd_memory_read_16 (void *context_ptr, uint32_t addr)
     /* Unused areas */
     else if (addr <= 0x9fffff)
     {
-        printf ("[%s] Unused address %06x not implemented.\n", __func__, addr);
+        snepulator_error (__func__, "Unused address %06x not implemented.", addr);
         return 0xffff;
     }
 
     /* Z80 Address Space */
     else if (addr <= 0xa0ffff)
     {
-        printf ("[%s] Z80 address-pace %06x not implemented.\n", __func__, addr);
+        snepulator_error (__func__, "Z80 address-pace %06x not implemented.", addr);
         return 0xffff;
     }
 
@@ -193,14 +193,14 @@ static uint16_t smd_memory_read_16 (void *context_ptr, uint32_t addr)
             case 0xa1000c: /* Player 1 - Control Register */
                 return context->state.ext_ctrl;
             default:
-                printf ("[%s] I/O address %06x not implemented.\n", __func__, addr);
+                snepulator_error (__func__, "I/O address %06x not implemented.", addr);
         }
     }
 
     /* Internal Registers and Expansion */
     else if (addr <= 0xbfffff)
     {
-        printf ("[%s] Internal registers / expansion address %06x not implemented.\n", __func__, addr);
+        snepulator_error (__func__, "Internal registers / expansion address %06x not implemented.", addr);
         return 0xffff;
     }
 
@@ -218,7 +218,7 @@ static uint16_t smd_memory_read_16 (void *context_ptr, uint32_t addr)
 
                 break;
             default:
-                printf ("[%s] VDP address %06x not implemented.\n", __func__, addr);
+                snepulator_error (__func__, "VDP address %06x not implemented.", addr);
                 return 0xffff;
         }
     }
@@ -229,7 +229,7 @@ static uint16_t smd_memory_read_16 (void *context_ptr, uint32_t addr)
         return util_ntoh16 (* (uint16_t *) &context->ram [addr & 0x00ffff]);
     }
 
-    printf ("[%s] Unmapped address %06x.\n", __func__, addr);
+    snepulator_error (__func__, "Unmapped address %06x.", addr);
     return 0xffff;
 }
 
