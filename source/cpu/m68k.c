@@ -1112,6 +1112,7 @@ static uint32_t m68k_run_instruction (M68000_Context *context)
 /*
  * Run the 68000 for the specified number of clock cycles.
  */
+/* XXX DEBUG XXX */ extern Snepulator_State state;
 void m68k_run_cycles (M68000_Context *context, int64_t cycles)
 {
     /* Account for cycles used during the last run */
@@ -1120,6 +1121,12 @@ void m68k_run_cycles (M68000_Context *context, int64_t cycles)
     /* As long as we have a positive number of cycles, run an instruction */
     while (context->clock_cycles > 0)
     {
+        /* XXX DEBUG XXX: Don't finish the call if we hit something unimplemented */
+        if (state.run != RUN_STATE_RUNNING)
+        {
+            return;
+        }
+
         context->clock_cycles -= m68k_run_instruction (context);
     }
 }
