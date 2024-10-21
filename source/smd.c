@@ -248,14 +248,20 @@ static void smd_memory_write_8 (void *context_ptr, uint32_t addr, uint8_t data)
     }
 
     /* PSG */
-    if (addr == 0xc00011 || addr == 0xc00013)
+    else if (addr == 0xc00011 || addr == 0xc00013)
     {
         sn76489_data_write (context->psg_context, data);
     }
 
+    /* RAM */
+    else if (addr >= 0xe00000 && addr <= 0xffffff)
+    {
+        context->ram [addr & 0x00ffff] = data;
+    }
+
     else
     {
-        printf ("[%s] Unmapped address %06x.\n", __func__, addr);
+        snepulator_error (__func__, "Unmapped address %06x.", addr);
     }
 }
 
@@ -270,13 +276,13 @@ static void smd_memory_write_16 (void *context_ptr, uint32_t addr, uint16_t data
     /* Z80 Address Space access */
     if (addr >= 0xa00000 && addr <= 0xa0ffff)
     {
-        printf ("[%s] Z80 address-space access %06x not implemented.\n", __func__, addr);
+        snepulator_error (__func__, "Z80 address-space access %06x not implemented.", addr);
     }
 
     /* I/O */
     if (addr >= 0xa10000 && addr <= 0xa1001f)
     {
-        printf ("[%s] I/O access %06x not implemented.\n", __func__, addr);
+        snepulator_error (__func__, "I/O access %06x not implemented.", addr);
     }
 
     /* Internal Registers and Expansion */
@@ -309,7 +315,7 @@ static void smd_memory_write_16 (void *context_ptr, uint32_t addr, uint16_t data
 
         else
         {
-            printf ("[%s] Internal register / expansion access %06x not implemented.\n", __func__, addr);
+            snepulator_error (__func__, "Internal register / expansion access %06x not implemented.", addr);
         }
     }
 
@@ -326,7 +332,7 @@ static void smd_memory_write_16 (void *context_ptr, uint32_t addr, uint16_t data
                 smd_vdp_control_write (context->vdp_context, data);
                 return;
             default:
-                printf ("[%s] VDP access %06x not implemented.\n", __func__, addr);
+                snepulator_error (__func__, "VDP access %06x not implemented.", addr);
         }
     }
 
@@ -352,7 +358,7 @@ static void smd_z80_memory_write (void *context_ptr, uint16_t addr, uint8_t data
     }
     else
     {
-        printf ("[%s] Unmapped Z80 address %04x.\n", __func__, addr);
+        snepulator_error (__func__, "Unmapped Z80 address %04x.", addr);
     }
 }
 
@@ -371,7 +377,7 @@ static uint8_t smd_z80_memory_read (void *context_ptr, uint16_t addr)
     }
     else
     {
-        printf ("[%s] Unmapped Z80 address %04x.\n", __func__, addr);
+        snepulator_error (__func__, "Unmapped Z80 address %04x.", addr);
         return 0xff;
     }
 }
@@ -382,7 +388,7 @@ static uint8_t smd_z80_memory_read (void *context_ptr, uint16_t addr)
  */
 static void smd_z80_io_write (void *context_ptr, uint8_t addr, uint8_t data)
 {
-    printf ("[%s] Z80 I/O write [%02x] not implemented.\n", __func__, addr);
+    snepulator_error (__func__, "Z80 I/O write [%02x] not implemented.", addr);
 }
 
 
@@ -391,7 +397,7 @@ static void smd_z80_io_write (void *context_ptr, uint8_t addr, uint8_t data)
  */
 static uint8_t smd_z80_io_read (void *context_ptr, uint8_t addr)
 {
-    printf ("[%s] Z80 I/O read [%02x] not implemented.\n", __func__, addr);
+    snepulator_error (__func__, "Z80 I/O read [%02x] not implemented.", addr);
     return 0xff;
 }
 
