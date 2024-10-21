@@ -144,6 +144,18 @@ static uint32_t m68k_0839_btst_b_imm_al (M68000_Context *context, uint16_t instr
 }
 
 
+/*
+ * Update flags for move.b instructions.
+ */
+static inline void m68k_move_b_flags (M68000_Context *context, uint8_t value)
+{
+    context->state.ccr_negative = ((int8_t) value < 0);
+    context->state.ccr_zero = (value == 0);
+    context->state.ccr_overflow = 0;
+    context->state.ccr_carry = 0;
+}
+
+
 /* move.b Dn ← (An)+ */
 static uint32_t m68k_1018_move_b_dn_anp (M68000_Context *context, uint16_t instruction)
 {
@@ -153,11 +165,7 @@ static uint32_t m68k_1018_move_b_dn_anp (M68000_Context *context, uint16_t instr
     uint8_t value = read_byte (context, context->state.a [source_reg]);
     context->state.a [source_reg] += (source_reg == 7) ? 2 : 1;
     context->state.d [dest_reg].b = value;
-
-    context->state.ccr_negative = ((int8_t) value < 0);
-    context->state.ccr_zero = (value == 0);
-    context->state.ccr_overflow = 0;
-    context->state.ccr_carry = 0;
+    m68k_move_b_flags (context, value);
 
     printf ("move.b d%d ← (a%d)+\n", dest_reg, source_reg);
     return 0;
@@ -173,11 +181,7 @@ static uint32_t m68k_1028_move_b_dn_dan (M68000_Context *context, uint16_t instr
 
     uint8_t value = read_byte (context, context->state.a [source_reg] + displacement);
     context->state.d [dest_reg].b = value;
-
-    context->state.ccr_negative = ((int8_t) value < 0);
-    context->state.ccr_zero = (value == 0);
-    context->state.ccr_overflow = 0;
-    context->state.ccr_carry = 0;
+    m68k_move_b_flags (context, value);
 
     printf ("move.b d%d ← %04x(a%d)\n", dest_reg, displacement, source_reg);
     return 0;
@@ -192,11 +196,7 @@ static uint32_t m68k_1039_move_b_dn_al (M68000_Context *context, uint16_t instru
 
     uint8_t value = read_byte (context, addr);
     context->state.d [dest_reg].b = value;
-
-    context->state.ccr_negative = ((int8_t) value < 0);
-    context->state.ccr_zero = (value == 0);
-    context->state.ccr_overflow = 0;
-    context->state.ccr_carry = 0;
+    m68k_move_b_flags (context, value);
 
     printf ("move.b d%d ← (%06x.l)\n", dest_reg, addr);
     return 0;
@@ -213,11 +213,7 @@ static uint32_t m68k_10d8_move_b_anp_anp (M68000_Context *context, uint16_t inst
     write_byte (context, context->state.a [dest_reg], value);
     context->state.a [source_reg] += (source_reg == 7) ? 2 : 1;
     context->state.a [dest_reg] += (dest_reg == 7) ? 2 : 1;
-
-    context->state.ccr_negative = ((int8_t) value < 0);
-    context->state.ccr_zero = (value == 0);
-    context->state.ccr_overflow = 0;
-    context->state.ccr_carry = 0;
+    m68k_move_b_flags (context, value);
 
     printf ("move.b (a%d)+ ← (a%d)+\n", dest_reg, source_reg);
     return 0;
@@ -234,11 +230,7 @@ static uint32_t m68k_1158_move_b_dan_anp (M68000_Context *context, uint16_t inst
     uint8_t value = read_byte (context, context->state.a [source_reg]);
     context->state.a [source_reg] += (source_reg == 7) ? 2 : 1;
     write_byte (context, context->state.a [dest_reg] + displacement, value);
-
-    context->state.ccr_negative = ((int8_t) value < 0);
-    context->state.ccr_zero = (value == 0);
-    context->state.ccr_overflow = 0;
-    context->state.ccr_carry = 0;
+    m68k_move_b_flags (context, value);
 
     printf ("move.b %04x(a%d) ← (a%d)+\n", displacement, dest_reg, source_reg);
     return 0;
@@ -253,14 +245,22 @@ static uint32_t m68k_11c0_move_b_aw_dn (M68000_Context *context, uint16_t instru
 
     uint8_t value = context->state.d [source_reg].b;
     write_byte (context, (int32_t) addr, value);
-
-    context->state.ccr_negative = ((int8_t) value < 0);
-    context->state.ccr_zero = (value == 0);
-    context->state.ccr_overflow = 0;
-    context->state.ccr_carry = 0;
+    m68k_move_b_flags (context, value);
 
     printf ("move.b (%04x.w) ← d%d\n", (uint16_t) addr, source_reg);
     return 0;
+}
+
+
+/*
+ * Update flags for move.l instructions.
+ */
+static inline void m68k_move_l_flags (M68000_Context *context, uint32_t value)
+{
+    context->state.ccr_negative = ((int32_t) value < 0);
+    context->state.ccr_zero = (value == 0);
+    context->state.ccr_overflow = 0;
+    context->state.ccr_carry = 0;
 }
 
 
@@ -272,11 +272,7 @@ static uint32_t m68k_2010_move_l_dn_an (M68000_Context *context, uint16_t instru
 
     uint32_t value = read_long (context, context->state.a [source_reg]);
     context->state.d [dest_reg].l = value;
-
-    context->state.ccr_negative = ((int32_t) value < 0);
-    context->state.ccr_zero = (value == 0);
-    context->state.ccr_overflow = 0;
-    context->state.ccr_carry = 0;
+    m68k_move_l_flags (context, value);
 
     printf ("move.l d%d ← (a%d)\n", dest_reg, source_reg);
     return 0;
@@ -290,11 +286,7 @@ static uint32_t m68k_23fc_move_l_al_imm (M68000_Context *context, uint16_t instr
     uint32_t addr = read_extension_long (context);
 
     write_long (context, addr, value);
-
-    context->state.ccr_negative = ((int32_t) value < 0);
-    context->state.ccr_zero = (value == 0);
-    context->state.ccr_overflow = 0;
-    context->state.ccr_carry = 0;
+    m68k_move_l_flags (context, value);
 
     printf ("move.l (%06x.l) ← #%06x\n", addr, value);
     return 0;
@@ -335,11 +327,7 @@ static uint32_t m68k_2080_move_l_an_dn (M68000_Context *context, uint16_t instru
 
     uint32_t value = context->state.d [source_reg].l;
     write_long (context, context->state.a [dest_reg], value);
-
-    context->state.ccr_negative = ((int32_t) value < 0);
-    context->state.ccr_zero = (value == 0);
-    context->state.ccr_overflow = 0;
-    context->state.ccr_carry = 0;
+    m68k_move_l_flags (context, value);
 
     printf ("move.l (a%d) ← d%d\n", dest_reg, source_reg);
     return 0;
@@ -356,11 +344,7 @@ static uint32_t m68k_2098_move_l_an_anp (M68000_Context *context, uint16_t instr
     context->state.a [source_reg] += 4;
 
     write_long (context, context->state.a [dest_reg], value);
-
-    context->state.ccr_negative = ((int32_t) value < 0);
-    context->state.ccr_zero = (value == 0);
-    context->state.ccr_overflow = 0;
-    context->state.ccr_carry = 0;
+    m68k_move_l_flags (context, value);
 
     printf ("move.w (a%d) ← (a%d)+\n", dest_reg, source_reg);
     return 0;
@@ -376,11 +360,7 @@ static uint32_t m68k_20c0_move_l_anp_dn (M68000_Context *context, uint16_t instr
     uint32_t value = context->state.d [source_reg].l;
     write_long (context, context->state.a [dest_reg], value);
     context->state.a [source_reg] += 4;
-
-    context->state.ccr_negative = ((int32_t) value < 0);
-    context->state.ccr_zero = (value == 0);
-    context->state.ccr_overflow = 0;
-    context->state.ccr_carry = 0;
+    m68k_move_l_flags (context, value);
 
     printf ("move.l (a%d)+ ← d%d\n", dest_reg, source_reg);
     return 0;
@@ -396,11 +376,7 @@ static uint32_t m68k_2100_move_l_pan_dn (M68000_Context *context, uint16_t instr
     uint32_t value = context->state.d [source_reg].l;
     context->state.a [dest_reg] -= 4;
     write_long (context, context->state.a [dest_reg], value);
-
-    context->state.ccr_negative = ((int32_t) value < 0);
-    context->state.ccr_zero = (value == 0);
-    context->state.ccr_overflow = 0;
-    context->state.ccr_carry = 0;
+    m68k_move_l_flags (context, value);
 
     printf ("move.l -(a%d) ← d%d\n", dest_reg, source_reg);
     return 0;
@@ -415,11 +391,7 @@ static uint32_t m68k_217c_move_l_dan_imm (M68000_Context *context, uint16_t inst
     int16_t displacement = read_extension (context);
 
     write_long (context, context->state.a [dest_reg] + displacement, value);
-
-    context->state.ccr_negative = ((int32_t) value < 0);
-    context->state.ccr_zero = (value == 0);
-    context->state.ccr_overflow = 0;
-    context->state.ccr_carry = 0;
+    m68k_move_l_flags (context, value);
 
     printf ("move.l %04x(a%d) ← #%08x\n", displacement, dest_reg, value);
     return 0;
@@ -433,14 +405,22 @@ static uint32_t m68k_21fc_move_l_aw_imm (M68000_Context *context, uint16_t instr
     int16_t addr = read_extension (context);
 
     write_long (context, (int32_t) addr, value);
-
-    context->state.ccr_negative = ((int32_t) value < 0);
-    context->state.ccr_zero = (value == 0);
-    context->state.ccr_overflow = 0;
-    context->state.ccr_carry = 0;
+    m68k_move_l_flags (context, value);
 
     printf ("move.l (%04x.w) ← #%08x\n", (uint16_t) addr, value);
     return 0;
+}
+
+
+/*
+ * Update flags for move.w instructions.
+ */
+static inline void m68k_move_w_flags (M68000_Context *context, uint16_t value)
+{
+    context->state.ccr_negative = ((int16_t) value < 0);
+    context->state.ccr_zero = (value == 0);
+    context->state.ccr_overflow = 0;
+    context->state.ccr_carry = 0;
 }
 
 
@@ -453,11 +433,7 @@ static uint32_t m68k_3010_move_w_dn_an (M68000_Context *context, uint16_t instru
 
     uint16_t value = read_word (context, context->state.a [source_reg]);
     context->state.d [dest_reg].w = value;
-
-    context->state.ccr_negative = ((int16_t) value < 0);
-    context->state.ccr_zero = (value == 0);
-    context->state.ccr_overflow = 0;
-    context->state.ccr_carry = 0;
+    m68k_move_w_flags (context, value);
 
     printf ("move.w d%d ← (a%d)\n", dest_reg, source_reg);
     return 0;
@@ -471,11 +447,7 @@ static uint32_t m68k_303c_move_w_dn_imm (M68000_Context *context, uint16_t instr
 
     uint16_t value = read_extension (context);
     context->state.d [dest_reg].w = value;
-
-    context->state.ccr_negative = ((int16_t) value < 0);
-    context->state.ccr_zero = (value == 0);
-    context->state.ccr_overflow = 0;
-    context->state.ccr_carry = 0;
+    m68k_move_w_flags (context, value);
 
     printf ("move.w d%d ← #%04x\n", dest_reg, value);
     return 0;
@@ -489,11 +461,8 @@ static uint32_t m68k_3039_move_w_dn_al (M68000_Context *context, uint16_t instru
     uint32_t addr = read_extension_long (context);
 
     uint16_t value = read_word (context, addr);
-
-    context->state.ccr_negative = ((int16_t) value < 0);
-    context->state.ccr_zero = (value == 0);
-    context->state.ccr_overflow = 0;
-    context->state.ccr_carry = 0;
+    context->state.d [dest_reg].w = value;
+    m68k_move_w_flags (context, value);
 
     printf ("move.w d%d ← (%06x.l)\n", dest_reg, addr);
     return 0;
@@ -508,11 +477,7 @@ static uint32_t m68k_3080_move_w_an_dn (M68000_Context *context, uint16_t instru
 
     uint16_t value = context->state.d [source_reg].w;
     write_word (context, context->state.a [dest_reg], value);
-
-    context->state.ccr_negative = ((int16_t) value < 0);
-    context->state.ccr_zero = (value == 0);
-    context->state.ccr_overflow = 0;
-    context->state.ccr_carry = 0;
+    m68k_move_w_flags (context, value);
 
     printf ("move.w (a%d) ← d%d\n", dest_reg, source_reg);
     return 0;
@@ -528,11 +493,7 @@ static uint32_t m68k_move_w_3098_an_anp (M68000_Context *context, uint16_t instr
     uint16_t value = read_word (context, context->state.a [source_reg]);
     context->state.a [source_reg] += 2;
     write_word (context, context->state.a [dest_reg], value);
-
-    context->state.ccr_negative = ((int16_t) value < 0);
-    context->state.ccr_zero = (value == 0);
-    context->state.ccr_overflow = 0;
-    context->state.ccr_carry = 0;
+    m68k_move_w_flags (context, value);
 
     printf ("move.w (a%d) ← (a%d)+\n", dest_reg, source_reg);
     return 0;
@@ -547,11 +508,7 @@ static uint32_t m68k_31c0_move_w_aw_dn (M68000_Context *context, uint16_t instru
 
     uint16_t value = context->state.d [source_reg].w;
     write_word (context, (int32_t) addr, value);
-
-    context->state.ccr_negative = ((int16_t) value < 0);
-    context->state.ccr_zero = (value == 0);
-    context->state.ccr_overflow = 0;
-    context->state.ccr_carry = 0;
+    m68k_move_w_flags (context, value);
 
     printf ("move.w (%04x.w) ← d%d\n", (uint16_t) addr, source_reg);
     return 0;
@@ -565,11 +522,7 @@ static uint32_t m68k_31fc_move_w_aw_imm (M68000_Context *context, uint16_t instr
     int16_t addr = read_extension (context);
 
     write_word (context, (int32_t) addr, value);
-
-    context->state.ccr_negative = ((int16_t) value < 0);
-    context->state.ccr_zero = (value == 0);
-    context->state.ccr_overflow = 0;
-    context->state.ccr_carry = 0;
+    m68k_move_w_flags (context, value);
 
     printf ("move.w (%04x.w) ← #%04x\n", (uint16_t) addr, value);
     return 0;
