@@ -280,13 +280,13 @@ static void smd_memory_write_16 (void *context_ptr, uint32_t addr, uint16_t data
     }
 
     /* I/O */
-    if (addr >= 0xa10000 && addr <= 0xa1001f)
+    else if (addr >= 0xa10000 && addr <= 0xa1001f)
     {
         snepulator_error (__func__, "I/O access %06x not implemented.", addr);
     }
 
     /* Internal Registers and Expansion */
-    if (addr >= 0xa10020 && addr <= 0xbfffff)
+    else if (addr >= 0xa10020 && addr <= 0xbfffff)
     {
         /* TMSS register */
         if (addr == 0xa14000 || addr == 0xa14002)
@@ -320,7 +320,7 @@ static void smd_memory_write_16 (void *context_ptr, uint32_t addr, uint16_t data
     }
 
     /* VDP */
-    if (addr >= 0xc00000 && addr <= 0xdfffff)
+    else if (addr >= 0xc00000 && addr <= 0xdfffff)
     {
         switch (addr)
         {
@@ -337,9 +337,15 @@ static void smd_memory_write_16 (void *context_ptr, uint32_t addr, uint16_t data
     }
 
     /* RAM */
-    if (addr >= 0xe00000 && addr <= 0xffffff)
+    else if (addr >= 0xe00000 && addr <= 0xffffff)
     {
         * (uint16_t *) &context->ram [addr & 0x00ffff] = util_hton16 (data);
+    }
+
+    /* Invalid write */
+    else
+    {
+        snepulator_error (__func__, "Unmapped address %06x.", addr);
     }
 }
 
