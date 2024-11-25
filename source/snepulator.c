@@ -316,12 +316,14 @@ Console snepulator_select_console_for_rom (const char *path)
         {
             return CONSOLE_GAME_GEAR;
         }
+#ifdef DEVELOPER_BUILD
         else if (strcmp (extension, ".md") == 0 ||
                  strcmp (extension, ".gen") == 0)
         {
             /* TODO: Support for .smd roms */
             return CONSOLE_MEGA_DRIVE;
         }
+#endif
     }
 
     /* Second priority: Check if the ROM matches any known headers */
@@ -813,9 +815,11 @@ void snepulator_system_init (void)
             state.console_context = sms_init ();
             break;
 
+#ifdef DEVELOPER_BUILD
         case CONSOLE_MEGA_DRIVE:
             state.console_context = smd_init ();
             break;
+#endif
 
         default:
             /* Default to Master System */

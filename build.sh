@@ -10,6 +10,7 @@ CXX=g++
 SDL2_CONFIG="sdl2-config"
 IMGUI_VERSION="imgui-1.86"
 CLEAN_BUILD="false"
+DEVELOPER_BUILD="false"
 
 EXTRA_FLAGS=""
 EXTRA_LINKS=""
@@ -54,7 +55,6 @@ build_snepulator ()
     eval $CC $CFLAGS -c source/sound/ym2413.c       -o work/ym2413.o
     eval $CC $CFLAGS -c source/video/tms9928a.c     -o work/tms9928a.o
     eval $CC $CFLAGS -c source/video/sms_vdp.c      -o work/sms_vdp.o
-    eval $CC $CFLAGS -c source/video/smd_vdp.c      -o work/smd_vdp.o
     eval $CC $CFLAGS -c source/colecovision.c       -o work/colecovision.o
     eval $CC $CFLAGS -c source/config.c             -o work/config.o
     eval $CC $CFLAGS -c source/gamepad.c            -o work/gamepad.o
@@ -63,11 +63,17 @@ build_snepulator ()
     eval $CC $CFLAGS -c source/path.c               -o work/path.o
     eval $CC $CFLAGS -c source/sg-1000.c            -o work/sg-1000.o
     eval $CC $CFLAGS -c source/save_state.c         -o work/save_state.o
-    eval $CC $CFLAGS -c source/smd.c                -o work/smd.o
     eval $CC $CFLAGS -c source/sms.c                -o work/sms.o
     eval $CC $CFLAGS -c source/snepulator.c         -o work/snepulator.o
     eval $CC $CFLAGS -c source/util.c               -o work/util.o
     eval $CC $CFLAGS -c source/vgm_player.c         -o work/vgm_player.o
+
+    # Mega Drive support is under development
+    if [ ${DEVELOPER_BUILD} = "true" ]
+    then
+        eval $CC $CFLAGS -c source/smd.c                -o work/smd.o
+        eval $CC $CFLAGS -c source/video/smd_vdp.c      -o work/smd_vdp.o
+    fi
 }
 
 
@@ -155,6 +161,7 @@ do
             ;;
         dev*)
             echo "Developer options enabled"
+            DEVELOPER_BUILD="true"
             EXTRA_FLAGS="${EXTRA_FLAGS} -DDEVELOPER_BUILD"
             ;;
         *)
