@@ -951,6 +951,32 @@ static uint32_t m68k_4e75_rts (M68000_Context *context, uint16_t instruction)
 }
 
 
+/* subq.l an, #xx */
+static uint32_t m68k_5188_subq_an (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    uint32_t a = context->state.a [reg];
+    uint32_t b = (instruction >> 9) & 0x07;
+
+    if (b == 0)
+    {
+        b = 8;
+    }
+
+    uint32_t result = a - b;
+    context->state.a [reg] = result;
+
+    context->state.ccr_negative = ((int32_t) result < 0);
+    context->state.ccr_zero = (result == 0);
+    context->state.ccr_overflow = (int64_t)(int32_t) a - (int32_t) b > 2147483647 || (int64_t)(int32_t) a - (int32_t) b < -2147483648;
+    context->state.ccr_carry = ((uint64_t) a - b) >> 32;
+
+    printf ("subq.l a%d, %d\n", reg, b);
+    return 0;
+}
+
+
 /* dbf Dn, #xxxx */
 static uint32_t m68k_51c8_dbf (M68000_Context *context, uint16_t instruction)
 {
@@ -1359,6 +1385,15 @@ static void m68k_init_instructions (void)
 
     /* clr */
     m68k_instruction [0x42b8] = m68k_42b8_clr_l_aw;
+
+    /* addq / subq */
+    for (uint16_t value = 0; value < 8; value++)
+    {
+        for (uint16_t reg = 0; reg < 8; reg++)
+        {
+            m68k_instruction [0x5188 | (value << 9) | reg] = m68k_5188_subq_an;
+        }
+    }
 
     /* dbcc */
     for (uint16_t dn = 0; dn < 8; dn++)
