@@ -337,6 +337,9 @@ SMS_Context *sms_init (void)
         }
         fprintf (stdout, "%d KiB BIOS %s loaded.\n", context->bios_size >> 10, state.sms_bios_filename);
         context->bios_mask = util_round_up (context->bios_size) - 1;
+
+        /* Hash the BIOS. This will allow save states when no cartridge is present. */
+        util_hash_rom (context->bios, context->bios_size, context->rom_hash);
     }
 
     /* Load ROM cart */
