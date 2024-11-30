@@ -168,7 +168,7 @@ static void snepulator_console_menu ()
 
         if (ImGui::MenuItem ("Hard Reset", NULL, false, running_or_paused))
         {
-            snepulator_system_init ();
+            snepulator_system_init (state.console);
         }
         if (ImGui::MenuItem ("Soft Reset", NULL, false, running_or_paused && state.soft_reset != NULL))
         {

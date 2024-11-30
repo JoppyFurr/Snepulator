@@ -465,12 +465,13 @@ int main (int argc, char **argv)
     state.video_3d_saturation = 0.25;
 
     /* Parse all CLI arguments */
+    const char *arg_filename = NULL;
     while (*(++argv))
     {
-        if (!state.cart_filename)
+        if (!arg_filename)
         {
             /* ROM to load */
-            state.cart_filename = strdup (*(argv));
+            arg_filename = *(argv);
         }
         else
         {
@@ -604,7 +605,7 @@ int main (int argc, char **argv)
     gamepad_init ();
 
     /* Start emulation, or the logo animation */
-    snepulator_system_init ();
+    snepulator_rom_set (arg_filename);
     SDL_TimerID emulation_timer = SDL_AddTimer (1, emulation_callback, NULL);
 
     /* Run the main loop until the user quits. */

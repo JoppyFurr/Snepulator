@@ -247,7 +247,7 @@ void snepulator_state_load (void *context, const char *filename);
 void snepulator_state_save (void *context, const char *filename);
 
 /* Call the appropriate initialisation for the chosen ROM. */
-void snepulator_system_init (void);
+void snepulator_system_init (Console console);
 
 /* Set the video 3D mode. */
 void snepulator_video_3d_mode_set (Video_3D_Mode mode);

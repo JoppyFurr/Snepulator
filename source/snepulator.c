@@ -714,7 +714,8 @@ void snepulator_rom_set (const char *path)
         state.cart_filename = strdup (path);
     }
 
-    snepulator_system_init ();
+    Console console = snepulator_select_console_for_rom (state.cart_filename);
+    snepulator_system_init (console);
 }
 
 
@@ -783,14 +784,14 @@ void snepulator_state_save (void *context, const char *filename)
 /*
  * Call the appropriate initialisation for the chosen ROM
  */
-void snepulator_system_init (void)
+void snepulator_system_init (Console console)
 {
     snepulator_reset ();
 
     /* Lock to ensure that initialization is complete before emulation starts. */
     pthread_mutex_lock (&state.run_mutex);
 
-    state.console = snepulator_select_console_for_rom (state.cart_filename);
+    state.console = console;
 
     switch (state.console)
     {
