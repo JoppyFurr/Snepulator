@@ -229,7 +229,7 @@ static void vgm_player_run_until_delay (VGM_Player_Context *context)
     uint8_t addr;
 
     /* Process commands until we reach a delay */
-    while (context->delay == 0)
+    while (state.run == RUN_STATE_RUNNING && context->delay == 0)
     {
         if (context->index > context->vgm_size)
         {
@@ -282,6 +282,11 @@ static void vgm_player_run_until_delay (VGM_Player_Context *context)
                 context->current_sample = context->total_samples - context->loop_samples;
                 break;
 
+            /* Data Block - Unsupported */
+            case 0x67:
+                snepulator_error ("VGM Error", "VGM Data blocks unsupported.");
+                break;
+
             /* 0x7n: Wait n+1 samples */
             case 0x70: case 0x71: case 0x72: case 0x73:
             case 0x74: case 0x75: case 0x76: case 0x77:
@@ -303,7 +308,7 @@ static void vgm_player_run_until_delay (VGM_Player_Context *context)
                 break;
 
             default:
-                fprintf (stderr, "Unknown command %02x.\n", command);
+                snepulator_error ("VGM Error", "Unknown command %02x.\n", command);
                 break;
 
         }
