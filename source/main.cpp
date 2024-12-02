@@ -61,9 +61,9 @@ void snepulator_error (const char *title, const char *format, ...)
     char message [240] = { '\0' };
     int len = 0;
 
-    if (state.run == RUN_STATE_RUNNING || state.run == RUN_STATE_PAUSED)
+    if (state.run != RUN_STATE_EXIT)
     {
-        state.run = RUN_STATE_INIT;
+        state.run = RUN_STATE_ERROR;
     }
     state.show_gui = true;
 
@@ -111,6 +111,10 @@ void snepulator_render_error ()
             free (state.error_message);
             state.error_message = NULL;
             first = true;
+
+            /* Return to the logo screen */
+            state.run = RUN_STATE_INIT;
+            snepulator_rom_set (NULL);
         }
         ImGui::EndPopup ();
     }

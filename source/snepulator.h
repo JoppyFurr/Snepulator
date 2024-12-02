@@ -28,6 +28,7 @@ typedef enum Run_State_e {
     RUN_STATE_INIT,     /* No ROM has been loaded. */
     RUN_STATE_RUNNING,  /* A ROM has been loaded and is running. */
     RUN_STATE_PAUSED,   /* A ROM has been loaded and is paused. */
+    RUN_STATE_ERROR,    /* An error has been encountered. */
     RUN_STATE_EXIT      /* Shut down. */
 } Run_State;
 

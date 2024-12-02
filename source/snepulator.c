@@ -703,6 +703,12 @@ void snepulator_reset (void)
  */
 void snepulator_rom_set (const char *path)
 {
+    /* Do not start running a new ROM while in the error state. */
+    if (state.run == RUN_STATE_ERROR)
+    {
+        return;
+    }
+
     if (state.cart_filename != NULL)
     {
         free (state.cart_filename);
