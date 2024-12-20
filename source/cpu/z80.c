@@ -4728,6 +4728,9 @@ static void z80_ca_jp_z_xx (Z80_Context *context)
 /* BIT PREFIX */
 static void z80_cb_prefix (Z80_Context *context)
 {
+    /* Bump the R register */
+    context->state.r = (context->state.r & 0x80) | ((context->state.r + 1) & 0x7f);
+
     uint8_t instruction = context->memory_read (context->parent, context->state.pc++);
 
     switch (instruction & 0x07)
@@ -5013,6 +5016,9 @@ static void z80_dc_call_c_xx (Z80_Context *context)
 /* IX PREFIX */
 static void z80_dd_ix (Z80_Context *context)
 {
+    /* Bump the R register */
+    context->state.r = (context->state.r & 0x80) | ((context->state.r + 1) & 0x7f);
+
     /* Fetch */
     uint8_t instruction = context->memory_read (context->parent, context->state.pc++);
 
@@ -5217,6 +5223,9 @@ static void z80_ec_call_pe_xx (Z80_Context *context)
 /* EXTENDED PREFIX */
 static void z80_ed_prefix (Z80_Context *context)
 {
+    /* Bump the R register */
+    context->state.r = (context->state.r & 0x80) | ((context->state.r + 1) & 0x7f);
+
     /* Fetch */
     uint8_t instruction = context->memory_read (context->parent, context->state.pc++);
 
@@ -5417,6 +5426,9 @@ static void z80_fc_call_m_xx (Z80_Context *context)
 /* IY PREFIX */
 static void z80_fd_prefix (Z80_Context *context)
 {
+    /* Bump the R register */
+    context->state.r = (context->state.r & 0x80) | ((context->state.r + 1) & 0x7f);
+
     /* Fetch */
     uint8_t instruction = context->memory_read (context->parent, context->state.pc++);
 
@@ -5519,8 +5531,8 @@ static void z80_run_instruction (Z80_Context *context)
 {
     uint8_t instruction;
 
-    /* TODO: This register should be incremented in more places than just here */
-    context->state.r = (context->state.r & 0x80) |((context->state.r + 1) & 0x7f);
+    /* Bump the R register */
+    context->state.r = (context->state.r & 0x80) | ((context->state.r + 1) & 0x7f);
 
     /* Fetch */
     instruction = context->memory_read (context->parent, context->state.pc++);
@@ -5558,6 +5570,9 @@ void z80_run_cycles (Z80_Context *context, int64_t cycles)
 
             if (nmi_rising_edge)
             {
+                /* Bump the R register */
+                context->state.r = (context->state.r & 0x80) | ((context->state.r + 1) & 0x7f);
+
                 if (context->state.halt)
                 {
                     context->state.halt = false;
@@ -5576,6 +5591,9 @@ void z80_run_cycles (Z80_Context *context, int64_t cycles)
             /* Then check for a maskable interrupt */
             if (context->state.iff1 && context->get_int (context->parent))
             {
+                /* Bump the R register */
+                context->state.r = (context->state.r & 0x80) | ((context->state.r + 1) & 0x7f);
+
                 if (context->state.halt)
                 {
                     context->state.halt = false;
@@ -5607,7 +5625,8 @@ void z80_run_cycles (Z80_Context *context, int64_t cycles)
         /* If there was no interrupts, run an instruction or remain in HALT. */
         if (context->state.halt)
         {
-            /* NOP */
+            /* Bump the R register */
+            context->state.r = (context->state.r & 0x80) | ((context->state.r + 1) & 0x7f);
             context->used_cycles += 4;
         }
         else
