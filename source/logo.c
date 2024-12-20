@@ -11,7 +11,6 @@
 
 #include "../images/snepulator_logo.c"
 #include "logo.h"
-#include <stdio.h> /* debug */
 
 extern Snepulator_State state;
 
