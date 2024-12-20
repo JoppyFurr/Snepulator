@@ -188,6 +188,18 @@ static void sms_diagnostics_show (void)
 
     state.diagnostics_print ("---");
     state.diagnostics_print ("Mapper : %s", sms_mapper_name_get (context->hw_state.mapper));
+    switch (context->hw_state.mapper)
+    {
+        case SMS_MAPPER_SEGA:
+        case SMS_MAPPER_CODEMASTERS:
+        case SMS_MAPPER_KOREAN:
+        case SMS_MAPPER_4PAK:
+            state.diagnostics_print ("slot [0]: %04x", context->hw_state.mapper_bank [0] * SIZE_16K);
+            state.diagnostics_print ("slot [1]: %04x", context->hw_state.mapper_bank [1] * SIZE_16K);
+            state.diagnostics_print ("slot [2]: %04x", context->hw_state.mapper_bank [2] * SIZE_16K);
+        default:
+            break;
+    }
 }
 #endif
 
