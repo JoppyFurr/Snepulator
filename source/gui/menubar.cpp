@@ -213,9 +213,10 @@ static void snepulator_console_menu ()
         {
             snepulator_disable_blanking_set (!state.disable_blanking);
         }
-        ImGui::Separator ();
 
 #ifdef DEVELOPER_BUILD
+        ImGui::Separator ();
+
         if (ImGui::BeginMenu ("Diagnostics", running_or_paused))
         {
             if (state.diagnostics_show == NULL)
