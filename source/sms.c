@@ -369,7 +369,11 @@ SMS_Context *sms_init (void)
         context->rom_hints = sms_db_get_hints (context->rom_hash);
 
         /* Mapper Hints */
-        if (context->rom_hints & SMS_HINT_MAPPER_SEGA)
+        if (context->rom_hints & SMS_HINT_MAPPER_NONE)
+        {
+            context->hw_state.mapper = SMS_MAPPER_NONE;
+        }
+        else if (context->rom_hints & SMS_HINT_MAPPER_SEGA)
         {
             context->hw_state.mapper = SMS_MAPPER_SEGA;
         }
