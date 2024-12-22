@@ -718,6 +718,13 @@ static void sms_io_write (void *context_ptr, uint8_t addr, uint8_t data)
     {
         if ((addr & 0x01) == 0x00)
         {
+            /* Some unlicensed games do dodgy writes to the memory control register.
+             * This can leave the console locked up with no code to run. */
+            if (context->rom_hints & SMS_HINT_NO_MEMORY_CONTROL)
+            {
+                return;
+            }
+
             /* Memory Control Register */
             /* Ignore writes that would leave us with no possibility of executing code.  */
             if ((~data & (SMS_MEMORY_CTRL_BIOS | SMS_MEMORY_CTRL_RAM | SMS_MEMORY_CTRL_CART)) == 0)
