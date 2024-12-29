@@ -42,6 +42,7 @@ build_prepare ()
     fi
 }
 
+
 # Compile Snepulator emulator core.
 build_snepulator ()
 {
@@ -123,6 +124,8 @@ build_libraries ()
     eval $CC $CFLAGS -c libraries/libspng-0.7.4/spng.c     -o work/spng.o
 }
 
+# Version from Git tag.
+TAG="$(git describe --tags)"
 
 # Build-host options
 if [ $(uname) = "Darwin" ]
@@ -178,7 +181,8 @@ CFLAGS="-std=c11 -O2 -Wall -Werror -D_POSIX_C_SOURCE=200809L \
         -I libraries/BLAKE3/ \
         -I libraries/gl3w/ \
         -I libraries/libspng-0.7.4/ \
-        -DBUILD_DATE=\\\"$DATE\\\" \
+        -DBUILD_DATE=\\\"${DATE}\\\" \
+        -DBUILD_TAG=\\\"${TAG:1}\\\" \
         ${EXTRA_FLAGS}"
 
 CXXFLAGS="-std=c++11 -O2 -Wall -Werror \
@@ -186,7 +190,8 @@ CXXFLAGS="-std=c++11 -O2 -Wall -Werror \
           -I libraries/gl3w/ \
           -I ${IMGUI_PATH}/ \
           -I ${IMGUI_PATH}/backends/ \
-          -DBUILD_DATE=\\\"$DATE\\\" \
+          -DBUILD_DATE=\\\"${DATE}\\\" \
+          -DBUILD_TAG=\\\"${TAG:1}\\\" \
           ${EXTRA_FLAGS}"
 
 # Keep track of the compiler name and imgui version.

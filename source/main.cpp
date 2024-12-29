@@ -411,6 +411,7 @@ static void about (void)
 
     printf ("────────────────────────────────────╮\n");
     printf (" Snepulator, the emulator with mow! │\n");
+    printf (" Version %-20s       │\n", BUILD_TAG);
     printf (" Built on %-10s                │\n", BUILD_DATE);
     printf (" ImGui version: %-9s           │\n", IMGUI_VERSION);
     printf (" SDL Version %-10s             │\n", sdl_version);
