@@ -1,7 +1,14 @@
 # Ignore build files
 work/
+build_id.txt
 Snepulator
+Snepulator.exe
+*.zip
+*.AppImage
 
 # Ignore OS & Tool files
 tags
 .DS_Store
+*.orig
+*.log
+*.patch
