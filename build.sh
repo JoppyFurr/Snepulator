@@ -61,6 +61,7 @@ build_snepulator ()
     eval $CC $CFLAGS -c source/gamepad.c            -o work/gamepad.o
     eval $CC $CFLAGS -c source/gamepad_sdl.c        -o work/gamepad_sdl.o
     eval $CC $CFLAGS -c source/logo.c               -o work/logo.o
+    eval $CC $CFLAGS -c source/midi_player.c        -o work/midi_player.o
     eval $CC $CFLAGS -c source/path.c               -o work/path.o
     eval $CC $CFLAGS -c source/sg-1000.c            -o work/sg-1000.o
     eval $CC $CFLAGS -c source/save_state.c         -o work/save_state.o

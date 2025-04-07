@@ -27,6 +27,7 @@
 #include "sms.h"
 #include "smd.h"
 #include "vgm_player.h"
+#include "midi_player.h"
 
 /* Images */
 #include "../images/snepulator_paused.c"
@@ -299,6 +300,12 @@ Console snepulator_select_console_for_rom (const char *path)
             strcmp (extension, ".vgz") == 0)
         {
             return CONSOLE_VGM_PLAYER;
+        }
+        else if (strcmp (extension, ".mid") == 0 ||
+                 strcmp (extension, ".midi") == 0 ||
+                 strcmp (extension, ".smf") == 0)
+        {
+            return CONSOLE_MIDI_PLAYER;
         }
         else if (strcmp (extension, ".col") == 0)
         {
@@ -807,6 +814,10 @@ void snepulator_system_init (Console console)
 
         case CONSOLE_VGM_PLAYER:
             state.console_context = vgm_player_init ();
+            break;
+
+        case CONSOLE_MIDI_PLAYER:
+            state.console_context = midi_player_init ();
             break;
 
         case CONSOLE_COLECOVISION:
