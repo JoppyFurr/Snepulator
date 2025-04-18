@@ -18,6 +18,30 @@
 
 extern Snepulator_State state;
 
+/* General MIDI mapping */
+/*  1: Violin,      2: Guitar,       3: Piano,        4: Flute,
+ *  5: Clarinet,    6: Oboe,         7: Trumpet,      8: Organ,
+ *  9: Horn,       10: Synthesizer, 11: Harpsichord, 12: Vibraphone,
+ * 13: Synth Bass, 14: Wood Bass,   15: Electric Guitar */
+static const uint8_t midi_program_to_ym2413 [128] =
+{
+     3,  3,  3,  3,  3,  3, 11,  3, /* Pianos */
+    12, 12, 12, 12, 12, 12, 12, 11, /* Chromatic Percussion */
+     8,  8,  8,  8,  8,  8,  8,  8, /* Organs */
+     2,  2, 15, 15, 15, 15, 15, 15, /* Guitars */
+    14, 14, 14, 14, 14, 14, 13, 13, /* Basses */
+     1,  1,  1,  1,  1,  2,  2, 13, /* Strings */
+     1,  1,  1,  1,  4,  4,  4, 10, /* Ensemble */
+     7,  7,  9,  7,  9,  7,  7,  7, /* Brass */
+     6,  6,  6,  6,  6,  6,  6,  5, /* Reed */
+     4,  4,  4,  4,  4,  4,  4,  4, /* Pipe */
+     5, 10,  4,  4, 15,  4, 10, 10, /* Synth Lead */
+    12,  1, 10,  4,  4,  4,  4,  4, /* Synth Pad */
+     3,  1, 12,  2,  7,  4, 14,  1, /* Synth Effects */
+     2,  2,  2, 11, 12, 10,  1,  6, /* Ethnic */
+    12, 12, 12, 13, 13, 13, 13, 11, /* Percussive */
+     0,  0,  0,  0,  0,  0,  0,  0, /* Sound Effects */
+};
 
 /*
  * Callback to supply audio frames.
