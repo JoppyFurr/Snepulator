@@ -102,6 +102,24 @@ static void midi_player_audio_callback (void *context_ptr, int16_t *stream, uint
 
 
 /*
+ * Return a synth channel to the queue.
+ */
+static void midi_synth_queue_put (MIDI_Player_Context *context, uint8_t synth_id)
+{
+    context->synth_queue [(context->synth_queue_put++) & 0x0f] = synth_id;
+}
+
+
+/*
+ * Take a synth channel from the queue.
+ */
+static uint8_t midi_synth_queue_get (MIDI_Player_Context *context)
+{
+    return context->synth_queue [(context->synth_queue_get++) & 0x0f];
+}
+
+
+/*
  * Key up event
  */
 static void midi_player_key_up (MIDI_Player_Context *context, uint8_t channel, uint8_t key)
@@ -125,7 +143,7 @@ static void midi_player_key_up (MIDI_Player_Context *context, uint8_t channel, u
     ym2413_data_write (context->ym2413_context, r20_value);
 
     /* Return the channel to the queue */
-    context->synth_queue [(context->synth_queue_put++) & 0x0f] = synth_id;
+    midi_synth_queue_put (context, synth_id);
 }
 
 
@@ -151,7 +169,7 @@ static void midi_player_key_down (MIDI_Player_Context *context, uint8_t channel,
     context->channel [channel].key [key] = 127;
 
     /* Get the synth channel from the queue */
-    uint8_t synth_id = context->synth_queue [(context->synth_queue_get++) & 0x0f];
+    uint8_t synth_id = midi_synth_queue_get (context);
     context->channel [channel].synth_id [key] = synth_id;
 
     /* Set the instrument */
@@ -631,8 +649,7 @@ MIDI_Player_Context *midi_player_init (void)
     /* Add the six channels to the synth-queue */
     for (uint32_t i = 0; i < 6; i++)
     {
-        /* TODO: Consider a get/put helper function */
-        context->synth_queue [(context->synth_queue_put++) & 0x0f] = i;
+        midi_synth_queue_put (context, i);
     }
 
     /* Initial video parameters */
