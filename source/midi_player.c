@@ -153,14 +153,20 @@ static void midi_player_key_up (MIDI_Player_Context *context, uint8_t channel, u
  */
 static void midi_player_key_down (MIDI_Player_Context *context, uint8_t channel, uint8_t key)
 {
-    /* If we don't have any free synth channels, drop the event */
-    if (context->synth_queue_get == context->synth_queue_put)
+    /* TODO: Handle percussion */
+    if (channel == 9)
     {
         return;
     }
 
-    /* TODO: Handle percussion */
-    if (channel == 9)
+    /* If the key was already down, generate an up event to free the previous synth channel. */
+    if (context->channel [channel].key [key] > 0)
+    {
+        midi_player_key_up (context, channel, key);
+    }
+
+    /* If we don't have any free synth channels, drop the event */
+    if (context->synth_queue_get == context->synth_queue_put)
     {
         return;
     }
