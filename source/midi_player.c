@@ -37,6 +37,7 @@
 #include "midi_player.h"
 
 extern Snepulator_State state;
+extern void vgm_player_draw_frame (VGM_Player_Context *context);
 
 /* General MIDI mapping:
  *  1: Violin,      2: Guitar,       3: Piano,        4: Flute,
@@ -490,6 +491,20 @@ static void midi_player_run (void *context_ptr, uint32_t clocks)
         }
 
         context->clocks -= context->tick_length;
+    }
+
+    context->frame_clock_counter += clocks;
+    /* Check if we need a new visualizer frame. 60 fps. */
+    if (context->frame_clock_counter >= 59659)
+    {
+        context->frame_clock_counter -= 59659;
+
+        /* For now, fake a VGM_Player_Context so that we can use the VGM Player's visualisation. */
+        context->vgm_player_context.ym2413_clock = NTSC_COLOURBURST_FREQ;
+        context->vgm_player_context.ym2413_context = context->ym2413_context;
+        context->vgm_player_context.current_sample = context->index;
+        context->vgm_player_context.total_samples = context->midi_size;
+        vgm_player_draw_frame (&context->vgm_player_context);
     }
 }
 

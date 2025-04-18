@@ -117,7 +117,7 @@ static void draw_rect (VGM_Player_Context *context,
 /*
  * Draw a frame of the visualisation.
  */
-static void vgm_player_draw_frame (VGM_Player_Context *context)
+void vgm_player_draw_frame (VGM_Player_Context *context)
 {
     uint32_t bar_count = 0;
     uint32_t bar_value [15] = { };

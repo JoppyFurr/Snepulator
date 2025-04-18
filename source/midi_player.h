@@ -52,6 +52,7 @@ typedef struct MIDI_Player_Context_s {
     uint32_t synth_queue_put;
 
     /* Visualisation */
+    uint32_t frame_clock_counter;
     VGM_Player_Context vgm_player_context;
 
 } MIDI_Player_Context;
