@@ -86,7 +86,7 @@ static void snepulator_file_menu (void)
         {
             snepulator_pause_set (true);
             open_state.title = "Open ROM...";
-            snepulator_set_open_regex (".*\\.(bin|col|gg|sg|sms|vgm|vgz)$");
+            snepulator_set_open_regex (".*\\.(bin|col|gg|sg|sms|vgm|vgz|midi|mid|smf)$");
             open_state.callback = snepulator_rom_set;
             open_modal_create = true;
         }

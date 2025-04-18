@@ -10,6 +10,13 @@ typedef enum MIDI_Expect_e {
 } MIDI_Expect;
 
 
+typedef struct MIDI_Channel_s {
+    uint8_t program;
+    uint8_t key [128]; /* Stores velocity, or 0 if the key is up */
+    uint8_t synth_id [128]; /* Reference to (chip, channel) that is currently sounding this key */
+} MIDI_Channel;
+
+
 typedef struct MIDI_Player_Context_s {
 
     uint8_t *midi;
@@ -25,7 +32,7 @@ typedef struct MIDI_Player_Context_s {
     MIDI_Expect expect;     /* Next expected element in track */
 
     /* Channel state */
-    uint8_t channel_program [16];
+    MIDI_Channel channel [16];
 
     /* Values read from MIDI header */
     uint32_t format;
@@ -35,9 +42,14 @@ typedef struct MIDI_Player_Context_s {
     /* MIDI state */
     uint32_t tempo;         /* µs per quarter-note */
 
+    /* YM2413 Synth State */
     YM2413_Context *ym2413_context;
-    uint32_t ym2413_clock;
     uint64_t ym2413_millicycles; /* Remaining time to carry over to the next run of the chip. */
+
+    /* Ring-buffer queue of available YM2413 channels */
+    uint8_t synth_queue [16];
+    uint32_t synth_queue_get;
+    uint32_t synth_queue_put;
 
     /* Visualisation */
     VGM_Player_Context vgm_player_context;

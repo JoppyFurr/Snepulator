@@ -3,6 +3,26 @@
  * MIDI Player implementation.
  */
 
+/*
+ * TODO List:
+ *  - Tempo changes
+ *  - Time signature changes
+ *  - Rhythm
+ *  - Volume changes
+ *  - Sustain pedal
+ *  - Velocity
+ *  - Second ym2413 for better polyphony.
+ *  - Improve timing accuracy
+ *  - Format-1 midi files
+ *  - Pitch bend
+ *  - Fine tuning
+ *
+ * Maybe list:
+ *  - Portamento
+ *  - Balance / pan
+ *  - Soft pedal
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -18,8 +38,8 @@
 
 extern Snepulator_State state;
 
-/* General MIDI mapping */
-/*  1: Violin,      2: Guitar,       3: Piano,        4: Flute,
+/* General MIDI mapping:
+ *  1: Violin,      2: Guitar,       3: Piano,        4: Flute,
  *  5: Clarinet,    6: Oboe,         7: Trumpet,      8: Organ,
  *  9: Horn,       10: Synthesizer, 11: Harpsichord, 12: Vibraphone,
  * 13: Synth Bass, 14: Wood Bass,   15: Electric Guitar */
@@ -43,6 +63,32 @@ static const uint8_t midi_program_to_ym2413 [128] =
      0,  0,  0,  0,  0,  0,  0,  0, /* Sound Effects */
 };
 
+typedef struct note_s
+{
+    uint16_t fnum;
+    uint8_t block;
+} note_t;
+
+/* Mapping from midi note to (fnum, block)
+ * Due to the 3-bit block saturating:
+ * - Notes 115-126 will sound one octave low.
+ * - Note 127 will sound two octaves low. */
+static const note_t midi_note_to_ym2413 [128] =
+{
+    { 86, 0}, { 91, 0}, { 97, 0}, {102, 0}, {109, 0}, {115, 0}, {122, 0}, {129, 0}, {137, 0}, {145, 0}, {153, 0}, {163, 0},
+    {172, 0}, {182, 0}, {193, 0}, {205, 0}, {217, 0}, {320, 0}, {244, 0}, {258, 0}, {274, 0}, {290, 0}, {307, 0}, {326, 0},
+    {345, 0}, {365, 0}, {387, 0}, {410, 0}, {435, 0}, {460, 0}, {488, 0}, {258, 1}, {274, 1}, {290, 1}, {307, 1}, {326, 1},
+    {345, 1}, {365, 1}, {387, 1}, {410, 1}, {435, 1}, {460, 1}, {488, 1}, {258, 2}, {274, 2}, {290, 2}, {307, 2}, {326, 2},
+    {345, 2}, {365, 2}, {387, 2}, {410, 2}, {435, 2}, {460, 2}, {488, 2}, {258, 3}, {274, 3}, {290, 3}, {307, 3}, {326, 3},
+    {345, 3}, {365, 3}, {387, 3}, {410, 3}, {435, 3}, {460, 3}, {488, 3}, {258, 4}, {274, 4}, {290, 4}, {345, 4}, {387, 4},
+    {410, 4}, {435, 4}, {460, 4}, {488, 4}, {258, 5}, {274, 5}, {290, 5}, {307, 5}, {326, 5}, {345, 5}, {365, 5}, {387, 5},
+    {410, 5}, {435, 5}, {460, 5}, {488, 5}, {258, 6}, {274, 6}, {290, 6}, {307, 6}, {326, 6}, {345, 6}, {365, 6}, {387, 6},
+    {410, 6}, {435, 6}, {460, 6}, {488, 6}, {258, 7}, {274, 7}, {290, 7}, {307, 7}, {326, 7}, {345, 7}, {365, 7}, {387, 7},
+    {410, 7}, {435, 7}, {460, 7}, {488, 7}, {258, 7}, {274, 7}, {290, 7}, {307, 7}, {326, 7}, {345, 7}, {365, 7}, {387, 7},
+    {410, 7}, {435, 7}, {460, 7}, {488, 7}, {258, 7}
+};
+
+
 /*
  * Callback to supply audio frames.
  */
@@ -50,10 +96,77 @@ static void midi_player_audio_callback (void *context_ptr, int16_t *stream, uint
 {
     MIDI_Player_Context *context = (MIDI_Player_Context *) context_ptr;
 
-    if (context->ym2413_clock)
+    ym2413_get_samples (context->ym2413_context, stream, count);
+}
+
+
+/*
+ * Key up event
+ */
+static void midi_player_key_up (MIDI_Player_Context *context, uint8_t channel, uint8_t key)
+{
+    /* Nothing to do if the key is already up */
+    if (context->channel [channel].key [key] == 0)
     {
-        ym2413_get_samples (context->ym2413_context, stream, count);
+        return;
     }
+
+    /* Mark the key as up */
+    context->channel [channel].key [key] = 0;
+
+    /* Synth-id to free up */
+    uint8_t synth_id = context->channel [channel].synth_id [key];
+
+    /* Register write for key-up event on ym2413 */
+    uint8_t r20_value = context->ym2413_context->state.r20_channel_params [synth_id].r20_channel_params;
+    r20_value &= 0xef;
+    ym2413_addr_write (context->ym2413_context, 0x20 + synth_id);
+    ym2413_data_write (context->ym2413_context, r20_value);
+
+    /* Return the channel to the queue */
+    context->synth_queue [(context->synth_queue_put++) & 0x0f] = synth_id;
+}
+
+
+/*
+ * Key down event.
+ * TODO: For now velocity is ignored.
+ */
+static void midi_player_key_down (MIDI_Player_Context *context, uint8_t channel, uint8_t key)
+{
+    /* If we don't have any free synth channels, drop the event */
+    if (context->synth_queue_get == context->synth_queue_put)
+    {
+        return;
+    }
+
+    /* TODO: Handle percussion */
+    if (channel == 9)
+    {
+        return;
+    }
+
+    /* Mark the key as down */
+    context->channel [channel].key [key] = 127;
+
+    /* Get the synth channel from the queue */
+    uint8_t synth_id = context->synth_queue [(context->synth_queue_get++) & 0x0f];
+    context->channel [channel].synth_id [key] = synth_id;
+
+    /* Set the instrument */
+    uint8_t r30_value = midi_program_to_ym2413 [context->channel [channel].program] << 4;
+    ym2413_addr_write (context->ym2413_context, 0x30 + synth_id);
+    ym2413_data_write (context->ym2413_context, r30_value);
+
+    /* Write lower eight bits of fnum */
+    note_t note = midi_note_to_ym2413 [key];
+    ym2413_addr_write (context->ym2413_context, 0x10 + synth_id);
+    ym2413_data_write (context->ym2413_context, note.fnum);
+
+    /* Write the key-down, block, and remaining bit of fnum */
+    uint8_t r20_value = 0x10 | (note.block << 1) | (note.fnum >> 8);
+    ym2413_addr_write (context->ym2413_context, 0x20 + synth_id);
+    ym2413_data_write (context->ym2413_context, r20_value);
 }
 
 
@@ -232,20 +345,28 @@ static int midi_read_event (MIDI_Player_Context *context)
         /* Note: The MIDI Status, telling us the event type is stored in context->status.
          *       The first byte of the event (note, controller, program, etc) is stored in 'event' */
         uint8_t channel = context->status & 0x0f;
+        uint8_t key;
+        uint8_t velocity;
 
         switch (context->status & 0xf0)
         {
             case 0x80: /* Note Off */
-                /* TODO: Ignored for now. */
-                printf ("MIDI Channel %d note %d off. (ignored)\n", channel + 1, event);
-                context->index += 1;
+                key = event & 0x7f;
+                velocity = context->midi [context->index++];
+                midi_player_key_up (context, channel, key);
                 break;
 
             case 0x90: /* Note On */
-                /* TODO: Ignored for now. */
-                printf ("MIDI Channel %d note %d %s. (ignored)\n", channel + 1,
-                        event, context->midi [context->index] ? "on" : "off");
-                context->index += 1;
+                key = event & 0x7f;
+                velocity = context->midi [context->index++];
+                if (velocity > 0)
+                {
+                    midi_player_key_down (context, channel, key);
+                }
+                else
+                {
+                    midi_player_key_up (context, channel, key);
+                }
                 break;
 
             case 0xa0: /* Polyphonic Pressure */
@@ -263,7 +384,7 @@ static int midi_read_event (MIDI_Player_Context *context)
                 break;
 
             case 0xc0: /* Program Change */
-                context->channel_program [channel] = event;
+                context->channel [channel].program = event & 0x7f;
                 printf ("MIDI Channel %d program set to %d.\n", channel + 1, event + 1);
                 break;
 
@@ -358,10 +479,9 @@ static void midi_player_run (void *context_ptr, uint32_t clocks)
         }
 
         /* During delay, we run the YM2413 */
-        if (context->ym2413_clock)
-        {
-            ym2413_run_cycles (context->ym2413_context, context->ym2413_clock, context->tick_length);
-        }
+        /* TODO: Consider storing millicycles like with the consoles,
+         *       as breaking things up into units of tick_length loses time. */
+        ym2413_run_cycles (context->ym2413_context, NTSC_COLOURBURST_FREQ, context->tick_length);
 
         /* Subtract this sample's delay */
         if (context->delay)
@@ -472,6 +592,15 @@ MIDI_Player_Context *midi_player_init (void)
     /* Initialise sound chip */
     ym2413_context = ym2413_init ();
     context->ym2413_context = ym2413_context;
+    ym2413_addr_write (ym2413_context, 0x0e);
+    ym2413_data_write (ym2413_context, 0x20); /* Rhythm mode */
+
+    /* Add the six channels to the synth-queue */
+    for (uint32_t i = 0; i < 6; i++)
+    {
+        /* TODO: Consider a get/put helper function */
+        context->synth_queue [(context->synth_queue_put++) & 0x0f] = i;
+    }
 
     /* Initial video parameters */
     state.video_start_x = VIDEO_SIDE_BORDER;
