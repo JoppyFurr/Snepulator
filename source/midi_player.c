@@ -281,6 +281,33 @@ static int midi_read_track_header (MIDI_Player_Context *context)
 
 
 /*
+ * Update the tick_length to handle tempo changes.
+ * TODO: Instead of setting a tick length, consider calculating each
+ *       delay in clock cycles. This would be more accurate over time.
+ */
+static void midi_update_tick_length (MIDI_Player_Context *context)
+{
+    /* Metrical Time */
+    if ((context->tick_div & 0x8000) == 0)
+    {
+        /* TODO: Assuming 4/4 time signature */
+        /* TODO: About 0.7 seconds could be lost per hour, as the true tick
+         *       length is not going to be a whole number of clock cycles.
+         *       We shouldn't need to lose this much, especially when delays
+         *       will be multiple ticks long. */
+        context->tick_length = ((uint64_t) NTSC_COLOURBURST_FREQ * context->tempo) /
+                               ((uint64_t) (context->tick_div & 0x7fff) * 1000000);
+    }
+
+    /* Timecode Time */
+    else
+    {
+        snepulator_error ("MIDI Error", "Timecode timing internals not supported");
+    }
+}
+
+
+/*
  * Read and process a Meta Event from the MIDI file.
  */
 static int midi_read_meta_event (MIDI_Player_Context *context)
@@ -292,12 +319,10 @@ static int midi_read_meta_event (MIDI_Player_Context *context)
     {
         case 0x01: /* Text */
             printf ("MIDI Text: %s\n", &context->midi [context->index]);
-            context->index += length;
             break;
 
         case 0x06: /* Marker */
             printf ("MIDI Marker: %s\n", &context->midi [context->index]);
-            context->index += length;
             break;
 
         case 0x2f: /* End of Track */
@@ -306,14 +331,19 @@ static int midi_read_meta_event (MIDI_Player_Context *context)
             snepulator_error ("MIDI", "Reached event End of Track");
             break;
 
-        case 0x51: /* TODO: Tempo */
+        case 0x51: /* Tempo */
+            context->tempo = util_ntoh32 (*(uint32_t *) &context->midi [context->index]) >> 8;
+            midi_update_tick_length (context);
+            break;
+
         case 0x54: /* TODO: SMPTE Offset */
         case 0x58: /* TODO: Time Signature */
         default:
             /* Skip over data */
-            context->index += length;
             printf ("Meta-event 0x%02x not implemented.\n", type);
     }
+
+    context->index += length;
 
     return 0;
 }
@@ -532,7 +562,6 @@ MIDI_Player_Context *midi_player_init (void)
     }
 
     /* Default values */
-    /* TODO: Assumes 4/4 time signature. */
     context->tempo = 500000; /* 120 bpm */
 
     /* Load MIDI file */
@@ -586,20 +615,9 @@ MIDI_Player_Context *midi_player_init (void)
     fprintf (stdout, "format = %d, n_tracks = %d, tick_div=0x%04x\n", context->format, context->n_tracks, context->tick_div);
 
     /* Calculate length of a midi-tick in colourburst clocks */
-    if ((context->tick_div & 0x8000) == 0)
+    midi_update_tick_length (context);
+    if (state.run == RUN_STATE_ERROR)
     {
-        /* TODO: Assuming 4/4 time signature */
-        /* TODO: About 0.7 seconds could be lost per hour, as the true tick
-         *       length is not going to be a whole number of clock cycles.
-         *       We shouldn't need to lose this much, especially when delays
-         *       will be multiple ticks long. */
-        context->tick_length = ((uint64_t) NTSC_COLOURBURST_FREQ * context->tempo) /
-                               ((uint64_t) (context->tick_div & 0x7fff) * 1000000);
-        printf ("context->tick_length = %u.\n", context->tick_length);
-    }
-    else
-    {
-        snepulator_error ("MIDI Error", "Timecode timing internals not supported");
         free (context);
         return NULL;
     }
