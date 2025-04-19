@@ -5,10 +5,8 @@
 
 /*
  * TODO List:
- *  - Tempo changes
  *  - Time signature changes
  *  - Rhythm
- *  - Volume changes
  *  - Sustain pedal
  *  - Velocity
  *  - Second ym2413 for better polyphony.
@@ -178,8 +176,9 @@ static void midi_player_key_down (MIDI_Player_Context *context, uint8_t channel,
     uint8_t synth_id = midi_synth_queue_get (context);
     context->channel [channel].synth_id [key] = synth_id;
 
-    /* Set the instrument */
-    uint8_t r30_value = midi_program_to_ym2413 [context->channel [channel].program] << 4;
+    /* Set the instrument and volume */
+    uint8_t r30_value = (midi_program_to_ym2413 [context->channel [channel].program] << 4) | context->channel [channel].volume;
+
     ym2413_addr_write (context->ym2413_context, 0x30 + synth_id);
     ym2413_data_write (context->ym2413_context, r30_value);
 
@@ -374,6 +373,26 @@ static int midi_read_meta_event (MIDI_Player_Context *context)
 
 
 /*
+ * Set a MIDI controller value
+ */
+static void midi_set_controller (MIDI_Player_Context *context, uint8_t channel, uint8_t controller, uint8_t value)
+{
+    switch (controller)
+    {
+        case 7: /* Channel Volume */
+            /* Store the volume as a 7-bit attenuation for the ym2413 */
+            context->channel [channel].volume = (127 - value) >> 3;
+            /* TODO: Update synth parameters for any notes that are already in progress */
+            break;
+
+        default:
+            printf ("MIDI Channel %d controller [%d] set to %d. (ignored)\n", channel + 1, controller, value);
+            break;
+    }
+}
+
+
+/*
  * Read and process a MIDI event from the MIDI file.
  */
 static int midi_read_event (MIDI_Player_Context *context)
@@ -402,6 +421,8 @@ static int midi_read_event (MIDI_Player_Context *context)
         uint8_t channel = context->status & 0x0f;
         uint8_t key;
         uint8_t velocity;
+        uint8_t controller;
+        uint8_t value;
 
         switch (context->status & 0xf0)
         {
@@ -432,10 +453,9 @@ static int midi_read_event (MIDI_Player_Context *context)
                 break;
 
             case 0xb0: /* Controller */
-                /* TODO: Ignored for now. */
-                printf ("MIDI Channel %d controller [%d] set to %d. (ignored)\n", channel + 1,
-                        event, context->midi [context->index]);
-                context->index += 1;
+                controller = event & 0x7f;
+                value = context->midi [context->index++] & 0x7f;
+                midi_set_controller (context, channel, controller, value);
                 break;
 
             case 0xc0: /* Program Change */
