@@ -177,7 +177,6 @@ static void midi_player_key_down (MIDI_Player_Context *context, uint8_t channel,
 
     /* Set the instrument and volume */
     uint8_t r30_value = (midi_program_to_ym2413 [context->channel [channel].program] << 4) | context->channel [channel].volume;
-
     ym2413_addr_write (context->ym2413_context, 0x30 + synth_id);
     ym2413_data_write (context->ym2413_context, r30_value);
 
@@ -389,7 +388,19 @@ static void midi_set_controller (MIDI_Player_Context *context, uint8_t channel, 
         case 7: /* Channel Volume */
             /* Store the volume as a 7-bit attenuation for the ym2413 */
             context->channel [channel].volume = (127 - value) >> 3;
-            /* TODO: Update synth parameters for any notes that are already in progress */
+
+            /* Update any in-progress notes */
+            for (uint8_t key = 0; key < 128; key++)
+            {
+                if (context->channel [channel].key [key] > 0)
+                {
+                    uint8_t synth_id = context->channel [channel].synth_id [key];
+                    uint8_t r30_value = context->ym2413_context->state.r30_channel_params [synth_id].r30_channel_params & 0xf0;
+                    r30_value |= context->channel [channel].volume;
+                    ym2413_addr_write (context->ym2413_context, 0x30 + synth_id);
+                    ym2413_data_write (context->ym2413_context, r30_value);
+                }
+            }
             break;
 
         case 10: /* Pan    - Not implemented */
