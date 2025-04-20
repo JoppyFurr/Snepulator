@@ -5,7 +5,6 @@
 
 /*
  * TODO List:
- *  - Time signature changes
  *  - Rhythm
  *  - Sustain pedal
  *  - Velocity
@@ -359,8 +358,16 @@ static int midi_read_meta_event (MIDI_Player_Context *context)
             midi_update_tick_length (context);
             break;
 
-        case 0x54: /* TODO: SMPTE Offset */
-        case 0x58: /* TODO: Time Signature */
+        case 0x54: /* SMPTE Offset */
+            /* Specifies the time at which the track is to start.
+             * Ignore this and just start right away. */
+            break;
+
+        case 0x58: /* Time Signature */
+            /* Specifies the time signature, metronome timing, and number of 32nd notes per MIDI quarter-note.
+             * Ignore this as it's not needed for playback, only for things like showing the bar number. */
+            break;
+
         default:
             /* Skip over data */
             printf ("Meta-event 0x%02x not implemented.\n", type);
@@ -383,6 +390,11 @@ static void midi_set_controller (MIDI_Player_Context *context, uint8_t channel, 
             /* Store the volume as a 7-bit attenuation for the ym2413 */
             context->channel [channel].volume = (127 - value) >> 3;
             /* TODO: Update synth parameters for any notes that are already in progress */
+            break;
+
+        case 10: /* Pan    - Not implemented */
+        case 91: /* Reverb - Not implemented */
+        case 93: /* Chorus - Not implemented */
             break;
 
         default:
@@ -423,6 +435,7 @@ static int midi_read_event (MIDI_Player_Context *context)
         uint8_t velocity;
         uint8_t controller;
         uint8_t value;
+        uint16_t bend;
 
         switch (context->status & 0xf0)
         {
@@ -445,10 +458,7 @@ static int midi_read_event (MIDI_Player_Context *context)
                 }
                 break;
 
-            case 0xa0: /* Polyphonic Pressure */
-                /* TODO: Ignored for now. */
-                printf ("MIDI Channel %d note %d aftertouch %d. (ignored)\n", channel + 1,
-                        event, context->midi [context->index]);
+            case 0xa0: /* Polyphonic Pressure - Not implemented */
                 context->index += 1;
                 break;
 
@@ -460,14 +470,15 @@ static int midi_read_event (MIDI_Player_Context *context)
 
             case 0xc0: /* Program Change */
                 context->channel [channel].program = event & 0x7f;
-                printf ("MIDI Channel %d program set to %d.\n", channel + 1, event + 1);
                 break;
 
             case 0xe0: /* Pitch Bend */
-                /* TODO: Ignored for now. */
-                printf ("MIDI Channel %d pitch-bend set to %d. (ignored)\n", channel + 1,
-                        event + (context->midi [context->index] << 8));
-                context->index += 1;
+                bend = (event & 0x7f) + ((context->midi [context->index++] & 0x7f) << 7);
+                if (bend != 8192)
+                {
+                    /* TODO: Ignored for now. */
+                    printf ("MIDI Channel %d pitch-bend set to %d. (ignored)\n", channel + 1, bend);
+                }
                 break;
 
             default:
