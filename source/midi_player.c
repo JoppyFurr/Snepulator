@@ -6,7 +6,6 @@
 /*
  * TODO List:
  *  - Rhythm
- *  - Sustain pedal
  *  - Velocity
  *  - Second ym2413 for better polyphony.
  *  - Improve timing accuracy
@@ -185,8 +184,8 @@ static void midi_player_key_down (MIDI_Player_Context *context, uint8_t channel,
     ym2413_addr_write (context->ym2413_context, 0x10 + synth_id);
     ym2413_data_write (context->ym2413_context, note.fnum);
 
-    /* Write the key-down, block, and remaining bit of fnum */
-    uint8_t r20_value = 0x10 | (note.block << 1) | (note.fnum >> 8);
+    /* Write the sustain, key-down, block, and remaining bit of fnum */
+    uint8_t r20_value = (context->channel [channel].sustain << 5) | 0x10 | (note.block << 1) | (note.fnum >> 8);
     ym2413_addr_write (context->ym2413_context, 0x20 + synth_id);
     ym2413_data_write (context->ym2413_context, r20_value);
 }
@@ -403,7 +402,27 @@ static void midi_set_controller (MIDI_Player_Context *context, uint8_t channel, 
             }
             break;
 
-        case 10: /* Pan    - Not implemented */
+        case 10: /* Pan - Not implemented */
+            break;
+
+        case 64: /* Sustain */
+            /* Store the sustain as a 1-bit value for the ym2413 */
+            context->channel [channel].sustain = (value >= 64);
+
+            /* Update any in-progress notes */
+            for (uint8_t key = 0; key < 128; key++)
+            {
+                if (context->channel [channel].key [key] > 0)
+                {
+                    uint8_t synth_id = context->channel [channel].synth_id [key];
+                    uint8_t r20_value = context->ym2413_context->state.r20_channel_params [synth_id].r20_channel_params & 0xdf;
+                    r20_value |= context->channel [channel].sustain << 5;
+                    ym2413_addr_write (context->ym2413_context, 0x20 + synth_id);
+                    ym2413_data_write (context->ym2413_context, r20_value);
+                }
+            }
+            break;
+
         case 91: /* Reverb - Not implemented */
         case 93: /* Chorus - Not implemented */
             break;
