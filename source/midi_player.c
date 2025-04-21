@@ -6,7 +6,6 @@
 /*
  * TODO List:
  *  - Rhythm
- *  - Velocity
  *  - Second ym2413 for better polyphony.
  *  - Improve timing accuracy
  *  - Format-1 midi files
@@ -145,9 +144,8 @@ static void midi_player_key_up (MIDI_Player_Context *context, uint8_t channel, u
 
 /*
  * Key down event.
- * TODO: For now velocity is ignored.
  */
-static void midi_player_key_down (MIDI_Player_Context *context, uint8_t channel, uint8_t key)
+static void midi_player_key_down (MIDI_Player_Context *context, uint8_t channel, uint8_t key, uint8_t velocity)
 {
     /* TODO: Handle percussion */
     if (channel == 9)
@@ -168,14 +166,15 @@ static void midi_player_key_down (MIDI_Player_Context *context, uint8_t channel,
     }
 
     /* Mark the key as down */
-    context->channel [channel].key [key] = 127;
+    context->channel [channel].key [key] = velocity;
 
     /* Get the synth channel from the queue */
     uint8_t synth_id = midi_synth_queue_get (context);
     context->channel [channel].synth_id [key] = synth_id;
 
     /* Set the instrument and volume */
-    uint8_t r30_value = (midi_program_to_ym2413 [context->channel [channel].program] << 4) | ((127 - context->channel [channel].volume) >> 3);
+    uint8_t volume = (16129 - velocity * context->channel [channel].volume) >> 10;
+    uint8_t r30_value = (midi_program_to_ym2413 [context->channel [channel].program] << 4) | volume;
     ym2413_addr_write (context->ym2413_context, 0x30 + synth_id);
     ym2413_data_write (context->ym2413_context, r30_value);
 
@@ -393,7 +392,7 @@ static void midi_set_controller (MIDI_Player_Context *context, uint8_t channel, 
                 {
                     uint8_t synth_id = context->channel [channel].synth_id [key];
                     uint8_t r30_value = context->ym2413_context->state.r30_channel_params [synth_id].r30_channel_params & 0xf0;
-                    r30_value |= (127 - context->channel [channel].volume) >> 3;
+                    r30_value |= (16129 - context->channel [channel].key [key] * value) >> 10;
                     ym2413_addr_write (context->ym2413_context, 0x30 + synth_id);
                     ym2413_data_write (context->ym2413_context, r30_value);
                 }
@@ -469,16 +468,16 @@ static int midi_read_event (MIDI_Player_Context *context)
         {
             case 0x80: /* Note Off */
                 key = event & 0x7f;
-                velocity = context->midi [context->index++];
+                velocity = context->midi [context->index++] & 0x7f;
                 midi_player_key_up (context, channel, key);
                 break;
 
             case 0x90: /* Note On */
                 key = event & 0x7f;
-                velocity = context->midi [context->index++];
+                velocity = context->midi [context->index++] & 0x7f;
                 if (velocity > 0)
                 {
-                    midi_player_key_down (context, channel, key);
+                    midi_player_key_down (context, channel, key, velocity);
                 }
                 else
                 {
