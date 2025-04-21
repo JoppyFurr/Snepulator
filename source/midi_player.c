@@ -175,7 +175,7 @@ static void midi_player_key_down (MIDI_Player_Context *context, uint8_t channel,
     context->channel [channel].synth_id [key] = synth_id;
 
     /* Set the instrument and volume */
-    uint8_t r30_value = (midi_program_to_ym2413 [context->channel [channel].program] << 4) | context->channel [channel].volume;
+    uint8_t r30_value = (midi_program_to_ym2413 [context->channel [channel].program] << 4) | ((127 - context->channel [channel].volume) >> 3);
     ym2413_addr_write (context->ym2413_context, 0x30 + synth_id);
     ym2413_data_write (context->ym2413_context, r30_value);
 
@@ -310,7 +310,6 @@ static void midi_update_tick_length (MIDI_Player_Context *context)
     /* Metrical Time */
     if ((context->tick_div & 0x8000) == 0)
     {
-        /* TODO: Assuming 4/4 time signature */
         /* TODO: About 0.7 seconds could be lost per hour, as the true tick
          *       length is not going to be a whole number of clock cycles.
          *       We shouldn't need to lose this much, especially when delays
@@ -385,8 +384,7 @@ static void midi_set_controller (MIDI_Player_Context *context, uint8_t channel, 
     switch (controller)
     {
         case 7: /* Channel Volume */
-            /* Store the volume as a 7-bit attenuation for the ym2413 */
-            context->channel [channel].volume = (127 - value) >> 3;
+            context->channel [channel].volume = value;
 
             /* Update any in-progress notes */
             for (uint8_t key = 0; key < 128; key++)
@@ -395,7 +393,7 @@ static void midi_set_controller (MIDI_Player_Context *context, uint8_t channel, 
                 {
                     uint8_t synth_id = context->channel [channel].synth_id [key];
                     uint8_t r30_value = context->ym2413_context->state.r30_channel_params [synth_id].r30_channel_params & 0xf0;
-                    r30_value |= context->channel [channel].volume;
+                    r30_value |= (127 - context->channel [channel].volume) >> 3;
                     ym2413_addr_write (context->ym2413_context, 0x30 + synth_id);
                     ym2413_data_write (context->ym2413_context, r30_value);
                 }
