@@ -5,7 +5,6 @@
 
 /*
  * TODO List:
- *  - Rhythm
  *  - Second ym2413 for better polyphony.
  *  - Improve timing accuracy
  *  - Format-1 midi files
@@ -58,6 +57,31 @@ static const uint8_t midi_program_to_ym2413 [128] =
     12, 12, 12, 13, 13, 13, 13, 11, /* Percussive */
      0,  0,  0,  0,  0,  0,  0,  0, /* Sound Effects */
 };
+
+
+/* General MIDI mapping:
+ * 0x01: High Hat,   0x02: Top Cymbal,  0x04: Tom-tom,
+ * 0x08: Snare Drum, 0x10: Bass Drum */
+static const uint8_t midi_percussion_to_ym2413 [128] =
+{
+       0,    0,    0,    0,    0,    0,    0,    0,
+       0,    0,    0,    0,    0,    0,    0,    0,
+       0,    0,    0,    0,    0,    0,    0,    0,
+       0,    0,    0,    0,    0,    0,    0,    0,
+       0,    0,    0, 0x10, 0x10, 0x08, 0x08, 0x08,
+    0x08, 0x04, 0x01, 0x04, 0x01, 0x04, 0x01, 0x04,
+    0x04, 0x02, 0x04, 0x02, 0x02, 0x02, 0x02, 0x02,
+    0x02, 0x02, 0x08, 0x02, 0x04, 0x04, 0x04, 0x04,
+    0x04, 0x08, 0x04, 0x01, 0x01, 0x01, 0x01, 0x02,
+    0x02, 0x08, 0x08, 0x04, 0x04, 0x04, 0x04, 0x04,
+    0x02, 0x02,    0,    0,    0,    0,    0,    0,
+       0,    0,    0,    0,    0,    0,    0,    0,
+       0,    0,    0,    0,    0,    0,    0,    0,
+       0,    0,    0,    0,    0,    0,    0,    0,
+       0,    0,    0,    0,    0,    0,    0,    0,
+       0,    0,    0,    0,    0,    0,    0,    0,
+};
+
 
 typedef struct note_s
 {
@@ -113,12 +137,107 @@ static uint8_t midi_synth_queue_get (MIDI_Player_Context *context)
     return context->synth_queue [(context->synth_queue_get++) & 0x0f];
 }
 
+/*
+ * Key up event (percussion)
+ */
+static void midi_player_percussion_up (MIDI_Player_Context *context, uint8_t channel, uint8_t key)
+{
+    uint8_t percussion_bit = midi_percussion_to_ym2413 [key];
+
+    /* Only the General Midi percussion keys have been mapped */
+    if (percussion_bit == 0)
+    {
+        return;
+    }
+
+    /* Clear percussion key */
+    uint8_t r0e_value = context->ym2413_context->state.r0e_rhythm;
+    r0e_value &= ~percussion_bit;
+    ym2413_addr_write (context->ym2413_context, 0x0e);
+    ym2413_data_write (context->ym2413_context, r0e_value);
+}
+
+
+/*
+ * Key down event (percussion)
+ *
+ * As an initial implementation, no state is kept about which key triggered
+ * the event. The events are simply mapped and passed along to the ym2413.
+ * This has the limitation that the up and down events for different MIDI
+ * keys became mixed together if they share the same ym2413 percussion sound.
+ *
+ * TODO: An improvement would be to run multiple ym2413 chips in rhythm mode,
+ *       allowing more than one instance of a percussion patch to sound at once.
+ *       And/or, to give precedence to the instance with the highest velocity.
+ */
+static void midi_player_percussion_down (MIDI_Player_Context *context, uint8_t channel, uint8_t key, uint8_t velocity)
+{
+    uint8_t percussion_bit = midi_percussion_to_ym2413 [key];
+
+    /* Only the General Midi percussion keys have been mapped */
+    if (percussion_bit == 0)
+    {
+        return;
+    }
+
+    /* Set percussion key */
+    uint8_t r0e_value = context->ym2413_context->state.r0e_rhythm;
+    r0e_value |= percussion_bit;
+    ym2413_addr_write (context->ym2413_context, 0x0e);
+    ym2413_data_write (context->ym2413_context, r0e_value);
+
+    /* Set percussion volume */
+    uint8_t volume = (16129 - velocity * context->channel [channel].volume) >> 10;
+    uint8_t reg_value;
+    switch (percussion_bit)
+    {
+        case 0x01: /* High Hat */
+            reg_value = context->ym2413_context->state.r30_channel_params [7].r30_channel_params & 0x0f;
+            reg_value |= volume << 4;
+            ym2413_addr_write (context->ym2413_context, 0x37);
+            ym2413_data_write (context->ym2413_context, reg_value);
+
+        case 0x02: /* Top Cymbal */
+            reg_value = context->ym2413_context->state.r30_channel_params [8].r30_channel_params & 0xf0;
+            reg_value |= volume;
+            ym2413_addr_write (context->ym2413_context, 0x38);
+            ym2413_data_write (context->ym2413_context, reg_value);
+
+        case 0x04: /* Tom Tom */
+            reg_value = context->ym2413_context->state.r30_channel_params [8].r30_channel_params & 0x0f;
+            reg_value |= volume << 4;
+            ym2413_addr_write (context->ym2413_context, 0x38);
+            ym2413_data_write (context->ym2413_context, reg_value);
+
+        case 0x08: /* Snare Drum */
+            reg_value = context->ym2413_context->state.r30_channel_params [7].r30_channel_params & 0xf0;
+            reg_value |= volume;
+            ym2413_addr_write (context->ym2413_context, 0x37);
+            ym2413_data_write (context->ym2413_context, reg_value);
+
+        case 0x10: /* Bass Drum */
+            reg_value = volume;
+            ym2413_addr_write (context->ym2413_context, 0x36);
+            ym2413_data_write (context->ym2413_context, reg_value);
+
+        default:
+            break;
+    }
+}
+
 
 /*
  * Key up event
  */
 static void midi_player_key_up (MIDI_Player_Context *context, uint8_t channel, uint8_t key)
 {
+    /* Channel 10 is used for percussion sounds */
+    if (channel == 9)
+    {
+        midi_player_percussion_up (context, channel, key);
+        return;
+    }
+
     /* Nothing to do if the key is already up */
     if (context->channel [channel].key [key] == 0)
     {
@@ -147,9 +266,10 @@ static void midi_player_key_up (MIDI_Player_Context *context, uint8_t channel, u
  */
 static void midi_player_key_down (MIDI_Player_Context *context, uint8_t channel, uint8_t key, uint8_t velocity)
 {
-    /* TODO: Handle percussion */
+    /* Channel 10 is used for percussion sounds */
     if (channel == 9)
     {
+        midi_player_percussion_down (context, channel, key, velocity);
         return;
     }
 
@@ -157,6 +277,12 @@ static void midi_player_key_down (MIDI_Player_Context *context, uint8_t channel,
     if (context->channel [channel].key [key] > 0)
     {
         midi_player_key_up (context, channel, key);
+    }
+
+    /* Only continue if we have a valid instrument mapping */
+    if (midi_program_to_ym2413 [context->channel [channel].program] == 0)
+    {
+        return;
     }
 
     /* If we don't have any free synth channels, drop the event */
