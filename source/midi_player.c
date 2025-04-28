@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #include "snepulator.h"
 #include "util.h"
@@ -80,32 +81,6 @@ static const uint8_t midi_percussion_to_ym2413 [128] =
        0,    0,    0,    0,    0,    0,    0,    0,
        0,    0,    0,    0,    0,    0,    0,    0,
        0,    0,    0,    0,    0,    0,    0,    0,
-};
-
-
-typedef struct note_s
-{
-    uint16_t fnum;
-    uint8_t block;
-} note_t;
-
-/* Mapping from midi note to (fnum, block)
- * Due to the 3-bit block saturating:
- * - Notes 115-126 will sound one octave low.
- * - Note 127 will sound two octaves low. */
-static const note_t midi_note_to_ym2413 [128] =
-{
-    { 86, 0}, { 91, 0}, { 97, 0}, {102, 0}, {109, 0}, {115, 0}, {122, 0}, {129, 0}, {137, 0}, {145, 0}, {153, 0}, {163, 0},
-    {172, 0}, {182, 0}, {193, 0}, {205, 0}, {217, 0}, {320, 0}, {244, 0}, {258, 0}, {274, 0}, {290, 0}, {307, 0}, {326, 0},
-    {345, 0}, {365, 0}, {387, 0}, {410, 0}, {435, 0}, {460, 0}, {488, 0}, {258, 1}, {274, 1}, {290, 1}, {307, 1}, {326, 1},
-    {345, 1}, {365, 1}, {387, 1}, {410, 1}, {435, 1}, {460, 1}, {488, 1}, {258, 2}, {274, 2}, {290, 2}, {307, 2}, {326, 2},
-    {345, 2}, {365, 2}, {387, 2}, {410, 2}, {435, 2}, {460, 2}, {488, 2}, {258, 3}, {274, 3}, {290, 3}, {307, 3}, {326, 3},
-    {345, 3}, {365, 3}, {387, 3}, {410, 3}, {435, 3}, {460, 3}, {488, 3}, {258, 4}, {274, 4}, {290, 4}, {307, 4}, {326, 4},
-    {345, 4}, {365, 4}, {387, 4}, {410, 4}, {435, 4}, {460, 4}, {488, 4}, {258, 5}, {274, 5}, {290, 5}, {307, 5}, {326, 5},
-    {345, 5}, {365, 5}, {387, 5}, {410, 5}, {435, 5}, {460, 5}, {488, 5}, {258, 6}, {274, 6}, {290, 6}, {307, 6}, {326, 6},
-    {345, 6}, {365, 6}, {387, 6}, {410, 6}, {435, 6}, {460, 6}, {488, 6}, {258, 7}, {274, 7}, {290, 7}, {307, 7}, {326, 7},
-    {345, 7}, {365, 7}, {387, 7}, {410, 7}, {435, 7}, {460, 7}, {488, 7}, {258, 7}, {274, 7}, {290, 7}, {307, 7}, {326, 7},
-    {345, 7}, {365, 7}, {387, 7}, {410, 7}, {435, 7}, {460, 7}, {488, 7}, {258, 7}
 };
 
 
@@ -304,13 +279,30 @@ static void midi_player_key_down (MIDI_Player_Context *context, uint8_t channel,
     ym2413_addr_write (context->ym2413_context, 0x30 + synth_id);
     ym2413_data_write (context->ym2413_context, r30_value);
 
+    /* Calculate frequency and fnum */
+    double frequency = 440.0 * pow (2, (key - 69) / 12.0);
+    uint32_t fnum = round (frequency * 524288 / (NTSC_COLOURBURST_FREQ / 72.0));
+    uint8_t block = 0;
+
+    /* Fnum is a 9-bit value, shifted by block */
+    while (fnum > 511)
+    {
+        block += 1;
+        fnum >>= 1;
+    }
+
+    /* Block is represented by only three bits */
+    if (block > 7)
+    {
+        block = 7;
+    }
+
     /* Write lower eight bits of fnum */
-    note_t note = midi_note_to_ym2413 [key];
     ym2413_addr_write (context->ym2413_context, 0x10 + synth_id);
-    ym2413_data_write (context->ym2413_context, note.fnum);
+    ym2413_data_write (context->ym2413_context, fnum);
 
     /* Write the sustain, key-down, block, and remaining bit of fnum */
-    uint8_t r20_value = (context->channel [channel].sustain << 5) | 0x10 | (note.block << 1) | (note.fnum >> 8);
+    uint8_t r20_value = (context->channel [channel].sustain << 5) | 0x10 | (block << 1) | (fnum >> 8);
     ym2413_addr_write (context->ym2413_context, 0x20 + synth_id);
     ym2413_data_write (context->ym2413_context, r20_value);
 }
