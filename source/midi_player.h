@@ -13,6 +13,7 @@ typedef enum MIDI_Expect_e {
 typedef struct MIDI_Channel_s {
     uint8_t program;
     uint8_t volume;
+    uint16_t pitch_bend;
     uint8_t sustain;
     uint8_t key [128]; /* Stores velocity, or 0 if the key is up */
     uint8_t synth_id [128]; /* Reference to (chip, channel) that is currently sounding this key */
