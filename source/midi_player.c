@@ -580,8 +580,10 @@ static int midi_read_event (MIDI_Player_Context *context)
     }
     else if (event >= 0xf0 && event < 0xf8)
     {
-        snepulator_error ("MIDI Error", "sysex-event 0x%02x not implemented.", event);
-        return -1;
+        printf ("SysEx-event 0x%02x ... not implemented.\n", event);
+        uint32_t length = midi_read_variable_length (context);
+        context->index += length;
+        return 0;
     }
     else if (event < 0xf0)
     {
