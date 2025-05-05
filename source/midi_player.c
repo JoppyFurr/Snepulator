@@ -5,7 +5,6 @@
 
 /*
  * Missing features list:
- *  - Format-1 MIDI files - This seems to be most MIDI files on the Internet.
  *  - A second or third YM2413 to give better polyphony.
  *  - Improve timing accuracy. Consider calculating the number of clock cycles
  *    to delay. Consider any lost fractional clocks.
@@ -181,7 +180,7 @@ static void midi_player_percussion_up (MIDI_Player_Context *context, uint8_t cha
  *       allowing more than one instance of a percussion patch to sound at once.
  *       And/or, to give precedence to the instance with the highest velocity.
  */
-static void midi_player_percussion_down (MIDI_Player_Context *context, uint8_t channel, uint8_t key, uint8_t velocity)
+static void midi_player_percussion_down (MIDI_Player_Context *context, MIDI_Track *track, uint8_t channel, uint8_t key, uint8_t velocity)
 {
     uint8_t percussion_bit = midi_percussion_to_ym2413 [key];
 
@@ -198,7 +197,7 @@ static void midi_player_percussion_down (MIDI_Player_Context *context, uint8_t c
     ym2413_data_write (context->ym2413_context, r0e_value);
 
     /* Set percussion volume */
-    uint8_t volume = (16129 - velocity * context->channel [channel].volume) >> 10;
+    uint8_t volume = (16129 - velocity * track->channel [channel].volume) >> 10;
     uint8_t reg_value;
     switch (percussion_bit)
     {
@@ -240,7 +239,7 @@ static void midi_player_percussion_down (MIDI_Player_Context *context, uint8_t c
 /*
  * Key up event
  */
-static void midi_player_key_up (MIDI_Player_Context *context, uint8_t channel, uint8_t key)
+static void midi_player_key_up (MIDI_Player_Context *context, MIDI_Track *track, uint8_t channel, uint8_t key)
 {
     /* Channel 10 is used for percussion sounds */
     if (channel == 9)
@@ -250,16 +249,16 @@ static void midi_player_key_up (MIDI_Player_Context *context, uint8_t channel, u
     }
 
     /* Nothing to do if the key is already up */
-    if (context->channel [channel].key [key] == 0)
+    if (track->channel [channel].key [key] == 0)
     {
         return;
     }
 
     /* Mark the key as up */
-    context->channel [channel].key [key] = 0;
+    track->channel [channel].key [key] = 0;
 
     /* Synth-id to free up */
-    uint8_t synth_id = context->channel [channel].synth_id [key];
+    uint8_t synth_id = track->channel [channel].synth_id [key];
 
     /* Register write for key-up event on ym2413 */
     uint8_t r20_value = context->ym2413_context->state.r20_channel_params [synth_id].r20_channel_params;
@@ -275,23 +274,23 @@ static void midi_player_key_up (MIDI_Player_Context *context, uint8_t channel, u
 /*
  * Key down event.
  */
-static void midi_player_key_down (MIDI_Player_Context *context, uint8_t channel, uint8_t key, uint8_t velocity)
+static void midi_player_key_down (MIDI_Player_Context *context, MIDI_Track *track, uint8_t channel, uint8_t key, uint8_t velocity)
 {
     /* Channel 10 is used for percussion sounds */
     if (channel == 9)
     {
-        midi_player_percussion_down (context, channel, key, velocity);
+        midi_player_percussion_down (context, track, channel, key, velocity);
         return;
     }
 
     /* If the key was already down, generate an up event to free the previous synth channel. */
-    if (context->channel [channel].key [key] > 0)
+    if (track->channel [channel].key [key] > 0)
     {
-        midi_player_key_up (context, channel, key);
+        midi_player_key_up (context, track, channel, key);
     }
 
     /* Only continue if we have a valid instrument mapping */
-    if (midi_program_to_ym2413 [context->channel [channel].program] == 0)
+    if (midi_program_to_ym2413 [track->channel [channel].program] == 0)
     {
         return;
     }
@@ -303,24 +302,24 @@ static void midi_player_key_down (MIDI_Player_Context *context, uint8_t channel,
     }
 
     /* Mark the key as down */
-    context->channel [channel].key [key] = velocity;
+    track->channel [channel].key [key] = velocity;
 
     /* Get the synth channel from the queue */
     uint8_t synth_id = midi_synth_queue_get (context);
-    context->channel [channel].synth_id [key] = synth_id;
+    track->channel [channel].synth_id [key] = synth_id;
 
     /* Set the instrument and volume */
-    uint8_t volume = (16129 - velocity * context->channel [channel].volume) >> 10;
-    uint8_t r30_value = (midi_program_to_ym2413 [context->channel [channel].program] << 4) | volume;
+    uint8_t volume = (16129 - velocity * track->channel [channel].volume) >> 10;
+    uint8_t r30_value = (midi_program_to_ym2413 [track->channel [channel].program] << 4) | volume;
     ym2413_addr_write (context->ym2413_context, 0x30 + synth_id);
     ym2413_data_write (context->ym2413_context, r30_value);
 
     /* Write the fnum and block */
-    midi_update_ym2413_fnum (context->ym2413_context, synth_id, key, context->channel [channel].pitch_bend);
+    midi_update_ym2413_fnum (context->ym2413_context, synth_id, key, track->channel [channel].pitch_bend);
 
     /* Write the sustain, key-down, block, and remaining bit of fnum */
     uint8_t r20_value = context->ym2413_context->state.r20_channel_params [synth_id].r20_channel_params & 0x0f;
-    r20_value |= (context->channel [channel].sustain << 5) | 0x10;
+    r20_value |= (track->channel [channel].sustain << 5) | 0x10;
     ym2413_addr_write (context->ym2413_context, 0x20 + synth_id);
     ym2413_data_write (context->ym2413_context, r20_value);
 }
@@ -344,62 +343,86 @@ static void midi_player_cleanup (void *context_ptr)
         free (context->midi);
         context->midi = NULL;
     }
+
+    if (context->track != NULL)
+    {
+        free (context->track);
+        context->track = NULL;
+    }
 }
 
 
 /*
  * Read a 32-bit big-endian value from the MIDI file.
  */
-static uint32_t midi_read_32 (MIDI_Player_Context *context)
+static uint32_t midi_read_32 (MIDI_Player_Context *context, MIDI_Track *track)
 {
-    uint32_t value = util_ntoh32 (* (uint32_t *) &context->midi [context->index]);
-    context->index += 4;
-    return value;
+    if (track)
+    {
+        uint32_t value = util_ntoh32 (* (uint32_t *) &context->midi [track->index]);
+        track->index += 4;
+        return value;
+    }
+    else
+    {
+        uint32_t value = util_ntoh32 (* (uint32_t *) &context->midi [context->index]);
+        context->index += 4;
+        return value;
+    }
 }
 
 
 /*
  * Read a 16-bit big-endian value from the MIDI file.
  */
-static uint16_t midi_read_16 (MIDI_Player_Context *context)
+static uint16_t midi_read_16 (MIDI_Player_Context *context, MIDI_Track *track)
 {
-    uint16_t value = util_ntoh16 (* (uint16_t *) &context->midi [context->index]);
-    context->index += 2;
-    return value;
+    if (track)
+    {
+        uint16_t value = util_ntoh16 (* (uint16_t *) &context->midi [track->index]);
+        track->index += 2;
+        return value;
+    }
+    else
+    {
+        uint16_t value = util_ntoh16 (* (uint16_t *) &context->midi [context->index]);
+        context->index += 2;
+        return value;
+    }
 }
 
 
 /*
  * Read a variable-width value from the MIDI file.
  */
-static uint32_t midi_read_variable_length (MIDI_Player_Context *context)
+static uint32_t midi_read_variable_length (MIDI_Player_Context *context, MIDI_Track *track)
 {
-    uint32_t byte_0 = context->midi [context->index];
-    context->index += 1;
+    uint32_t byte_0 = context->midi [track->index];
+    track->index += 1;
     uint32_t value = byte_0 & 0x7f;
     if ((byte_0 & 0x80) == 0)
     {
         return value;
     }
 
-    uint32_t byte_1 = context->midi [context->index];
-    context->index += 1;
+    uint32_t byte_1 = context->midi [track->index];
+    track->index += 1;
     value = (value << 7) | (byte_1 & 0x7f);
     if ((byte_1 & 0x80) == 0)
     {
         return value;
     }
 
-    uint32_t byte_2 = context->midi [context->index];
-    context->index += 1;
+    uint32_t byte_2 = context->midi [track->index];
+    track->index += 1;
     value = (value << 7) | (byte_2 & 0x7f);
     if ((byte_2 & 0x80) == 0)
     {
         return value;
     }
 
-    uint32_t byte_3 = context->midi [context->index];
-    context->index += 1;
+    uint32_t byte_3 = context->midi [track->index];
+    track->index += 1;
     value = (value << 7) | (byte_3 & 0x7f);
 
     return value;
@@ -409,7 +432,7 @@ static uint32_t midi_read_variable_length (MIDI_Player_Context *context)
 /*
  * Read a MIDI track header
  */
-static int midi_read_track_header (MIDI_Player_Context *context)
+static int midi_read_track_header (MIDI_Player_Context *context, MIDI_Track *track)
 {
     if (memcmp (&context->midi [context->index], "MTrk", 4) != 0)
     {
@@ -418,18 +441,21 @@ static int midi_read_track_header (MIDI_Player_Context *context)
     }
     context->index += 4;
 
-    uint32_t chunk_length = midi_read_32 (context);
+    uint32_t chunk_length = midi_read_32 (context, NULL);
     if (context->index + chunk_length > context->midi_size)
     {
         snepulator_error ("MIDI Error", "Invalid chunk size would run off end of file", chunk_length);
         return -1;
     }
-    context->track_end = context->index + chunk_length;
-
     printf ("MIDI Track has chunk_length of %d bytes.\n", chunk_length);
 
-    /* MIDI tracks are a sequence of (delta_time, event) pairs. */
-    context->expect = EXPECT_DELTA_TIME;
+    /* Initialize the current track */
+    track->index = context->index;
+    track->track_end = context->index + chunk_length;
+    track->expect = EXPECT_DELTA_TIME;
+
+    /* Advance MIDI index to the next track */
+    context->index += chunk_length;
 
     return 0;
 }
@@ -464,29 +490,30 @@ static void midi_update_tick_length (MIDI_Player_Context *context)
 /*
  * Read and process a Meta Event from the MIDI file.
  */
-static int midi_read_meta_event (MIDI_Player_Context *context)
+static int midi_read_meta_event (MIDI_Player_Context *context, MIDI_Track *track)
 {
-    uint8_t type = context->midi [context->index++];
-    uint32_t length = midi_read_variable_length (context);
+    uint8_t type = context->midi [track->index++];
+    uint32_t length = midi_read_variable_length (context, track);
 
     switch (type)
     {
         case 0x01: /* Text */
-            printf ("MIDI Text: %s\n", &context->midi [context->index]);
+            printf ("MIDI Text: %s\n", &context->midi [track->index]);
             break;
 
         case 0x06: /* Marker */
-            printf ("MIDI Marker: %s\n", &context->midi [context->index]);
+            printf ("MIDI Marker: %s\n", &context->midi [track->index]);
             break;
 
         case 0x2f: /* End of Track */
             printf ("MIDI End of Track.\n");
             /* TODO: Sort out a clean way of returning to the logo-screen */
+            /* TODO: Wait for all tracks to end, not just the first */
             snepulator_error ("MIDI", "Reached event End of Track");
             break;
 
         case 0x51: /* Tempo */
-            context->tempo = util_ntoh32 (*(uint32_t *) &context->midi [context->index]) >> 8;
+            context->tempo = util_ntoh32 (*(uint32_t *) &context->midi [track->index]) >> 8;
             midi_update_tick_length (context);
             break;
 
@@ -505,7 +532,7 @@ static int midi_read_meta_event (MIDI_Player_Context *context)
             printf ("Meta-event 0x%02x not implemented.\n", type);
     }
 
-    context->index += length;
+    track->index += length;
 
     return 0;
 }
@@ -514,21 +541,21 @@ static int midi_read_meta_event (MIDI_Player_Context *context)
 /*
  * Set a MIDI controller value
  */
-static void midi_set_controller (MIDI_Player_Context *context, uint8_t channel, uint8_t controller, uint8_t value)
+static void midi_set_controller (MIDI_Player_Context *context, MIDI_Track *track, uint8_t channel, uint8_t controller, uint8_t value)
 {
     switch (controller)
     {
         case 7: /* Channel Volume */
-            context->channel [channel].volume = value;
+            track->channel [channel].volume = value;
 
             /* Update any in-progress notes */
             for (uint8_t key = 0; key < 128; key++)
             {
-                if (context->channel [channel].key [key] > 0)
+                if (track->channel [channel].key [key] > 0)
                 {
-                    uint8_t synth_id = context->channel [channel].synth_id [key];
+                    uint8_t synth_id = track->channel [channel].synth_id [key];
                     uint8_t r30_value = context->ym2413_context->state.r30_channel_params [synth_id].r30_channel_params & 0xf0;
-                    r30_value |= (16129 - context->channel [channel].key [key] * value) >> 10;
+                    r30_value |= (16129 - track->channel [channel].key [key] * value) >> 10;
                     ym2413_addr_write (context->ym2413_context, 0x30 + synth_id);
                     ym2413_data_write (context->ym2413_context, r30_value);
                 }
@@ -540,16 +567,16 @@ static void midi_set_controller (MIDI_Player_Context *context, uint8_t channel, 
 
         case 64: /* Sustain */
             /* Store the sustain as a 1-bit value for the ym2413 */
-            context->channel [channel].sustain = (value >= 64);
+            track->channel [channel].sustain = (value >= 64);
 
             /* Update any in-progress notes */
             for (uint8_t key = 0; key < 128; key++)
             {
-                if (context->channel [channel].key [key] > 0)
+                if (track->channel [channel].key [key] > 0)
                 {
-                    uint8_t synth_id = context->channel [channel].synth_id [key];
+                    uint8_t synth_id = track->channel [channel].synth_id [key];
                     uint8_t r20_value = context->ym2413_context->state.r20_channel_params [synth_id].r20_channel_params & 0xdf;
-                    r20_value |= context->channel [channel].sustain << 5;
+                    r20_value |= track->channel [channel].sustain << 5;
                     ym2413_addr_write (context->ym2413_context, 0x20 + synth_id);
                     ym2413_data_write (context->ym2413_context, r20_value);
                 }
@@ -570,90 +597,90 @@ static void midi_set_controller (MIDI_Player_Context *context, uint8_t channel, 
 /*
  * Read and process a MIDI event from the MIDI file.
  */
-static int midi_read_event (MIDI_Player_Context *context)
+static int midi_read_event (MIDI_Player_Context *context, MIDI_Track *track)
 {
-    uint8_t event = context->midi [context->index++];
+    uint8_t event = context->midi [track->index++];
 
     if (event == 0xff)
     {
-        return midi_read_meta_event (context);
+        return midi_read_meta_event (context, track);
     }
     else if (event >= 0xf0 && event < 0xf8)
     {
         printf ("SysEx-event 0x%02x ... not implemented.\n", event);
-        uint32_t length = midi_read_variable_length (context);
-        context->index += length;
+        uint32_t length = midi_read_variable_length (context, track);
+        track->index += length;
         return 0;
     }
     else if (event < 0xf0)
     {
         if (event & 0x80)
         {
-            context->status = event;
-            event = context->midi [context->index++];
+            track->status = event;
+            event = context->midi [track->index++];
         }
 
         /* Note: The MIDI Status, telling us the event type is stored in context->status.
          *       The first byte of the event (note, controller, program, etc) is stored in 'event' */
-        uint8_t channel = context->status & 0x0f;
+        uint8_t channel = track->status & 0x0f;
         uint8_t key;
         uint8_t velocity;
         uint8_t controller;
         uint8_t value;
         uint16_t bend;
 
-        switch (context->status & 0xf0)
+        switch (track->status & 0xf0)
         {
             case 0x80: /* Note Off */
                 key = event & 0x7f;
-                velocity = context->midi [context->index++] & 0x7f;
-                midi_player_key_up (context, channel, key);
+                velocity = context->midi [track->index++] & 0x7f;
+                midi_player_key_up (context, track, channel, key);
                 break;
 
             case 0x90: /* Note On */
                 key = event & 0x7f;
-                velocity = context->midi [context->index++] & 0x7f;
+                velocity = context->midi [track->index++] & 0x7f;
                 if (velocity > 0)
                 {
-                    midi_player_key_down (context, channel, key, velocity);
+                    midi_player_key_down (context, track, channel, key, velocity);
                 }
                 else
                 {
-                    midi_player_key_up (context, channel, key);
+                    midi_player_key_up (context, track, channel, key);
                 }
                 break;
 
             case 0xa0: /* Polyphonic Pressure - Not implemented */
-                context->index += 1;
+                track->index += 1;
                 break;
 
             case 0xb0: /* Controller */
                 controller = event & 0x7f;
-                value = context->midi [context->index++] & 0x7f;
-                midi_set_controller (context, channel, controller, value);
+                value = context->midi [track->index++] & 0x7f;
+                midi_set_controller (context, track, channel, controller, value);
                 break;
 
             case 0xc0: /* Program Change */
-                context->channel [channel].program = event & 0x7f;
+                track->channel [channel].program = event & 0x7f;
                 break;
 
             case 0xe0: /* Pitch Bend */
-                bend = (event & 0x7f) + ((context->midi [context->index++] & 0x7f) << 7);
-                context->channel [channel].pitch_bend = bend;
+                bend = (event & 0x7f) + ((context->midi [track->index++] & 0x7f) << 7);
+                track->channel [channel].pitch_bend = bend;
 
                 /* Pitch bend needs to be applied to notes which are already sounding */
                 for (uint8_t key = 0; key < 128; key++)
                 {
-                    if (context->channel [channel].key [key] > 0)
+                    if (track->channel [channel].key [key] > 0)
                     {
-                        uint8_t synth_id = context->channel [channel].synth_id [key];
-                        midi_update_ym2413_fnum (context->ym2413_context, synth_id, key, context->channel [channel].pitch_bend);
+                        uint8_t synth_id = track->channel [channel].synth_id [key];
+                        midi_update_ym2413_fnum (context->ym2413_context, synth_id, key, track->channel [channel].pitch_bend);
                     }
                 }
                 break;
 
             default:
-                snepulator_error ("MIDI Error", "midi-event 0x%02x not implemented.", context->status);
+                snepulator_error ("MIDI Error", "midi-event 0x%02x not implemented.", track->status);
                 return -1;
         }
     }
@@ -675,9 +702,6 @@ static int midi_read_event (MIDI_Player_Context *context)
  * Clock-rate is the NTSC Colourburst frequency.
  * Called with the run_mutex held.
  *
- * TODO: For now, format 0 is assumed; a single track that
- *       can just be read sequentially.
- *
  * TODO: For better polyphony, consider emulating a 2nd ym2413.
  *
  * TODO: Consider adding a wrapper around reading bytes from the
@@ -694,44 +718,41 @@ static void midi_player_run (void *context_ptr, uint32_t clocks)
     while (state.run == RUN_STATE_RUNNING &&
            context->clocks > context->tick_length)
     {
-        if (context->index >= context->track_end && context->expect != EXPECT_TRACK_HEADER)
+        /* Process events until all tracks have reached a delay */
+        for (uint32_t track = 0; track < context->n_tracks; track++)
         {
-            snepulator_error ("MIDI Error", "Track data runs longer than specified track length");
-        }
-
-        /* Process events until we reach a delay */
-        while (context->delay == 0 &&
-               (context->index < context->track_end || context->expect == EXPECT_TRACK_HEADER))
-        {
-            switch (context->expect)
+            /* TODO: Combine this into the while loop below */
+            if (context->track [track].index >= context->track [track].track_end)
             {
-                case EXPECT_TRACK_HEADER:
-                    /* TODO: Move above code into a function.
-                     *       Will need to be reworked for format-1 later on. */
-                    ret = midi_read_track_header (context);
-                    if (ret == -1)
-                    {
-                        return;
-                    }
+                snepulator_error ("MIDI Error", "Track data runs longer than specified track length");
+            }
 
-                    break;
-                case EXPECT_EVENT:
-                    ret = midi_read_event (context);
-                    if (ret == -1)
-                    {
-                        return;
-                    }
-                    context->expect = EXPECT_DELTA_TIME;
-                    /* TODO: Some events, such as tempo-change or time-signature-change,
-                     *       will change context->tick_length. If this happens and results
-                     *       in a tick_length greater than the remaining clocks, we need
-                     *       to return early to prevent clocks going negative. */
-                    break;
-                case EXPECT_DELTA_TIME:
-                default:
-                    context->delay = midi_read_variable_length (context);
-                    context->expect = EXPECT_EVENT;
-                    break;
+            while (context->track [track].delay == 0 && context->track [track].index < context->track [track].track_end)
+            {
+                switch (context->track [track].expect)
+                {
+                    case EXPECT_DELTA_TIME:
+                        context->track [track].delay = midi_read_variable_length (context, &context->track [track]);
+                        context->track [track].expect = EXPECT_EVENT;
+                        break;
+
+                    case EXPECT_EVENT:
+                        ret = midi_read_event (context, &context->track [track]);
+                        if (ret == -1)
+                        {
+                            return;
+                        }
+                        context->track [track].expect = EXPECT_DELTA_TIME;
+                        /* TODO: Some events, such as tempo-change or time-signature-change,
+                         *       will change context->tick_length. If this happens and results
+                         *       in a tick_length greater than the remaining clocks, we need
+                         *       to return early to prevent clocks going negative. */
+                        break;
+
+                    default:
+                        snepulator_error ("MIDI Error", "Invalid state - Expect %d", context->track [track].expect);
+                        break;
+                }
             }
         }
 
@@ -740,10 +761,13 @@ static void midi_player_run (void *context_ptr, uint32_t clocks)
          *       as breaking things up into units of tick_length loses time. */
         ym2413_run_cycles (context->ym2413_context, NTSC_COLOURBURST_FREQ, context->tick_length);
 
-        /* Subtract this sample's delay */
-        if (context->delay)
+        /* Subtract this tick_length delay from all tracks */
+        for (uint32_t track = 0; track < context->n_tracks; track++)
         {
-            context->delay--;
+            if (context->track [track].delay)
+            {
+                context->track [track].delay--;
+            }
         }
 
         context->clocks -= context->tick_length;
@@ -758,8 +782,9 @@ static void midi_player_run (void *context_ptr, uint32_t clocks)
         /* For now, fake a VGM_Player_Context so that we can use the VGM Player's visualisation. */
         context->vgm_player_context.ym2413_clock = NTSC_COLOURBURST_FREQ;
         context->vgm_player_context.ym2413_context = context->ym2413_context;
-        context->vgm_player_context.current_sample = context->index;
-        context->vgm_player_context.total_samples = context->midi_size;
+        /* TODO: This approximation won't work well for multi-track MIDIs. Do we need to sum the delays and work out the duration? */
+        context->vgm_player_context.current_sample = context->track [0].index;
+        context->vgm_player_context.total_samples = context->track [0].track_end;
         vgm_player_draw_frame (&context->vgm_player_context);
     }
 }
@@ -790,11 +815,6 @@ MIDI_Player_Context *midi_player_init (void)
     /* Default values */
     context->tempo = 500000; /* 120 bpm */
 
-    for (uint32_t channel = 0; channel < 16; channel++)
-    {
-        context->channel [channel].pitch_bend = 8192;
-    }
-
     /* Load MIDI file */
     if (util_load_file (&context->midi, &context->midi_size, state.cart_filename) == -1)
     {
@@ -814,7 +834,7 @@ MIDI_Player_Context *midi_player_init (void)
     }
     context->index += 4;
 
-    uint32_t header_length = midi_read_32 (context);
+    uint32_t header_length = midi_read_32 (context, NULL);
     if (header_length < 6)
     {
         snepulator_error ("MIDI Error", "Invalid HThd length %d.", header_length);
@@ -823,11 +843,11 @@ MIDI_Player_Context *midi_player_init (void)
         return NULL;
     }
 
-    context->format = midi_read_16 (context);
-    context->n_tracks = midi_read_16 (context);
-    context->tick_div = midi_read_16 (context);
+    context->format = midi_read_16 (context, NULL);
+    context->n_tracks = midi_read_16 (context, NULL);
+    context->tick_div = midi_read_16 (context, NULL);
 
-    if (context->format != 0)
+    if (context->format > 1)
     {
         snepulator_error ("MIDI Error", "MIDI format '%d' is not supported.", context->format);
         midi_player_cleanup (context);
@@ -840,6 +860,27 @@ MIDI_Player_Context *midi_player_init (void)
     {
         context->index += header_length - 6;
     }
+
+    /* Allocate memory for tracks */
+    context->track = calloc (context->n_tracks, sizeof (MIDI_Track));
+
+    /* Set up tracks */
+    for (uint32_t i = 0; i < context->n_tracks; i++)
+    {
+        int ret = midi_read_track_header (context, &context->track [i]);
+        if (ret < 0)
+        {
+            midi_player_cleanup (context);
+            free (context);
+            return NULL;
+        }
+
+        for (uint32_t channel = 0; channel < 16; channel++)
+        {
+            context->track [i].channel [channel].pitch_bend = 8192;
+        }
+    }
+
 
     fprintf (stdout, "%d KiB MIDI %s loaded.\n", context->midi_size >> 10, state.cart_filename);
     /* DEBUG */
@@ -877,8 +918,6 @@ MIDI_Player_Context *midi_player_init (void)
     state.run_callback = midi_player_run;
 
     /* Start playing */
-    context->track_end = context->index;
-    context->expect = EXPECT_TRACK_HEADER;
     state.clock_rate = NTSC_COLOURBURST_FREQ;
     state.run = RUN_STATE_RUNNING;
 

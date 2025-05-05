@@ -4,8 +4,7 @@
  */
 
 typedef enum MIDI_Expect_e {
-    EXPECT_TRACK_HEADER = 0,
-    EXPECT_DELTA_TIME,
+    EXPECT_DELTA_TIME = 0,
     EXPECT_EVENT
 } MIDI_Expect;
 
@@ -20,6 +19,21 @@ typedef struct MIDI_Channel_s {
 } MIDI_Channel;
 
 
+typedef struct MIDI_Track_s {
+
+    /* Track state */
+    uint32_t index;
+    uint32_t track_end;     /* Index of the first byte outside of the current track */
+    MIDI_Expect expect;     /* Next expected element in track */
+    uint8_t status;         /* Status byte for running events */
+    uint32_t delay;         /* Number of time intervals to delay before processing the next event */
+
+    /* Channel state */
+    MIDI_Channel channel [16];
+
+} MIDI_Track;
+
+
 typedef struct MIDI_Player_Context_s {
 
     uint8_t *midi;
@@ -27,16 +41,10 @@ typedef struct MIDI_Player_Context_s {
 
     /* MIDI state */
     uint32_t index;
-    MIDI_Expect expect;     /* Next expected element in track */
-    uint32_t track_end;     /* Index of the first byte outside of the current track */
+    MIDI_Track *track;
     uint32_t tick_length;   /* Number of NTSC Colourburst clocks per MIDI tick */
     uint32_t clocks;        /* Unspent NTSC Colourburst clock cycles */
-    uint32_t delay;         /* Number of time intervals to delay before processing the next event */
-    uint8_t status;         /* Status byte for running events */
     uint32_t tempo;         /* µs per quarter-note */
-
-    /* Channel state */
-    MIDI_Channel channel [16];
 
     /* Values read from MIDI header */
     uint32_t format;
