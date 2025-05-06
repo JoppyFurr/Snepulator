@@ -487,8 +487,47 @@ static int midi_read_meta_event (MIDI_Player_Context *context, MIDI_Track *track
             printf ("MIDI Text: %s\n", &context->midi [track->index]);
             break;
 
+        case 0x02: /* Copyright */
+            printf ("MIDI Copyright: %s\n", &context->midi [track->index]);
+            break;
+
+        case 0x03: /* Sequence / Track Name */
+            if (track == &context->track [0])
+            {
+                printf ("MIDI Sequence Name: %s\n", &context->midi [track->index]);
+            }
+            else
+            {
+                printf ("MIDI Track %d Name: %s\n", (int) (track - &context->track [0]), &context->midi [track->index]);
+            }
+            break;
+
+        case 0x04: /* Copyright */
+            printf ("MIDI Instrument Name: %s\n", &context->midi [track->index]);
+            break;
+
+        case 0x05: /* Lyric */
+            printf ("MIDI Lyric: %s\n", &context->midi [track->index]);
+            break;
+
         case 0x06: /* Marker */
             printf ("MIDI Marker: %s\n", &context->midi [track->index]);
+            break;
+
+        case 0x07: /* Cue Point */
+            printf ("MIDI Cue Point: %s\n", &context->midi [track->index]);
+            break;
+
+        case 0x08: /* Program Name */
+            printf ("MIDI Program Name: %s\n", &context->midi [track->index]);
+            break;
+
+        case 0x09: /* Device Name */
+            printf ("MIDI Device Name: %s\n", &context->midi [track->index]);
+            break;
+
+        case 0x20: /* MIDI Channel Prefix (ignore) */
+        case 0x21: /* MIDI Port (ignore) */
             break;
 
         case 0x2f: /* End of Track */
@@ -511,6 +550,10 @@ static int midi_read_meta_event (MIDI_Player_Context *context, MIDI_Track *track
              * Ignore this as it's not needed for playback, only for things like showing the bar number. */
             break;
 
+        case 0x59: /* Key Signature */
+            /* Specifies the number of flats or sharps in the key signature. Doesn't affect playback. */
+            break;
+
         default:
             /* Skip over data */
             printf ("Meta-event 0x%02x not implemented.\n", type);
@@ -529,6 +572,12 @@ static void midi_set_controller (MIDI_Player_Context *context, MIDI_Channel *cha
 {
     switch (controller)
     {
+        case 0: /* Bank Select (ignore) */
+            break;
+
+        case 1: /* Modulation - Not implemented */
+            break;
+
         case 7: /* Channel Volume */
             channel->volume = value;
 
@@ -547,6 +596,9 @@ static void midi_set_controller (MIDI_Player_Context *context, MIDI_Channel *cha
             break;
 
         case 10: /* Pan - Not implemented */
+            break;
+
+        case 32: /* Bank Select LSB (ignore) */
             break;
 
         case 64: /* Sustain */
