@@ -27,6 +27,7 @@ typedef struct MIDI_Track_s {
     MIDI_Expect expect;     /* Next expected element in track */
     uint8_t status;         /* Status byte for running events */
     uint32_t delay;         /* Number of time intervals to delay before processing the next event */
+    bool end_of_track;      /* Set to true once the track has ended */
 
     /* Channel state */
     MIDI_Channel channel [16];
@@ -45,6 +46,7 @@ typedef struct MIDI_Player_Context_s {
     uint32_t tick_length;   /* Number of NTSC Colourburst clocks per MIDI tick */
     uint32_t clocks;        /* Unspent NTSC Colourburst clock cycles */
     uint32_t tempo;         /* µs per quarter-note */
+    uint32_t n_tracks_completed; /* Count of tracks that have received an end-of-track event */
 
     /* Values read from MIDI header */
     uint32_t format;

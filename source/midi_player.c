@@ -506,10 +506,8 @@ static int midi_read_meta_event (MIDI_Player_Context *context, MIDI_Track *track
             break;
 
         case 0x2f: /* End of Track */
-            printf ("MIDI End of Track.\n");
-            /* TODO: Sort out a clean way of returning to the logo-screen */
-            /* TODO: Wait for all tracks to end, not just the first */
-            snepulator_error ("MIDI", "Reached event End of Track");
+            track->end_of_track = true;
+            context->n_tracks_completed += 1;
             break;
 
         case 0x51: /* Tempo */
@@ -721,6 +719,11 @@ static void midi_player_run (void *context_ptr, uint32_t clocks)
         /* Process events until all tracks have reached a delay */
         for (uint32_t track = 0; track < context->n_tracks; track++)
         {
+            if (context->track [track].end_of_track)
+            {
+                continue;
+            }
+
             /* TODO: Combine this into the while loop below */
             if (context->track [track].index >= context->track [track].track_end)
             {
@@ -768,6 +771,12 @@ static void midi_player_run (void *context_ptr, uint32_t clocks)
             {
                 context->track [track].delay--;
             }
+        }
+
+        /* TODO: Sort out a clean way of returning to the logo-screen */
+        if (context->n_tracks_completed == context->n_tracks)
+        {
+            snepulator_error ("MIDI", "All tracks completed.");
         }
 
         context->clocks -= context->tick_length;
