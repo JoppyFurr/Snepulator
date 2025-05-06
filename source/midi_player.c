@@ -150,7 +150,7 @@ static void midi_update_ym2413_fnum (YM2413_Context *context, uint8_t synth_id, 
 /*
  * Key up event (percussion)
  */
-static void midi_player_percussion_up (MIDI_Player_Context *context, uint8_t channel, uint8_t key)
+static void midi_player_percussion_up (MIDI_Player_Context *context, MIDI_Channel *channel, uint8_t key)
 {
     uint8_t percussion_bit = midi_percussion_to_ym2413 [key];
 
@@ -180,7 +180,7 @@ static void midi_player_percussion_up (MIDI_Player_Context *context, uint8_t cha
  *       allowing more than one instance of a percussion patch to sound at once.
  *       And/or, to give precedence to the instance with the highest velocity.
  */
-static void midi_player_percussion_down (MIDI_Player_Context *context, MIDI_Track *track, uint8_t channel, uint8_t key, uint8_t velocity)
+static void midi_player_percussion_down (MIDI_Player_Context *context, MIDI_Channel *channel, uint8_t key, uint8_t velocity)
 {
     uint8_t percussion_bit = midi_percussion_to_ym2413 [key];
 
@@ -197,7 +197,7 @@ static void midi_player_percussion_down (MIDI_Player_Context *context, MIDI_Trac
     ym2413_data_write (context->ym2413_context, r0e_value);
 
     /* Set percussion volume */
-    uint8_t volume = (16129 - velocity * track->channel [channel].volume) >> 10;
+    uint8_t volume = (16129 - velocity * channel->volume) >> 10;
     uint8_t reg_value;
     switch (percussion_bit)
     {
@@ -239,26 +239,19 @@ static void midi_player_percussion_down (MIDI_Player_Context *context, MIDI_Trac
 /*
  * Key up event
  */
-static void midi_player_key_up (MIDI_Player_Context *context, MIDI_Track *track, uint8_t channel, uint8_t key)
+static void midi_player_key_up (MIDI_Player_Context *context, MIDI_Channel *channel, uint8_t key)
 {
-    /* Channel 10 is used for percussion sounds */
-    if (channel == 9)
-    {
-        midi_player_percussion_up (context, channel, key);
-        return;
-    }
-
     /* Nothing to do if the key is already up */
-    if (track->channel [channel].key [key] == 0)
+    if (channel->key [key] == 0)
     {
         return;
     }
 
     /* Mark the key as up */
-    track->channel [channel].key [key] = 0;
+    channel->key [key] = 0;
 
     /* Synth-id to free up */
-    uint8_t synth_id = track->channel [channel].synth_id [key];
+    uint8_t synth_id = channel->synth_id [key];
 
     /* Register write for key-up event on ym2413 */
     uint8_t r20_value = context->ym2413_context->state.r20_channel_params [synth_id].r20_channel_params;
@@ -274,23 +267,16 @@ static void midi_player_key_up (MIDI_Player_Context *context, MIDI_Track *track,
 /*
  * Key down event.
  */
-static void midi_player_key_down (MIDI_Player_Context *context, MIDI_Track *track, uint8_t channel, uint8_t key, uint8_t velocity)
+static void midi_player_key_down (MIDI_Player_Context *context, MIDI_Channel *channel, uint8_t key, uint8_t velocity)
 {
-    /* Channel 10 is used for percussion sounds */
-    if (channel == 9)
-    {
-        midi_player_percussion_down (context, track, channel, key, velocity);
-        return;
-    }
-
     /* If the key was already down, generate an up event to free the previous synth channel. */
-    if (track->channel [channel].key [key] > 0)
+    if (channel->key [key] > 0)
     {
-        midi_player_key_up (context, track, channel, key);
+        midi_player_key_up (context, channel, key);
     }
 
     /* Only continue if we have a valid instrument mapping */
-    if (midi_program_to_ym2413 [track->channel [channel].program] == 0)
+    if (midi_program_to_ym2413 [channel->program] == 0)
     {
         return;
     }
@@ -302,24 +288,24 @@ static void midi_player_key_down (MIDI_Player_Context *context, MIDI_Track *trac
     }
 
     /* Mark the key as down */
-    track->channel [channel].key [key] = velocity;
+    channel->key [key] = velocity;
 
     /* Get the synth channel from the queue */
     uint8_t synth_id = midi_synth_queue_get (context);
-    track->channel [channel].synth_id [key] = synth_id;
+    channel->synth_id [key] = synth_id;
 
     /* Set the instrument and volume */
-    uint8_t volume = (16129 - velocity * track->channel [channel].volume) >> 10;
-    uint8_t r30_value = (midi_program_to_ym2413 [track->channel [channel].program] << 4) | volume;
+    uint8_t volume = (16129 - velocity * channel->volume) >> 10;
+    uint8_t r30_value = (midi_program_to_ym2413 [channel->program] << 4) | volume;
     ym2413_addr_write (context->ym2413_context, 0x30 + synth_id);
     ym2413_data_write (context->ym2413_context, r30_value);
 
     /* Write the fnum and block */
-    midi_update_ym2413_fnum (context->ym2413_context, synth_id, key, track->channel [channel].pitch_bend);
+    midi_update_ym2413_fnum (context->ym2413_context, synth_id, key, channel->pitch_bend);
 
     /* Write the sustain, key-down, block, and remaining bit of fnum */
     uint8_t r20_value = context->ym2413_context->state.r20_channel_params [synth_id].r20_channel_params & 0x0f;
-    r20_value |= (track->channel [channel].sustain << 5) | 0x10;
+    r20_value |= (channel->sustain << 5) | 0x10;
     ym2413_addr_write (context->ym2413_context, 0x20 + synth_id);
     ym2413_data_write (context->ym2413_context, r20_value);
 }
@@ -539,21 +525,21 @@ static int midi_read_meta_event (MIDI_Player_Context *context, MIDI_Track *track
 /*
  * Set a MIDI controller value
  */
-static void midi_set_controller (MIDI_Player_Context *context, MIDI_Track *track, uint8_t channel, uint8_t controller, uint8_t value)
+static void midi_set_controller (MIDI_Player_Context *context, MIDI_Channel *channel, uint8_t controller, uint8_t value)
 {
     switch (controller)
     {
         case 7: /* Channel Volume */
-            track->channel [channel].volume = value;
+            channel->volume = value;
 
             /* Update any in-progress notes */
             for (uint8_t key = 0; key < 128; key++)
             {
-                if (track->channel [channel].key [key] > 0)
+                if (channel->key [key] > 0)
                 {
-                    uint8_t synth_id = track->channel [channel].synth_id [key];
+                    uint8_t synth_id = channel->synth_id [key];
                     uint8_t r30_value = context->ym2413_context->state.r30_channel_params [synth_id].r30_channel_params & 0xf0;
-                    r30_value |= (16129 - track->channel [channel].key [key] * value) >> 10;
+                    r30_value |= (16129 - channel->key [key] * value) >> 10;
                     ym2413_addr_write (context->ym2413_context, 0x30 + synth_id);
                     ym2413_data_write (context->ym2413_context, r30_value);
                 }
@@ -565,16 +551,16 @@ static void midi_set_controller (MIDI_Player_Context *context, MIDI_Track *track
 
         case 64: /* Sustain */
             /* Store the sustain as a 1-bit value for the ym2413 */
-            track->channel [channel].sustain = (value >= 64);
+            channel->sustain = (value >= 64);
 
             /* Update any in-progress notes */
             for (uint8_t key = 0; key < 128; key++)
             {
-                if (track->channel [channel].key [key] > 0)
+                if (channel->key [key] > 0)
                 {
-                    uint8_t synth_id = track->channel [channel].synth_id [key];
+                    uint8_t synth_id = channel->synth_id [key];
                     uint8_t r20_value = context->ym2413_context->state.r20_channel_params [synth_id].r20_channel_params & 0xdf;
-                    r20_value |= track->channel [channel].sustain << 5;
+                    r20_value |= channel->sustain << 5;
                     ym2413_addr_write (context->ym2413_context, 0x20 + synth_id);
                     ym2413_data_write (context->ym2413_context, r20_value);
                 }
@@ -586,7 +572,7 @@ static void midi_set_controller (MIDI_Player_Context *context, MIDI_Track *track
             break;
 
         default:
-            printf ("MIDI Channel %d controller [%d] set to %d. (ignored)\n", channel + 1, controller, value);
+            printf ("MIDI controller [%d] set to %d. (ignored)\n", controller, value);
             break;
     }
 }
@@ -632,7 +618,15 @@ static int midi_read_event (MIDI_Player_Context *context, MIDI_Track *track)
             case 0x80: /* Note Off */
                 key = event & 0x7f;
                 velocity = context->midi [track->index++] & 0x7f;
-                midi_player_key_up (context, track, channel, key);
+                /* Channel 10 is used for percussion sounds */
+                if (channel == 9)
+                {
+                    midi_player_percussion_up (context, &track->channel [channel], key);
+                }
+                else
+                {
+                    midi_player_key_up (context, &track->channel [channel], key);
+                }
                 break;
 
             case 0x90: /* Note On */
@@ -640,11 +634,27 @@ static int midi_read_event (MIDI_Player_Context *context, MIDI_Track *track)
                 velocity = context->midi [track->index++] & 0x7f;
                 if (velocity > 0)
                 {
-                    midi_player_key_down (context, track, channel, key, velocity);
+                    /* Channel 10 is used for percussion sounds */
+                    if (channel == 9)
+                    {
+                        midi_player_percussion_down (context, &track->channel [channel], key, velocity);
+                    }
+                    else
+                    {
+                        midi_player_key_down (context, &track->channel [channel], key, velocity);
+                    }
                 }
                 else
                 {
-                    midi_player_key_up (context, track, channel, key);
+                    /* Channel 10 is used for percussion sounds */
+                    if (channel == 9)
+                    {
+                        midi_player_percussion_up (context, &track->channel [channel], key);
+                    }
+                    else
+                    {
+                        midi_player_key_up (context, &track->channel [channel], key);
+                    }
                 }
                 break;
 
@@ -655,7 +665,7 @@ static int midi_read_event (MIDI_Player_Context *context, MIDI_Track *track)
             case 0xb0: /* Controller */
                 controller = event & 0x7f;
                 value = context->midi [track->index++] & 0x7f;
-                midi_set_controller (context, track, channel, controller, value);
+                midi_set_controller (context, &track->channel [channel], controller, value);
                 break;
 
             case 0xc0: /* Program Change */
