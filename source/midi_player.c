@@ -808,10 +808,6 @@ static void midi_player_run (void *context_ptr, uint32_t clocks)
                             return;
                         }
                         context->track [track].expect = EXPECT_DELTA_TIME;
-                        /* TODO: Some events, such as tempo-change or time-signature-change,
-                         *       will change context->tick_length. If this happens and results
-                         *       in a tick_length greater than the remaining clocks, we need
-                         *       to return early to prevent clocks going negative. */
                         break;
 
                     default:
@@ -819,6 +815,14 @@ static void midi_player_run (void *context_ptr, uint32_t clocks)
                         break;
                 }
             }
+        }
+
+        /* If the tempo has changed, the new tick_length may be more
+         * than the number of remaining clocks. When this happens, the
+         * return now so that we don't spend time we don't have. */
+        if (context->clocks < context->tick_length)
+        {
+            break;
         }
 
         /* During delay, we run the YM2413 */
