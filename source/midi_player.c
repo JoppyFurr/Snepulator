@@ -433,7 +433,6 @@ static int midi_read_track_header (MIDI_Player_Context *context, MIDI_Track *tra
         snepulator_error ("MIDI Error", "Invalid chunk size would run off end of file", chunk_length);
         return -1;
     }
-    printf ("MIDI Track has chunk_length of %d bytes.\n", chunk_length);
 
     /* Initialize the current track */
     track->index = context->index;
@@ -554,6 +553,10 @@ static int midi_read_meta_event (MIDI_Player_Context *context, MIDI_Track *track
             /* Specifies the number of flats or sharps in the key signature. Doesn't affect playback. */
             break;
 
+        case 0x7f: /* Sequencer Specific Event */
+            /* Used to store manufacturer / sequencer-specific information */
+            break;
+
         default:
             /* Skip over data */
             printf ("Meta-event 0x%02x not implemented.\n", type);
@@ -621,6 +624,8 @@ static void midi_set_controller (MIDI_Player_Context *context, MIDI_Channel *cha
 
         case 91: /* Reverb - Not implemented */
         case 93: /* Chorus - Not implemented */
+        case 126: /* Mono Mode - Not implemented */
+        case 127: /* Poly Mode - Assume polyphonic by default */
             break;
 
         default:
@@ -643,7 +648,7 @@ static int midi_read_event (MIDI_Player_Context *context, MIDI_Track *track)
     }
     else if (event >= 0xf0 && event < 0xf8)
     {
-        printf ("SysEx-event 0x%02x ... not implemented.\n", event);
+        /* Skip over any SysEx events or System Common messages */
         uint32_t length = midi_read_variable_length (context, track);
         track->index += length;
         return 0;
@@ -722,6 +727,9 @@ static int midi_read_event (MIDI_Player_Context *context, MIDI_Track *track)
 
             case 0xc0: /* Program Change */
                 track->channel [channel].program = event & 0x7f;
+                break;
+
+            case 0xd0: /* Channel Pressure - Not implemented */
                 break;
 
             case 0xe0: /* Pitch Bend */
