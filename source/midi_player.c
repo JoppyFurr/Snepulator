@@ -5,7 +5,6 @@
 
 /*
  * Missing features list:
- *  - A second or third YM2413 to give better polyphony.
  *  - Improve timing accuracy. Consider calculating the number of clock cycles
  *    to delay. Consider any lost fractional clocks.
  *  - Registered Parameter Number (RPN) values (Pitch Bend sensitivity, Fine Tuning)
@@ -13,6 +12,10 @@
  *    still be affected by volume, pitch-bends, or a late release of the sustain pedal.
  *  - Other MIDI controllers (Portamento, soft pedal, etc)
  *  - Investigate a non-linear curve for velocity.
+ *  - Check the maths on MIDI volume / expression. We should try match the change in dB
+ *  - TODO: Pass around syth_id where possible and have the called function split instance and channel.
+ *  - TODO: Wrapper for ym2413_addr/data_write that handles synth_id.
+ *  - Multi-chip percussion
  */
 
 #include <stdio.h>
@@ -89,7 +92,10 @@ static void midi_player_audio_callback (void *context_ptr, int16_t *stream, uint
 {
     MIDI_Player_Context *context = (MIDI_Player_Context *) context_ptr;
 
-    ym2413_get_samples (context->ym2413_context, stream, count);
+    for (uint32_t i = 0; i < MIDI_YM2413_COUNT; i++)
+    {
+        ym2413_get_samples (context->ym2413_context [i], stream, count);
+    }
 }
 
 
@@ -98,7 +104,7 @@ static void midi_player_audio_callback (void *context_ptr, int16_t *stream, uint
  */
 static void midi_synth_queue_put (MIDI_Player_Context *context, uint8_t synth_id)
 {
-    context->synth_queue [(context->synth_queue_put++) & 0x0f] = synth_id;
+    context->synth_queue [(context->synth_queue_put++) % MIDI_SYNTH_QUEUE_SIZE] = synth_id;
 }
 
 
@@ -107,13 +113,14 @@ static void midi_synth_queue_put (MIDI_Player_Context *context, uint8_t synth_id
  */
 static uint8_t midi_synth_queue_get (MIDI_Player_Context *context)
 {
-    return context->synth_queue [(context->synth_queue_get++) & 0x0f];
+    return context->synth_queue [(context->synth_queue_get++) % MIDI_SYNTH_QUEUE_SIZE];
 }
 
 
 /*
  * Update the fnum and block for a ym2413 channel.
  */
+/* TODO: Should this take a midi-context and synth_id instead? */
 static void midi_update_ym2413_fnum (YM2413_Context *context, uint8_t synth_id, uint8_t key, uint16_t pitch_bend)
 {
     double bend = 2.0 * (pitch_bend - 8192) / 8192.0; /* Default range is +/- 2 semitones */
@@ -161,10 +168,10 @@ static void midi_player_percussion_up (MIDI_Player_Context *context, MIDI_Channe
     }
 
     /* Clear percussion key */
-    uint8_t r0e_value = context->ym2413_context->state.r0e_rhythm;
+    uint8_t r0e_value = context->ym2413_context [0]->state.r0e_rhythm;
     r0e_value &= ~percussion_bit;
-    ym2413_addr_write (context->ym2413_context, 0x0e);
-    ym2413_data_write (context->ym2413_context, r0e_value);
+    ym2413_addr_write (context->ym2413_context [0], 0x0e);
+    ym2413_data_write (context->ym2413_context [0], r0e_value);
 }
 
 
@@ -191,10 +198,10 @@ static void midi_player_percussion_down (MIDI_Player_Context *context, MIDI_Chan
     }
 
     /* Set percussion key */
-    uint8_t r0e_value = context->ym2413_context->state.r0e_rhythm;
+    uint8_t r0e_value = context->ym2413_context [0]->state.r0e_rhythm;
     r0e_value |= percussion_bit;
-    ym2413_addr_write (context->ym2413_context, 0x0e);
-    ym2413_data_write (context->ym2413_context, r0e_value);
+    ym2413_addr_write (context->ym2413_context [0], 0x0e);
+    ym2413_data_write (context->ym2413_context [0], r0e_value);
 
     /* Set percussion volume */
     uint8_t volume = (16129 - velocity * channel->volume) >> 10;
@@ -202,33 +209,33 @@ static void midi_player_percussion_down (MIDI_Player_Context *context, MIDI_Chan
     switch (percussion_bit)
     {
         case 0x01: /* High Hat */
-            reg_value = context->ym2413_context->state.r30_channel_params [7].r30_channel_params & 0x0f;
+            reg_value = context->ym2413_context [0]->state.r30_channel_params [7].r30_channel_params & 0x0f;
             reg_value |= volume << 4;
-            ym2413_addr_write (context->ym2413_context, 0x37);
-            ym2413_data_write (context->ym2413_context, reg_value);
+            ym2413_addr_write (context->ym2413_context [0], 0x37);
+            ym2413_data_write (context->ym2413_context [0], reg_value);
 
         case 0x02: /* Top Cymbal */
-            reg_value = context->ym2413_context->state.r30_channel_params [8].r30_channel_params & 0xf0;
+            reg_value = context->ym2413_context [0]->state.r30_channel_params [8].r30_channel_params & 0xf0;
             reg_value |= volume;
-            ym2413_addr_write (context->ym2413_context, 0x38);
-            ym2413_data_write (context->ym2413_context, reg_value);
+            ym2413_addr_write (context->ym2413_context [0], 0x38);
+            ym2413_data_write (context->ym2413_context [0], reg_value);
 
         case 0x04: /* Tom Tom */
-            reg_value = context->ym2413_context->state.r30_channel_params [8].r30_channel_params & 0x0f;
+            reg_value = context->ym2413_context [0]->state.r30_channel_params [8].r30_channel_params & 0x0f;
             reg_value |= volume << 4;
-            ym2413_addr_write (context->ym2413_context, 0x38);
-            ym2413_data_write (context->ym2413_context, reg_value);
+            ym2413_addr_write (context->ym2413_context [0], 0x38);
+            ym2413_data_write (context->ym2413_context [0], reg_value);
 
         case 0x08: /* Snare Drum */
-            reg_value = context->ym2413_context->state.r30_channel_params [7].r30_channel_params & 0xf0;
+            reg_value = context->ym2413_context [0]->state.r30_channel_params [7].r30_channel_params & 0xf0;
             reg_value |= volume;
-            ym2413_addr_write (context->ym2413_context, 0x37);
-            ym2413_data_write (context->ym2413_context, reg_value);
+            ym2413_addr_write (context->ym2413_context [0], 0x37);
+            ym2413_data_write (context->ym2413_context [0], reg_value);
 
         case 0x10: /* Bass Drum */
             reg_value = volume;
-            ym2413_addr_write (context->ym2413_context, 0x36);
-            ym2413_data_write (context->ym2413_context, reg_value);
+            ym2413_addr_write (context->ym2413_context [0], 0x36);
+            ym2413_data_write (context->ym2413_context [0], reg_value);
 
         default:
             break;
@@ -254,10 +261,10 @@ static void midi_player_key_up (MIDI_Player_Context *context, MIDI_Channel *chan
     uint8_t synth_id = channel->synth_id [key];
 
     /* Register write for key-up event on ym2413 */
-    uint8_t r20_value = context->ym2413_context->state.r20_channel_params [synth_id].r20_channel_params;
+    uint8_t r20_value = context->ym2413_context [synth_id / 6]->state.r20_channel_params [synth_id % 6].r20_channel_params;
     r20_value &= 0xef;
-    ym2413_addr_write (context->ym2413_context, 0x20 + synth_id);
-    ym2413_data_write (context->ym2413_context, r20_value);
+    ym2413_addr_write (context->ym2413_context [synth_id / 6], 0x20 + (synth_id % 6));
+    ym2413_data_write (context->ym2413_context [synth_id / 6], r20_value);
 
     /* Return the channel to the queue */
     midi_synth_queue_put (context, synth_id);
@@ -297,17 +304,17 @@ static void midi_player_key_down (MIDI_Player_Context *context, MIDI_Channel *ch
     /* Set the instrument and volume */
     uint8_t volume = (16129 - velocity * channel->volume) >> 10;
     uint8_t r30_value = (midi_program_to_ym2413 [channel->program] << 4) | volume;
-    ym2413_addr_write (context->ym2413_context, 0x30 + synth_id);
-    ym2413_data_write (context->ym2413_context, r30_value);
+    ym2413_addr_write (context->ym2413_context [synth_id / 6], 0x30 + (synth_id % 6));
+    ym2413_data_write (context->ym2413_context [synth_id / 6], r30_value);
 
     /* Write the fnum and block */
-    midi_update_ym2413_fnum (context->ym2413_context, synth_id, key, channel->pitch_bend);
+    midi_update_ym2413_fnum (context->ym2413_context [synth_id / 6], synth_id % 6, key, channel->pitch_bend);
 
     /* Write the sustain, key-down, block, and remaining bit of fnum */
-    uint8_t r20_value = context->ym2413_context->state.r20_channel_params [synth_id].r20_channel_params & 0x0f;
+    uint8_t r20_value = context->ym2413_context [synth_id / 6]->state.r20_channel_params [synth_id % 6].r20_channel_params & 0x0f;
     r20_value |= (channel->sustain << 5) | 0x10;
-    ym2413_addr_write (context->ym2413_context, 0x20 + synth_id);
-    ym2413_data_write (context->ym2413_context, r20_value);
+    ym2413_addr_write (context->ym2413_context [synth_id / 6], 0x20 + (synth_id % 6));
+    ym2413_data_write (context->ym2413_context [synth_id / 6], r20_value);
 }
 
 
@@ -318,10 +325,13 @@ static void midi_player_cleanup (void *context_ptr)
 {
     MIDI_Player_Context *context = (MIDI_Player_Context *) context_ptr;
 
-    if (context->ym2413_context != NULL)
+    for (uint32_t i = 0; i < MIDI_YM2413_COUNT; i++)
     {
-        free (context->ym2413_context);
-        context->ym2413_context = NULL;
+        if (context->ym2413_context [i] != NULL)
+        {
+            free (context->ym2413_context [i]);
+            context->ym2413_context [i] = NULL;
+        }
     }
 
     if (context->midi != NULL)
@@ -590,10 +600,10 @@ static void midi_set_controller (MIDI_Player_Context *context, MIDI_Channel *cha
                 if (channel->key [key] > 0)
                 {
                     uint8_t synth_id = channel->synth_id [key];
-                    uint8_t r30_value = context->ym2413_context->state.r30_channel_params [synth_id].r30_channel_params & 0xf0;
+                    uint8_t r30_value = context->ym2413_context [synth_id / 6]->state.r30_channel_params [synth_id % 6].r30_channel_params & 0xf0;
                     r30_value |= (16129 - channel->key [key] * value) >> 10;
-                    ym2413_addr_write (context->ym2413_context, 0x30 + synth_id);
-                    ym2413_data_write (context->ym2413_context, r30_value);
+                    ym2413_addr_write (context->ym2413_context [synth_id / 6], 0x30 + (synth_id % 6));
+                    ym2413_data_write (context->ym2413_context [synth_id / 6], r30_value);
                 }
             }
             break;
@@ -614,10 +624,10 @@ static void midi_set_controller (MIDI_Player_Context *context, MIDI_Channel *cha
                 if (channel->key [key] > 0)
                 {
                     uint8_t synth_id = channel->synth_id [key];
-                    uint8_t r20_value = context->ym2413_context->state.r20_channel_params [synth_id].r20_channel_params & 0xdf;
+                    uint8_t r20_value = context->ym2413_context [synth_id / 6]->state.r20_channel_params [synth_id % 6].r20_channel_params & 0xdf;
                     r20_value |= channel->sustain << 5;
-                    ym2413_addr_write (context->ym2413_context, 0x20 + synth_id);
-                    ym2413_data_write (context->ym2413_context, r20_value);
+                    ym2413_addr_write (context->ym2413_context [synth_id / 6], 0x20 + (synth_id % 6));
+                    ym2413_data_write (context->ym2413_context [synth_id / 6], r20_value);
                 }
             }
             break;
@@ -742,7 +752,7 @@ static int midi_read_event (MIDI_Player_Context *context, MIDI_Track *track)
                     if (track->channel [channel].key [key] > 0)
                     {
                         uint8_t synth_id = track->channel [channel].synth_id [key];
-                        midi_update_ym2413_fnum (context->ym2413_context, synth_id, key, track->channel [channel].pitch_bend);
+                        midi_update_ym2413_fnum (context->ym2413_context [synth_id / 6], synth_id % 6, key, track->channel [channel].pitch_bend);
                     }
                 }
                 break;
@@ -836,7 +846,10 @@ static void midi_player_run (void *context_ptr, uint32_t clocks)
         /* During delay, we run the YM2413 */
         /* TODO: Consider storing millicycles like with the consoles,
          *       as breaking things up into units of tick_length loses time. */
-        ym2413_run_cycles (context->ym2413_context, NTSC_COLOURBURST_FREQ, context->tick_length);
+        for (uint32_t i = 0; i < MIDI_YM2413_COUNT; i++)
+        {
+            ym2413_run_cycles (context->ym2413_context [i], NTSC_COLOURBURST_FREQ, context->tick_length);
+        }
 
         /* Subtract this tick_length delay from all tracks */
         for (uint32_t track = 0; track < context->n_tracks; track++)
@@ -862,9 +875,10 @@ static void midi_player_run (void *context_ptr, uint32_t clocks)
     {
         context->frame_clock_counter -= 59659;
 
+        /* TODO: Bring in the animation code to deal with the multiple chips. */
         /* For now, fake a VGM_Player_Context so that we can use the VGM Player's visualisation. */
         context->vgm_player_context.ym2413_clock = NTSC_COLOURBURST_FREQ;
-        context->vgm_player_context.ym2413_context = context->ym2413_context;
+        context->vgm_player_context.ym2413_context = context->ym2413_context [0];
         /* TODO: This approximation won't work well for multi-track MIDIs. Do we need to sum the delays and work out the duration? */
         context->vgm_player_context.current_sample = context->track [0].index;
         context->vgm_player_context.total_samples = context->track [0].track_end;
@@ -879,7 +893,6 @@ static void midi_player_run (void *context_ptr, uint32_t clocks)
 MIDI_Player_Context *midi_player_init (void)
 {
     MIDI_Player_Context *context;
-    YM2413_Context *ym2413_context;
 
     /* Check we've been passed a filename */
     if (state.cart_filename == NULL)
@@ -978,15 +991,18 @@ MIDI_Player_Context *midi_player_init (void)
     }
 
     /* Initialise sound chip */
-    ym2413_context = ym2413_init ();
-    context->ym2413_context = ym2413_context;
-    ym2413_addr_write (ym2413_context, 0x0e);
-    ym2413_data_write (ym2413_context, 0x20); /* Rhythm mode */
-
-    /* Add the six channels to the synth-queue */
-    for (uint32_t i = 0; i < 6; i++)
+    for (uint32_t i = 0; i < MIDI_YM2413_COUNT; i++)
     {
-        midi_synth_queue_put (context, i);
+        YM2413_Context *ym2413_context = ym2413_init ();
+        ym2413_addr_write (ym2413_context, 0x0e);
+        ym2413_data_write (ym2413_context, 0x20); /* Rhythm mode */
+        context->ym2413_context [i] = ym2413_context;
+
+        /* Add the six channels to the synth-queue */
+        for (uint32_t c = 0; c < 6; c++)
+        {
+            midi_synth_queue_put (context, (i * 6) + c);
+        }
     }
 
     /* Initial video parameters */

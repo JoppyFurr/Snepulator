@@ -3,6 +3,9 @@
  * MIDI Player header.
  */
 
+#define MIDI_YM2413_COUNT 3
+#define MIDI_SYNTH_QUEUE_SIZE 32
+
 typedef enum MIDI_Expect_e {
     EXPECT_DELTA_TIME = 0,
     EXPECT_EVENT
@@ -54,11 +57,11 @@ typedef struct MIDI_Player_Context_s {
     uint32_t tick_div;
 
     /* YM2413 Synth State */
-    YM2413_Context *ym2413_context;
+    YM2413_Context *ym2413_context [MIDI_YM2413_COUNT];
     uint64_t ym2413_millicycles; /* Remaining time to carry over to the next run of the chip. */
 
     /* Ring-buffer queue of available YM2413 channels */
-    uint8_t synth_queue [16];
+    uint8_t synth_queue [MIDI_SYNTH_QUEUE_SIZE];
     uint32_t synth_queue_get;
     uint32_t synth_queue_put;
 
