@@ -13,26 +13,9 @@
 #include "sound/band_limit.h"
 #include "sound/sn76489.h"
 #include "sound/ym2413.h"
+#include "video/visualiser.h"
 #include "vgm_player.h"
 
-/* Colours for visualisation */
-static const uint_pixel bright_red    = { .r = 255, .g =   0, .b =   0 };
-static const uint_pixel dim_red       = { .r = 170, .g =   0, .b =   0 };
-static const uint_pixel bright_yellow = { .r = 255, .g = 255, .b =   0 };
-static const uint_pixel dim_yellow    = { .r = 170, .g = 170, .b =   0 };
-static const uint_pixel bright_green  = { .r =   0, .g = 255, .b =   0 };
-static const uint_pixel dim_green     = { .r =   0, .g = 170, .b =   0 };
-static const uint_pixel white         = { .r = 255, .g = 255, .b = 255 };
-static const uint_pixel light_grey    = { .r = 170, .g = 170, .b = 170 };
-static const uint_pixel dark_grey     = { .r =  85, .g =  85, .b =  85 };
-
-static const uint_pixel colours_peak [15] = { bright_green, bright_green,  bright_green,  bright_green, bright_green,
-                                              bright_green, bright_green,  bright_green,  bright_green, bright_green,
-                                              bright_green, bright_yellow, bright_yellow, bright_red,   bright_red };
-
-static const uint_pixel colours_base [15] = { dim_green, dim_green,  dim_green,  dim_green, dim_green,
-                                              dim_green, dim_green,  dim_green,  dim_green, dim_green,
-                                              dim_green, dim_yellow, dim_yellow, dim_red,   dim_red };
 
 extern Snepulator_State state;
 
@@ -117,7 +100,7 @@ static void draw_rect (VGM_Player_Context *context,
 /*
  * Draw a frame of the visualisation.
  */
-void vgm_player_draw_frame (VGM_Player_Context *context)
+static void vgm_player_draw_frame (VGM_Player_Context *context)
 {
     uint32_t bar_count = 0;
     uint32_t bar_value [15] = { };

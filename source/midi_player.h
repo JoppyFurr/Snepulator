@@ -67,7 +67,7 @@ typedef struct MIDI_Player_Context_s {
 
     /* Visualisation */
     uint32_t frame_clock_counter;
-    VGM_Player_Context vgm_player_context;
+    uint_pixel frame_buffer [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
 
 } MIDI_Player_Context;
 

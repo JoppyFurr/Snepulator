@@ -16,6 +16,7 @@
  *  - TODO: Pass around syth_id where possible and have the called function split instance and channel.
  *  - TODO: Wrapper for ym2413_addr/data_write that handles synth_id.
  *  - Multi-chip percussion
+ *  - With three sound chip outputs being summed, handle clipping.
  */
 
 #include <stdio.h>
@@ -29,11 +30,10 @@
 #include "sound/band_limit.h"
 #include "sound/sn76489.h"
 #include "sound/ym2413.h"
-#include "vgm_player.h"
+#include "video/visualiser.h"
 #include "midi_player.h"
 
 extern Snepulator_State state;
-extern void vgm_player_draw_frame (VGM_Player_Context *context);
 
 /* General MIDI mapping:
  *  1: Violin,      2: Guitar,       3: Piano,        4: Flute,
@@ -345,6 +345,122 @@ static void midi_player_cleanup (void *context_ptr)
         free (context->track);
         context->track = NULL;
     }
+}
+
+
+/*
+ * Draw a filled rectangle.
+ */
+static void draw_rect (MIDI_Player_Context *context,
+                       uint32_t x, uint32_t y, uint32_t w, uint32_t h,
+                       uint_pixel colour)
+{
+    const uint32_t start_x = x + state.video_start_x;
+    const uint32_t start_y = y + state.video_start_y;
+    const uint32_t end_x = start_x + w;
+    const uint32_t end_y = start_y + h;
+
+    for (uint32_t y = start_y; y < end_y; y++)
+    {
+        for (uint32_t x = start_x; x < end_x; x++)
+        {
+            context->frame_buffer [x + y * VIDEO_BUFFER_WIDTH] = colour;
+        }
+    }
+}
+
+
+/*
+ * Draw a frame of the visualisation.
+ */
+static void midi_player_draw_frame (MIDI_Player_Context *context)
+{
+    /* Horizontal layout of the bars */
+    /* MIDI playback uses ym2413 rhythm mode, so 11 bars per chip. */
+    uint32_t bar_width = 12;
+    uint32_t bar_gap = 8;
+    uint32_t bar_area_width = bar_width * 11 + bar_gap * (11 - 1);
+    uint32_t first_bar = (state.video_width - bar_area_width) / 2;
+
+    for (uint32_t i = 0; i < MIDI_YM2413_COUNT; i++)
+    {
+        uint32_t bar_count = 0;
+        uint32_t bar_value [11] = { };
+
+        uint16_t volume;
+        uint16_t eg_level;
+        uint16_t attenuation;
+
+        YM2413_Context *ym2413_context = context->ym2413_context [i];
+
+        /* Melody Channels */
+        for (uint32_t channel = 0; channel < 6; channel++)
+        {
+            volume  = ym2413_context->state.r30_channel_params [channel].volume;
+            eg_level = ym2413_context->state.carrier [channel].eg_level;
+            attenuation = volume + (eg_level >> 3);
+            bar_value [bar_count++] = (attenuation >= 15) ? 0 : 15 - attenuation;
+        }
+
+        /* Bass Drum */
+        volume = ym2413_context->state.rhythm_volume_bd;
+        eg_level = ym2413_context->state.carrier [YM2413_BASS_DRUM_CH].eg_level;
+        attenuation = volume + (eg_level >> 3);
+        bar_value [bar_count++] = (attenuation >= 15) ? 0 : 15 - attenuation;
+
+        /* High Hat */
+        volume = ym2413_context->state.rhythm_volume_hh;
+        eg_level = ym2413_context->state.modulator [YM2413_HIGH_HAT_CH].eg_level;
+        attenuation = volume + (eg_level >> 3);
+        bar_value [bar_count++] = (attenuation >= 15) ? 0 : 15 - attenuation;
+
+        /* Snare Drum */
+        volume = ym2413_context->state.rhythm_volume_sd;
+        eg_level = ym2413_context->state.carrier [YM2413_SNARE_DRUM_CH].eg_level;
+        attenuation = volume + (eg_level >> 3);
+        bar_value [bar_count++] = (attenuation >= 15) ? 0 : 15 - attenuation;
+
+        /* Tom Tom */
+        volume = ym2413_context->state.rhythm_volume_tt;
+        eg_level = ym2413_context->state.modulator [YM2413_TOM_TOM_CH].eg_level;
+        attenuation = volume + (eg_level >> 3);
+        bar_value [bar_count++] = (attenuation >= 15) ? 0 : 15 - attenuation;
+
+        /* Top Cymbal */
+        volume = ym2413_context->state.rhythm_volume_tc;
+        eg_level = ym2413_context->state.carrier [YM2413_TOP_CYMBAL_CH].eg_level;
+        attenuation = volume + (eg_level >> 3);
+        bar_value [bar_count++] = (attenuation >= 15) ? 0 : 15 - attenuation;
+
+        /* Draw the segments */
+        uint32_t top = 8 + (68 * i);
+        uint32_t low_segment = top + 52;
+        for (uint32_t bar = 0; bar < bar_count; bar++)
+        {
+            for (uint32_t segment = bar_value [bar]; segment > 0; segment--)
+            {
+                draw_rect (context, first_bar + bar * (bar_width + bar_gap), low_segment - 4 * (segment - 1), bar_width, 2,
+                           (segment == bar_value [bar]) ? colours_peak [segment - 1] : colours_base [segment - 1]);
+            }
+        }
+
+        /* Underline */
+        draw_rect (context, first_bar - 8, top + 58, bar_area_width + 16, 1, white);
+    }
+
+    /* Progress Bar */
+    /* TODO: This approximation won't work well for multi-track MIDIs. Do we need to sum the delays and work out the duration? */
+    uint32_t current_sample =context->track [0].index;
+    uint32_t total_samples = context->track [0].track_end;
+    draw_rect (context, 32, 216, 192, 1, dark_grey);
+    uint32_t progress = current_sample * (uint64_t) 184 / total_samples;
+    draw_rect (context, 32 + progress, 216, 8, 1, light_grey);
+
+    /* Pass the completed frame on for rendering */
+    snepulator_frame_done (context->frame_buffer);
+
+    /* Clear the buffer for the next frame. */
+    memset (context->frame_buffer, 0, sizeof (context->frame_buffer));
 }
 
 
@@ -874,15 +990,7 @@ static void midi_player_run (void *context_ptr, uint32_t clocks)
     if (context->frame_clock_counter >= 59659)
     {
         context->frame_clock_counter -= 59659;
-
-        /* TODO: Bring in the animation code to deal with the multiple chips. */
-        /* For now, fake a VGM_Player_Context so that we can use the VGM Player's visualisation. */
-        context->vgm_player_context.ym2413_clock = NTSC_COLOURBURST_FREQ;
-        context->vgm_player_context.ym2413_context = context->ym2413_context [0];
-        /* TODO: This approximation won't work well for multi-track MIDIs. Do we need to sum the delays and work out the duration? */
-        context->vgm_player_context.current_sample = context->track [0].index;
-        context->vgm_player_context.total_samples = context->track [0].track_end;
-        vgm_player_draw_frame (&context->vgm_player_context);
+        midi_player_draw_frame (context);
     }
 }
 
@@ -1007,9 +1115,9 @@ MIDI_Player_Context *midi_player_init (void)
 
     /* Initial video parameters */
     state.video_start_x = VIDEO_SIDE_BORDER;
-    state.video_start_y = (VIDEO_BUFFER_LINES - 192) / 2;
+    state.video_start_y = (VIDEO_BUFFER_LINES - 224) / 2;
     state.video_width   = 256;
-    state.video_height  = 192;
+    state.video_height  = 224;
 
     /* Hook up callbacks */
     state.audio_callback = midi_player_audio_callback;
