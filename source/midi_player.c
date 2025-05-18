@@ -12,7 +12,6 @@
  *    still be affected by volume, pitch-bends, or a late release of the sustain pedal.
  *  - Other MIDI controllers (Portamento, soft pedal, etc)
  *  - Investigate a non-linear curve for velocity.
- *  - Check the maths on MIDI volume / expression. We should try match the change in dB
  *  - TODO: Pass around syth_id where possible and have the called function split instance and channel.
  *  - TODO: Wrapper for ym2413_addr/data_write that handles synth_id.
  *  - Multi-chip percussion
@@ -155,6 +154,25 @@ static void midi_update_ym2413_fnum (YM2413_Context *context, uint8_t synth_id, 
 
 
 /*
+ * Calculate the 4-bit ym2413 volume from channel volume and velocity.
+ */
+static uint32_t midi_ym2413_volume (uint8_t volume, uint8_t velocity)
+{
+    double attenuation = -40.0 * log10 (volume / 127.0)
+                       + -40.0 * log10 (velocity / 127.0);
+
+    /* Limit the attenuation to the ym2413 maximum */
+    if (attenuation > 45.0)
+    {
+        attenuation = 45.0;
+    }
+
+    /* Each step on the ym2413 represents 3 dB. Round and return. */
+    return round (attenuation / 3.0);
+}
+
+
+/*
  * Key up event (percussion)
  */
 static void midi_player_percussion_up (MIDI_Player_Context *context, MIDI_Channel *channel, uint8_t key)
@@ -204,7 +222,7 @@ static void midi_player_percussion_down (MIDI_Player_Context *context, MIDI_Chan
     ym2413_data_write (context->ym2413_context [0], r0e_value);
 
     /* Set percussion volume */
-    uint8_t volume = (16129 - velocity * channel->volume) >> 10;
+    uint8_t volume = midi_ym2413_volume (channel->volume, velocity);
     uint8_t reg_value;
     switch (percussion_bit)
     {
@@ -302,7 +320,7 @@ static void midi_player_key_down (MIDI_Player_Context *context, MIDI_Channel *ch
     channel->synth_id [key] = synth_id;
 
     /* Set the instrument and volume */
-    uint8_t volume = (16129 - velocity * channel->volume) >> 10;
+    uint8_t volume = midi_ym2413_volume (channel->volume, velocity);
     uint8_t r30_value = (midi_program_to_ym2413 [channel->program] << 4) | volume;
     ym2413_addr_write (context->ym2413_context [synth_id / 6], 0x30 + (synth_id % 6));
     ym2413_data_write (context->ym2413_context [synth_id / 6], r30_value);
@@ -717,7 +735,7 @@ static void midi_set_controller (MIDI_Player_Context *context, MIDI_Channel *cha
                 {
                     uint8_t synth_id = channel->synth_id [key];
                     uint8_t r30_value = context->ym2413_context [synth_id / 6]->state.r30_channel_params [synth_id % 6].r30_channel_params & 0xf0;
-                    r30_value |= (16129 - channel->key [key] * value) >> 10;
+                    r30_value |= midi_ym2413_volume (channel->volume, channel->key [key]);
                     ym2413_addr_write (context->ym2413_context [synth_id / 6], 0x30 + (synth_id % 6));
                     ym2413_data_write (context->ym2413_context [synth_id / 6], r30_value);
                 }
@@ -1082,6 +1100,7 @@ MIDI_Player_Context *midi_player_init (void)
         for (uint32_t channel = 0; channel < 16; channel++)
         {
             context->track [i].channel [channel].pitch_bend = 8192;
+            context->track [i].channel [channel].volume = 100;
         }
     }
 
