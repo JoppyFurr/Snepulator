@@ -132,8 +132,11 @@ typedef struct YM2413_State_s {
     uint8_t r0f_test;
 
     /* Channel Registers */
-    struct {
-        uint8_t fnum;
+    union {
+        uint8_t r10_channel_params;
+        struct {
+            uint8_t fnum;
+        };
     } r10_channel_params [9];
 
     union {
