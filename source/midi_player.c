@@ -243,9 +243,10 @@ static void midi_ym2413_update_fnum (MIDI_Player_Context *context, uint8_t synth
 /*
  * Calculate the 4-bit ym2413 volume from channel volume and velocity.
  */
-static void midi_ym2413_update_volume (MIDI_Player_Context *context, uint8_t synth_id, uint8_t volume, uint8_t velocity)
+static void midi_ym2413_update_volume (MIDI_Player_Context *context, uint8_t synth_id, uint8_t volume, uint8_t expression, uint8_t velocity)
 {
     double attenuation = -40.0 * log10 (volume / 127.0)
+                       + -40.0 * log10 (expression / 127.0)
                        + -40.0 * log10 (velocity / 127.0);
 
     /* Limit the attenuation to the ym2413 maximum */
@@ -374,7 +375,7 @@ static void midi_player_key_down (MIDI_Player_Context *context, MIDI_Channel *ch
 
     /* Set the instrument and volume */
     midi_ym2413_register_write (context, synth_id, 0x30, midi_program_to_ym2413 [channel->program] << 4);
-    midi_ym2413_update_volume (context, synth_id, channel->volume, velocity);
+    midi_ym2413_update_volume (context, synth_id, channel->volume, channel->expression, velocity);
 
     /* Write the fnum and block */
     midi_ym2413_update_fnum (context, synth_id, key, channel->pitch_bend);
@@ -424,7 +425,7 @@ static void midi_player_percussion_down (MIDI_Player_Context *context, MIDI_Chan
     channel->synth_id [key] = synth_id;
 
     /* Set percussion volume */
-    midi_ym2413_update_volume (context, synth_id, channel->volume, velocity);
+    midi_ym2413_update_volume (context, synth_id, channel->volume, channel->expression, velocity);
 
     /* Set percussion key */
     uint8_t r0e_value = midi_ym2413_register_read (context, synth_id, 0x0e);
@@ -831,12 +832,26 @@ static void midi_set_controller (MIDI_Player_Context *context, MIDI_Channel *cha
                 if (channel->key [key] > 0)
                 {
                     uint8_t synth_id = channel->synth_id [key];
-                    midi_ym2413_update_volume (context, synth_id, channel->volume, channel->key [key]);
+                    midi_ym2413_update_volume (context, synth_id, channel->volume, channel->expression, channel->key [key]);
                 }
             }
             break;
 
         case 10: /* Pan - Not implemented */
+            break;
+
+        case 11: /* Expression */
+            channel->expression = value;
+
+            /* Update any in-progress notes */
+            for (uint8_t key = 0; key < 128; key++)
+            {
+                if (channel->key [key] > 0)
+                {
+                    uint8_t synth_id = channel->synth_id [key];
+                    midi_ym2413_update_volume (context, synth_id, channel->volume, channel->expression, channel->key [key]);
+                }
+            }
             break;
 
         case 32: /* Bank Select LSB (ignore) */
@@ -1184,6 +1199,7 @@ MIDI_Player_Context *midi_player_init (void)
         {
             context->track [i].channel [channel].pitch_bend = 8192;
             context->track [i].channel [channel].volume = 100;
+            context->track [i].channel [channel].expression = 127;
         }
     }
 
