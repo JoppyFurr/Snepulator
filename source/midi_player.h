@@ -22,6 +22,7 @@ typedef enum MIDI_Expect_e {
  *  Bit  [  4] - 0: Melody patch, 1: Rhythm patch
  *  Bits [3:0] - Melody channel number, or Rhythm instrument number.
  */
+#define SYNTH_ID_CHIP_MASK    0xe0
 #define SYNTH_ID_RHYTHM_BIT   0x10
 #define SYNTH_ID_CHANNEL_MASK 0x0f
 

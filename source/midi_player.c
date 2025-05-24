@@ -12,7 +12,6 @@
  *    still be affected by volume, pitch-bends, or a late release of the sustain pedal.
  *  - Other MIDI controllers (Portamento, soft pedal, etc)
  *  - Investigate a non-linear curve for velocity.
- *  - TODO: Wrapper for ym2413_addr/data_write percussion registers
  *  - With three sound chip outputs being summed, handle clipping.
  */
 
@@ -139,16 +138,26 @@ static uint8_t midi_rhythm_queue_get (MIDI_Player_Context *context, uint8_t inst
 /*
  * Read a YM2413 register.
  * The chip instance and specific address are calculated from synth_id.
- * The supplied address should be the channel-0 address of the register.
+ * For channel registers, the supplied address should be the channel-0 address of the register.
  * Note that the chip doesn't actually support reads, this peeks at its state.
  */
 static uint8_t midi_ym2413_register_read (MIDI_Player_Context *context, uint8_t synth_id, uint8_t addr)
 {
     YM2413_Context *ym2413_context = context->ym2413_context [synth_id >> 5];
+
     uint8_t channel = synth_id & SYNTH_ID_CHANNEL_MASK;
 
-    switch (addr & 0xf0)
+    /* Ignore channel for rhythm sounds */
+    if (synth_id & SYNTH_ID_RHYTHM_BIT)
     {
+        channel = 0;
+    }
+
+    switch (addr)
+    {
+        case 0x0e:
+            return ym2413_context->state.r0e_rhythm;
+
         case 0x10:
             return ym2413_context->state.r10_channel_params [channel].r10_channel_params;
 
@@ -157,6 +166,12 @@ static uint8_t midi_ym2413_register_read (MIDI_Player_Context *context, uint8_t 
 
         case 0x30:
             return ym2413_context->state.r30_channel_params [channel].r30_channel_params;
+
+        /* Rhythm volumes */
+        case 0x36:
+        case 0x37:
+        case 0x38:
+            return ym2413_context->state.r30_channel_params [addr & 0x0f].r30_channel_params;
 
         default:
             break;
@@ -179,7 +194,13 @@ static void midi_ym2413_register_write (MIDI_Player_Context *context, uint8_t sy
     YM2413_Context *ym2413_context = context->ym2413_context [synth_id >> 5];
     uint8_t channel = synth_id & SYNTH_ID_CHANNEL_MASK;
 
-    ym2413_addr_write (ym2413_context, addr + channel);
+    /* Automatically select the address for melody channel registers */
+    if ((synth_id & SYNTH_ID_RHYTHM_BIT) == 0 && (addr == 0x10 || addr == 0x20 || addr == 0x30))
+    {
+        addr += channel;
+    }
+
+    ym2413_addr_write (ym2413_context, addr);
     ym2413_data_write (ym2413_context, value);
 }
 
@@ -187,7 +208,7 @@ static void midi_ym2413_register_write (MIDI_Player_Context *context, uint8_t sy
 /*
  * Update the fnum and block for a ym2413 channel.
  */
-static void midi_update_ym2413_fnum (MIDI_Player_Context *context, uint8_t synth_id, uint8_t key, uint16_t pitch_bend)
+static void midi_ym2413_update_fnum (MIDI_Player_Context *context, uint8_t synth_id, uint8_t key, uint16_t pitch_bend)
 {
     double bend = 2.0 * (pitch_bend - 8192) / 8192.0; /* Default range is +/- 2 semitones */
     double frequency = 440.0 * pow (2, (key - 69 + bend) / 12.0);
@@ -222,7 +243,7 @@ static void midi_update_ym2413_fnum (MIDI_Player_Context *context, uint8_t synth
 /*
  * Calculate the 4-bit ym2413 volume from channel volume and velocity.
  */
-static uint32_t midi_ym2413_volume (uint8_t volume, uint8_t velocity)
+static void midi_ym2413_update_volume (MIDI_Player_Context *context, uint8_t synth_id, uint8_t volume, uint8_t velocity)
 {
     double attenuation = -40.0 * log10 (volume / 127.0)
                        + -40.0 * log10 (velocity / 127.0);
@@ -233,8 +254,54 @@ static uint32_t midi_ym2413_volume (uint8_t volume, uint8_t velocity)
         attenuation = 45.0;
     }
 
-    /* Each step on the ym2413 represents 3 dB. Round and return. */
-    return round (attenuation / 3.0);
+    /* Each step on the ym2413 represents 3 dB. */
+    uint8_t ym2413_volume = round (attenuation / 3.0);
+
+    /* Write the volume into the ym2413 */
+    if (synth_id & SYNTH_ID_RHYTHM_BIT)
+    {
+        uint8_t reg_value;
+        switch (synth_id & SYNTH_ID_CHANNEL_MASK)
+        {
+            case RHYTHM_HH: /* High Hat */
+                reg_value = midi_ym2413_register_read (context, synth_id, 0x37);
+                reg_value &= 0x0f;
+                reg_value |= ym2413_volume << 4;
+                midi_ym2413_register_write (context, synth_id, 0x37, reg_value);
+
+            case RHYTHM_TC: /* Top Cymbal */
+                reg_value = midi_ym2413_register_read (context, synth_id, 0x38);
+                reg_value &= 0xf0;
+                reg_value |= ym2413_volume;
+                midi_ym2413_register_write (context, synth_id, 0x38, reg_value);
+
+            case RHYTHM_TT: /* Tom Tom */
+                reg_value = midi_ym2413_register_read (context, synth_id, 0x38);
+                reg_value &= 0x0f;
+                reg_value |= ym2413_volume << 4;
+                midi_ym2413_register_write (context, synth_id, 0x38, reg_value);
+
+            case RHYTHM_SD: /* Snare Drum */
+                reg_value = midi_ym2413_register_read (context, synth_id, 0x37);
+                reg_value &= 0xf0;
+                reg_value |= ym2413_volume;
+                midi_ym2413_register_write (context, synth_id, 0x37, reg_value);
+
+            case RHYTHM_BD: /* Bass Drum */
+                reg_value = ym2413_volume;
+                midi_ym2413_register_write (context, synth_id, 0x36, reg_value);
+
+            default:
+                break;
+        }
+    }
+    else
+    {
+        uint8_t r30_value = midi_ym2413_register_read (context, synth_id, 0x30);
+        r30_value &= 0xf0;
+        r30_value |= ym2413_volume;
+        midi_ym2413_register_write (context, synth_id, 0x30, r30_value);
+    }
 }
 
 
@@ -258,10 +325,9 @@ static void midi_player_key_up (MIDI_Player_Context *context, MIDI_Channel *chan
     /* Register write for key-up event on ym2413 */
     if (synth_id & SYNTH_ID_RHYTHM_BIT)
     {
-        uint8_t r0e_value = context->ym2413_context [synth_id >> 5]->state.r0e_rhythm;
+        uint8_t r0e_value = midi_ym2413_register_read (context, synth_id, 0x0e);
         r0e_value &= ~(1 << (synth_id & SYNTH_ID_CHANNEL_MASK));
-        ym2413_addr_write (context->ym2413_context [synth_id >> 5], 0x0e);
-        ym2413_data_write (context->ym2413_context [synth_id >> 5], r0e_value);
+        midi_ym2413_register_write (context, synth_id, 0x0e, r0e_value);
     }
     else
     {
@@ -307,12 +373,11 @@ static void midi_player_key_down (MIDI_Player_Context *context, MIDI_Channel *ch
     channel->synth_id [key] = synth_id;
 
     /* Set the instrument and volume */
-    uint8_t volume = midi_ym2413_volume (channel->volume, velocity);
-    uint8_t r30_value = (midi_program_to_ym2413 [channel->program] << 4) | volume;
-    midi_ym2413_register_write (context, synth_id, 0x30, r30_value);
+    midi_ym2413_register_write (context, synth_id, 0x30, midi_program_to_ym2413 [channel->program] << 4);
+    midi_ym2413_update_volume (context, synth_id, channel->volume, velocity);
 
     /* Write the fnum and block */
-    midi_update_ym2413_fnum (context, synth_id, key, channel->pitch_bend);
+    midi_ym2413_update_fnum (context, synth_id, key, channel->pitch_bend);
 
     /* Write the sustain, key-down, block, and remaining bit of fnum */
     uint8_t r20_value = midi_ym2413_register_read (context, synth_id, 0x20);
@@ -358,49 +423,13 @@ static void midi_player_percussion_down (MIDI_Player_Context *context, MIDI_Chan
     uint8_t synth_id = midi_rhythm_queue_get (context, instrument);
     channel->synth_id [key] = synth_id;
 
-    /* Set percussion key */
-    uint8_t r0e_value = context->ym2413_context [synth_id >> 5]->state.r0e_rhythm;
-    r0e_value |= (1 << instrument);
-    ym2413_addr_write (context->ym2413_context [synth_id >> 5], 0x0e);
-    ym2413_data_write (context->ym2413_context [synth_id >> 5], r0e_value);
-
     /* Set percussion volume */
-    uint8_t volume = midi_ym2413_volume (channel->volume, velocity);
-    uint8_t reg_value;
-    switch (instrument)
-    {
-        case RHYTHM_HH: /* High Hat */
-            reg_value = context->ym2413_context [synth_id >> 5]->state.r30_channel_params [7].r30_channel_params & 0x0f;
-            reg_value |= volume << 4;
-            ym2413_addr_write (context->ym2413_context [synth_id >> 5], 0x37);
-            ym2413_data_write (context->ym2413_context [synth_id >> 5], reg_value);
+    midi_ym2413_update_volume (context, synth_id, channel->volume, velocity);
 
-        case RHYTHM_TC: /* Top Cymbal */
-            reg_value = context->ym2413_context [synth_id >> 5]->state.r30_channel_params [8].r30_channel_params & 0xf0;
-            reg_value |= volume;
-            ym2413_addr_write (context->ym2413_context [synth_id >> 5], 0x38);
-            ym2413_data_write (context->ym2413_context [synth_id >> 5], reg_value);
-
-        case RHYTHM_TT: /* Tom Tom */
-            reg_value = context->ym2413_context [synth_id >> 5]->state.r30_channel_params [8].r30_channel_params & 0x0f;
-            reg_value |= volume << 4;
-            ym2413_addr_write (context->ym2413_context [synth_id >> 5], 0x38);
-            ym2413_data_write (context->ym2413_context [synth_id >> 5], reg_value);
-
-        case RHYTHM_SD: /* Snare Drum */
-            reg_value = context->ym2413_context [synth_id >> 5]->state.r30_channel_params [7].r30_channel_params & 0xf0;
-            reg_value |= volume;
-            ym2413_addr_write (context->ym2413_context [synth_id >> 5], 0x37);
-            ym2413_data_write (context->ym2413_context [synth_id >> 5], reg_value);
-
-        case RHYTHM_BD: /* Bass Drum */
-            reg_value = volume;
-            ym2413_addr_write (context->ym2413_context [synth_id >> 5], 0x36);
-            ym2413_data_write (context->ym2413_context [synth_id >> 5], reg_value);
-
-        default:
-            break;
-    }
+    /* Set percussion key */
+    uint8_t r0e_value = midi_ym2413_register_read (context, synth_id, 0x0e);
+    r0e_value |= (1 << instrument);
+    midi_ym2413_register_write (context, synth_id, 0x0e, r0e_value);
 }
 
 
@@ -801,12 +830,8 @@ static void midi_set_controller (MIDI_Player_Context *context, MIDI_Channel *cha
             {
                 if (channel->key [key] > 0)
                 {
-                    /* TODO: What about rhythm sounds? */
                     uint8_t synth_id = channel->synth_id [key];
-                    uint8_t r30_value = midi_ym2413_register_read (context, synth_id, 0x30);
-                    r30_value &= 0xf0;
-                    r30_value |= midi_ym2413_volume (channel->volume, channel->key [key]);
-                    midi_ym2413_register_write (context, synth_id, 0x30, r30_value);
+                    midi_ym2413_update_volume (context, synth_id, channel->volume, channel->key [key]);
                 }
             }
             break;
@@ -826,8 +851,14 @@ static void midi_set_controller (MIDI_Player_Context *context, MIDI_Channel *cha
             {
                 if (channel->key [key] > 0)
                 {
-                    /* TODO: What about rhythm sounds? */
                     uint8_t synth_id = channel->synth_id [key];
+
+                    /* Only for melody channels */
+                    if (synth_id & SYNTH_ID_RHYTHM_BIT)
+                    {
+                        break;
+                    }
+
                     uint8_t r20_value = midi_ym2413_register_read (context, synth_id, 0x20);
                     r20_value &= 0xdf;
                     r20_value |= channel->sustain << 5;
@@ -934,13 +965,19 @@ static int midi_read_event (MIDI_Player_Context *context, MIDI_Track *track)
                 bend = (event & 0x7f) + ((context->midi [track->index++] & 0x7f) << 7);
                 track->channel [channel].pitch_bend = bend;
 
+                /* Only for melody channels */
+                if (channel == 9)
+                {
+                    break;
+                }
+
                 /* Pitch bend needs to be applied to notes which are already sounding */
                 for (uint8_t key = 0; key < 128; key++)
                 {
                     if (track->channel [channel].key [key] > 0)
                     {
                         uint8_t synth_id = track->channel [channel].synth_id [key];
-                        midi_update_ym2413_fnum (context, synth_id, key, track->channel [channel].pitch_bend);
+                        midi_ym2413_update_fnum (context, synth_id, key, track->channel [channel].pitch_bend);
                     }
                 }
                 break;
