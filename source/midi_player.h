@@ -13,6 +13,18 @@ typedef enum MIDI_Expect_e {
 } MIDI_Expect;
 
 
+/*
+ * synth_id definition:
+ *
+ * Eight bits to describe the location of the ym2413 channel being used:
+ *
+ *  Bits [7:5] - Chip number
+ *  Bit  [  4] - 0: Melody patch, 1: Rhythm patch
+ *  Bits [3:0] - Melody channel number, or Rhythm instrument number.
+ */
+#define SYNTH_ID_RHYTHM_BIT   0x10
+#define SYNTH_ID_CHANNEL_MASK 0x0f
+
 typedef struct MIDI_Channel_s {
     uint8_t program;
     uint8_t volume;

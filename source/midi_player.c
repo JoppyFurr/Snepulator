@@ -106,25 +106,24 @@ static void midi_player_audio_callback (void *context_ptr, int16_t *stream, uint
  */
 static void midi_synth_queue_put (MIDI_Player_Context *context, uint8_t synth_id)
 {
-    context->synth_queue [(context->synth_queue_put++) % MIDI_SYNTH_QUEUE_SIZE] = synth_id;
+    if (synth_id & SYNTH_ID_RHYTHM_BIT)
+    {
+        uint8_t instrument = synth_id & SYNTH_ID_CHANNEL_MASK;
+        context->rhythm_queue [instrument] [(context->rhythm_queue_put [instrument]++) % MIDI_RHYTHM_QUEUE_SIZE] = synth_id;
+    }
+    else
+    {
+        context->synth_queue [(context->synth_queue_put++) % MIDI_SYNTH_QUEUE_SIZE] = synth_id;
+    }
 }
 
 
 /*
- * Take a synth channel from the queue.
+ * Take a melody channel from the queue.
  */
 static uint8_t midi_synth_queue_get (MIDI_Player_Context *context)
 {
     return context->synth_queue [(context->synth_queue_get++) % MIDI_SYNTH_QUEUE_SIZE];
-}
-
-
-/*
- * Return a rhythm channel to the queue.
- */
-static void midi_rhythm_queue_put (MIDI_Player_Context *context, uint8_t instrument, uint8_t synth_id)
-{
-    context->rhythm_queue [instrument] [(context->rhythm_queue_put [instrument]++) % MIDI_RHYTHM_QUEUE_SIZE] = synth_id;
 }
 
 
@@ -145,8 +144,8 @@ static uint8_t midi_rhythm_queue_get (MIDI_Player_Context *context, uint8_t inst
  */
 static uint8_t midi_ym2413_register_read (MIDI_Player_Context *context, uint8_t synth_id, uint8_t addr)
 {
-    YM2413_Context *ym2413_context = context->ym2413_context [synth_id / 6];
-    uint8_t channel = synth_id % 6;
+    YM2413_Context *ym2413_context = context->ym2413_context [synth_id >> 5];
+    uint8_t channel = synth_id & SYNTH_ID_CHANNEL_MASK;
 
     switch (addr & 0xf0)
     {
@@ -173,12 +172,12 @@ static uint8_t midi_ym2413_register_read (MIDI_Player_Context *context, uint8_t 
  * The chip instance and specific address are calculated from synth_id.
  * The supplied address should be the channel-0 address of the register.
  *
- * For non-melody registers, `synth_id % 6` should be 0.
+ * For non-melody registers, the channel-bits should be 0.
  */
 static void midi_ym2413_register_write (MIDI_Player_Context *context, uint8_t synth_id, uint8_t addr, uint8_t value)
 {
-    YM2413_Context *ym2413_context = context->ym2413_context [synth_id / 6];
-    uint8_t channel = synth_id % 6;
+    YM2413_Context *ym2413_context = context->ym2413_context [synth_id >> 5];
+    uint8_t channel = synth_id & SYNTH_ID_CHANNEL_MASK;
 
     ym2413_addr_write (ym2413_context, addr + channel);
     ym2413_data_write (ym2413_context, value);
@@ -240,123 +239,6 @@ static uint32_t midi_ym2413_volume (uint8_t volume, uint8_t velocity)
 
 
 /*
- * Key up event (percussion)
- */
-static void midi_player_percussion_up (MIDI_Player_Context *context, MIDI_Channel *channel, uint8_t key)
-{
-    /* Nothing to do if the key is already up */
-    if (channel->key [key] == 0)
-    {
-        return;
-    }
-
-    /* Only the General Midi percussion keys have been mapped */
-    uint8_t instrument = midi_percussion_to_ym2413 [key];
-    if (instrument == 0xff)
-    {
-        return;
-    }
-
-    /* Mark the key as up */
-    channel->key [key] = 0;
-
-    /* Synth-id to free up */
-    uint8_t synth_id = channel->synth_id [key];
-
-    /* Register write for key-up event on ym2413 */
-    uint8_t r0e_value = context->ym2413_context [synth_id]->state.r0e_rhythm;
-    r0e_value &= ~(1 << instrument);
-    ym2413_addr_write (context->ym2413_context [synth_id], 0x0e);
-    ym2413_data_write (context->ym2413_context [synth_id], r0e_value);
-
-    /* Return the channel to the queue */
-    midi_rhythm_queue_put (context, instrument, synth_id);
-}
-
-
-/*
- * Key down event (percussion)
- *
- * As an initial implementation, no state is kept about which key triggered
- * the event. The events are simply mapped and passed along to the ym2413.
- * This has the limitation that the up and down events for different MIDI
- * keys became mixed together if they share the same ym2413 percussion sound.
- */
-static void midi_player_percussion_down (MIDI_Player_Context *context, MIDI_Channel *channel, uint8_t key, uint8_t velocity)
-{
-    /* If the key was already down, generate an up event to free the previous synth channel. */
-    if (channel->key [key] > 0)
-    {
-        midi_player_percussion_up (context, channel, key);
-    }
-
-    /* Only the General Midi percussion keys have been mapped */
-    uint8_t instrument = midi_percussion_to_ym2413 [key];
-    if (instrument == 0xff)
-    {
-        return;
-    }
-
-    /* If we don't have any free synth channels, drop the event */
-    if (context->rhythm_queue_get [instrument] == context->rhythm_queue_put [instrument])
-    {
-        return;
-    }
-
-    /* Mark the key as down */
-    channel->key [key] = velocity;
-
-    /* Get the synth channel from the queue */
-    uint8_t synth_id = midi_rhythm_queue_get (context, instrument);
-    channel->synth_id [key] = synth_id;
-
-    /* Set percussion key */
-    uint8_t r0e_value = context->ym2413_context [synth_id]->state.r0e_rhythm;
-    r0e_value |= (1 << instrument);
-    ym2413_addr_write (context->ym2413_context [synth_id], 0x0e);
-    ym2413_data_write (context->ym2413_context [synth_id], r0e_value);
-
-    /* Set percussion volume */
-    uint8_t volume = midi_ym2413_volume (channel->volume, velocity);
-    uint8_t reg_value;
-    switch (instrument)
-    {
-        case RHYTHM_HH: /* High Hat */
-            reg_value = context->ym2413_context [synth_id]->state.r30_channel_params [7].r30_channel_params & 0x0f;
-            reg_value |= volume << 4;
-            ym2413_addr_write (context->ym2413_context [synth_id], 0x37);
-            ym2413_data_write (context->ym2413_context [synth_id], reg_value);
-
-        case RHYTHM_TC: /* Top Cymbal */
-            reg_value = context->ym2413_context [synth_id]->state.r30_channel_params [8].r30_channel_params & 0xf0;
-            reg_value |= volume;
-            ym2413_addr_write (context->ym2413_context [synth_id], 0x38);
-            ym2413_data_write (context->ym2413_context [synth_id], reg_value);
-
-        case RHYTHM_TT: /* Tom Tom */
-            reg_value = context->ym2413_context [synth_id]->state.r30_channel_params [8].r30_channel_params & 0x0f;
-            reg_value |= volume << 4;
-            ym2413_addr_write (context->ym2413_context [synth_id], 0x38);
-            ym2413_data_write (context->ym2413_context [synth_id], reg_value);
-
-        case RHYTHM_SD: /* Snare Drum */
-            reg_value = context->ym2413_context [synth_id]->state.r30_channel_params [7].r30_channel_params & 0xf0;
-            reg_value |= volume;
-            ym2413_addr_write (context->ym2413_context [synth_id], 0x37);
-            ym2413_data_write (context->ym2413_context [synth_id], reg_value);
-
-        case RHYTHM_BD: /* Bass Drum */
-            reg_value = volume;
-            ym2413_addr_write (context->ym2413_context [synth_id], 0x36);
-            ym2413_data_write (context->ym2413_context [synth_id], reg_value);
-
-        default:
-            break;
-    }
-}
-
-
-/*
  * Key up event
  */
 static void midi_player_key_up (MIDI_Player_Context *context, MIDI_Channel *channel, uint8_t key)
@@ -374,9 +256,20 @@ static void midi_player_key_up (MIDI_Player_Context *context, MIDI_Channel *chan
     uint8_t synth_id = channel->synth_id [key];
 
     /* Register write for key-up event on ym2413 */
-    uint8_t r20_value = midi_ym2413_register_read (context, synth_id, 0x20);
-    r20_value &= 0xef;
-    midi_ym2413_register_write (context, synth_id, 0x20, r20_value);
+    if (synth_id & SYNTH_ID_RHYTHM_BIT)
+    {
+        uint8_t r0e_value = context->ym2413_context [synth_id >> 5]->state.r0e_rhythm;
+        r0e_value &= ~(1 << (synth_id & SYNTH_ID_CHANNEL_MASK));
+        ym2413_addr_write (context->ym2413_context [synth_id >> 5], 0x0e);
+        ym2413_data_write (context->ym2413_context [synth_id >> 5], r0e_value);
+    }
+    else
+    {
+        /* Register write for key-up event on ym2413 */
+        uint8_t r20_value = midi_ym2413_register_read (context, synth_id, 0x20);
+        r20_value &= 0xef;
+        midi_ym2413_register_write (context, synth_id, 0x20, r20_value);
+    }
 
     /* Return the channel to the queue */
     midi_synth_queue_put (context, synth_id);
@@ -426,6 +319,88 @@ static void midi_player_key_down (MIDI_Player_Context *context, MIDI_Channel *ch
     r20_value &= 0x0f;
     r20_value |= (channel->sustain << 5) | 0x10;
     midi_ym2413_register_write (context, synth_id, 0x20, r20_value);
+}
+
+
+/*
+ * Key down event (percussion)
+ *
+ * As an initial implementation, no state is kept about which key triggered
+ * the event. The events are simply mapped and passed along to the ym2413.
+ * This has the limitation that the up and down events for different MIDI
+ * keys became mixed together if they share the same ym2413 percussion sound.
+ */
+static void midi_player_percussion_down (MIDI_Player_Context *context, MIDI_Channel *channel, uint8_t key, uint8_t velocity)
+{
+    /* If the key was already down, generate an up event to free the previous synth channel. */
+    if (channel->key [key] > 0)
+    {
+        midi_player_key_up (context, channel, key);
+    }
+
+    /* Only the General Midi percussion keys have been mapped */
+    uint8_t instrument = midi_percussion_to_ym2413 [key];
+    if (instrument == 0xff)
+    {
+        return;
+    }
+
+    /* If we don't have any free synth channels, drop the event */
+    if (context->rhythm_queue_get [instrument] == context->rhythm_queue_put [instrument])
+    {
+        return;
+    }
+
+    /* Mark the key as down */
+    channel->key [key] = velocity;
+
+    /* Get the synth channel from the queue */
+    uint8_t synth_id = midi_rhythm_queue_get (context, instrument);
+    channel->synth_id [key] = synth_id;
+
+    /* Set percussion key */
+    uint8_t r0e_value = context->ym2413_context [synth_id >> 5]->state.r0e_rhythm;
+    r0e_value |= (1 << instrument);
+    ym2413_addr_write (context->ym2413_context [synth_id >> 5], 0x0e);
+    ym2413_data_write (context->ym2413_context [synth_id >> 5], r0e_value);
+
+    /* Set percussion volume */
+    uint8_t volume = midi_ym2413_volume (channel->volume, velocity);
+    uint8_t reg_value;
+    switch (instrument)
+    {
+        case RHYTHM_HH: /* High Hat */
+            reg_value = context->ym2413_context [synth_id >> 5]->state.r30_channel_params [7].r30_channel_params & 0x0f;
+            reg_value |= volume << 4;
+            ym2413_addr_write (context->ym2413_context [synth_id >> 5], 0x37);
+            ym2413_data_write (context->ym2413_context [synth_id >> 5], reg_value);
+
+        case RHYTHM_TC: /* Top Cymbal */
+            reg_value = context->ym2413_context [synth_id >> 5]->state.r30_channel_params [8].r30_channel_params & 0xf0;
+            reg_value |= volume;
+            ym2413_addr_write (context->ym2413_context [synth_id >> 5], 0x38);
+            ym2413_data_write (context->ym2413_context [synth_id >> 5], reg_value);
+
+        case RHYTHM_TT: /* Tom Tom */
+            reg_value = context->ym2413_context [synth_id >> 5]->state.r30_channel_params [8].r30_channel_params & 0x0f;
+            reg_value |= volume << 4;
+            ym2413_addr_write (context->ym2413_context [synth_id >> 5], 0x38);
+            ym2413_data_write (context->ym2413_context [synth_id >> 5], reg_value);
+
+        case RHYTHM_SD: /* Snare Drum */
+            reg_value = context->ym2413_context [synth_id >> 5]->state.r30_channel_params [7].r30_channel_params & 0xf0;
+            reg_value |= volume;
+            ym2413_addr_write (context->ym2413_context [synth_id >> 5], 0x37);
+            ym2413_data_write (context->ym2413_context [synth_id >> 5], reg_value);
+
+        case RHYTHM_BD: /* Bass Drum */
+            reg_value = volume;
+            ym2413_addr_write (context->ym2413_context [synth_id >> 5], 0x36);
+            ym2413_data_write (context->ym2413_context [synth_id >> 5], reg_value);
+
+        default:
+            break;
+    }
 }
 
 
@@ -914,15 +889,7 @@ static int midi_read_event (MIDI_Player_Context *context, MIDI_Track *track)
             case 0x80: /* Note Off */
                 key = event & 0x7f;
                 velocity = context->midi [track->index++] & 0x7f;
-                /* Channel 10 is used for percussion sounds */
-                if (channel == 9)
-                {
-                    midi_player_percussion_up (context, &track->channel [channel], key);
-                }
-                else
-                {
-                    midi_player_key_up (context, &track->channel [channel], key);
-                }
+                midi_player_key_up (context, &track->channel [channel], key);
                 break;
 
             case 0x90: /* Note On */
@@ -942,15 +909,7 @@ static int midi_read_event (MIDI_Player_Context *context, MIDI_Track *track)
                 }
                 else
                 {
-                    /* Channel 10 is used for percussion sounds */
-                    if (channel == 9)
-                    {
-                        midi_player_percussion_up (context, &track->channel [channel], key);
-                    }
-                    else
-                    {
-                        midi_player_key_up (context, &track->channel [channel], key);
-                    }
+                    midi_player_key_up (context, &track->channel [channel], key);
                 }
                 break;
 
@@ -1205,22 +1164,22 @@ MIDI_Player_Context *midi_player_init (void)
     }
 
     /* Initialise sound chip */
-    for (uint32_t i = 0; i < MIDI_YM2413_COUNT; i++)
+    for (uint32_t chip = 0; chip < MIDI_YM2413_COUNT; chip++)
     {
         YM2413_Context *ym2413_context = ym2413_init ();
-        context->ym2413_context [i] = ym2413_context;
-        midi_ym2413_register_write (context, i * 6, 0x0e, 0x20); /* Rhythm mode */
+        context->ym2413_context [chip] = ym2413_context;
+        midi_ym2413_register_write (context, (chip << 5), 0x0e, 0x20); /* Rhythm mode */
 
-        /* Add the six channels to the synth-queue */
-        for (uint32_t c = 0; c < 6; c++)
+        /* Add the six melody channels to the synth-queue */
+        for (uint32_t channel = 0; channel < 6; channel++)
         {
-            midi_synth_queue_put (context, (i * 6) + c);
+            midi_synth_queue_put (context, (chip << 5) + channel);
         }
 
         /* Add the five rhythm instruments to the five rhythm queues */
         for (uint32_t instrument = 0; instrument < 5; instrument++)
         {
-            midi_rhythm_queue_put (context, instrument, i);
+            midi_synth_queue_put (context, (chip << 5) | SYNTH_ID_RHYTHM_BIT | instrument);
         }
     }
 
