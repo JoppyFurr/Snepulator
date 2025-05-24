@@ -5,6 +5,7 @@
 
 #define MIDI_YM2413_COUNT 3
 #define MIDI_SYNTH_QUEUE_SIZE 32
+#define MIDI_RHYTHM_QUEUE_SIZE 8
 
 typedef enum MIDI_Expect_e {
     EXPECT_DELTA_TIME = 0,
@@ -64,6 +65,11 @@ typedef struct MIDI_Player_Context_s {
     uint8_t synth_queue [MIDI_SYNTH_QUEUE_SIZE];
     uint32_t synth_queue_get;
     uint32_t synth_queue_put;
+
+    /* Separate queues for the five rhythm sounds */
+    uint8_t rhythm_queue [5] [MIDI_RHYTHM_QUEUE_SIZE];
+    uint32_t rhythm_queue_get [5];
+    uint32_t rhythm_queue_put [5];
 
     /* Visualisation */
     uint32_t frame_clock_counter;
