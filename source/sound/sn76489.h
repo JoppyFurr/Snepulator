@@ -95,7 +95,7 @@ SN76489_Context *sn76489_init (void);
 void sn76489_data_write (SN76489_Context *context, uint8_t data);
 
 /* Retrieves a block of samples from the sample-ring. */
-void sn76489_get_samples (SN76489_Context *context, int16_t *stream, uint32_t len);
+void sn76489_get_samples (SN76489_Context *context, int32_t *stream, uint32_t len);
 
 /* Run the PSG for a number of CPU clock cycles. */
 void sn76489_run_cycles (SN76489_Context *context, uint32_t clock_rate, uint32_t cycles);

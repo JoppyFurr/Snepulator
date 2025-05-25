@@ -41,7 +41,7 @@ static void     colecovision_update_settings (void *context_ptr);
 /*
  * Callback to supply audio frames.
  */
-static void colecovision_audio_callback (void *context_ptr, int16_t *stream, uint32_t count)
+static void colecovision_audio_callback (void *context_ptr, int32_t *stream, uint32_t count)
 {
     ColecoVision_Context *context = (ColecoVision_Context *) context_ptr;
 

@@ -211,7 +211,7 @@ void ym2413_addr_write (YM2413_Context *context, uint8_t addr);
 void ym2413_data_write (YM2413_Context *context, uint8_t data);
 
 /* Retrieves a block of samples from the sample-ring. */
-void ym2413_get_samples (YM2413_Context *context, int16_t *stream, uint32_t count);
+void ym2413_get_samples (YM2413_Context *context, int32_t *stream, uint32_t count);
 
 /* Run the PSG for a number of CPU clock cycles. */
 void ym2413_run_cycles (YM2413_Context *context, uint32_t clock_rate, uint32_t cycles);

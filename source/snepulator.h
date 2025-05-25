@@ -124,7 +124,7 @@ typedef struct Snepulator_State_s {
     Console   console;
     uint32_t  clock_rate;
     void     *console_context;
-    void      (*audio_callback) (void *, int16_t *stream, uint32_t count);
+    void      (*audio_callback) (void *, int32_t *stream, uint32_t count);
     void      (*cleanup) (void *);
     uint8_t * (*get_rom_hash) (void *);
     void      (*run_callback) (void *, uint32_t cycles);
@@ -137,6 +137,15 @@ typedef struct Snepulator_State_s {
     void      (*diagnostics_print) (const char *, ...);
     void      (*diagnostics_show) (void);
 #endif
+
+    /* Console audio output */
+    /* Note: Some consoles, or music player features, use more than one sound chip.
+     *       It is possible in some rare cases for the summed outputs to cross the
+     *       bound of what a 16-bit sample can store.
+     *       Eg, three ym2413 playing a loud MIDI file with a lot of notes at once.
+     *       By using a 32-bit buffer, we can sum all of the chips without overflows,
+     *       and then range-limit the final output before passing it to the sound card. */
+    int32_t audio_buffer [512 * 2];
 
     /* Console video output */
     /* Note: Unlike the audio rings, in this case the read index is not

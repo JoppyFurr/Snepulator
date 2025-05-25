@@ -6,6 +6,12 @@
 #define ENFORCE_MINIMUM(VAR, MIN) VAR = (VAR > MIN) ? VAR : MIN
 #define ENFORCE_MAXIMUM(VAR, MAX) VAR = (VAR > MAX) ? MAX : VAR
 
+#define MAX(A, B) (((A) > (B)) ? (A) : (B))
+#define MIN(A, B) (((A) < (B)) ? (A) : (B))
+
+/* Return B, within the limits of A <= B <= C */
+#define RANGE(A, B, C) (((B) < (A)) ? (A) : ((B) > (C)) ? (C) : (B))
+
 
 /* Set the start time for util_get_ticks. */
 void util_ticks_init (void);

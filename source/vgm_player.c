@@ -23,7 +23,7 @@ extern Snepulator_State state;
 /*
  * Callback to supply audio frames.
  */
-static void vgm_player_audio_callback (void *context_ptr, int16_t *stream, uint32_t count)
+static void vgm_player_audio_callback (void *context_ptr, int32_t *stream, uint32_t count)
 {
     VGM_Player_Context *context = (VGM_Player_Context *) context_ptr;
 

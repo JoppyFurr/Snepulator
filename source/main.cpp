@@ -129,11 +129,31 @@ void snepulator_render_error ()
  */
 void snepulator_audio_callback (void *userdata, uint8_t *stream, int len)
 {
-    memset (stream, 0, len);
+    uint32_t audio_frames = len / 4;
+    int16_t *sample_stream = (int16_t *) stream;
+    uint32_t sample_index = 0;
 
     if (state.audio_callback != NULL && state.run == RUN_STATE_RUNNING)
     {
-        state.audio_callback (state.console_context, (int16_t *)stream, len / 4);
+        /* Process audio in blocks of up to 512 frames */
+        while (audio_frames)
+        {
+            uint32_t block_frames = MIN (audio_frames, 512);
+            memset (state.audio_buffer, 0, sizeof (state.audio_buffer));
+
+            state.audio_callback (state.console_context, state.audio_buffer, block_frames);
+
+            for (uint32_t i = 0; i < block_frames * 2; i++)
+            {
+                /* Range limit to avoid integer wrap-around */
+                sample_stream [sample_index++] = RANGE (-32768, state.audio_buffer [i], 32767);
+            }
+            audio_frames -= block_frames;
+        }
+    }
+    else
+    {
+        memset (stream, 0, len);
     }
 }
 

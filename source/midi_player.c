@@ -12,7 +12,9 @@
  *    still be affected by volume, pitch-bends, or a late release of the sustain pedal.
  *  - Other MIDI controllers (Portamento, soft pedal, etc)
  *  - Investigate a non-linear curve for velocity.
- *  - With three sound chip outputs being summed, handle clipping.
+ *  - Do some MIDI files play the key-down the rhythm sounds for too short of a time to hear?
+ *    (maybe work out a minimum number of ym2413 cycles for each sound and queue delayed key-ups?)
+ *  - Working scroll-bar for the bottom of the screen.
  */
 
 #include <stdio.h>
@@ -89,7 +91,7 @@ static const uint8_t midi_percussion_to_ym2413 [128] =
 /*
  * Callback to supply audio frames.
  */
-static void midi_player_audio_callback (void *context_ptr, int16_t *stream, uint32_t count)
+static void midi_player_audio_callback (void *context_ptr, int32_t *stream, uint32_t count)
 {
     MIDI_Player_Context *context = (MIDI_Player_Context *) context_ptr;
 

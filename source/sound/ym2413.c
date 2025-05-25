@@ -1032,7 +1032,7 @@ void ym2413_run_cycles (YM2413_Context *context, uint32_t clock_rate, uint32_t c
  * Retrieves a block of samples from the sample-ring.
  * Assumes that the number of samples requested fits evenly into the ring buffer.
  */
-void ym2413_get_samples (YM2413_Context *context, int16_t *stream, uint32_t count)
+void ym2413_get_samples (YM2413_Context *context, int32_t *stream, uint32_t count)
 {
     if (context->read_index + count > context->write_index)
     {

@@ -40,7 +40,7 @@ static void     sg_1000_update_settings (void *context_ptr);
 /*
  * Callback to supply audio frames.
  */
-static void sg_1000_audio_callback (void *context_ptr, int16_t *stream, uint32_t count)
+static void sg_1000_audio_callback (void *context_ptr, int32_t *stream, uint32_t count)
 {
     SG_1000_Context *context = (SG_1000_Context *) context_ptr;
 

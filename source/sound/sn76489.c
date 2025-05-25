@@ -343,7 +343,7 @@ void sn76489_run_cycles (SN76489_Context *context, uint32_t clock_rate, uint32_t
  * Retrieves a block of samples from the sample-ring.
  * Assumes that the number of samples requested fits evenly into the ring buffer.
  */
-void sn76489_get_samples (SN76489_Context *context, int16_t *stream, uint32_t count)
+void sn76489_get_samples (SN76489_Context *context, int32_t *stream, uint32_t count)
 {
     if (context->read_index + count > context->write_index)
     {
