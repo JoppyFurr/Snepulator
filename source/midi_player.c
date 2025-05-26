@@ -813,16 +813,67 @@ static int midi_read_meta_event (MIDI_Player_Context *context, MIDI_Track *track
 
 
 /*
+ * Set a MIDI RPN data value
+ */
+static void midi_set_rpn (MIDI_Player_Context *context, MIDI_Channel *channel, uint8_t controller, uint8_t value)
+{
+    if (controller == 96 || controller == 97)
+    {
+        printf ("MIDI: RPN increment/decrement not implemented.\n");
+        return;
+    }
+
+    switch (channel->rpn)
+    {
+        case 0: /* Pitch Bend Sensitivity */
+            printf ("MIDI: RPN %d (pitch-bend-sensitivity) not implemented.\n", channel->rpn);
+            break;
+
+        case 1: /* Channel Fine Tuning */
+            printf ("MIDI: RPN %d (channel-fine-tuning) not implemented.\n", channel->rpn);
+            break;
+
+        case 2: /* Channel Coarse Tuning */
+            printf ("MIDI: RPN %d (channel-coarse-tuning) not implemented.\n", channel->rpn);
+            break;
+
+        case 3: /* Select Tuning Program */
+            printf ("MIDI: RPN %d (select-tuning-program) not implemented.\n", channel->rpn);
+            break;
+
+        case 4: /* Select Tuning Bank */
+            printf ("MIDI: RPN %d (select-tuning-bank) not implemented.\n", channel->rpn);
+            break;
+
+        case 5: /* Modulation Depth Range */
+            printf ("MIDI: RPN %d (modulation-depth-range) not implemented.\n", channel->rpn);
+            break;
+
+        case 0x3fff: /* Null Function */
+        default:
+            /* RPNs outside of the six defined are excluded from the switch statement are silently dropped. */
+            break;
+    }
+}
+
+
+/*
  * Set a MIDI controller value
  */
 static void midi_set_controller (MIDI_Player_Context *context, MIDI_Channel *channel, uint8_t controller, uint8_t value)
 {
     switch (controller)
     {
-        case 0: /* Bank Select (ignore) */
+        case 1: /* Modulation */
+            printf ("MIDI: Controller %d (modulation) not implemented.\n", controller);
             break;
 
-        case 1: /* Modulation - Not implemented */
+        case 5: /* Portamento Time */
+            printf ("MIDI: Controller %d (portamento-time) not implemented.\n", controller);
+            break;
+
+        case 6: /* Data Entry MSB */
+            midi_set_rpn (context, channel, controller, value);
             break;
 
         case 7: /* Channel Volume */
@@ -839,9 +890,6 @@ static void midi_set_controller (MIDI_Player_Context *context, MIDI_Channel *cha
             }
             break;
 
-        case 10: /* Pan - Not implemented */
-            break;
-
         case 11: /* Expression */
             channel->expression = value;
 
@@ -856,7 +904,8 @@ static void midi_set_controller (MIDI_Player_Context *context, MIDI_Channel *cha
             }
             break;
 
-        case 32: /* Bank Select LSB (ignore) */
+        case 38: /* Data Entry LSB */
+            midi_set_rpn (context, channel, controller, value);
             break;
 
         case 64: /* Sustain */
@@ -884,14 +933,81 @@ static void midi_set_controller (MIDI_Player_Context *context, MIDI_Channel *cha
             }
             break;
 
-        case 91: /* Reverb - Not implemented */
-        case 93: /* Chorus - Not implemented */
-        case 126: /* Mono Mode - Not implemented */
-        case 127: /* Poly Mode - Assume polyphonic by default */
+        case 65: /* Portamento switch */
+            printf ("MIDI: Controller %d (portamento-switch) not implemented.\n", controller);
+            break;
+
+        case 66: /* Sostenuto */
+            printf ("MIDI: Controller %d (sostenuto-switch) not implemented.\n", controller);
+            break;
+
+        case 67: /* Soft pedal */
+            printf ("MIDI: Controller %d (soft-pedal) not implemented.\n", controller);
+            break;
+
+        case 68: /* Legato foot-switch */
+            printf ("MIDI: Controller %d (legato-footswitch) not implemented.\n", controller);
+            break;
+
+        case 69: /* Hold 2 - Not implemented */
+            printf ("MIDI: Controller %d (hold-2) not implemented.\n", controller);
+            break;
+
+        case 70: /* Sound Controller 1 - Sound Variation */
+        case 71: /* Sound Controller 2 - Resonance */
+        case 72: /* Sound Controller 3 - Release */
+        case 73: /* Sound Controller 4 - Attack */
+        case 74: /* Sound Controller 5 - Cut-off frequency */
+            printf ("MIDI: Controller %d (sound-controller) not implemented.\n", controller);
+            break;
+
+        case 84: /* Portamento CC Control */
+            printf ("MIDI: Controller %d (portamento-cc-control) not implemented.\n", controller);
+            break;
+
+        case 91: /* Effect 1 Depth - Reverb */
+        case 92: /* Effect 2 Depth - Tremolo */
+        case 93: /* Effect 3 Depth - Chorus */
+        case 94: /* Effect 4 Depth - Detune */
+        case 95: /* Effect 5 Depth - Phaser */
+            printf ("MIDI: Controller %d (effect-depth) not implemented.\n", controller);
+            break;
+
+        case 96: /* Data Entry - Increment */
+        case 97: /* Data Entry - Decrement */
+            midi_set_rpn (context, channel, controller, value);
+            break;
+
+
+        case 98: /* NRPN LSB */
+        case 99: /* NRPN MSB */
+            channel->rpn = 0x3fff; /* Null function */
+            break;
+
+        case 100: /* RPN LSB */
+            channel->rpn = (channel->rpn & 0x3f80) | value;
+            break;
+
+        case 101: /* RPN MSB */
+            channel->rpn = (channel->rpn & 0x007f) | (value << 7);
+            break;
+
+        case 120: /* All Sound Off */
+            printf ("MIDI: Controller %d (all-sound-off) not implemented.\n", controller);
+            break;
+
+        case 121: /* Reset All Controllers */
+            printf ("MIDI: Controller %d (reset-all-controllers) not implemented.\n", controller);
+            break;
+
+        case 123: /* All Notes Off */
+            printf ("MIDI: Controller %d (all-notes-off) not implemented.\n", controller);
             break;
 
         default:
-            printf ("MIDI controller [%d] set to %d. (ignored)\n", controller, value);
+            /* Controllers excluded from the switch statement are silently dropped.
+             * This includes undefined values, unspecific things like "Generic On/Off switch", and effects
+             * not suitable for the ym2413 such as bank-select, balance, and high-resolution values. */
             break;
     }
 }
@@ -1202,13 +1318,11 @@ MIDI_Player_Context *midi_player_init (void)
             context->track [i].channel [channel].pitch_bend = 8192;
             context->track [i].channel [channel].volume = 100;
             context->track [i].channel [channel].expression = 127;
+            context->track [i].channel [channel].rpn = 0x3fff;
         }
     }
 
-
     fprintf (stdout, "%d KiB MIDI %s loaded.\n", context->midi_size >> 10, state.cart_filename);
-    /* DEBUG */
-    fprintf (stdout, "format = %d, n_tracks = %d, tick_div=0x%04x\n", context->format, context->n_tracks, context->tick_div);
 
     /* Calculate length of a midi-tick in colourburst clocks */
     midi_update_tick_length (context);
