@@ -12,8 +12,6 @@
  *    still be affected by volume, pitch-bends, or a late release of the sustain pedal.
  *  - Other MIDI controllers (Portamento, soft pedal, etc)
  *  - Investigate a non-linear curve for velocity.
- *  - Do some MIDI files play the key-down the rhythm sounds for too short of a time to hear?
- *    (maybe work out a minimum number of ym2413 cycles for each sound and queue delayed key-ups?)
  *  - Working scroll-bar for the bottom of the screen.
  */
 
@@ -392,11 +390,6 @@ static void midi_player_key_down (MIDI_Player_Context *context, MIDI_Channel *ch
 
 /*
  * Key down event (percussion)
- *
- * As an initial implementation, no state is kept about which key triggered
- * the event. The events are simply mapped and passed along to the ym2413.
- * This has the limitation that the up and down events for different MIDI
- * keys became mixed together if they share the same ym2413 percussion sound.
  */
 static void midi_player_percussion_down (MIDI_Player_Context *context, MIDI_Channel *channel, uint8_t key, uint8_t velocity)
 {
@@ -1337,7 +1330,15 @@ MIDI_Player_Context *midi_player_init (void)
     {
         YM2413_Context *ym2413_context = ym2413_init ();
         context->ym2413_context [chip] = ym2413_context;
-        midi_ym2413_register_write (context, (chip << 5), 0x0e, 0x20); /* Rhythm mode */
+
+        /* Enable rhythm mode and set recommended fnum & block parameters. */
+        midi_ym2413_register_write (context, (chip << 5), 0x0e, 0x20);
+        midi_ym2413_register_write (context, (chip << 5), 0x16, 0x20);
+        midi_ym2413_register_write (context, (chip << 5), 0x26, 0x05);
+        midi_ym2413_register_write (context, (chip << 5), 0x17, 0x50);
+        midi_ym2413_register_write (context, (chip << 5), 0x27, 0x05);
+        midi_ym2413_register_write (context, (chip << 5), 0x18, 0xc0);
+        midi_ym2413_register_write (context, (chip << 5), 0x28, 0x01);
 
         /* Add the six melody channels to the synth-queue */
         for (uint32_t channel = 0; channel < 6; channel++)
