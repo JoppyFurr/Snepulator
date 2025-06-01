@@ -1,5 +1,5 @@
 /*
- * Snepeulator
+ * Snepulator
  * YM2413 FM synthesizer chip implementation.
  *
  * Based on reverse engineering documents by Andete,

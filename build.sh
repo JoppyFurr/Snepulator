@@ -91,7 +91,7 @@ build_snepulator_gui ()
 }
 
 
-# Campile ImGui if we haven't already.
+# Compile ImGui if we haven't already.
 build_imgui ()
 {
     mkdir -p work/imgui
