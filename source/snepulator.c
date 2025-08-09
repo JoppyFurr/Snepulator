@@ -757,8 +757,15 @@ void snepulator_run (uint32_t cycles)
     }
 
     pthread_mutex_unlock (&state.run_mutex);
-}
 
+    /* Nothing left to run, return to the INIT state
+     * now that the mutex has been unlocked. */
+    if (state.run == RUN_STATE_STOP)
+    {
+        state.run = RUN_STATE_INIT;
+        snepulator_rom_set (NULL);
+    }
+}
 
 
 /*

@@ -13,6 +13,7 @@
  *  - Other MIDI controllers (Portamento, soft pedal, etc)
  *  - Investigate a non-linear curve for velocity.
  *  - Working scroll-bar for the bottom of the screen.
+ *  - Global SysEx?
  */
 
 #include <stdio.h>
@@ -1203,10 +1204,13 @@ static void midi_player_run (void *context_ptr, uint32_t clocks)
             }
         }
 
-        /* TODO: Sort out a clean way of returning to the logo-screen */
+        /* If all tracks have finished playing, return to the logo screen. */
+        /* TODO: Possibly it would be a good idea to allow an extra few ms
+         *       to complete any final decay of the instruments. */
         if (context->n_tracks_completed == context->n_tracks)
         {
-            snepulator_error ("MIDI", "All tracks completed.");
+            state.run = RUN_STATE_STOP;
+            return;
         }
 
         context->clocks -= context->tick_length;
