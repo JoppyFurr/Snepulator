@@ -7,7 +7,7 @@
  * Missing features list:
  *  - Improve timing accuracy. Consider calculating the number of clock cycles
  *    to delay. Consider any lost fractional clocks.
- *  - Registered Parameter Number (RPN) values (Pitch Bend sensitivity, Fine Tuning)
+ *  - Remaining RPN parameters
  *  - Consider for instruments with a slower decay, even if the key is up, they could
  *    still be affected by volume, pitch-bends, or a late release of the sustain pedal.
  *  - Other MIDI controllers (Portamento, soft pedal, etc)
@@ -209,9 +209,10 @@ static void midi_ym2413_register_write (MIDI_Player_Context *context, uint8_t sy
 /*
  * Update the fnum and block for a ym2413 channel.
  */
-static void midi_ym2413_update_fnum (MIDI_Player_Context *context, uint8_t synth_id, uint8_t key, uint16_t pitch_bend)
+static void midi_ym2413_update_fnum (MIDI_Player_Context *context, MIDI_Channel *channel, uint8_t synth_id, uint8_t key)
 {
-    double bend = 2.0 * (pitch_bend - 8192) / 8192.0; /* Default range is +/- 2 semitones */
+    double bend = ((double) channel->bend_sensitivity_semitones +
+                   (double) channel->bend_sensitivity_cents * 0.01) * (channel->pitch_bend - 8192) / 8192.0;
     double frequency = 440.0 * pow (2, (key - 69 + bend) / 12.0);
     double fnum_float = frequency * 524288 / (NTSC_COLOURBURST_FREQ / 72.0);
     uint8_t block = 0;
@@ -379,7 +380,7 @@ static void midi_player_key_down (MIDI_Player_Context *context, MIDI_Channel *ch
     midi_ym2413_update_volume (context, synth_id, channel->volume, channel->expression, velocity);
 
     /* Write the fnum and block */
-    midi_ym2413_update_fnum (context, synth_id, key, channel->pitch_bend);
+    midi_ym2413_update_fnum (context, channel, synth_id, key);
 
     /* Write the sustain, key-down, block, and remaining bit of fnum */
     uint8_t r20_value = midi_ym2413_register_read (context, synth_id, 0x20);
@@ -820,7 +821,14 @@ static void midi_set_rpn (MIDI_Player_Context *context, MIDI_Channel *channel, u
     switch (channel->rpn)
     {
         case 0: /* Pitch Bend Sensitivity */
-            printf ("MIDI: RPN %d (pitch-bend-sensitivity) not implemented.\n", channel->rpn);
+            if (controller == 6)
+            {
+                channel->bend_sensitivity_semitones = value;
+            }
+            else if (controller == 38)
+            {
+                channel->bend_sensitivity_cents = value;
+            }
             break;
 
         case 1: /* Channel Fine Tuning */
@@ -1104,7 +1112,7 @@ static int midi_read_event (MIDI_Player_Context *context, MIDI_Track *track)
                     if (track->channel [channel].key [key] > 0)
                     {
                         uint8_t synth_id = track->channel [channel].synth_id [key];
-                        midi_ym2413_update_fnum (context, synth_id, key, track->channel [channel].pitch_bend);
+                        midi_ym2413_update_fnum (context, &track->channel [channel], synth_id, key);
                     }
                 }
                 break;
@@ -1316,6 +1324,8 @@ MIDI_Player_Context *midi_player_init (void)
             context->track [i].channel [channel].volume = 100;
             context->track [i].channel [channel].expression = 127;
             context->track [i].channel [channel].rpn = 0x3fff;
+            context->track [i].channel [channel].bend_sensitivity_semitones = 2;
+
         }
     }
 
