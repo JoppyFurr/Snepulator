@@ -59,7 +59,6 @@ void snepulator_error (const char *title, const char *format, ...)
 {
     va_list args;
     char message [240] = { '\0' };
-    int len = 0;
 
     if (state.run != RUN_STATE_EXIT)
     {
@@ -68,7 +67,7 @@ void snepulator_error (const char *title, const char *format, ...)
     state.show_gui = true;
 
     va_start (args, format);
-    len += vsnprintf (message, 240, format, args);
+    vsnprintf (message, 240, format, args);
     va_end (args);
 
     /* All errors get printed to console */

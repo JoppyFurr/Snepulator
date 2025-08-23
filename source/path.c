@@ -81,7 +81,7 @@ int32_t path_base (char **path_ptr)
  * Get the path to the requested subdirectory.
  * Intended for internal use, should only be called once per name.
  */
-static int32_t path_get_dir (char **path_ptr, char *name)
+int32_t path_get_dir (char **path_ptr, const char *name)
 {
     char *path;
     struct stat stat_buf;

@@ -95,6 +95,7 @@ static inline uint32_t read_extension_long (M68000_Context *context)
 }
 
 
+#if 0 /* UNUSED */
 /*
  * Read a byte from the immediate 16-bit address.
  */
@@ -123,6 +124,7 @@ static inline uint32_t read_long_aw (M68000_Context *context)
     int16_t addr = read_extension (context);
     return read_long (context, (int32_t) addr);
 }
+#endif
 
 
 /*
@@ -185,6 +187,7 @@ static inline void write_long_aw (M68000_Context *context, uint32_t value)
 }
 
 
+#if 0 /* UNUSED */
 /*
  * Write a byte from the immediate 16-bit address.
  */
@@ -193,6 +196,7 @@ static inline void write_byte_al (M68000_Context *context, uint8_t value)
     uint32_t addr = read_extension_long (context);
     write_byte (context, addr, value);
 }
+#endif
 
 
 /*

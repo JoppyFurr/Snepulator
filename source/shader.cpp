@@ -19,6 +19,7 @@
  *   ╰────────────────────────╯
  */
 
+#include <stdio.h>
 #include <GL/gl3w.h>
 #include <SDL2/SDL.h>
 
