@@ -177,7 +177,7 @@ do
     shift
 done
 
-CFLAGS="-std=c11 -O2 -Wall -Werror -D_POSIX_C_SOURCE=200809L \
+CFLAGS="-std=c17 -O2 -Wall -Werror -D_POSIX_C_SOURCE=200809L \
         $(${SDL2_CONFIG} --cflags) \
         -I libraries/BLAKE3/ \
         -I libraries/gl3w/ \
@@ -186,7 +186,7 @@ CFLAGS="-std=c11 -O2 -Wall -Werror -D_POSIX_C_SOURCE=200809L \
         -DBUILD_TAG=\\\"${TAG:1}\\\" \
         ${EXTRA_FLAGS}"
 
-CXXFLAGS="-std=c++11 -O2 -Wall -Werror \
+CXXFLAGS="-std=c++17 -O2 -Wall -Werror \
           $(${SDL2_CONFIG} --cflags) \
           -I libraries/gl3w/ \
           -I ${IMGUI_PATH}/ \
