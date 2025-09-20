@@ -31,7 +31,7 @@ static void    smd_z80_memory_write (void *context_ptr, uint16_t addr, uint8_t d
 /*
  * Callback to supply audio frames.
  */
-static void smd_audio_callback (void *context_ptr, int16_t *stream, uint32_t count)
+static void smd_audio_callback (void *context_ptr, int32_t *stream, uint32_t count)
 {
     SMD_Context *context = (SMD_Context *) context_ptr;
 
