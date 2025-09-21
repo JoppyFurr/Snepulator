@@ -250,7 +250,7 @@ static void snepulator_console_menu ()
             uint32_t end_time;
             snepulator_pause_set (true);
             start_time = util_get_ticks ();
-            state.run_callback (state.console_context, 5 * 60000); /* Simulate five minutes */
+            state.run_callback (state.console_context, 5 * 60 * state.clock_rate); /* Simulate five minutes */
             end_time = util_get_ticks ();
             snepulator_pause_set (false);
 
