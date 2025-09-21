@@ -740,15 +740,6 @@ static void sms_vdp_render_line (TMS9928A_Context *context, uint16_t line)
         }
     }
 
-    if (!context->is_game_gear && context->state.regs.ctrl_0_mask_col_1)
-    {
-        context->video_blank_left = 8;
-    }
-    else
-    {
-        context->video_blank_left = 0;
-    }
-
     /* Bottom border */
     if (line == context->lines_active - 1)
     {
@@ -862,6 +853,8 @@ void sms_vdp_run_one_scanline (TMS9928A_Context *context)
         /* The Master System supports multiple resolutions that can be changed on the fly. */
         if (!context->is_game_gear)
         {
+            context->video_blank_left = context->state.regs.ctrl_0_mask_col_1 ? 8 : 0;
+
             context->render_start_y = (VIDEO_BUFFER_LINES - context->lines_active) / 2;
             context->video_start_y  = context->render_start_y;
             context->video_height   = context->lines_active;
