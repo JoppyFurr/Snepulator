@@ -26,7 +26,8 @@ static void logo_draw_frame (Logo_Context *context)
 
     if (context->frame == 0)
     {
-        memset (context->frame_buffer, 0, sizeof (context->frame_buffer));
+        memset (context->frame_buffer.active_area, 0, sizeof (context->frame_buffer.active_area));
+        memset (context->frame_buffer.backdrop, 0, sizeof (context->frame_buffer.backdrop));
     }
 
     /* For the first 100 frames, fade the logo in from black. */
@@ -38,16 +39,16 @@ static void logo_draw_frame (Logo_Context *context)
         {
             for (uint32_t x = 0; x < snepulator_logo.width; x++)
             {
-                context->frame_buffer [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].r =
+                context->frame_buffer.active_area [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].r =
                     brightness * snepulator_logo.pixel_data [(x + y * snepulator_logo.width) * 3 + 0];
-                context->frame_buffer [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].g =
+                context->frame_buffer.active_area [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].g =
                     brightness * snepulator_logo.pixel_data [(x + y * snepulator_logo.width) * 3 + 1];
-                context->frame_buffer [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].b =
+                context->frame_buffer.active_area [(x + x_offset) + (y + y_offset) * VIDEO_BUFFER_WIDTH].b =
                     brightness * snepulator_logo.pixel_data [(x + y * snepulator_logo.width) * 3 + 2];
             }
         }
 
-        snepulator_frame_done (context->frame_buffer);
+        snepulator_frame_done (&context->frame_buffer);
         context->frame++;
     }
 }
@@ -86,8 +87,8 @@ Logo_Context *logo_init (void)
     }
 
     /* Video parameters */
-    state.video_start_x = VIDEO_SIDE_BORDER;
-    state.video_start_y = VIDEO_TOP_BORDER_192;
+    state.video_start_x = 0;
+    state.video_start_y = (VIDEO_BUFFER_LINES - 192) / 2;
     state.video_width   = 256;
     state.video_height  = 192;
 

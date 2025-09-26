@@ -71,7 +71,7 @@ typedef struct SMD_VDP_Context_s {
     uint32_t video_width;
     uint32_t video_height;
 
-    uint_pixel frame_buffer [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
+    Video_Frame frame_buffer;
     void (* frame_done) (void *);
 
 } SMD_VDP_Context;

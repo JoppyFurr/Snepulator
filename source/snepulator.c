@@ -268,7 +268,11 @@ int snepulator_config_import (void)
 void snepulator_clear_video (void)
 {
     pthread_mutex_lock (&state.video_mutex);
-    memset (state.video_ring, 0, sizeof (state.video_ring));
+    for (uint32_t i = 0; i < VIDEO_RING_SIZE; i++)
+    {
+        memset (state.video_ring[i].active_area, 0, sizeof (state.video_ring[i].active_area));
+        memset (state.video_ring[i].backdrop, 0, sizeof (state.video_ring[i].backdrop));
+    }
     state.video_read_index = 0;
     state.video_write_index = 0;
     pthread_mutex_unlock (&state.video_mutex);
@@ -391,7 +395,7 @@ void snepulator_fm_sound_set (bool enable)
  * A buffer is used to avoid skipping frames when
  * the host and emulated console have a similar framerate.
  */
-void snepulator_frame_done (uint_pixel *frame)
+void snepulator_frame_done (Video_Frame *frame)
 {
     /* Queue the frame.
      *  -> If there are already two frames queued, replace the last frame.
@@ -401,7 +405,8 @@ void snepulator_frame_done (uint_pixel *frame)
     {
         state.video_write_index++;
     }
-    memcpy (state.video_ring [state.video_write_index % 3], frame, sizeof (state.video_ring [0]));
+    memcpy (state.video_ring [state.video_write_index % VIDEO_RING_SIZE].active_area, frame->active_area, sizeof (state.video_ring [0].active_area));
+    memcpy (state.video_ring [state.video_write_index % VIDEO_RING_SIZE].backdrop,    frame->backdrop,    sizeof (state.video_ring [0].backdrop));
     pthread_mutex_unlock (&state.video_mutex);
 }
 
@@ -409,9 +414,9 @@ void snepulator_frame_done (uint_pixel *frame)
 /*
  * Get a pointer to the currently displayed frame.
  */
-uint_pixel *snepulator_get_current_frame (void)
+Video_Frame *snepulator_get_current_frame (void)
 {
-    return state.video_ring [state.video_read_index % 3];
+    return &state.video_ring [state.video_read_index % VIDEO_RING_SIZE];
 }
 
 
@@ -419,7 +424,7 @@ uint_pixel *snepulator_get_current_frame (void)
  * Advance the video_read_index and get a pointer
  * to the new frame.
  */
-uint_pixel *snepulator_get_next_frame (void)
+Video_Frame *snepulator_get_next_frame (void)
 {
     pthread_mutex_lock (&state.video_mutex);
     if (state.video_read_index < state.video_write_index)
@@ -428,7 +433,7 @@ uint_pixel *snepulator_get_next_frame (void)
     }
     pthread_mutex_unlock (&state.video_mutex);
 
-    return state.video_ring [state.video_read_index % 3];
+    return &state.video_ring [state.video_read_index % VIDEO_RING_SIZE];
 }
 
 
@@ -515,7 +520,7 @@ void snepulator_override_tms9928a_palette (uint_pixel *palette)
  */
 void snepulator_pause_animate (void)
 {
-    uint_pixel frame_buffer [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
+    Video_Frame frame_buffer;
 
     /* Each letter overlaps by one pixel */
     uint32_t x_base = VIDEO_BUFFER_WIDTH / 2 - (snepulator_paused.width - 5) / 2;
@@ -523,7 +528,8 @@ void snepulator_pause_animate (void)
     const uint32_t letter_position [7] = {  0, 23, 46, 69,  92, 115, 138 };
 
     /* Draw over a greyscale copy of the last-drawn frame */
-    memcpy (frame_buffer, state.video_pause_data, sizeof (state.video_ring [0]));
+    memcpy (frame_buffer.active_area, state.video_pause_data.active_area, sizeof (frame_buffer.active_area));
+    memcpy (frame_buffer.backdrop, state.video_pause_data.backdrop, sizeof (frame_buffer.backdrop));
 
     uint32_t frame_time = util_get_ticks ();
     for (uint32_t letter = 0; letter < 6; letter++)
@@ -543,17 +549,17 @@ void snepulator_pause_animate (void)
                     continue;
                 }
 
-                frame_buffer [(x + x_base - letter) + (uint32_t) (y + y_base + y_offset) * VIDEO_BUFFER_WIDTH].r =
+                frame_buffer.active_area [(x + x_base - letter) + (uint32_t) (y + y_base + y_offset) * VIDEO_BUFFER_WIDTH].r =
                     snepulator_paused.pixel_data [(x + y * snepulator_paused.width) * 3 + 0];
-                frame_buffer [(x + x_base - letter) + (uint32_t) (y + y_base + y_offset) * VIDEO_BUFFER_WIDTH].g =
+                frame_buffer.active_area [(x + x_base - letter) + (uint32_t) (y + y_base + y_offset) * VIDEO_BUFFER_WIDTH].g =
                     snepulator_paused.pixel_data [(x + y * snepulator_paused.width) * 3 + 1];
-                frame_buffer [(x + x_base - letter) + (uint32_t) (y + y_base + y_offset) * VIDEO_BUFFER_WIDTH].b =
+                frame_buffer.active_area [(x + x_base - letter) + (uint32_t) (y + y_base + y_offset) * VIDEO_BUFFER_WIDTH].b =
                     snepulator_paused.pixel_data [(x + y * snepulator_paused.width) * 3 + 2];
             }
         }
     }
 
-    snepulator_frame_done (frame_buffer);
+    snepulator_frame_done (&frame_buffer);
 }
 
 
@@ -571,15 +577,19 @@ void snepulator_pause_set (bool pause)
 
         /* Because emulation is paused, we don't need to lock.
          * No new frames will come from the emulated console. */
-        uint_pixel *current_frame = snepulator_get_current_frame ();
+        Video_Frame *current_frame = snepulator_get_current_frame ();
 
         /* Convert the screen to black and white, and sore in the pause buffer */
         for (int x = 0; x < (VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES); x++)
         {
-            state.video_pause_data [x] = util_to_greyscale (current_frame [x]);
+            state.video_pause_data.active_area [x] = util_to_greyscale (current_frame->active_area [x]);
+        }
+        for (int x = 0; x < (VIDEO_BUFFER_LINES); x++)
+        {
+            state.video_pause_data.backdrop [x] = util_to_greyscale (current_frame->backdrop [x]);
         }
 
-        snepulator_frame_done (state.video_pause_data);
+        snepulator_frame_done (&state.video_pause_data);
     }
 
     /* Un-pause */
@@ -686,8 +696,8 @@ void snepulator_reset (void)
     snepulator_clear_video ();
 
     /* Clear additional video parameters */
-    state.video_start_x = VIDEO_SIDE_BORDER;
-    state.video_start_y = VIDEO_TOP_BORDER_192;
+    state.video_start_x = 0;
+    state.video_start_y = (VIDEO_BUFFER_LINES - 192) / 2;
     state.video_width = 256;
     state.video_height = 192;
 

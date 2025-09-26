@@ -91,7 +91,7 @@ static void draw_rect (VGM_Player_Context *context,
     {
         for (uint32_t x = start_x; x < end_x; x++)
         {
-            context->frame_buffer [x + y * VIDEO_BUFFER_WIDTH] = colour;
+            context->frame_buffer.active_area [x + y * VIDEO_BUFFER_WIDTH] = colour;
         }
     }
 }
@@ -198,10 +198,10 @@ static void vgm_player_draw_frame (VGM_Player_Context *context)
     draw_rect (context, 32 + progress, 176, 8, 1, light_grey);
 
     /* Pass the completed frame on for rendering */
-    snepulator_frame_done (context->frame_buffer);
+    snepulator_frame_done (&context->frame_buffer);
 
     /* Clear the buffer for the next frame. */
-    memset (context->frame_buffer, 0, sizeof (context->frame_buffer));
+    memset (context->frame_buffer.active_area, 0, sizeof (context->frame_buffer.active_area));
 }
 
 
@@ -400,7 +400,7 @@ VGM_Player_Context *vgm_player_init (void)
     context->ym2413_context = ym2413_context;
 
     /* Initial video parameters */
-    state.video_start_x = VIDEO_SIDE_BORDER;
+    state.video_start_x = 0;
     state.video_start_y = (VIDEO_BUFFER_LINES - 192) / 2;
     state.video_width   = 256;
     state.video_height  = 192;

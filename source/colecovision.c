@@ -105,7 +105,7 @@ static void colecovision_frame_done (void *context_ptr)
     ColecoVision_Context *context = (ColecoVision_Context *) context_ptr;
     TMS9928A_Context *vdp_context = context->vdp_context;
 
-    snepulator_frame_done (vdp_context->frame_buffer);
+    snepulator_frame_done (&vdp_context->frame_buffer);
 
     /* TODO: Make these parameters */
     state.video_start_x = vdp_context->video_start_x;
@@ -172,7 +172,7 @@ ColecoVision_Context *colecovision_init (void)
 
     /* Initialise VDP */
     vdp_context = tms9928a_init (context, colecovision_frame_done);
-    vdp_context->render_start_x      = VIDEO_SIDE_BORDER;
+    vdp_context->render_start_x      = 0;
     vdp_context->render_start_y      = (VIDEO_BUFFER_LINES - 192) / 2;
     vdp_context->video_start_x       = vdp_context->render_start_x;
     vdp_context->video_start_y       = vdp_context->render_start_y;

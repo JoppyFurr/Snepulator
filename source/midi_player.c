@@ -477,7 +477,7 @@ static void draw_rect (MIDI_Player_Context *context,
     {
         for (uint32_t x = start_x; x < end_x; x++)
         {
-            context->frame_buffer [x + y * VIDEO_BUFFER_WIDTH] = colour;
+            context->frame_buffer.active_area [x + y * VIDEO_BUFFER_WIDTH] = colour;
         }
     }
 }
@@ -570,10 +570,11 @@ static void midi_player_draw_frame (MIDI_Player_Context *context)
     draw_rect (context, 32 + progress, 216, 8, 1, light_grey);
 
     /* Pass the completed frame on for rendering */
-    snepulator_frame_done (context->frame_buffer);
+    snepulator_frame_done (&context->frame_buffer);
 
     /* Clear the buffer for the next frame. */
-    memset (context->frame_buffer, 0, sizeof (context->frame_buffer));
+    memset (context->frame_buffer.active_area, 0, sizeof (context->frame_buffer.active_area));
+    memset (context->frame_buffer.backdrop, 0, sizeof (context->frame_buffer.backdrop));
 }
 
 
@@ -1368,7 +1369,7 @@ MIDI_Player_Context *midi_player_init (void)
     }
 
     /* Initial video parameters */
-    state.video_start_x = VIDEO_SIDE_BORDER;
+    state.video_start_x = 0;
     state.video_start_y = (VIDEO_BUFFER_LINES - 224) / 2;
     state.video_width   = 256;
     state.video_height  = 224;

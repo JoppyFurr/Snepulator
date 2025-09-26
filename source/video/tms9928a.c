@@ -250,7 +250,7 @@ static void tms9928a_draw_pattern_background (TMS9928A_Context *context, uint16_
         }
 
         uint_pixel pixel = context->palette [colour_index];
-        context->frame_buffer [(offset.x + x + VIDEO_SIDE_BORDER) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = pixel;
+        context->frame_buffer.active_area [(offset.x + x) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = pixel;
     }
 }
 
@@ -290,7 +290,7 @@ static void tms9928a_draw_pattern_sprite (TMS9928A_Context *context, uint16_t li
         context->state.collision_buffer [x + position.x] = true;
 
         uint_pixel pixel = context->palette [colour_index];
-        context->frame_buffer [(position.x + x + VIDEO_SIDE_BORDER) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = pixel;
+        context->frame_buffer.active_area [(position.x + x) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = pixel;
     }
 }
 
@@ -505,20 +505,20 @@ void tms9928a_mode3_draw_background (TMS9928A_Context *context, uint16_t line)
             colour_left = context->state.regs.background_colour & 0x0f;
         }
         uint_pixel pixel_left = context->palette [colour_left];
-        context->frame_buffer [(8 * tile_x + 0 + VIDEO_SIDE_BORDER) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = pixel_left;
-        context->frame_buffer [(8 * tile_x + 1 + VIDEO_SIDE_BORDER) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = pixel_left;
-        context->frame_buffer [(8 * tile_x + 2 + VIDEO_SIDE_BORDER) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = pixel_left;
-        context->frame_buffer [(8 * tile_x + 3 + VIDEO_SIDE_BORDER) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = pixel_left;
+        context->frame_buffer.active_area [(8 * tile_x + 0) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = pixel_left;
+        context->frame_buffer.active_area [(8 * tile_x + 1) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = pixel_left;
+        context->frame_buffer.active_area [(8 * tile_x + 2) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = pixel_left;
+        context->frame_buffer.active_area [(8 * tile_x + 3) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = pixel_left;
 
         if (colour_right == TMS9928A_COLOUR_TRANSPARENT)
         {
             colour_right = context->state.regs.background_colour & 0x0f;
         }
         uint_pixel pixel_right = context->palette [colour_right];
-        context->frame_buffer [(8 * tile_x + 4 + VIDEO_SIDE_BORDER) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = pixel_right;
-        context->frame_buffer [(8 * tile_x + 5 + VIDEO_SIDE_BORDER) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = pixel_right;
-        context->frame_buffer [(8 * tile_x + 6 + VIDEO_SIDE_BORDER) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = pixel_right;
-        context->frame_buffer [(8 * tile_x + 7 + VIDEO_SIDE_BORDER) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = pixel_right;
+        context->frame_buffer.active_area [(8 * tile_x + 4) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = pixel_right;
+        context->frame_buffer.active_area [(8 * tile_x + 5) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = pixel_right;
+        context->frame_buffer.active_area [(8 * tile_x + 6) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = pixel_right;
+        context->frame_buffer.active_area [(8 * tile_x + 7) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = pixel_right;
     }
 }
 
@@ -547,18 +547,7 @@ void tms9928a_render_line (TMS9928A_Context *context, uint16_t line)
     video_backdrop = context->palette [context->state.regs.background_colour & 0x0f];
 
     /* Note: The top/bottom borders use the background colour of the first and last active lines. */
-
-    /* Top border */
-    if (line == 0)
-    {
-        for (uint32_t border_line = 0; border_line < context->render_start_y; border_line++)
-        {
-            for (uint32_t x = 0; x < VIDEO_BUFFER_WIDTH; x++)
-            {
-                context->frame_buffer [x + border_line * VIDEO_BUFFER_WIDTH] = video_backdrop;
-            }
-        }
-    }
+    context->frame_buffer.backdrop [context->video_start_y + line] = video_backdrop;
 
     /* If blanking is enabled, fill the whole screen with the backdrop colour.
      * Otherwise, fill only the border. */
@@ -566,33 +555,10 @@ void tms9928a_render_line (TMS9928A_Context *context, uint16_t line)
     {
         for (int x = 0; x < VIDEO_BUFFER_WIDTH; x++)
         {
-            context->frame_buffer [x + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = video_backdrop;
+            context->frame_buffer.active_area [x + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = video_backdrop;
         }
-    }
-    else
-    {
-        for (int x = 0; x < VIDEO_SIDE_BORDER; x++)
-        {
-            context->frame_buffer [x + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = video_backdrop;
-            context->frame_buffer [x + (VIDEO_BUFFER_WIDTH - VIDEO_SIDE_BORDER) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = video_backdrop;
-        }
-    }
 
-    /* Bottom border */
-    if (line == context->lines_active - 1)
-    {
-        for (uint32_t border_line = context->render_start_y + context->lines_active; border_line < VIDEO_BUFFER_LINES; border_line++)
-        {
-            for (uint32_t x = 0; x < VIDEO_BUFFER_WIDTH; x++)
-            {
-                context->frame_buffer [x + border_line * VIDEO_BUFFER_WIDTH] = video_backdrop;
-            }
-        }
-    }
-
-    /* Return without rendering patterns if BLANK is enabled */
-    if (!context->state.regs.ctrl_1_blank && !context->disable_blanking)
-    {
+        /* Return without rendering patterns if BLANK is enabled */
         return;
     }
 
@@ -713,8 +679,8 @@ TMS9928A_Context *tms9928a_init (void *parent, void (* frame_done) (void *))
     context->parent = parent;
     context->frame_done = frame_done;
 
-    context->video_start_x = VIDEO_SIDE_BORDER;
-    context->video_start_y = VIDEO_TOP_BORDER_192;
+    context->video_start_x = 0;
+    context->video_start_y = (VIDEO_BUFFER_LINES - 192) / 2;
     context->video_width = 256;
     context->video_height = 192;
     context->palette = tms9928a_palette;

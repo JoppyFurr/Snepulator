@@ -43,7 +43,8 @@ Snepulator_State state;
 bool config_capture_events = false;
 SDL_Window *window = NULL;
 SDL_GLContext glcontext = NULL;
-GLuint video_out_texture = 0;
+GLuint active_area_texture = 0;
+GLuint backdrop_texture = 0;
 ImFont *font;
 
 /* Modal windows */
@@ -211,9 +212,9 @@ void toggle_fullscreen (void)
  */
 int main_loop (void)
 {
-    /* Create the video-out texture, initialise with an empty image */
-    glGenTextures (1, &video_out_texture);
-    glBindTexture (GL_TEXTURE_2D, video_out_texture);
+    /* Create the active_area texture, initialise with an empty image */
+    glGenTextures (1, &active_area_texture);
+    glBindTexture (GL_TEXTURE_2D, active_area_texture);
     glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -221,6 +222,23 @@ int main_loop (void)
     glTexImage2D (GL_TEXTURE_2D, 0, GL_RGB,
                   VIDEO_BUFFER_WIDTH, VIDEO_BUFFER_LINES,
                   0, GL_RGB, GL_FLOAT, NULL);
+
+    /* Create the backdrop texture,
+     * Each pixel in the backdrop texture represents a line of backdrop colour.
+     * GL_TEXTURE_1D was initially tried, but did not appear to work, so a
+     * one-line texture is used instead. */
+    glGenTextures (1, &backdrop_texture);
+    glBindTexture (GL_TEXTURE_2D, backdrop_texture);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexImage2D (GL_TEXTURE_2D, 0, GL_RGB, VIDEO_BUFFER_LINES, 1, 0, GL_RGB, GL_FLOAT, NULL);
+
+    /* TODO: Should the above be simplified or moved? The shader is not yet loaded and the
+     *       two textures are each assigned to different texture units, so the initial black
+     *       texture may not be applied correctly. The shader itself implements its own clamping
+     *       and uses texelFetch, so setting GL_NEAREST and GL_CLAMP_TO_EDGE may be redundant. */
 
     /* Set up the GLSL shaders */
     snepulator_clear_video ();
@@ -285,7 +303,7 @@ int main_loop (void)
             if (event.type == SDL_MOUSEMOTION && state.video_scale >= 1)
             {
                 int32_t cursor_x = (event.motion.x - (state.host_width  / 2 - (VIDEO_BUFFER_WIDTH * state.video_scale * state.video_par) / 2))
-                                   / (state.video_scale * state.video_par) - VIDEO_SIDE_BORDER;
+                                   / (state.video_scale * state.video_par);
                 int32_t cursor_y = (event.motion.y - (state.host_height / 2 - (VIDEO_BUFFER_LINES * state.video_scale) / 2))
                                    / state.video_scale - state.video_start_y;
 
@@ -411,7 +429,8 @@ int main_loop (void)
 #endif
     }
 
-    glDeleteTextures (1, &video_out_texture);
+    glDeleteTextures (1, &active_area_texture);
+    glDeleteTextures (1, &backdrop_texture);
 
     return 0;
 }
@@ -542,7 +561,7 @@ int main (int argc, char **argv)
     /* TODO: Make dialogues fit (full-screen?) */
     /* TODO: Check if we're running on a small-screened device and use a lower window size */
     window = SDL_CreateWindow ("Snepulator", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-                               VIDEO_BUFFER_WIDTH * 3 * state.video_par, VIDEO_BUFFER_LINES * 3,
+                               (VIDEO_BUFFER_WIDTH  + 16) * 3 * state.video_par, VIDEO_BUFFER_LINES * 3,
                                SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL);
     if (window == NULL)
     {

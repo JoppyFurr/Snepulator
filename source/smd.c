@@ -47,11 +47,11 @@ static void smd_frame_done (void *context_ptr)
     SMD_Context *context = (SMD_Context *) context_ptr;
     SMD_VDP_Context *vdp_context = context->vdp_context;
 
-    snepulator_frame_done (vdp_context->frame_buffer);
+    snepulator_frame_done (&vdp_context->frame_buffer);
 
     /* TODO: Have these as a parameter for snepulator_frame_done?,
      *       or, remove start_x / start_y and only have a width / height. */
-    state.video_start_x     = VIDEO_SIDE_BORDER;
+    state.video_start_x     = 0;
     state.video_start_y     = (VIDEO_BUFFER_LINES - 224) / 2;
     state.video_width       = vdp_context->video_width;
     state.video_height      = vdp_context->video_height;

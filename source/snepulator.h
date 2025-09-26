@@ -11,11 +11,9 @@
 #include "snepulator_compat.h"
 #include "snepulator_types.h"
 
-#define VIDEO_SIDE_BORDER 8
-#define VIDEO_BUFFER_WIDTH (256 + 2 * VIDEO_SIDE_BORDER)
-
+#define VIDEO_BUFFER_WIDTH 256
 #define VIDEO_BUFFER_LINES 240
-#define VIDEO_TOP_BORDER_192 ((VIDEO_BUFFER_LINES - 192) / 2)
+#define VIDEO_RING_SIZE 3
 
 #define AUDIO_SAMPLE_RATE 48000
 
@@ -79,6 +77,11 @@ typedef enum Video_3D_Mode_e {
     VIDEO_3D_LEFT_ONLY,
     VIDEO_3D_RIGHT_ONLY
 } Video_3D_Mode;
+
+typedef struct Video_Frame_s {
+    uint_pixel active_area [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
+    uint_pixel backdrop [VIDEO_BUFFER_LINES];
+} Video_Frame;
 
 
 typedef struct Snepulator_State_s {
@@ -158,7 +161,7 @@ typedef struct Snepulator_State_s {
      *       to be written.
      *       This should change to match the audio rings when we start
      *       passing pointers instead of copying buffers. */
-    uint_pixel  video_ring [3] [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
+    Video_Frame video_ring [VIDEO_RING_SIZE];
     uint32_t    video_read_index;
     uint32_t    video_write_index;
     uint32_t    video_start_x;              /* Start of active area. */
@@ -171,7 +174,7 @@ typedef struct Snepulator_State_s {
     bool        cursor_in_gui;              /* Cursor is interacting with the GUI. */
 
     /* Host video output */
-    uint_pixel  video_pause_data [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
+    Video_Frame video_pause_data;
     int         host_width;
     int         host_height;
     Shader      shader;
@@ -214,13 +217,13 @@ void snepulator_disable_blanking_set (bool disable_blanking);
 void snepulator_fm_sound_set (bool enable);
 
 /* Send a completed frame for display. */
-void snepulator_frame_done (uint_pixel *frame);
+void snepulator_frame_done (Video_Frame *frame);
 
 /* Get a pointer to the currently displayed frame. */
-uint_pixel *snepulator_get_current_frame (void);
+Video_Frame *snepulator_get_current_frame (void);
 
 /* Get a pointer to the currently displayed frame. */
-uint_pixel *snepulator_get_next_frame (void);
+Video_Frame *snepulator_get_next_frame (void);
 
 /* Enable integer scaling. */
 void snepulator_integer_scaling_set (bool integer_scaling);

@@ -224,7 +224,7 @@ static void sms_frame_done (void *context_ptr)
                 {
                     continue;
                 }
-                vdp_context->frame_buffer [x + y * VIDEO_BUFFER_WIDTH] = (uint_pixel) { .r = 0, .g = 0, .b = 0 };
+                vdp_context->frame_buffer.active_area [x + y * VIDEO_BUFFER_WIDTH] = (uint_pixel) { .r = 0, .g = 0, .b = 0 };
             }
         }
     }
@@ -232,11 +232,11 @@ static void sms_frame_done (void *context_ptr)
     if (context->video_3d_field != SMS_3D_FIELD_NONE)
     {
         sms_process_3d_field (context);
-        snepulator_frame_done (context->frame_buffer_3d);
+        snepulator_frame_done (&context->frame_buffer_3d);
     }
     else
     {
-        snepulator_frame_done (vdp_context->frame_buffer);
+        snepulator_frame_done (&vdp_context->frame_buffer);
     }
 
     /* TODO: Have these as a parameter for snepulator_frame_done? */
@@ -313,7 +313,7 @@ SMS_Context *sms_init (void)
 
     /* Initialise VDP */
     vdp_context = sms_vdp_init (context, sms_frame_done, state.console);
-    vdp_context->render_start_x = VIDEO_SIDE_BORDER;
+    vdp_context->render_start_x = 0;
     vdp_context->render_start_y = (VIDEO_BUFFER_LINES - 192) / 2;
     vdp_context->video_start_x  = vdp_context->render_start_x;
     vdp_context->video_start_y  = vdp_context->render_start_y;
@@ -1211,25 +1211,25 @@ static void sms_process_3d_field (SMS_Context *context)
 
     for (uint32_t i = 0; i < (VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES); i++)
     {
-        pixel = util_colour_saturation (vdp_context->frame_buffer [i], state.video_3d_saturation);
+        pixel = util_colour_saturation (vdp_context->frame_buffer.active_area [i], state.video_3d_saturation);
 
         if (update_red)
         {
-            context->frame_buffer_3d [i].r = pixel.r;
+            context->frame_buffer_3d.active_area [i].r = pixel.r;
         }
         if (update_green)
         {
-            context->frame_buffer_3d [i].g = pixel.g;
+            context->frame_buffer_3d.active_area [i].g = pixel.g;
         }
         if (update_blue)
         {
-            context->frame_buffer_3d [i].b = pixel.b;
+            context->frame_buffer_3d.active_area [i].b = pixel.b;
         }
 
         /* Special case where blue is not used */
         if (state.video_3d_mode == VIDEO_3D_RED_GREEN)
         {
-            context->frame_buffer_3d [i].b = 0.0;
+            context->frame_buffer_3d.active_area [i].b = 0.0;
         }
     }
 }
