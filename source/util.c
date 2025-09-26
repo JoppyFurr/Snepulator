@@ -404,14 +404,16 @@ void util_take_screenshot (void)
 
     /* Fill the newly allocated buffer */
     pthread_mutex_lock (&state.video_mutex);
-    uint_pixel *frame_buffer = snepulator_get_current_frame ();
+    Video_Frame *frame = snepulator_get_current_frame ();
     for (uint32_t y = 0; y < ihdr.height; y++)
     {
         for (uint32_t x = 0; x < ihdr.width; x++)
         {
-            buffer [(x + y * ihdr.width) * 3 + 0] = frame_buffer [start_x + x + (start_y + y) * stride].r;
-            buffer [(x + y * ihdr.width) * 3 + 1] = frame_buffer [start_x + x + (start_y + y) * stride].g;
-            buffer [(x + y * ihdr.width) * 3 + 2] = frame_buffer [start_x + x + (start_y + y) * stride].b;
+            /* TODO: If all consoles (including Game Gear) only render
+             *       the active-area, then start_x / start_y can be removed. */
+            buffer [(x + y * ihdr.width) * 3 + 0] = frame->active_area [start_x + x + (start_y + y) * stride].r;
+            buffer [(x + y * ihdr.width) * 3 + 1] = frame->active_area [start_x + x + (start_y + y) * stride].g;
+            buffer [(x + y * ihdr.width) * 3 + 2] = frame->active_area [start_x + x + (start_y + y) * stride].b;
         }
     }
     pthread_mutex_unlock (&state.video_mutex);

@@ -53,7 +53,8 @@ static const char *fragment_shader_source [SHADER_COUNT] =
 };
 
 extern Snepulator_State state;
-extern GLuint video_out_texture;
+extern GLuint active_area_texture;
+extern GLuint backdrop_texture;
 GLuint shader_programs [SHADER_COUNT] = { };
 GLuint vertex_array = 0;
 
@@ -157,11 +158,29 @@ void snepulator_shader_callback (const ImDrawList *parent_list, const ImDrawCmd 
 
     glUseProgram (shader_program);
 
-    /* Copy the most recent frame into video_out_texture */
-    glBindTexture (GL_TEXTURE_2D, video_out_texture);
-    glTexImage2D (GL_TEXTURE_2D, 0, GL_RGB,
-                  VIDEO_BUFFER_WIDTH, VIDEO_BUFFER_LINES,
-                  0, GL_RGB, GL_UNSIGNED_BYTE, snepulator_get_next_frame ());
+    /* Set texture units. Note that unit 0 is taken by Dear ImGui. */
+    location = glGetUniformLocation (shader_program, "active_area");
+    if (location != -1)
+    {
+        glUniform1i (location, 1);
+    }
+
+    location = glGetUniformLocation (shader_program, "backdrop");
+    if (location != -1)
+    {
+        glUniform1i (location, 2);
+    }
+
+    /* Copy the most recent frame into the textures */
+    Video_Frame *frame = snepulator_get_next_frame ();
+
+    glActiveTexture (GL_TEXTURE1);
+    glBindTexture (GL_TEXTURE_2D, active_area_texture);
+    glTexImage2D (GL_TEXTURE_2D, 0, GL_RGB, VIDEO_BUFFER_WIDTH, VIDEO_BUFFER_LINES, 0, GL_RGB, GL_UNSIGNED_BYTE, frame->active_area);
+
+    glActiveTexture (GL_TEXTURE2);
+    glBindTexture (GL_TEXTURE_2D, backdrop_texture);
+    glTexImage2D (GL_TEXTURE_2D, 0, GL_RGB, VIDEO_BUFFER_LINES, 1, 0, GL_RGB, GL_UNSIGNED_BYTE, frame->backdrop);
 
     /* Set the uniforms */
     location = glGetUniformLocation (shader_program, "video_resolution");

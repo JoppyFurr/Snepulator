@@ -68,7 +68,7 @@ typedef struct SMS_Context_s {
 
     /* 3D Support */
     SMS_3D_Field video_3d_field;
-    uint_pixel frame_buffer_3d [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
+    Video_Frame frame_buffer_3d;
 
     /* Settings */
     Video_Format format;

@@ -2,10 +2,11 @@ R"(#version 330 core
 
 layout (origin_upper_left, pixel_center_integer) in vec4 gl_FragCoord;
 
-const vec2 buffer_size = vec2 (272, 240);
+const vec2 buffer_size = vec2 (256, 240);
 const vec4 black = vec4 (0.0, 0.0, 0.0, 1.0);
 
-uniform sampler2D video_out;
+uniform sampler2D active_area;
+uniform sampler2D backdrop;
 uniform ivec2 video_resolution;
 uniform ivec2 video_start;
 uniform vec2 output_resolution;
@@ -31,13 +32,11 @@ vec4 get_pixel (vec2 position)
 
     position /= floor (scale);
 
-    position = clamp (position, ivec2 (0, 0), buffer_size - 1);
-
     /* Active area */
     if (position.x >= video_start.x && position.x < (video_start.x + video_resolution.x) &&
         position.y >= video_start.y && position.y < (video_start.y + video_resolution.y))
     {
-        return texelFetch (video_out, ivec2 (position), 0);
+        return texelFetch (active_area, ivec2 (position), 0);
     }
 
     return black;

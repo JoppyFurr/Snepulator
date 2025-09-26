@@ -28,7 +28,7 @@ typedef struct VGM_Player_Context_s {
 
     /* Visualisation */
     uint32_t frame_sample_counter; /* Time for updating the visualisation */
-    uint_pixel frame_buffer [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
+    Video_Frame frame_buffer;
 
 } VGM_Player_Context;
 

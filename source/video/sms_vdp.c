@@ -422,7 +422,7 @@ static void sms_vdp_mode4_draw_pattern_background (TMS9928A_Context *context, ui
 
         uint_pixel pixel = context->state.cram [palette + colour_index];
 
-        context->frame_buffer [(position.x + x + VIDEO_SIDE_BORDER) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = pixel;
+        context->frame_buffer.active_area [(position.x + x) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = pixel;
     }
 }
 
@@ -552,7 +552,7 @@ static void sms_vdp_mode4_draw_pattern_sprite (TMS9928A_Context *context, uint16
 
         uint_pixel pixel = context->state.cram [SMS_VDP_PALETTE_SPRITE + colour_index];
 
-        context->frame_buffer [(position.x + x + VIDEO_SIDE_BORDER) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = pixel;
+        context->frame_buffer.active_area [(position.x + x) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = pixel;
     }
 }
 
@@ -707,54 +707,19 @@ static void sms_vdp_render_line (TMS9928A_Context *context, uint16_t line)
 
     /* Note: For now the top/bottom borders just copy the background from the first
      *       and last active lines. Do any games change the value outside of this? */
+    context->frame_buffer.backdrop [context->video_start_y + line] = video_backdrop;
 
-    /* Top border */
-    if (line == 0)
-    {
-        for (uint32_t border_line = 0; border_line < context->render_start_y; border_line++)
-        {
-            for (uint32_t x = 0; x < VIDEO_BUFFER_WIDTH; x++)
-            {
-                context->frame_buffer [x + border_line * VIDEO_BUFFER_WIDTH] = video_backdrop;
-            }
-        }
-    }
 
-    /* If blanking is enabled, fill the whole screen with the backdrop colour.
-     * Otherwise, fill only the border.
-     * Note, the left border is drawn an extra 8px to account for left column blanking. */
+    /* If blanking is enabled, fill the active area with the backdrop colour. */
     if (!context->state.regs.ctrl_1_blank && !context->disable_blanking)
     {
         for (int x = 0; x < VIDEO_BUFFER_WIDTH; x++)
         {
-            context->frame_buffer [x + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = video_backdrop;
+            context->frame_buffer.active_area [x + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = video_backdrop;
         }
-    }
-    else
-    {
-        for (int x = 0; x < VIDEO_SIDE_BORDER; x++)
-        {
-            context->frame_buffer [x + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = video_backdrop;
-            context->frame_buffer [x + 8 + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = video_backdrop;
-            context->frame_buffer [x + (VIDEO_BUFFER_WIDTH - VIDEO_SIDE_BORDER) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = video_backdrop;
-        }
-    }
 
-    /* Bottom border */
-    if (line == context->lines_active - 1)
-    {
-        for (uint32_t border_line = context->render_start_y + context->lines_active; border_line < VIDEO_BUFFER_LINES; border_line++)
-        {
-            for (uint32_t x = 0; x < VIDEO_BUFFER_WIDTH; x++)
-            {
-                context->frame_buffer [x + border_line * VIDEO_BUFFER_WIDTH] = video_backdrop;
-            }
-        }
-    }
-
-    /* Don't actually render if BLANK is enabled */
-    if (!context->state.regs.ctrl_1_blank && !context->disable_blanking)
-    {
+        /* Don't actually render if BLANK is enabled, only check
+         * the sprite overflow flag. */
         if (context->state.regs.ctrl_0_mode_4)
         {
             sms_vdp_mode4_check_sprite_overflow (context, line);

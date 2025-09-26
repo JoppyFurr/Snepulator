@@ -5,7 +5,7 @@
 typedef struct Logo_Context_s {
 
     uint32_t frame;
-    uint_pixel frame_buffer [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
+    Video_Frame frame_buffer;
 
 } Logo_Context;
 
