@@ -48,13 +48,6 @@ static void smd_frame_done (void *context_ptr)
     SMD_VDP_Context *vdp_context = context->vdp_context;
 
     snepulator_frame_done (&vdp_context->frame_buffer);
-
-    /* TODO: Have these as a parameter for snepulator_frame_done?,
-     *       or, remove start_x / start_y and only have a width / height. */
-    state.video_start_x     = 0;
-    state.video_start_y     = (VIDEO_BUFFER_LINES - 224) / 2;
-    state.video_width       = vdp_context->video_width;
-    state.video_height      = vdp_context->video_height;
 }
 
 
@@ -610,10 +603,6 @@ SMD_Context *smd_init (void)
         context->rom_mask = util_round_up (context->rom_size) - 1;
         util_hash_rom (context->rom, context->rom_size, context->rom_hash);
     }
-
-    /* Initial video parameters */
-    state.video_width   = vdp_context->video_width;
-    state.video_height  = vdp_context->video_height;
 
     /* Hook up callbacks */
     state.audio_callback = smd_audio_callback;

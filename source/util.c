@@ -378,16 +378,6 @@ int32_t util_load_rom (uint8_t **buffer, uint32_t *rom_size, const char *filenam
  */
 void util_take_screenshot (void)
 {
-    uint32_t stride = VIDEO_BUFFER_WIDTH;
-    uint32_t start_x = state.video_start_x;
-    uint32_t start_y = state.video_start_y;
-    struct spng_ihdr ihdr = {
-        .width = state.video_width,
-        .height = state.video_height,
-        .color_type = SPNG_COLOR_TYPE_TRUECOLOR,
-        .bit_depth = 8
-    };
-
     /* Open the output file */
     char *path = path_screenshot ();
     FILE *output_file = fopen (path, "wb");
@@ -398,22 +388,31 @@ void util_take_screenshot (void)
         return;
     }
 
+    /* Get the frame */
+    /* Fill the newly allocated buffer */
+    pthread_mutex_lock (&state.video_mutex);
+    Video_Frame *frame = snepulator_get_current_frame ();
+
+    struct spng_ihdr ihdr = {
+        .width = frame->width,
+        .height = frame->height,
+        .color_type = SPNG_COLOR_TYPE_TRUECOLOR,
+        .bit_depth = 8
+    };
+
     /* Allocate with 24-bits per pixel */
     uint32_t image_size = ihdr.width * ihdr.height * 3;
     uint8_t *buffer = malloc (image_size);
 
-    /* Fill the newly allocated buffer */
-    pthread_mutex_lock (&state.video_mutex);
-    Video_Frame *frame = snepulator_get_current_frame ();
     for (uint32_t y = 0; y < ihdr.height; y++)
     {
         for (uint32_t x = 0; x < ihdr.width; x++)
         {
             /* TODO: If all consoles (including Game Gear) only render
              *       the active-area, then start_x / start_y can be removed. */
-            buffer [(x + y * ihdr.width) * 3 + 0] = frame->active_area [start_x + x + (start_y + y) * stride].r;
-            buffer [(x + y * ihdr.width) * 3 + 1] = frame->active_area [start_x + x + (start_y + y) * stride].g;
-            buffer [(x + y * ihdr.width) * 3 + 2] = frame->active_area [start_x + x + (start_y + y) * stride].b;
+            buffer [(x + y * ihdr.width) * 3 + 0] = frame->active_area [x + y * frame->width].r;
+            buffer [(x + y * ihdr.width) * 3 + 1] = frame->active_area [x + y * frame->width].g;
+            buffer [(x + y * ihdr.width) * 3 + 2] = frame->active_area [x + y * frame->width].b;
         }
     }
     pthread_mutex_unlock (&state.video_mutex);

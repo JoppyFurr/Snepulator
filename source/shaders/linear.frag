@@ -7,9 +7,8 @@ const vec4 black = vec4 (0.0, 0.0, 0.0, 1.0);
 
 uniform sampler2D active_area;
 uniform sampler2D backdrop;
-uniform ivec2 video_resolution;
-uniform ivec2 video_start;
-uniform vec2 output_resolution;
+uniform ivec2 frame_resolution;
+uniform vec2 host_resolution;
 uniform vec2 scale;
 
 out vec4 pixel;
@@ -22,8 +21,8 @@ out vec4 pixel;
 vec4 get_pixel (vec2 position)
 {
     /* Active area */
-    if (position.x >= video_start.x && position.x < (video_start.x + video_resolution.x) &&
-        position.y >= video_start.y && position.y < (video_start.y + video_resolution.y))
+    if (position.x >= 0 && position.x < frame_resolution.x &&
+        position.y >= 0 && position.y < frame_resolution.y)
     {
         return texelFetch (active_area, ivec2 (position), 0);
     }
@@ -31,7 +30,7 @@ vec4 get_pixel (vec2 position)
     /* Backdrop is dimmed to 50% */
     else
     {
-        int line = clamp (int (position.y), video_start.y, video_start.y + video_resolution.y - 1);
+        int line = clamp (int (position.y), 0, frame_resolution.y - 1);
         return mix (black, texelFetch (backdrop, ivec2 (line, 0), 0), 0.5);
     }
 }
@@ -43,7 +42,7 @@ vec4 get_pixel (vec2 position)
 void main()
 {
     /* Calculate the top-left screen-pixel that lands on the video_out texture area. */
-    vec2 start = floor ((output_resolution / 2.0) - (video_resolution * scale / 2.0) - video_start * scale);
+    vec2 start = floor ((host_resolution / 2.0) - (frame_resolution * scale / 2.0));
 
     /* Calculate the location of the current pixel in video_out texture coordinates. */
     vec2 texture_position = (gl_FragCoord.xy - start) / scale;

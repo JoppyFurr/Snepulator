@@ -212,23 +212,6 @@ static void sms_frame_done (void *context_ptr)
     SMS_Context *context = (SMS_Context *) context_ptr;
     TMS9928A_Context *vdp_context = context->vdp_context;
 
-    if (context->console == CONSOLE_GAME_GEAR)
-    {
-        /* Only keep the LCD area */
-        for (uint32_t y = 0; y < VIDEO_BUFFER_LINES; y++)
-        {
-            for (uint32_t x = 0; x < VIDEO_BUFFER_WIDTH; x++)
-            {
-                if ((x >= vdp_context->video_start_x) && (x < vdp_context->video_start_x + vdp_context->video_width) &&
-                    (y >= vdp_context->video_start_y) && (y < vdp_context->video_start_y + vdp_context->video_height))
-                {
-                    continue;
-                }
-                vdp_context->frame_buffer.active_area [x + y * VIDEO_BUFFER_WIDTH] = (uint_pixel) { .r = 0, .g = 0, .b = 0 };
-            }
-        }
-    }
-
     if (context->video_3d_field != SMS_3D_FIELD_NONE)
     {
         sms_process_3d_field (context);
@@ -238,12 +221,6 @@ static void sms_frame_done (void *context_ptr)
     {
         snepulator_frame_done (&vdp_context->frame_buffer);
     }
-
-    /* TODO: Have these as a parameter for snepulator_frame_done? */
-    state.video_start_x     = vdp_context->video_start_x + vdp_context->video_blank_left;
-    state.video_start_y     = vdp_context->video_start_y;
-    state.video_width       = vdp_context->video_width - vdp_context->video_blank_left;
-    state.video_height      = vdp_context->video_height;
 }
 
 
@@ -313,10 +290,6 @@ SMS_Context *sms_init (void)
 
     /* Initialise VDP */
     vdp_context = sms_vdp_init (context, sms_frame_done, state.console);
-    vdp_context->render_start_x = 0;
-    vdp_context->render_start_y = (VIDEO_BUFFER_LINES - 192) / 2;
-    vdp_context->video_start_x  = vdp_context->render_start_x;
-    vdp_context->video_start_y  = vdp_context->render_start_y;
     context->vdp_context = vdp_context;
 
     /* Initialise sound chips */
@@ -457,22 +430,10 @@ SMS_Context *sms_init (void)
     }
     free (sram_path);
 
-    if (state.console == CONSOLE_GAME_GEAR)
-    {
-        vdp_context->video_start_x += 48;
-        vdp_context->video_start_y += 24;
-    }
-
     if (context->rom_hints & SMS_HINT_SMS1_VDP)
     {
         vdp_context->sms1_vdp_hint = true;
     }
-
-    /* Initial video parameters */
-    state.video_start_x = vdp_context->video_start_x;
-    state.video_start_y = vdp_context->video_start_y;
-    state.video_width   = vdp_context->video_width;
-    state.video_height  = vdp_context->video_height;
 
     /* Hook up callbacks */
     state.audio_callback = sms_audio_callback;
@@ -1209,7 +1170,10 @@ static void sms_process_3d_field (SMS_Context *context)
             break;
     }
 
-    for (uint32_t i = 0; i < (VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES); i++)
+    context->frame_buffer_3d.width = vdp_context->frame_buffer.width;
+    context->frame_buffer_3d.height = vdp_context->frame_buffer.height;
+
+    for (uint32_t i = 0; i < (context->frame_buffer_3d.width * context->frame_buffer_3d.height); i++)
     {
         pixel = util_colour_saturation (vdp_context->frame_buffer.active_area [i], state.video_3d_saturation);
 

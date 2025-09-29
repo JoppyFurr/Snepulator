@@ -465,11 +465,9 @@ static void midi_player_cleanup (void *context_ptr)
  * Draw a filled rectangle.
  */
 static void draw_rect (MIDI_Player_Context *context,
-                       uint32_t x, uint32_t y, uint32_t w, uint32_t h,
+                       uint32_t start_x, uint32_t start_y, uint32_t w, uint32_t h,
                        uint_pixel colour)
 {
-    const uint32_t start_x = x + state.video_start_x;
-    const uint32_t start_y = y + state.video_start_y;
     const uint32_t end_x = start_x + w;
     const uint32_t end_y = start_y + h;
 
@@ -477,7 +475,7 @@ static void draw_rect (MIDI_Player_Context *context,
     {
         for (uint32_t x = start_x; x < end_x; x++)
         {
-            context->frame_buffer.active_area [x + y * VIDEO_BUFFER_WIDTH] = colour;
+            context->frame_buffer.active_area [x + y * context->frame_buffer.width] = colour;
         }
     }
 }
@@ -488,12 +486,15 @@ static void draw_rect (MIDI_Player_Context *context,
  */
 static void midi_player_draw_frame (MIDI_Player_Context *context)
 {
+    context->frame_buffer.width = 256;
+    context->frame_buffer.height = 224;
+
     /* Horizontal layout of the bars */
     /* MIDI playback uses ym2413 rhythm mode, so 11 bars per chip. */
     uint32_t bar_width = 12;
     uint32_t bar_gap = 8;
     uint32_t bar_area_width = bar_width * 11 + bar_gap * (11 - 1);
-    uint32_t first_bar = (state.video_width - bar_area_width) / 2;
+    uint32_t first_bar = (context->frame_buffer.width - bar_area_width) / 2;
 
     for (uint32_t i = 0; i < MIDI_YM2413_COUNT; i++)
     {
@@ -1367,12 +1368,6 @@ MIDI_Player_Context *midi_player_init (void)
             midi_synth_queue_put (context, (chip << 5) | SYNTH_ID_RHYTHM_BIT | instrument);
         }
     }
-
-    /* Initial video parameters */
-    state.video_start_x = 0;
-    state.video_start_y = (VIDEO_BUFFER_LINES - 224) / 2;
-    state.video_width   = 256;
-    state.video_height  = 224;
 
     /* Hook up callbacks */
     state.audio_callback = midi_player_audio_callback;

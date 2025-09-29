@@ -106,12 +106,6 @@ static void colecovision_frame_done (void *context_ptr)
     TMS9928A_Context *vdp_context = context->vdp_context;
 
     snepulator_frame_done (&vdp_context->frame_buffer);
-
-    /* TODO: Make these parameters */
-    state.video_start_x = vdp_context->video_start_x;
-    state.video_start_y = vdp_context->video_start_y;
-    state.video_width   = vdp_context->video_width;
-    state.video_height  = vdp_context->video_height;
 }
 
 
@@ -172,10 +166,6 @@ ColecoVision_Context *colecovision_init (void)
 
     /* Initialise VDP */
     vdp_context = tms9928a_init (context, colecovision_frame_done);
-    vdp_context->render_start_x      = 0;
-    vdp_context->render_start_y      = (VIDEO_BUFFER_LINES - 192) / 2;
-    vdp_context->video_start_x       = vdp_context->render_start_x;
-    vdp_context->video_start_y       = vdp_context->render_start_y;
     context->vdp_context = vdp_context;
 
     /* Initialise PSG */
@@ -215,12 +205,6 @@ ColecoVision_Context *colecovision_init (void)
         context->rom_mask = util_round_up (context->rom_size) - 1;
         util_hash_rom (context->rom, context->rom_size, context->rom_hash);
     }
-
-    /* Initial video parameters */
-    state.video_start_x    = vdp_context->video_start_x;
-    state.video_start_y    = vdp_context->video_start_y;
-    state.video_width      = vdp_context->video_width;
-    state.video_height     = vdp_context->video_height;
 
     /* Hook up the callbacks */
     state.audio_callback = colecovision_audio_callback;

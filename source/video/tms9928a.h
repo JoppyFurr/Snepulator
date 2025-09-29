@@ -152,6 +152,7 @@ typedef struct TMS9928A_Context_s {
 
     void *parent;
     TMS9928A_State state;
+    uint8_t vram [TMS9928A_VRAM_SIZE];
     Video_Format format;
     bool is_game_gear;
     bool sms1_vdp_hint;
@@ -167,17 +168,9 @@ typedef struct TMS9928A_Context_s {
     SMS_VDP_V_Counter_Range v_counter_map [3]; /* SMS VDP v-counter mapping */
 
     /* Video output */
-    uint8_t vram [TMS9928A_VRAM_SIZE];
-    uint32_t render_start_x;
-    uint32_t render_start_y;
-    uint32_t video_start_x;
-    uint32_t video_start_y;
-    uint32_t video_width;
-    uint32_t video_height;
-    uint32_t video_blank_left;
-    uint_pixel *palette;
-
     Video_Frame frame_buffer;
+    uint_pixel *palette;
+    int32_Point_2D crop_start; /* Game Gear mode behaves like a cropped Master System. */
     void (* frame_done) (void *);
 
 } TMS9928A_Context;
