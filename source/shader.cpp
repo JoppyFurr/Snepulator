@@ -172,30 +172,24 @@ void snepulator_shader_callback (const ImDrawList *parent_list, const ImDrawCmd 
     }
 
     /* Copy the most recent frame into the textures */
-    Video_Frame *frame = snepulator_get_next_frame ();
+    Video_Frame *frame = snepulator_get_current_frame ();
 
     glActiveTexture (GL_TEXTURE1);
     glBindTexture (GL_TEXTURE_2D, active_area_texture);
-    glTexImage2D (GL_TEXTURE_2D, 0, GL_RGB, VIDEO_BUFFER_WIDTH, VIDEO_BUFFER_LINES, 0, GL_RGB, GL_UNSIGNED_BYTE, frame->active_area);
+    glTexImage2D (GL_TEXTURE_2D, 0, GL_RGB, frame->width, frame->height, 0, GL_RGB, GL_UNSIGNED_BYTE, frame->active_area);
 
     glActiveTexture (GL_TEXTURE2);
     glBindTexture (GL_TEXTURE_2D, backdrop_texture);
-    glTexImage2D (GL_TEXTURE_2D, 0, GL_RGB, VIDEO_BUFFER_LINES, 1, 0, GL_RGB, GL_UNSIGNED_BYTE, frame->backdrop);
+    glTexImage2D (GL_TEXTURE_2D, 0, GL_RGB, frame->height, 1, 0, GL_RGB, GL_UNSIGNED_BYTE, frame->backdrop);
 
     /* Set the uniforms */
-    location = glGetUniformLocation (shader_program, "video_resolution");
+    location = glGetUniformLocation (shader_program, "frame_resolution");
     if (location != -1)
     {
-        glUniform2i (location, state.video_width, state.video_height);
+        glUniform2i (location, frame->width, frame->height);
     }
 
-    location = glGetUniformLocation (shader_program, "video_start");
-    if (location != -1)
-    {
-        glUniform2i (location, state.video_start_x, state.video_start_y);
-    }
-
-    location = glGetUniformLocation (shader_program, "output_resolution");
+    location = glGetUniformLocation (shader_program, "host_resolution");
     if (location != -1)
     {
         glUniform2f (location, state.host_width, state.host_height);

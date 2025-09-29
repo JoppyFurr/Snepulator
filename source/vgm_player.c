@@ -77,13 +77,12 @@ static void vgm_player_cleanup (void *context_ptr)
 
 /*
  * Draw a filled rectangle.
+ * TODO: Common implementation that takes a Frame_Buffer.
  */
 static void draw_rect (VGM_Player_Context *context,
-                       uint32_t x, uint32_t y, uint32_t w, uint32_t h,
+                       uint32_t start_x, uint32_t start_y, uint32_t w, uint32_t h,
                        uint_pixel colour)
 {
-    const uint32_t start_x = x + state.video_start_x;
-    const uint32_t start_y = y + state.video_start_y;
     const uint32_t end_x = start_x + w;
     const uint32_t end_y = start_y + h;
 
@@ -91,7 +90,7 @@ static void draw_rect (VGM_Player_Context *context,
     {
         for (uint32_t x = start_x; x < end_x; x++)
         {
-            context->frame_buffer.active_area [x + y * VIDEO_BUFFER_WIDTH] = colour;
+            context->frame_buffer.active_area [x + y * context->frame_buffer.width] = colour;
         }
     }
 }
@@ -104,6 +103,9 @@ static void vgm_player_draw_frame (VGM_Player_Context *context)
 {
     uint32_t bar_count = 0;
     uint32_t bar_value [15] = { };
+
+    context->frame_buffer.width = 256;
+    context->frame_buffer.height = 192;
 
     if (context->sn76489_clock)
     {
@@ -178,7 +180,7 @@ static void vgm_player_draw_frame (VGM_Player_Context *context)
 
     /* Bars */
     uint32_t bar_area_width = bar_width * bar_count + bar_gap * (bar_count - 1);
-    uint32_t first_bar = (state.video_width - bar_area_width) / 2;
+    uint32_t first_bar = (context->frame_buffer.width - bar_area_width) / 2;
 
     for (uint32_t i = 0; i < bar_count; i++)
     {
@@ -398,12 +400,6 @@ VGM_Player_Context *vgm_player_init (void)
     context->sn76489_context = sn76489_context;
     ym2413_context = ym2413_init ();
     context->ym2413_context = ym2413_context;
-
-    /* Initial video parameters */
-    state.video_start_x = 0;
-    state.video_start_y = (VIDEO_BUFFER_LINES - 192) / 2;
-    state.video_width   = 256;
-    state.video_height  = 192;
 
     /* Read header */
     context->version       = *(uint32_t *) (&context->vgm [0x08]);

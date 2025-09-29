@@ -11,8 +11,7 @@
 #include "snepulator_compat.h"
 #include "snepulator_types.h"
 
-#define VIDEO_BUFFER_WIDTH 256
-#define VIDEO_BUFFER_LINES 240
+#define VIDEO_BUFFER_SIZE (256 * 240)
 #define VIDEO_RING_SIZE 3
 
 #define AUDIO_SAMPLE_RATE 48000
@@ -79,8 +78,10 @@ typedef enum Video_3D_Mode_e {
 } Video_3D_Mode;
 
 typedef struct Video_Frame_s {
-    uint_pixel active_area [VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES];
-    uint_pixel backdrop [VIDEO_BUFFER_LINES];
+    uint_pixel active_area [256 * 240];
+    uint_pixel backdrop [240];
+    uint32_t   width;
+    uint32_t   height;
 } Video_Frame;
 
 
@@ -164,10 +165,6 @@ typedef struct Snepulator_State_s {
     Video_Frame video_ring [VIDEO_RING_SIZE];
     uint32_t    video_read_index;
     uint32_t    video_write_index;
-    uint32_t    video_start_x;              /* Start of active area. */
-    uint32_t    video_start_y;
-    uint32_t    video_width;                /* Size of the active area. */
-    uint32_t    video_height;
     int16_t     cursor_x;                   /* User's cursor coordinate within active area. */
     int16_t     cursor_y;
     bool        cursor_button;

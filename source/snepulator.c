@@ -272,6 +272,8 @@ void snepulator_clear_video (void)
     {
         memset (state.video_ring[i].active_area, 0, sizeof (state.video_ring[i].active_area));
         memset (state.video_ring[i].backdrop, 0, sizeof (state.video_ring[i].backdrop));
+        state.video_ring [i].width = 256;
+        state.video_ring [i].height = 192;
     }
     state.video_read_index = 0;
     state.video_write_index = 0;
@@ -407,6 +409,8 @@ void snepulator_frame_done (Video_Frame *frame)
     }
     memcpy (state.video_ring [state.video_write_index % VIDEO_RING_SIZE].active_area, frame->active_area, sizeof (state.video_ring [0].active_area));
     memcpy (state.video_ring [state.video_write_index % VIDEO_RING_SIZE].backdrop,    frame->backdrop,    sizeof (state.video_ring [0].backdrop));
+    state.video_ring [state.video_write_index % VIDEO_RING_SIZE].width = frame->width;
+    state.video_ring [state.video_write_index % VIDEO_RING_SIZE].height = frame->height;
     pthread_mutex_unlock (&state.video_mutex);
 }
 
@@ -522,14 +526,16 @@ void snepulator_pause_animate (void)
 {
     Video_Frame frame_buffer;
 
-    /* Each letter overlaps by one pixel */
-    uint32_t x_base = VIDEO_BUFFER_WIDTH / 2 - (snepulator_paused.width - 5) / 2;
-    uint32_t y_base = VIDEO_BUFFER_LINES / 2 - snepulator_paused.height / 2;
-    const uint32_t letter_position [7] = {  0, 23, 46, 69,  92, 115, 138 };
-
     /* Draw over a greyscale copy of the last-drawn frame */
     memcpy (frame_buffer.active_area, state.video_pause_data.active_area, sizeof (frame_buffer.active_area));
     memcpy (frame_buffer.backdrop, state.video_pause_data.backdrop, sizeof (frame_buffer.backdrop));
+    frame_buffer.width = state.video_pause_data.width;
+    frame_buffer.height = state.video_pause_data.height;
+
+    /* Each letter overlaps by one pixel */
+    uint32_t x_base = frame_buffer.width / 2 - (snepulator_paused.width - 5) / 2;
+    uint32_t y_base = frame_buffer.height / 2 - snepulator_paused.height / 2;
+    const uint32_t letter_position [7] = {  0, 23, 46, 69,  92, 115, 138 };
 
     uint32_t frame_time = util_get_ticks ();
     for (uint32_t letter = 0; letter < 6; letter++)
@@ -549,11 +555,11 @@ void snepulator_pause_animate (void)
                     continue;
                 }
 
-                frame_buffer.active_area [(x + x_base - letter) + (uint32_t) (y + y_base + y_offset) * VIDEO_BUFFER_WIDTH].r =
+                frame_buffer.active_area [(x + x_base - letter) + (uint32_t) (y + y_base + y_offset) * frame_buffer.width].r =
                     snepulator_paused.pixel_data [(x + y * snepulator_paused.width) * 3 + 0];
-                frame_buffer.active_area [(x + x_base - letter) + (uint32_t) (y + y_base + y_offset) * VIDEO_BUFFER_WIDTH].g =
+                frame_buffer.active_area [(x + x_base - letter) + (uint32_t) (y + y_base + y_offset) * frame_buffer.width].g =
                     snepulator_paused.pixel_data [(x + y * snepulator_paused.width) * 3 + 1];
-                frame_buffer.active_area [(x + x_base - letter) + (uint32_t) (y + y_base + y_offset) * VIDEO_BUFFER_WIDTH].b =
+                frame_buffer.active_area [(x + x_base - letter) + (uint32_t) (y + y_base + y_offset) * frame_buffer.width].b =
                     snepulator_paused.pixel_data [(x + y * snepulator_paused.width) * 3 + 2];
             }
         }
@@ -578,13 +584,15 @@ void snepulator_pause_set (bool pause)
         /* Because emulation is paused, we don't need to lock.
          * No new frames will come from the emulated console. */
         Video_Frame *current_frame = snepulator_get_current_frame ();
+        state.video_pause_data.width = current_frame->width;
+        state.video_pause_data.height = current_frame->height;
 
         /* Convert the screen to black and white, and sore in the pause buffer */
-        for (int x = 0; x < (VIDEO_BUFFER_WIDTH * VIDEO_BUFFER_LINES); x++)
+        for (int x = 0; x < (current_frame->width * current_frame->height); x++)
         {
             state.video_pause_data.active_area [x] = util_to_greyscale (current_frame->active_area [x]);
         }
-        for (int x = 0; x < (VIDEO_BUFFER_LINES); x++)
+        for (int x = 0; x < (current_frame->height); x++)
         {
             state.video_pause_data.backdrop [x] = util_to_greyscale (current_frame->backdrop [x]);
         }
@@ -694,12 +702,6 @@ void snepulator_reset (void)
 #endif
 
     snepulator_clear_video ();
-
-    /* Clear additional video parameters */
-    state.video_start_x = 0;
-    state.video_start_y = (VIDEO_BUFFER_LINES - 192) / 2;
-    state.video_width = 256;
-    state.video_height = 192;
 
     /* Auto format default to NTSC */
     if (state.format_auto)

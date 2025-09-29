@@ -386,18 +386,25 @@ static void sms_vdp_mode4_draw_pattern_background (TMS9928A_Context *context, ui
         pattern_line = ((uint32_t *) pattern_base) [line - position.y];
     }
 
-    for (uint32_t x = 0; x < 8; x++)
+    /* Account for the destination frame-buffer start position, which may be smaller than
+     * the native SMS VDP resolution. Eg, due to left-column-blanking or Game Gear cropping */
+    if (line < context->crop_start.y || line - context->crop_start.y >= context->frame_buffer.height)
     {
-        /* Nothing to do off the right side of the screen */
-        if (x + position.x >= 256)
-        {
-            return;
-        }
+        return;
+    }
+    int32_t destination_start = position.x - context->crop_start.x + (line - context->crop_start.y) * context->frame_buffer.width;
 
-        /* Don't draw the left-most eight pixels if BIT_5 of CTRL_1 is set */
-        if (context->state.regs.ctrl_0_mask_col_1 && x + position.x < 8)
+    for (int32_t x = 0; x < 8; x++)
+    {
+        /* Nothing to do outside of the active area. Continue if we're to the left,
+         * as the next pixel might be on-screen. Return if we're to the right. */
+        if (x + position.x < context->crop_start.x)
         {
             continue;
+        }
+        else if (x + position.x - context->crop_start.x >= context->frame_buffer.width)
+        {
+            return;
         }
 
         if (flip_h)
@@ -421,8 +428,7 @@ static void sms_vdp_mode4_draw_pattern_background (TMS9928A_Context *context, ui
         }
 
         uint_pixel pixel = context->state.cram [palette + colour_index];
-
-        context->frame_buffer.active_area [(position.x + x) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = pixel;
+        context->frame_buffer.active_area [destination_start + x] = pixel;
     }
 }
 
@@ -516,18 +522,14 @@ static void sms_vdp_mode4_draw_pattern_sprite (TMS9928A_Context *context, uint16
     uint32_t pattern_line = ((uint32_t *) pattern_base) [(line - position.y) >> magnify];
     uint32_t pixel_bit;
 
+    int32_t destination_start = position.x - context->crop_start.x + (line - context->crop_start.y) * context->frame_buffer.width;
+
     for (uint32_t x = 0; x < draw_width; x++)
     {
         /* Nothing to do off the right side of the screen */
         if (x + position.x >= 256)
         {
             return;
-        }
-
-        /* Don't draw the left-most eight pixels if BIT_5 of CTRL_1 is set */
-        if (context->state.regs.ctrl_0_mask_col_1 && x + position.x < 8)
-        {
-            continue;
         }
 
         pixel_bit = 7 - (x >> magnify);
@@ -550,9 +552,17 @@ static void sms_vdp_mode4_draw_pattern_sprite (TMS9928A_Context *context, uint16
         }
         context->state.collision_buffer [x + position.x] = true;
 
-        uint_pixel pixel = context->state.cram [SMS_VDP_PALETTE_SPRITE + colour_index];
+        /* Don't actually render to the outside of the active area. */
+        if (x + position.x < context->crop_start.x ||
+            x + position.x - context->crop_start.x >= context->frame_buffer.width ||
+            line < context->crop_start.y ||
+            line - context->crop_start.y >= context->frame_buffer.height)
+        {
+            continue;
+        }
 
-        context->frame_buffer.active_area [(position.x + x) + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = pixel;
+        uint_pixel pixel = context->state.cram [SMS_VDP_PALETTE_SPRITE + colour_index];
+        context->frame_buffer.active_area [destination_start + x] = pixel;
     }
 }
 
@@ -705,25 +715,30 @@ static void sms_vdp_render_line (TMS9928A_Context *context, uint16_t line)
         video_backdrop = context->palette [context->state.regs.background_colour & 0x0f];
     }
 
-    /* Note: For now the top/bottom borders just copy the background from the first
-     *       and last active lines. Do any games change the value outside of this? */
-    context->frame_buffer.backdrop [context->video_start_y + line] = video_backdrop;
-
-
-    /* If blanking is enabled, fill the active area with the backdrop colour. */
-    if (!context->state.regs.ctrl_1_blank && !context->disable_blanking)
+    /* Only draw the backdrop if this line is included in the active area */
+    if (line >= context->crop_start.y &&
+        line - context->crop_start.y < context->frame_buffer.height)
     {
-        for (int x = 0; x < VIDEO_BUFFER_WIDTH; x++)
-        {
-            context->frame_buffer.active_area [x + (context->render_start_y + line) * VIDEO_BUFFER_WIDTH] = video_backdrop;
-        }
+        /* Note: For now the top/bottom borders just copy the background from the first
+         *       and last active lines. Do any games change the value outside of this? */
+        context->frame_buffer.backdrop [line - context->crop_start.y] = video_backdrop;
 
-        /* Don't actually render if BLANK is enabled, only check
-         * the sprite overflow flag. */
-        if (context->state.regs.ctrl_0_mode_4)
+        /* If blanking is enabled, fill the active area with the backdrop colour. */
+        if (!context->state.regs.ctrl_1_blank && !context->disable_blanking)
         {
-            sms_vdp_mode4_check_sprite_overflow (context, line);
+            uint32_t line_start = (line - context->crop_start.y) * context->frame_buffer.width;
+            for (int x = 0; x < context->frame_buffer.width; x++)
+            {
+                context->frame_buffer.active_area [line_start + x] = video_backdrop;
+            }
         }
+    }
+
+    /* Don't actually render if BLANK is enabled, only check
+     * the sprite overflow flag. */
+    if (!context->state.regs.ctrl_1_blank && !context->disable_blanking && context->state.regs.ctrl_0_mode_4)
+    {
+        sms_vdp_mode4_check_sprite_overflow (context, line);
         return;
     }
 
@@ -816,13 +831,28 @@ void sms_vdp_run_one_scanline (TMS9928A_Context *context)
         sms_vdp_update_mode (context);
 
         /* The Master System supports multiple resolutions that can be changed on the fly. */
-        if (!context->is_game_gear)
+        if (context->is_game_gear)
         {
-            context->video_blank_left = context->state.regs.ctrl_0_mask_col_1 ? 8 : 0;
-
-            context->render_start_y = (VIDEO_BUFFER_LINES - context->lines_active) / 2;
-            context->video_start_y  = context->render_start_y;
-            context->video_height   = context->lines_active;
+            context->frame_buffer.width = 160;
+            context->frame_buffer.height = 144;
+            context->crop_start.x = 48;
+            context->crop_start.y = 24;
+        }
+        else
+        {
+            /* Treat mode-4's left-column-blanking as a lower resolution mode */
+            if (context->state.regs.ctrl_0_mode_4 && context->state.regs.ctrl_0_mask_col_1)
+            {
+                context->frame_buffer.width = 248;
+                context->crop_start.x = 8;
+            }
+            else
+            {
+                context->frame_buffer.width = 256;
+                context->crop_start.x = 0;
+            }
+            context->frame_buffer.height = context->lines_active;
+            context->crop_start.y = 0;
         }
     }
 
@@ -920,13 +950,6 @@ TMS9928A_Context *sms_vdp_init (void *parent, void (* frame_done) (void *), Cons
     if (console == CONSOLE_GAME_GEAR)
     {
         context->is_game_gear = true;
-        context->video_width = 160;
-        context->video_height = 144;
-    }
-    else
-    {
-        context->video_width = 256;
-        context->video_height = 192;
     }
 
     context->palette = sms_vdp_legacy_palette;
