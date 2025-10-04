@@ -37,7 +37,7 @@ static inline uint16_t read_word (M68000_Context *context, uint32_t addr)
  */
 static inline uint32_t read_long (M68000_Context *context, uint32_t addr)
 {
-    uint32_reg value;
+    uint32_split_t value;
     value.w_high = read_word (context, addr);
     value.w_low  = read_word (context, addr + 2);
     return value.l;
@@ -88,7 +88,7 @@ static inline uint16_t read_extension (M68000_Context *context)
  */
 static inline uint32_t read_extension_long (M68000_Context *context)
 {
-    uint32_reg addr;
+    uint32_split_t addr;
     addr.w_high = read_extension (context);
     addr.w_low  = read_extension (context);
     return addr.l;

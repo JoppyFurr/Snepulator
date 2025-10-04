@@ -466,7 +466,7 @@ static void midi_player_cleanup (void *context_ptr)
  */
 static void draw_rect (MIDI_Player_Context *context,
                        uint32_t start_x, uint32_t start_y, uint32_t w, uint32_t h,
-                       uint_pixel colour)
+                       uint_pixel_t colour)
 {
     const uint32_t end_x = start_x + w;
     const uint32_t end_y = start_y + h;

@@ -80,8 +80,8 @@ typedef enum Video_3D_Mode_e {
 } Video_3D_Mode;
 
 typedef struct Video_Frame_s {
-    uint_pixel active_area [VIDEO_MAX_WIDTH * VIDEO_MAX_LINES];
-    uint_pixel backdrop [VIDEO_MAX_LINES];
+    uint_pixel_t active_area [VIDEO_MAX_WIDTH * VIDEO_MAX_LINES];
+    uint_pixel_t backdrop [VIDEO_MAX_LINES];
     uint32_t   width;
     uint32_t   height;
 } Video_Frame;
@@ -110,7 +110,7 @@ typedef struct Snepulator_State_s {
     bool            disable_blanking;       /* Don't blank the screen when the blank bit is set. */
     bool            disable_border;         /* Don't show the border surrounding the active area. */
     uint32_t        overclock;              /* Extra CPU cycles to run per line. */
-    uint_pixel     *override_tms_palette;   /* Override default tms9928a palette. NULL for default. */
+    uint_pixel_t   *override_tms_palette;   /* Override default tms9928a palette. NULL for default. */
     Video_Format    format;                 /* 50 Hz PAL / 60 Hz NTSC. */
     bool            format_auto;            /* Automatically select PAL for games that require it. */
     Console_Region  region;                 /* Japan / World. */
@@ -235,7 +235,7 @@ void snepulator_integer_scaling_set (bool integer_scaling);
 void snepulator_overclock_set (bool overclock);
 
 /* Override the palette used for tms9928a modes. */
-void snepulator_override_tms9928a_palette (uint_pixel *palette);
+void snepulator_override_tms9928a_palette (uint_pixel_t *palette);
 
 /* Animate the pause screen. */
 void snepulator_pause_animate (void);

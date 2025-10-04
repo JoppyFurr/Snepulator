@@ -55,7 +55,7 @@ typedef struct SMD_VDP_State_s {
 #pragma pack ()
     };
 
-    uint_pixel cram [64];
+    uint_pixel_t cram [64];
     uint16_t vsram [40];
 
 } SMD_VDP_State;

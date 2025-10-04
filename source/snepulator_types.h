@@ -35,15 +35,15 @@
 #define SIZE_48K    (48 << 10)
 #define SIZE_64K    (64 << 10)
 
-typedef union uint16_t_Split_u {
+typedef union uint16_split_u {
     uint16_t w;
     struct {
         uint8_t l;
         uint8_t h;
     };
-} uint16_t_Split;
+} uint16_split_t;
 
-typedef union uint32_reg_u {
+typedef union uint32_split_u {
     uint32_t l;
     struct {
         uint16_t w_low;
@@ -51,16 +51,16 @@ typedef union uint32_reg_u {
     };
     uint16_t w;
     uint8_t b;
-} uint32_reg;
+} uint32_split_t;
 
 
-typedef struct int32_Point_2D_s {
+typedef struct int_point_s {
     int32_t x;
     int32_t y;
-} int32_Point_2D;
+} int_point_t;
 
 typedef struct uint_pixel_s {
     uint8_t r;
     uint8_t g;
     uint8_t b;
-} uint_pixel;
+} uint_pixel_t;
