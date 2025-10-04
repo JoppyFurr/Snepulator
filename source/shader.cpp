@@ -57,6 +57,7 @@ extern GLuint active_area_texture;
 extern GLuint backdrop_texture;
 GLuint shader_programs [SHADER_COUNT] = { };
 GLuint vertex_array = 0;
+uint_pixel black_backdrop [VIDEO_MAX_LINES] = { };
 
 
 /*
@@ -180,7 +181,7 @@ void snepulator_shader_callback (const ImDrawList *parent_list, const ImDrawCmd 
 
     glActiveTexture (GL_TEXTURE2);
     glBindTexture (GL_TEXTURE_2D, backdrop_texture);
-    glTexImage2D (GL_TEXTURE_2D, 0, GL_RGB, frame->height, 1, 0, GL_RGB, GL_UNSIGNED_BYTE, frame->backdrop);
+    glTexImage2D (GL_TEXTURE_2D, 0, GL_RGB, frame->height, 1, 0, GL_RGB, GL_UNSIGNED_BYTE, state.disable_border ? black_backdrop : frame->backdrop);
 
     /* Set the uniforms */
     location = glGetUniformLocation (shader_program, "frame_resolution");

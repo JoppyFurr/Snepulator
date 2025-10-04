@@ -150,6 +150,13 @@ int snepulator_config_import (void)
         state.disable_blanking = uint;
     }
 
+    /* Disable border - Defaults to off */
+    state.disable_border = false;
+    if (config_uint_get ("video", "disable-border", &uint) == 0)
+    {
+        state.disable_border = uint;
+    }
+
     /* Video Integer Scaling - Defaults to true */
     state.integer_scaling = true;
     if (config_uint_get ("video", "integer-scaling", &uint) == 0)
@@ -364,6 +371,23 @@ void snepulator_disable_blanking_set (bool disable_blanking)
 {
     state.disable_blanking = disable_blanking;
     config_uint_set ("hacks", "disable-blanking", disable_blanking);
+
+    if (state.update_settings != NULL)
+    {
+        state.update_settings (state.console_context);
+    }
+
+    config_write ();
+}
+
+
+/*
+ * Disable the screen border.
+ */
+void snepulator_disable_border_set (bool disable_border)
+{
+    state.disable_border = disable_border;
+    config_uint_set ("video", "disable-border", disable_border);
 
     if (state.update_settings != NULL)
     {

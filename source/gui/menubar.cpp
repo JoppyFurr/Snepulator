@@ -436,6 +436,10 @@ static void snepulator_video_menu (void)
     {
         state.mouse_time = util_get_ticks ();
 
+        if (ImGui::MenuItem ("Disable Border", NULL, state.disable_border))
+        {
+            snepulator_disable_border_set (!state.disable_border);
+        }
         if (ImGui::MenuItem ("Integer Scaling", NULL, state.integer_scaling))
         {
             snepulator_integer_scaling_set (!state.integer_scaling);
