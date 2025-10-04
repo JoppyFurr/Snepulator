@@ -11,7 +11,9 @@
 #include "snepulator_compat.h"
 #include "snepulator_types.h"
 
-#define VIDEO_BUFFER_SIZE (256 * 240)
+#define VIDEO_MAX_WIDTH 256
+#define VIDEO_MAX_LINES 240
+
 #define VIDEO_RING_SIZE 3
 
 #define AUDIO_SAMPLE_RATE 48000
@@ -78,8 +80,8 @@ typedef enum Video_3D_Mode_e {
 } Video_3D_Mode;
 
 typedef struct Video_Frame_s {
-    uint_pixel active_area [256 * 240];
-    uint_pixel backdrop [240];
+    uint_pixel active_area [VIDEO_MAX_WIDTH * VIDEO_MAX_LINES];
+    uint_pixel backdrop [VIDEO_MAX_LINES];
     uint32_t   width;
     uint32_t   height;
 } Video_Frame;
@@ -106,6 +108,7 @@ typedef struct Snepulator_State_s {
 
     /* User emulator settings */
     bool            disable_blanking;       /* Don't blank the screen when the blank bit is set. */
+    bool            disable_border;         /* Don't show the border surrounding the active area. */
     uint32_t        overclock;              /* Extra CPU cycles to run per line. */
     uint_pixel     *override_tms_palette;   /* Override default tms9928a palette. NULL for default. */
     Video_Format    format;                 /* 50 Hz PAL / 60 Hz NTSC. */
@@ -209,6 +212,9 @@ Console snepulator_select_console_for_rom (const char *path);
 
 /* Disable screen blanking when the blanking bit is set. */
 void snepulator_disable_blanking_set (bool disable_blanking);
+
+/* Disable the screen border. */
+void snepulator_disable_border_set (bool disable_border);
 
 /* Enable the FM Sound Unit for the SMS. */
 void snepulator_fm_sound_set (bool enable);
