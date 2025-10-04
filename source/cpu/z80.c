@@ -393,7 +393,7 @@ static uint16_t z80_ix_iy_19_add_ix_de (Z80_Context *context, uint16_t ix)
 /* LD IX, ** */
 static uint16_t z80_ix_iy_21_ld_ix_xx (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split data;
+    uint16_split_t data;
     data.l = context->memory_read (context->parent, context->state.pc++);
     data.h = context->memory_read (context->parent, context->state.pc++);
     context->used_cycles += 14;
@@ -404,8 +404,8 @@ static uint16_t z80_ix_iy_21_ld_ix_xx (Z80_Context *context, uint16_t ix)
 /* LD (**), IX */
 static uint16_t z80_ix_iy_22_ld_xx_ix (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
-    uint16_t_Split addr;
+    uint16_split_t _ix = { .w = ix };
+    uint16_split_t addr;
     addr.l = context->memory_read (context->parent, context->state.pc++);
     addr.h = context->memory_read (context->parent, context->state.pc++);
     context->memory_write (context->parent, addr.w,     _ix.l);
@@ -427,7 +427,7 @@ static uint16_t z80_ix_iy_23_inc_ix (Z80_Context *context, uint16_t ix)
 /* INC IXH (undocumented) */
 static uint16_t z80_ix_iy_24_inc_ixh (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     _ix.h++;
     SET_FLAGS_INC (_ix.h);
     SET_FLAGS_XY (_ix.h);
@@ -439,7 +439,7 @@ static uint16_t z80_ix_iy_24_inc_ixh (Z80_Context *context, uint16_t ix)
 /* DEC IXH (undocumented) */
 static uint16_t z80_ix_iy_25_dec_ixh (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     _ix.h--;
     SET_FLAGS_DEC (_ix.h);
     SET_FLAGS_XY (_ix.h);
@@ -451,7 +451,7 @@ static uint16_t z80_ix_iy_25_dec_ixh (Z80_Context *context, uint16_t ix)
 /* LD IXH, * (undocumented) */
 static uint16_t z80_ix_iy_26_ld_ixh_x (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     _ix.h = context->memory_read (context->parent, context->state.pc++);
     context->used_cycles += 11;
     return _ix.w;
@@ -472,8 +472,8 @@ static uint16_t z80_ix_iy_29_add_ix_ix (Z80_Context *context, uint16_t ix)
 /* LD IX, (**) */
 static uint16_t z80_ix_iy_2a_ld_ix_xx (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
-    uint16_t_Split addr;
+    uint16_split_t _ix = { .w = ix };
+    uint16_split_t addr;
     addr.l = context->memory_read (context->parent, context->state.pc++);
     addr.h = context->memory_read (context->parent, context->state.pc++);
     _ix.l = context->memory_read (context->parent, addr.w);
@@ -495,7 +495,7 @@ static uint16_t z80_ix_iy_2b_dec_ix (Z80_Context *context, uint16_t ix)
 /* INC IXL (undocumented) */
 static uint16_t z80_ix_iy_2c_inc_ixl (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     _ix.l++;
     SET_FLAGS_INC (_ix.l);
     SET_FLAGS_XY (_ix.l);
@@ -507,7 +507,7 @@ static uint16_t z80_ix_iy_2c_inc_ixl (Z80_Context *context, uint16_t ix)
 /* DEC IXL (undocumented) */
 static uint16_t z80_ix_iy_2d_dec_ixl (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     _ix.l--;
     SET_FLAGS_DEC (_ix.l);
     SET_FLAGS_XY (_ix.l);
@@ -519,7 +519,7 @@ static uint16_t z80_ix_iy_2d_dec_ixl (Z80_Context *context, uint16_t ix)
 /* LD IXL, * (undocumented) */
 static uint16_t z80_ix_iy_2e_ld_ixl_x (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     _ix.l = context->memory_read (context->parent, context->state.pc++);
     context->used_cycles += 11;
     return _ix.w;
@@ -579,7 +579,7 @@ static uint16_t z80_ix_iy_39_add_ix_sp (Z80_Context *context, uint16_t ix)
 /* LD B, IXH (undocumented) */
 static uint16_t z80_ix_iy_44_ld_b_ixh (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     context->state.b = _ix.h;
     context->used_cycles += 8;
     return ix;
@@ -589,7 +589,7 @@ static uint16_t z80_ix_iy_44_ld_b_ixh (Z80_Context *context, uint16_t ix)
 /* LD B, IXL (undocumented) */
 static uint16_t z80_ix_iy_45_ld_b_ixl (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     context->state.b = _ix.l;
     context->used_cycles += 8;
     return ix;
@@ -609,7 +609,7 @@ static uint16_t z80_ix_iy_46_ld_b_ixx (Z80_Context *context, uint16_t ix)
 /* LD C, IXH (undocumented) */
 static uint16_t z80_ix_iy_4c_ld_c_ixh (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     context->state.c = _ix.h;
     context->used_cycles += 8;
     return ix;
@@ -619,7 +619,7 @@ static uint16_t z80_ix_iy_4c_ld_c_ixh (Z80_Context *context, uint16_t ix)
 /* LD C, IXL (undocumented) */
 static uint16_t z80_ix_iy_4d_ld_c_ixl (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     context->state.c = _ix.l;
     context->used_cycles += 8;
     return ix;
@@ -639,7 +639,7 @@ static uint16_t z80_ix_iy_4e_ld_c_ixx (Z80_Context *context, uint16_t ix)
 /* LD D, IXH (undocumented) */
 static uint16_t z80_ix_iy_54_ld_d_ixh (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     context->state.d = _ix.h;
     context->used_cycles += 8;
     return ix;
@@ -649,7 +649,7 @@ static uint16_t z80_ix_iy_54_ld_d_ixh (Z80_Context *context, uint16_t ix)
 /* LD D, IXL (undocumented) */
 static uint16_t z80_ix_iy_55_ld_d_ixl (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     context->state.d = _ix.l;
     context->used_cycles += 8;
     return ix;
@@ -669,7 +669,7 @@ static uint16_t z80_ix_iy_56_ld_d_ixx (Z80_Context *context, uint16_t ix)
 /* LD E, IXH (undocumented) */
 static uint16_t z80_ix_iy_5c_ld_e_ixh (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     context->state.e = _ix.h;
     context->used_cycles += 8;
     return ix;
@@ -679,7 +679,7 @@ static uint16_t z80_ix_iy_5c_ld_e_ixh (Z80_Context *context, uint16_t ix)
 /* LD E, IXL (undocumented) */
 static uint16_t z80_ix_iy_5d_ld_e_ixl (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     context->state.e = _ix.l;
     context->used_cycles += 8;
     return ix;
@@ -699,7 +699,7 @@ static uint16_t z80_ix_iy_5e_ld_e_ixx (Z80_Context *context, uint16_t ix)
 /* LD IXH, B (undocumented) */
 static uint16_t z80_ix_iy_60_ld_ixh_b (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     _ix.h = context->state.b;
     context->used_cycles += 8;
     return _ix.w;
@@ -709,7 +709,7 @@ static uint16_t z80_ix_iy_60_ld_ixh_b (Z80_Context *context, uint16_t ix)
 /* LD IXH, C (undocumented) */
 static uint16_t z80_ix_iy_61_ld_ixh_c (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     _ix.h = context->state.c;
     context->used_cycles += 8;
     return _ix.w;
@@ -719,7 +719,7 @@ static uint16_t z80_ix_iy_61_ld_ixh_c (Z80_Context *context, uint16_t ix)
 /* LD IXH, D (undocumented) */
 static uint16_t z80_ix_iy_62_ld_ixh_d (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     _ix.h = context->state.d;
     context->used_cycles += 8;
     return _ix.w;
@@ -729,7 +729,7 @@ static uint16_t z80_ix_iy_62_ld_ixh_d (Z80_Context *context, uint16_t ix)
 /* LD IXH, E (undocumented) */
 static uint16_t z80_ix_iy_63_ld_ixh_e (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     _ix.h = context->state.e;
     context->used_cycles += 8;
     return _ix.w;
@@ -747,7 +747,7 @@ static uint16_t z80_ix_iy_64_ld_ixh_ixh (Z80_Context *context, uint16_t ix)
 /* LD IXH, IXL (undocumented) */
 static uint16_t z80_ix_iy_65_ld_ixh_ixl (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     _ix.h = _ix.l;
     context->used_cycles += 8;
     return _ix.w;
@@ -767,7 +767,7 @@ static uint16_t z80_ix_iy_66_ld_h_ixx (Z80_Context *context, uint16_t ix)
 /* LD IXH, A (undocumented) */
 static uint16_t z80_ix_iy_67_ld_ixh_a (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     _ix.h = context->state.a;
     context->used_cycles += 8;
     return _ix.w;
@@ -777,7 +777,7 @@ static uint16_t z80_ix_iy_67_ld_ixh_a (Z80_Context *context, uint16_t ix)
 /* LD IXL, B (undocumented) */
 static uint16_t z80_ix_iy_68_ld_ixl_b (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     _ix.l = context->state.b;
     context->used_cycles += 8;
     return _ix.w;
@@ -787,7 +787,7 @@ static uint16_t z80_ix_iy_68_ld_ixl_b (Z80_Context *context, uint16_t ix)
 /* LD IXL, C (undocumented) */
 static uint16_t z80_ix_iy_69_ld_ixl_c (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     _ix.l = context->state.c;
     context->used_cycles += 8;
     return _ix.w;
@@ -797,7 +797,7 @@ static uint16_t z80_ix_iy_69_ld_ixl_c (Z80_Context *context, uint16_t ix)
 /* LD IXL, D (undocumented) */
 static uint16_t z80_ix_iy_6a_ld_ixl_d (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     _ix.l = context->state.d;
     context->used_cycles += 8;
     return _ix.w;
@@ -807,7 +807,7 @@ static uint16_t z80_ix_iy_6a_ld_ixl_d (Z80_Context *context, uint16_t ix)
 /* LD IXL, E (undocumented) */
 static uint16_t z80_ix_iy_6b_ld_ixl_e (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     _ix.l = context->state.e;
     context->used_cycles += 8;
     return _ix.w;
@@ -817,7 +817,7 @@ static uint16_t z80_ix_iy_6b_ld_ixl_e (Z80_Context *context, uint16_t ix)
 /* LD IXL, IXH (undocumented) */
 static uint16_t z80_ix_iy_6c_ld_ixl_ixh (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     _ix.l = _ix.h;
     context->used_cycles += 8;
     return _ix.w;
@@ -845,7 +845,7 @@ static uint16_t z80_ix_iy_6e_ld_l_ixx (Z80_Context *context, uint16_t ix)
 /* LD IXL, A (undocumented) */
 static uint16_t z80_ix_iy_6f_ld_ixl_a (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     _ix.l = context->state.a;
     context->used_cycles += 8;
     return _ix.w;
@@ -925,7 +925,7 @@ static uint16_t z80_ix_iy_77_ld_ixx_a (Z80_Context *context, uint16_t ix)
 /* LD A, IXH (undocumented) */
 static uint16_t z80_ix_iy_7c_ld_a_ixh (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     context->state.a = _ix.h;
     context->used_cycles += 8;
     return ix;
@@ -935,7 +935,7 @@ static uint16_t z80_ix_iy_7c_ld_a_ixh (Z80_Context *context, uint16_t ix)
 /* LD A, IXL (undocumented) */
 static uint16_t z80_ix_iy_7d_ld_a_ixl (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     context->state.a = _ix.l;
     context->used_cycles += 8;
     return ix;
@@ -955,7 +955,7 @@ static uint16_t z80_ix_iy_7e_ld_a_ixx (Z80_Context *context, uint16_t ix)
 /* ADD A, IXH (undocumented) */
 static uint16_t z80_ix_iy_84_add_a_ixh (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     SET_FLAGS_ADD (context->state.a, _ix.h);
     context->state.a += _ix.h;
     SET_FLAGS_XY (context->state.a);
@@ -967,7 +967,7 @@ static uint16_t z80_ix_iy_84_add_a_ixh (Z80_Context *context, uint16_t ix)
 /* ADD A, IXL (undocumented) */
 static uint16_t z80_ix_iy_85_add_a_ixl (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     SET_FLAGS_ADD (context->state.a, _ix.l);
     context->state.a += _ix.l;
     SET_FLAGS_XY (context->state.a);
@@ -992,7 +992,7 @@ static uint16_t z80_ix_iy_86_add_a_ixx (Z80_Context *context, uint16_t ix)
 /* ADC A, IXH (undocumented) */
 static uint16_t z80_ix_iy_8c_adc_a_ixh (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     uint8_t value = _ix.h + context->state.flag_carry;
     SET_FLAGS_ADC (_ix.h);
     context->state.a += value;
@@ -1005,7 +1005,7 @@ static uint16_t z80_ix_iy_8c_adc_a_ixh (Z80_Context *context, uint16_t ix)
 /* ADC A, IXL (undocumented) */
 static uint16_t z80_ix_iy_8d_adc_a_ixl (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     uint8_t value = _ix.l + context->state.flag_carry;
     SET_FLAGS_ADC (_ix.l);
     context->state.a += value;
@@ -1032,7 +1032,7 @@ static uint16_t z80_ix_iy_8e_adc_a_ixx (Z80_Context *context, uint16_t ix)
 /* SUB A, IXH (undocumented) */
 static uint16_t z80_ix_iy_94_sub_a_ixh (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     SET_FLAGS_SUB (context->state.a, _ix.h);
     context->state.a -= _ix.h;
     SET_FLAGS_XY (context->state.a);
@@ -1044,7 +1044,7 @@ static uint16_t z80_ix_iy_94_sub_a_ixh (Z80_Context *context, uint16_t ix)
 /* SUB A, IXL (undocumented) */
 static uint16_t z80_ix_iy_95_sub_a_ixl (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     SET_FLAGS_SUB (context->state.a, _ix.l);
     context->state.a -= _ix.l;
     SET_FLAGS_XY (context->state.a);
@@ -1069,7 +1069,7 @@ static uint16_t z80_ix_iy_96_sub_a_ixx (Z80_Context *context, uint16_t ix)
 /* SBC A, IXH (undocumented) */
 static uint16_t z80_ix_iy_9c_sbc_a_ixh (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     uint8_t value = _ix.h + context->state.flag_carry;
     SET_FLAGS_SBC (_ix.h);
     context->state.a -= value;
@@ -1082,7 +1082,7 @@ static uint16_t z80_ix_iy_9c_sbc_a_ixh (Z80_Context *context, uint16_t ix)
 /* SBC A, IXL (undocumented) */
 static uint16_t z80_ix_iy_9d_sbc_a_ixl (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     uint8_t value= _ix.l + context->state.flag_carry;
     SET_FLAGS_SBC (_ix.l);
     context->state.a -= value;
@@ -1109,7 +1109,7 @@ static uint16_t z80_ix_iy_9e_sbc_a_ixx (Z80_Context *context, uint16_t ix)
 /* AND A, IXH (undocumented) */
 static uint16_t z80_ix_iy_a4_and_a_ixh (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     context->state.a &= _ix.h;
     SET_FLAGS_AND;
     SET_FLAGS_XY (context->state.a);
@@ -1121,7 +1121,7 @@ static uint16_t z80_ix_iy_a4_and_a_ixh (Z80_Context *context, uint16_t ix)
 /* AND A, IXL (undocumented) */
 static uint16_t z80_ix_iy_a5_and_a_ixl (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     context->state.a &= _ix.l;
     SET_FLAGS_AND;
     SET_FLAGS_XY (context->state.a);
@@ -1145,7 +1145,7 @@ static uint16_t z80_ix_iy_a6_and_a_ixx (Z80_Context *context, uint16_t ix)
 /* XOR A, IXH (undocumented) */
 static uint16_t z80_ix_iy_ac_xor_a_ixh (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     context->state.a ^= _ix.h;
     SET_FLAGS_OR_XOR;
     SET_FLAGS_XY (context->state.a);
@@ -1157,7 +1157,7 @@ static uint16_t z80_ix_iy_ac_xor_a_ixh (Z80_Context *context, uint16_t ix)
 /* XOR A, IXL (undocumented) */
 static uint16_t z80_ix_iy_ad_xor_a_ixl (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     context->state.a ^= _ix.l;
     SET_FLAGS_OR_XOR;
     SET_FLAGS_XY (context->state.a);
@@ -1181,7 +1181,7 @@ static uint16_t z80_ix_iy_ae_xor_a_ixx (Z80_Context *context, uint16_t ix)
 /* OR A, IXH (undocumented) */
 static uint16_t z80_ix_iy_b4_or_a_ixh (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     context->state.a |= _ix.h;
     SET_FLAGS_OR_XOR;
     SET_FLAGS_XY (context->state.a);
@@ -1193,7 +1193,7 @@ static uint16_t z80_ix_iy_b4_or_a_ixh (Z80_Context *context, uint16_t ix)
 /* OR A, IXL (undocumented) */
 static uint16_t z80_ix_iy_b5_or_a_ixl (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     context->state.a |= _ix.l;
     SET_FLAGS_OR_XOR;
     SET_FLAGS_XY (context->state.a);
@@ -1217,7 +1217,7 @@ static uint16_t z80_ix_iy_b6_or_a_ixx (Z80_Context *context, uint16_t ix)
 /* CP A, IXH (undocumented) */
 static uint16_t z80_ix_iy_bc_cp_a_ixh (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     SET_FLAGS_SUB (context->state.a, _ix.h);
     SET_FLAGS_XY (_ix.h);
     context->used_cycles += 8;
@@ -1228,7 +1228,7 @@ static uint16_t z80_ix_iy_bc_cp_a_ixh (Z80_Context *context, uint16_t ix)
 /* CP A, IXL (undocumented) */
 static uint16_t z80_ix_iy_bd_cp_a_ixl (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     SET_FLAGS_SUB (context->state.a, _ix.l);
     SET_FLAGS_XY (_ix.l);
     context->used_cycles += 8;
@@ -1259,7 +1259,7 @@ static uint16_t z80_ix_iy_cb_prefix (Z80_Context *context, uint16_t ix)
 /* POP IX */
 static uint16_t z80_ix_iy_e1_pop_ix (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     _ix.l = context->memory_read (context->parent, context->state.sp++);
     _ix.h = context->memory_read (context->parent, context->state.sp++);
     context->used_cycles += 14;
@@ -1270,7 +1270,7 @@ static uint16_t z80_ix_iy_e1_pop_ix (Z80_Context *context, uint16_t ix)
 /* EX (SP), IX */
 static uint16_t z80_ix_iy_e3_ex_sp_ix (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     uint8_t temp = _ix.l;
     _ix.l = context->memory_read (context->parent, context->state.sp);
     context->memory_write (context->parent, context->state.sp, temp);
@@ -1285,7 +1285,7 @@ static uint16_t z80_ix_iy_e3_ex_sp_ix (Z80_Context *context, uint16_t ix)
 /* PUSH IX */
 static uint16_t z80_ix_iy_e5_push_ix (Z80_Context *context, uint16_t ix)
 {
-    uint16_t_Split _ix = { .w = ix };
+    uint16_split_t _ix = { .w = ix };
     context->memory_write (context->parent, --context->state.sp, _ix.h);
     context->memory_write (context->parent, --context->state.sp, _ix.l);
     context->used_cycles += 15;
@@ -1740,7 +1740,7 @@ static void z80_ed_42_sbc_hl_bc (Z80_Context *context)
 /* LD (**), BC */
 static void z80_ed_43_ld_xx_bc (Z80_Context *context)
 {
-    uint16_t_Split addr;
+    uint16_split_t addr;
     addr.l = context->memory_read (context->parent, context->state.pc++);
     addr.h = context->memory_read (context->parent, context->state.pc++);
 
@@ -1827,7 +1827,7 @@ static void z80_ed_4a_adc_hl_bc (Z80_Context *context)
 /* LD BC, (**) */
 static void z80_ed_4b_ld_bc_xx (Z80_Context *context)
 {
-    uint16_t_Split addr;
+    uint16_split_t addr;
     addr.l = context->memory_read (context->parent, context->state.pc++);
     addr.h = context->memory_read (context->parent, context->state.pc++);
 
@@ -1900,7 +1900,7 @@ static void z80_ed_52_sbc_hl_de (Z80_Context *context)
 /* LD (**), DC */
 static void z80_ed_53_ld_xx_de (Z80_Context *context)
 {
-    uint16_t_Split addr;
+    uint16_split_t addr;
     addr.l = context->memory_read (context->parent, context->state.pc++);
     addr.h = context->memory_read (context->parent, context->state.pc++);
 
@@ -1976,7 +1976,7 @@ static void z80_ed_5a_adc_hl_de (Z80_Context *context)
 /* LD DE, (**) */
 static void z80_ed_5b_ld_de_xx (Z80_Context *context)
 {
-    uint16_t_Split addr;
+    uint16_split_t addr;
     addr.l = context->memory_read (context->parent, context->state.pc++);
     addr.h = context->memory_read (context->parent, context->state.pc++);
 
@@ -2052,7 +2052,7 @@ static void z80_ed_62_sbc_hl_hl (Z80_Context *context)
 /* LD (**), hl (undocumented) */
 static void z80_ed_63_ld_xx_hl (Z80_Context *context)
 {
-    uint16_t_Split addr;
+    uint16_split_t addr;
     addr.l = context->memory_read (context->parent, context->state.pc++);
     addr.h = context->memory_read (context->parent, context->state.pc++);
 
@@ -2086,7 +2086,7 @@ static void z80_ed_66_im_0 (Z80_Context *context)
 /* RRD */
 static void z80_ed_67_rrd (Z80_Context *context)
 {
-    uint16_t_Split shifted;
+    uint16_split_t shifted;
 
     /* Calculate 12-bit value */
     shifted.l = context->memory_read (context->parent, context->state.hl);
@@ -2136,7 +2136,7 @@ static void z80_ed_6a_adc_hl_hl (Z80_Context *context)
 /* LD HL, (**) (undocumented) */
 static void z80_ed_6b_ld_hl_xx (Z80_Context *context)
 {
-    uint16_t_Split addr;
+    uint16_split_t addr;
     addr.l = context->memory_read (context->parent, context->state.pc++);
     addr.h = context->memory_read (context->parent, context->state.pc++);
 
@@ -2170,7 +2170,7 @@ static void z80_ed_6e_im_0 (Z80_Context *context)
 /* RLD */
 static void z80_ed_6f_rld (Z80_Context *context)
 {
-    uint16_t_Split shifted;
+    uint16_split_t shifted;
 
     /* Calculate 12-bit value */
     shifted.w = ((uint16_t) context->memory_read (context->parent, context->state.hl) << 4) | (context->state.a & 0x0f);
@@ -2219,7 +2219,7 @@ static void z80_ed_72_sbc_hl_sp (Z80_Context *context)
 /* LD (**), SP */
 static void z80_ed_73_ld_xx_sp (Z80_Context *context)
 {
-    uint16_t_Split addr;
+    uint16_split_t addr;
     addr.l = context->memory_read (context->parent, context->state.pc++);
     addr.h = context->memory_read (context->parent, context->state.pc++);
 
@@ -2281,7 +2281,7 @@ static void z80_ed_7a_adc_hl_sp (Z80_Context *context)
 /* LD SP, (**) */
 static void z80_ed_7b_ld_sp_xx (Z80_Context *context)
 {
-    uint16_t_Split addr;
+    uint16_split_t addr;
     addr.l = context->memory_read (context->parent, context->state.pc++);
     addr.h = context->memory_read (context->parent, context->state.pc++);
 
@@ -3058,7 +3058,7 @@ static void z80_21_ld_hl_xx (Z80_Context *context)
 /* LD (**), HL */
 static void z80_22_ld_xx_hl (Z80_Context *context)
 {
-    uint16_t_Split addr;
+    uint16_split_t addr;
     addr.l = context->memory_read (context->parent, context->state.pc++);
     addr.h = context->memory_read (context->parent, context->state.pc++);
     context->memory_write (context->parent, addr.w,     context->state.l);
@@ -3200,7 +3200,7 @@ static void z80_29_add_hl_hl (Z80_Context *context)
 /* LD, HL, (**) */
 static void z80_2a_ld_hl_xx (Z80_Context *context)
 {
-    uint16_t_Split addr;
+    uint16_split_t addr;
     addr.l = context->memory_read (context->parent, context->state.pc++);
     addr.h = context->memory_read (context->parent, context->state.pc++);
     context->state.l = context->memory_read (context->parent, addr.w);
@@ -3285,7 +3285,7 @@ static void z80_31_ld_sp_xx (Z80_Context *context)
 /* LD (**), A */
 static void z80_32_ld_xx_a (Z80_Context *context)
 {
-    uint16_t_Split addr;
+    uint16_split_t addr;
     addr.l = context->memory_read (context->parent, context->state.pc++);
     addr.h = context->memory_read (context->parent, context->state.pc++);
     context->memory_write (context->parent, addr.w, context->state.a);
@@ -3374,7 +3374,7 @@ static void z80_39_add_hl_sp (Z80_Context *context)
 /* LD A, (**) */
 static void z80_3a_ld_a_xx (Z80_Context *context)
 {
-    uint16_t_Split addr;
+    uint16_split_t addr;
     addr.l = context->memory_read (context->parent, context->state.pc++);
     addr.h = context->memory_read (context->parent, context->state.pc++);
     context->state.a = context->memory_read (context->parent, addr.w);
@@ -4608,7 +4608,7 @@ static void z80_c1_pop_bc (Z80_Context *context)
 /* JP NZ, ** */
 static void z80_c2_jp_nz_xx (Z80_Context *context)
 {
-    uint16_t_Split addr;
+    uint16_split_t addr;
     addr.l = context->memory_read (context->parent, context->state.pc++);
     addr.h = context->memory_read (context->parent, context->state.pc++);
 
@@ -4623,7 +4623,7 @@ static void z80_c2_jp_nz_xx (Z80_Context *context)
 /* JP ** */
 static void z80_c3_jp_xx (Z80_Context *context)
 {
-    uint16_t_Split addr;
+    uint16_split_t addr;
     addr.l = context->memory_read (context->parent, context->state.pc++);
     addr.h = context->memory_read (context->parent, context->state.pc++);
     context->state.pc = addr.w;
@@ -4634,7 +4634,7 @@ static void z80_c3_jp_xx (Z80_Context *context)
 /* CALL NZ, ** */
 static void z80_c4_call_nz_xx (Z80_Context *context)
 {
-    uint16_t_Split addr;
+    uint16_split_t addr;
     addr.l = context->memory_read (context->parent, context->state.pc++);
     addr.h = context->memory_read (context->parent, context->state.pc++);
 
@@ -4713,7 +4713,7 @@ static void z80_c9_ret (Z80_Context *context)
 /* JP Z, ** */
 static void z80_ca_jp_z_xx (Z80_Context *context)
 {
-    uint16_t_Split addr;
+    uint16_split_t addr;
     addr.l = context->memory_read (context->parent, context->state.pc++);
     addr.h = context->memory_read (context->parent, context->state.pc++);
 
@@ -4790,7 +4790,7 @@ static void z80_cb_prefix (Z80_Context *context)
 /* CALL Z, ** */
 static void z80_cc_call_z_xx (Z80_Context *context)
 {
-    uint16_t_Split addr;
+    uint16_split_t addr;
     addr.l = context->memory_read (context->parent, context->state.pc++);
     addr.h = context->memory_read (context->parent, context->state.pc++);
 
@@ -4811,7 +4811,7 @@ static void z80_cc_call_z_xx (Z80_Context *context)
 /* CALL ** */
 static void z80_cd_call_xx (Z80_Context *context)
 {
-    uint16_t_Split addr;
+    uint16_split_t addr;
     addr.l = context->memory_read (context->parent, context->state.pc++);
     addr.h = context->memory_read (context->parent, context->state.pc++);
     context->memory_write (context->parent, --context->state.sp, context->state.pc_h);
@@ -4871,7 +4871,7 @@ static void z80_d1_pop_de (Z80_Context *context)
 /* JP NC, ** */
 static void z80_d2_jp_nc_xx (Z80_Context *context)
 {
-    uint16_t_Split addr;
+    uint16_split_t addr;
     addr.l = context->memory_read (context->parent, context->state.pc++);
     addr.h = context->memory_read (context->parent, context->state.pc++);
 
@@ -4894,7 +4894,7 @@ static void z80_d3_out_x_a (Z80_Context *context)
 /* CALL NC, ** */
 static void z80_d4_call_nc_xx (Z80_Context *context)
 {
-    uint16_t_Split addr;
+    uint16_split_t addr;
     addr.l = context->memory_read (context->parent, context->state.pc++);
     addr.h = context->memory_read (context->parent, context->state.pc++);
 
@@ -4972,7 +4972,7 @@ static void z80_d9_exx (Z80_Context *context)
 /* JP C, ** */
 static void z80_da_jp_c_xx (Z80_Context *context)
 {
-    uint16_t_Split addr;
+    uint16_split_t addr;
     addr.l = context->memory_read (context->parent, context->state.pc++);
     addr.h = context->memory_read (context->parent, context->state.pc++);
 
@@ -4995,7 +4995,7 @@ static void z80_db_in_a_x (Z80_Context *context)
 /* CALL C, ** */
 static void z80_dc_call_c_xx (Z80_Context *context)
 {
-    uint16_t_Split addr;
+    uint16_split_t addr;
     addr.l = context->memory_read (context->parent, context->state.pc++);
     addr.h = context->memory_read (context->parent, context->state.pc++);
 
@@ -5077,7 +5077,7 @@ static void z80_e1_pop_hl (Z80_Context *context)
 /* JP PO, ** */
 static void z80_e2_jp_po_xx (Z80_Context *context)
 {
-    uint16_t_Split addr;
+    uint16_split_t addr;
     addr.l = context->memory_read (context->parent, context->state.pc++);
     addr.h = context->memory_read (context->parent, context->state.pc++);
 
@@ -5105,7 +5105,7 @@ static void z80_e3_ex_sp_hl (Z80_Context *context)
 /* CALL PO, ** */
 static void z80_e4_call_po_xx (Z80_Context *context)
 {
-    uint16_t_Split addr;
+    uint16_split_t addr;
     addr.l = context->memory_read (context->parent, context->state.pc++);
     addr.h = context->memory_read (context->parent, context->state.pc++);
 
@@ -5179,7 +5179,7 @@ static void z80_e9_jp_hl (Z80_Context *context)
 /* JP PE, ** */
 static void z80_ea_jp_pe_xx (Z80_Context *context)
 {
-    uint16_t_Split addr;
+    uint16_split_t addr;
     addr.l = context->memory_read (context->parent, context->state.pc++);
     addr.h = context->memory_read (context->parent, context->state.pc++);
 
@@ -5202,7 +5202,7 @@ static void z80_eb_ex_de_hl (Z80_Context *context)
 /* CALL PE, ** */
 static void z80_ec_call_pe_xx (Z80_Context *context)
 {
-    uint16_t_Split addr;
+    uint16_split_t addr;
     addr.l = context->memory_read (context->parent, context->state.pc++);
     addr.h = context->memory_read (context->parent, context->state.pc++);
 
@@ -5282,7 +5282,7 @@ static void z80_f1_pop_af (Z80_Context *context)
 /* JP P, ** */
 static void z80_f2_jp_p_xx (Z80_Context *context)
 {
-    uint16_t_Split addr;
+    uint16_split_t addr;
     addr.l = context->memory_read (context->parent, context->state.pc++);
     addr.h = context->memory_read (context->parent, context->state.pc++);
 
@@ -5306,7 +5306,7 @@ static void z80_f3_di (Z80_Context *context)
 /* CALL P,** */
 static void z80_f4_call_p_xx (Z80_Context *context)
 {
-    uint16_t_Split addr;
+    uint16_split_t addr;
     addr.l = context->memory_read (context->parent, context->state.pc++);
     addr.h = context->memory_read (context->parent, context->state.pc++);
 
@@ -5380,7 +5380,7 @@ static void z80_f9_ld_sp_hl (Z80_Context *context)
 /* JP M, ** */
 static void z80_fa_jp_m_xx (Z80_Context *context)
 {
-    uint16_t_Split addr;
+    uint16_split_t addr;
     addr.l = context->memory_read (context->parent, context->state.pc++);
     addr.h = context->memory_read (context->parent, context->state.pc++);
 
@@ -5405,7 +5405,7 @@ static void z80_fb_ei (Z80_Context *context)
 /* CALL M, ** */
 static void z80_fc_call_m_xx (Z80_Context *context)
 {
-    uint16_t_Split addr;
+    uint16_split_t addr;
     addr.l = context->memory_read (context->parent, context->state.pc++);
     addr.h = context->memory_read (context->parent, context->state.pc++);
 

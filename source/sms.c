@@ -1112,7 +1112,7 @@ static void sms_process_3d_field (SMS_Context *context)
     bool update_red = false;
     bool update_green = false;
     bool update_blue = false;
-    uint_pixel pixel;
+    uint_pixel_t pixel;
 
     switch (state.video_3d_mode)
     {

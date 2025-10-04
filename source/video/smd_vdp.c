@@ -138,9 +138,9 @@ void smd_vdp_data_write (SMD_VDP_Context *context, uint16_t data)
         uint32_t index = (context->state.address >> 1) & 0x3f;
         context->state.address += context->state.auto_increment;
 
-        context->state.cram [index] = (uint_pixel) { .r = ((data >> 1) & 0x07) * 0xff / 7,
-                                                     .g = ((data >> 5) & 0x07) * 0xff / 7,
-                                                     .b = ((data >> 9) & 0x07) * 0xff / 7};
+        context->state.cram [index] = (uint_pixel_t) { .r = ((data >> 1) & 0x07) * 0xff / 7,
+                                                       .g = ((data >> 5) & 0x07) * 0xff / 7,
+                                                       .b = ((data >> 9) & 0x07) * 0xff / 7};
 
         /* TODO: Wait until nonzero colours get written before implementing drawing */
         printf ("[%s] cram [%d] = rgb (%d, %d, %d)\n", __func__, index,

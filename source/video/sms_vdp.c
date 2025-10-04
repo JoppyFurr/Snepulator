@@ -32,7 +32,7 @@ extern Snepulator_Gamepad gamepad [3];
                                   .b = ((((C) >> 8) & 0x0f) * (0xff / 15)) }
 
 /* Palette used by the Sega Master System VDP */
-uint_pixel sms_vdp_legacy_palette [16] = {
+uint_pixel_t sms_vdp_legacy_palette [16] = {
     SMS_VDP_TO_UINT_PIXEL (0x00), /* Transparent */
     SMS_VDP_TO_UINT_PIXEL (0x00), /* Black */
     SMS_VDP_TO_UINT_PIXEL (0x08), /* Medium Green */
@@ -173,12 +173,12 @@ void sms_vdp_data_write (TMS9928A_Context *context, uint8_t value)
                 else
                 {
                     context->state.cram [(context->state.address >> 1) & 0x1f] =
-                        (uint_pixel) GG_VDP_TO_UINT_PIXEL ((((uint16_t) value) << 8) | context->state.cram_latch);
+                        (uint_pixel_t) GG_VDP_TO_UINT_PIXEL ((((uint16_t) value) << 8) | context->state.cram_latch);
                 }
             }
             else
             {
-                context->state.cram [context->state.address & 0x1f] = (uint_pixel) SMS_VDP_TO_UINT_PIXEL (value);
+                context->state.cram [context->state.address & 0x1f] = (uint_pixel_t) SMS_VDP_TO_UINT_PIXEL (value);
             }
             break;
 
@@ -371,7 +371,7 @@ bool sms_vdp_get_interrupt (TMS9928A_Context *context)
  * Supports vertical and horizontal mirroring.
  */
 static void sms_vdp_mode4_draw_pattern_background (TMS9928A_Context *context, uint16_t line, SMS_VDP_Mode4_Pattern *pattern_base,
-                                                   SMS_VDP_Palette palette, int32_Point_2D position, bool flip_h, bool flip_v, bool priority)
+                                                   SMS_VDP_Palette palette, int_point_t position, bool flip_h, bool flip_v, bool priority)
 {
     uint32_t pattern_line;
     uint32_t pixel_bit;
@@ -427,7 +427,7 @@ static void sms_vdp_mode4_draw_pattern_background (TMS9928A_Context *context, ui
             continue;
         }
 
-        uint_pixel pixel = context->state.cram [palette + colour_index];
+        uint_pixel_t pixel = context->state.cram [palette + colour_index];
         context->frame_buffer.active_area [destination_start + x] = pixel;
     }
 }
@@ -449,7 +449,7 @@ static void sms_vdp_mode4_draw_background (TMS9928A_Context *context, uint16_t l
     uint8_t fine_scroll_y = context->state.regs.bg_scroll_y & 0x07;
     uint32_t tile_y = (line + fine_scroll_y) >> 3;
 
-    int32_Point_2D position; /* Position of the pattern on the display */
+    int_point_t position; /* Position of the pattern on the display */
 
     if (context->lines_active == 192)
     {
@@ -516,7 +516,7 @@ static void sms_vdp_mode4_draw_background (TMS9928A_Context *context, uint16_t l
  * Supports magnification.
  */
 static void sms_vdp_mode4_draw_pattern_sprite (TMS9928A_Context *context, uint16_t line, SMS_VDP_Mode4_Pattern *pattern_base,
-                                                      int32_Point_2D position, bool magnify)
+                                               int_point_t position, bool magnify)
 {
     uint32_t draw_width = (magnify) ? 16 : 8;
     uint32_t pattern_line = ((uint32_t *) pattern_base) [(line - position.y) >> magnify];
@@ -561,7 +561,7 @@ static void sms_vdp_mode4_draw_pattern_sprite (TMS9928A_Context *context, uint16
             continue;
         }
 
-        uint_pixel pixel = context->state.cram [SMS_VDP_PALETTE_SPRITE + colour_index];
+        uint_pixel_t pixel = context->state.cram [SMS_VDP_PALETTE_SPRITE + colour_index];
         context->frame_buffer.active_area [destination_start + x] = pixel;
     }
 }
@@ -579,7 +579,7 @@ static void sms_vdp_mode4_draw_sprites (TMS9928A_Context *context, uint16_t line
     uint8_t line_sprite_buffer [64];
     uint8_t line_sprite_count = 0;
     SMS_VDP_Mode4_Pattern *pattern;
-    int32_Point_2D position;
+    int_point_t position;
     bool magnify = false;
 
     /* Sprite magnification */
@@ -667,7 +667,7 @@ static void sms_vdp_mode4_check_sprite_overflow (TMS9928A_Context *context, uint
     uint8_t pattern_height = context->state.regs.ctrl_1_sprite_mag ? 16 : 8;
     uint8_t sprite_height = context->state.regs.ctrl_1_sprite_size ? (pattern_height << 1) : pattern_height;
     uint8_t line_sprite_count = 0;
-    int32_Point_2D position;
+    int_point_t position;
 
     /* Traverse the sprite list, filling the line sprite buffer */
     for (int i = 0; i < 64; i++)
@@ -704,7 +704,7 @@ static void sms_vdp_mode4_check_sprite_overflow (TMS9928A_Context *context, uint
  */
 static void sms_vdp_render_line (TMS9928A_Context *context, uint16_t line)
 {
-    uint_pixel video_backdrop;
+    uint_pixel_t video_backdrop;
 
     if (context->mode & SMS_VDP_MODE_4)
     {

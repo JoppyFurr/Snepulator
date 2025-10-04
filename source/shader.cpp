@@ -57,7 +57,7 @@ extern GLuint active_area_texture;
 extern GLuint backdrop_texture;
 GLuint shader_programs [SHADER_COUNT] = { };
 GLuint vertex_array = 0;
-uint_pixel black_backdrop [VIDEO_MAX_LINES] = { };
+uint_pixel_t black_backdrop [VIDEO_MAX_LINES] = { };
 
 
 /*

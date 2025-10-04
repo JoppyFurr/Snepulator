@@ -435,11 +435,11 @@ void util_take_screenshot (void)
 
 
 /*
- * Convert a uint_pixel to greyscale.
+ * Convert a uint_pixel_t to greyscale.
  *
  * TODO: Reduce floating-point math.
  */
-uint_pixel util_to_greyscale (uint_pixel c)
+uint_pixel_t util_to_greyscale (uint_pixel_t c)
 {
     float float_r = c.r / 255.0f;
     float float_g = c.g / 255.0f;
@@ -467,11 +467,11 @@ uint_pixel util_to_greyscale (uint_pixel c)
 
 
 /*
- * Reduce saturation of a uint_pixel.
+ * Reduce saturation of a uint_pixel_t.
  *
  * TODO: Reduce floating-point math.
  */
-uint_pixel util_colour_saturation (uint_pixel c, float saturation)
+uint_pixel_t util_colour_saturation (uint_pixel_t c, float saturation)
 {
     float float_r = c.r / 255.0f;
     float float_g = c.g / 255.0f;

@@ -35,7 +35,7 @@ const char *tms9928a_mode_name [16] = {
 };
 
 /* "Datasheet" palette */
-uint_pixel tms9928a_palette_uncorrected [16] = {
+uint_pixel_t tms9928a_palette_uncorrected [16] = {
     {   0,   0,   0 }, /* Transparent */
     {   0,   0,   0 }, /* Black */
     {  33, 200,  66 }, /* Medium Green */
@@ -55,7 +55,7 @@ uint_pixel tms9928a_palette_uncorrected [16] = {
 };
 
 /* Gamma corrected palette (Wikipedia) */
-uint_pixel tms9928a_palette [16] = {
+uint_pixel_t tms9928a_palette [16] = {
     { 0x00 , 0x00, 0x00 }, /* Transparent */
     { 0x00 , 0x00, 0x00 }, /* Black */
     { 0x0a , 0xad, 0x1e }, /* Medium Green */
@@ -227,7 +227,7 @@ bool tms9928a_get_interrupt (TMS9928A_Context *context)
  * Render one line of an 8x8 pattern.
  */
 static void tms9928a_draw_pattern_background (TMS9928A_Context *context, uint16_t line, TMS9928A_Pattern *pattern_base,
-                                              uint8_t tile_colours, int32_Point_2D offset)
+                                              uint8_t tile_colours, int_point_t offset)
 {
     uint8_t line_data;
 
@@ -249,7 +249,7 @@ static void tms9928a_draw_pattern_background (TMS9928A_Context *context, uint16_
             colour_index = context->state.regs.background_colour & 0x0f;
         }
 
-        uint_pixel pixel = context->palette [colour_index];
+        uint_pixel_t pixel = context->palette [colour_index];
         context->frame_buffer.active_area [(offset.x + x) + line * context->frame_buffer.width] = pixel;
     }
 }
@@ -260,7 +260,7 @@ static void tms9928a_draw_pattern_background (TMS9928A_Context *context, uint16_
  * Sprite version.
  */
 static void tms9928a_draw_pattern_sprite (TMS9928A_Context *context, uint16_t line, TMS9928A_Pattern *pattern_base,
-                                          uint8_t tile_colours, int32_Point_2D position, bool magnify)
+                                          uint8_t tile_colours, int_point_t position, bool magnify)
 {
     uint8_t line_data;
 
@@ -289,7 +289,7 @@ static void tms9928a_draw_pattern_sprite (TMS9928A_Context *context, uint16_t li
         }
         context->state.collision_buffer [x + position.x] = true;
 
-        uint_pixel pixel = context->palette [colour_index];
+        uint_pixel_t pixel = context->palette [colour_index];
         context->frame_buffer.active_area [(position.x + x) + line * context->frame_buffer.width] = pixel;
     }
 }
@@ -307,7 +307,7 @@ void tms9928a_draw_sprites (TMS9928A_Context *context, uint16_t line)
     TMS9928A_Sprite *line_sprite_buffer [32];
     uint8_t line_sprite_count = 0;
     TMS9928A_Pattern *pattern;
-    int32_Point_2D position;
+    int_point_t position;
     bool magnify = false;
 
     /* Sprite magnification */
@@ -387,7 +387,7 @@ void tms9928a_draw_sprites (TMS9928A_Context *context, uint16_t line)
         {
             pattern_index &= 0xfc;
             pattern = (TMS9928A_Pattern *) &context->vram [pattern_generator_base + (pattern_index * sizeof (TMS9928A_Pattern))];
-            int32_Point_2D sub_position;
+            int_point_t sub_position;
 
             for (int i = 0; i < 4; i++)
             {
@@ -414,7 +414,7 @@ void tms9928a_mode0_draw_background (TMS9928A_Context *context, uint16_t line)
     uint16_t pattern_generator_base;
     uint16_t colour_table_base;
     uint32_t tile_y = line / 8;
-    int32_Point_2D position;
+    int_point_t position;
 
     name_table_base = (((uint16_t) context->state.regs.name_table_base) << 10) & 0x3c00;
 
@@ -445,7 +445,7 @@ void tms9928a_mode2_draw_background (TMS9928A_Context *context, uint16_t line)
     uint16_t pattern_generator_base;
     uint16_t colour_table_base;
     uint32_t tile_y = line / 8;
-    int32_Point_2D position;
+    int_point_t position;
 
     name_table_base = (((uint16_t) context->state.regs.name_table_base) << 10) & 0x3c00;
 
@@ -504,7 +504,7 @@ void tms9928a_mode3_draw_background (TMS9928A_Context *context, uint16_t line)
         {
             colour_left = context->state.regs.background_colour & 0x0f;
         }
-        uint_pixel pixel_left = context->palette [colour_left];
+        uint_pixel_t pixel_left = context->palette [colour_left];
         context->frame_buffer.active_area [(8 * tile_x + 0) + line * context->frame_buffer.width] = pixel_left;
         context->frame_buffer.active_area [(8 * tile_x + 1) + line * context->frame_buffer.width] = pixel_left;
         context->frame_buffer.active_area [(8 * tile_x + 2) + line * context->frame_buffer.width] = pixel_left;
@@ -514,7 +514,7 @@ void tms9928a_mode3_draw_background (TMS9928A_Context *context, uint16_t line)
         {
             colour_right = context->state.regs.background_colour & 0x0f;
         }
-        uint_pixel pixel_right = context->palette [colour_right];
+        uint_pixel_t pixel_right = context->palette [colour_right];
         context->frame_buffer.active_area [(8 * tile_x + 4) + line * context->frame_buffer.width] = pixel_right;
         context->frame_buffer.active_area [(8 * tile_x + 5) + line * context->frame_buffer.width] = pixel_right;
         context->frame_buffer.active_area [(8 * tile_x + 6) + line * context->frame_buffer.width] = pixel_right;
@@ -539,7 +539,7 @@ uint8_t tms9928a_get_mode (TMS9928A_Context *context)
  */
 void tms9928a_render_line (TMS9928A_Context *context, uint16_t line)
 {
-    uint_pixel video_backdrop;
+    uint_pixel_t video_backdrop;
 
     /* Background */
     video_backdrop = context->palette [context->state.regs.background_colour & 0x0f];

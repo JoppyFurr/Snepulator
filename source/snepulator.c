@@ -509,7 +509,7 @@ void snepulator_overclock_set (bool overclock)
 /*
  * Override the palette used for tms9928a modes.
  */
-void snepulator_override_tms9928a_palette (uint_pixel *palette)
+void snepulator_override_tms9928a_palette (uint_pixel_t *palette)
 {
     char *config_string = NULL;
 

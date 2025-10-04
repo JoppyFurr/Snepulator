@@ -137,7 +137,7 @@ typedef struct TMS9928A_State_s {
     uint8_t  collision_buffer [256];
 
     /* SMS VDP extensions */
-    uint_pixel cram [32];               /* Conversion to uint_pixel is done when writing to cram */
+    uint_pixel_t cram [32];             /* Conversion to uint_pixel is done when writing to cram */
     uint8_t  line_interrupt_counter;    /* Line interrupt counter current value */
     uint8_t  line_interrupt;            /* Line interrupt pending */
     uint8_t  h_counter;                 /* 8-bit horizontal counter */
@@ -169,8 +169,8 @@ typedef struct TMS9928A_Context_s {
 
     /* Video output */
     Video_Frame frame_buffer;
-    uint_pixel *palette;
-    int32_Point_2D crop_start; /* Game Gear mode behaves like a cropped Master System. */
+    uint_pixel_t *palette;
+    int_point_t crop_start; /* Game Gear mode behaves like a cropped Master System. */
     void (* frame_done) (void *);
 
 } TMS9928A_Context;
@@ -188,8 +188,8 @@ typedef struct TMS9928A_Sprite_t {
     uint8_t colour_ec;
 } TMS9928A_Sprite;
 
-extern uint_pixel tms9928a_palette [16];
-extern uint_pixel tms9928a_palette_uncorrected [16];
+extern uint_pixel_t tms9928a_palette [16];
+extern uint_pixel_t tms9928a_palette_uncorrected [16];
 
 /* Supply a human-readable string describing the specified mode. */
 const char *tms9928a_mode_name_get (TMS9928A_Mode mode);
