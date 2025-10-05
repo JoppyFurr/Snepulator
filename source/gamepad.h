@@ -92,7 +92,14 @@ typedef struct Snepulator_Gamepad_t {
     Gamepad_Config *config;     /* Button mapping configuration */
     bool            state [GAMEPAD_BUTTON_COUNT];
     float           paddle_velocity;
-    uint8_t         paddle_position;
+    float           paddle_position;
+    union {
+        uint8_t     paddle_data;
+        struct {
+            uint8_t paddle_data_low:4;
+            uint8_t paddle_data_high:4;
+        };
+    };
 } Snepulator_Gamepad;
 
 

@@ -4,6 +4,7 @@
  */
 
 #include <errno.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -558,6 +559,9 @@ static uint8_t sms_io_read (void *context_ptr, uint8_t addr)
             {
                 static uint8_t paddle_clock = 0;
 
+                /* TODO: Latch only on a specific clock edge */
+                gamepad [1].paddle_data = round (gamepad [1].paddle_position);
+
                 /* The "export paddle" uses the TH pin for a clock signal */
                 if (context->export_paddle)
                 {
@@ -578,13 +582,16 @@ static uint8_t sms_io_read (void *context_ptr, uint8_t addr)
 
                 if ((paddle_clock & 0x01) == 0x00)
                 {
-                    port_value = (gamepad [1].paddle_position & 0x0f) |
-                                 ((gamepad [1].state [GAMEPAD_BUTTON_1] || gamepad [1].state [GAMEPAD_BUTTON_2]) ? 0 : BIT_4);
+                    port_value = (gamepad [1].paddle_data_low);
                 }
                 else
                 {
-                    port_value = (gamepad [1].paddle_position >> 0x04) |
-                                 ((gamepad [1].state [GAMEPAD_BUTTON_1] || gamepad [1].state [GAMEPAD_BUTTON_2]) ? 0 : BIT_4) | BIT_5;
+                    port_value = (gamepad [1].paddle_data_high) | BIT_5;
+                }
+
+                if (gamepad [1].state [GAMEPAD_BUTTON_1] || gamepad [1].state [GAMEPAD_BUTTON_2] || state.cursor_button)
+                {
+                    port_value |= BIT_4;
                 }
             }
             else if (gamepad [1].type == GAMEPAD_TYPE_SMS_PHASER)
