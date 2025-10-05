@@ -13,6 +13,7 @@
 #include "snepulator.h"
 #include "gamepad.h"
 #include "config.h"
+#include "util.h"
 
 extern Snepulator_State state;
 
@@ -282,13 +283,13 @@ void gamepad_process_key_event (int32_t key, bool key_down)
  *       * Support variable speeds with analogue input
  *       * Mouse support?
  *       * Direct vs relative?
+ *       * Latching of the data so that the high/low nibbles
+ *         are from the same byte.
  */
 void gamepad_paddle_tick (uint32_t cycles)
 {
-    static float remainder = 0.0;
     float paddle_speed = 250.0;
-    float delta;
-    int16_t new_position = gamepad [1].paddle_position;
+    float new_position = gamepad [1].paddle_position;
     float time = (float) cycles / state.clock_rate;
 
     /* Temporary™ digital-only support */
@@ -306,19 +307,10 @@ void gamepad_paddle_tick (uint32_t cycles)
     }
 
     /* Calculate and apply movement */
-    delta = gamepad [1].paddle_velocity * paddle_speed * time + remainder;
-    new_position += (int16_t) delta;
-    remainder = fmodf (delta, 1.0);
+    new_position += gamepad [1].paddle_velocity * paddle_speed * time;
 
     /* Bounds checking */
-    if (new_position > 255)
-    {
-        new_position = 255;
-    }
-    else if (new_position < 0)
-    {
-        new_position = 0;
-    }
+    new_position = CLAMP (0.0, new_position, 255.0);
 
     gamepad [1].paddle_position = new_position;
 }

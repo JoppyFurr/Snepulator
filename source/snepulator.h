@@ -168,6 +168,9 @@ typedef struct Snepulator_State_s {
     Video_Frame video_ring [VIDEO_RING_SIZE];
     uint32_t    video_read_index;
     uint32_t    video_write_index;
+
+    /* Mouse Input */
+    bool        capture_mouse;              /* Cursor locked into the Snepulator window for relative input */
     int16_t     cursor_x;                   /* User's cursor coordinate within active area. */
     int16_t     cursor_y;
     bool        cursor_button;

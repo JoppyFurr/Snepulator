@@ -146,7 +146,7 @@ void snepulator_audio_callback (void *userdata, uint8_t *stream, int len)
             for (uint32_t i = 0; i < block_frames * 2; i++)
             {
                 /* Range limit to avoid integer wrap-around */
-                sample_stream [sample_index++] = RANGE (-32768, state.audio_buffer [i], 32767);
+                sample_stream [sample_index++] = CLAMP (-32768, state.audio_buffer [i], 32767);
             }
             audio_frames -= block_frames;
         }
@@ -273,6 +273,17 @@ int main_loop (void)
                 continue;
             }
 
+            /* Escape or right-control release mouse capture */
+            if ((event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_ESCAPE) ||
+                (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_RCTRL))
+            {
+                if (SDL_GetRelativeMouseMode ())
+                {
+                    SDL_SetRelativeMouseMode (SDL_FALSE);
+                }
+                state.capture_mouse = false;
+            }
+
             ImGui_ImplSDL2_ProcessEvent (&event);
 
             if (event.type == SDL_QUIT)
@@ -287,28 +298,12 @@ int main_loop (void)
                 SDL_free (event.drop.file);
             }
 
-            gamepad_sdl_process_event (&event);
-
             /* Use mouse motion to show / hide the menubar */
             if (event.type == SDL_MOUSEMOTION)
             {
                 state.mouse_time = util_get_ticks ();
                 state.show_gui = true;
                 SDL_ShowCursor (SDL_ENABLE);
-            }
-
-            /* Use the mouse coordinates for the light phaser target */
-            if (event.type == SDL_MOUSEMOTION && state.video_scale >= 1)
-            {
-                Video_Frame *frame = snepulator_get_current_frame ();
-
-                int32_t cursor_x = (event.motion.x - (state.host_width  / 2 - (frame->width * state.video_scale * state.video_par) / 2))
-                                   / (state.video_scale * state.video_par);
-                int32_t cursor_y = (event.motion.y - (state.host_height / 2 - (frame->height * state.video_scale) / 2))
-                                   / state.video_scale;
-
-                state.cursor_x = cursor_x;
-                state.cursor_y = cursor_y;
             }
 
             /* Device change */
@@ -322,6 +317,8 @@ int main_loop (void)
 
                 gamepad_list_update ();
             }
+
+            gamepad_sdl_process_event (&event);
         }
 
         /* Animate the pause screen. */

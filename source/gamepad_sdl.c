@@ -9,6 +9,7 @@
 
 #include "snepulator.h"
 #include "gamepad.h"
+#include "util.h"
 
 extern Snepulator_State state;
 extern Snepulator_Gamepad gamepad [3];
@@ -235,10 +236,38 @@ void gamepad_sdl_process_event (SDL_Event *event)
     }
 
     /* Mouse */
+    /* Use the mouse coordinates for the light phaser target */
+    if (event->type == SDL_MOUSEMOTION && state.video_scale >= 1)
+    {
+        /* cursor_x / cursor_y provides the cursor coordinates in active-area space.
+         * This is used used for light phaser and graphics tablet input. */
+        Video_Frame *frame = snepulator_get_current_frame ();
+        state.cursor_x = (event->motion.x - (state.host_width  / 2 - (frame->width * state.video_scale * state.video_par) / 2))
+                         / (state.video_scale * state.video_par);
+        state.cursor_y = (event->motion.y - (state.host_height / 2 - (frame->height * state.video_scale) / 2))
+                         / state.video_scale;
+
+        /* For the paddle input, allow relative mouse input to steer the paddle. */
+        /* TODO: Option to adjust the scaling factor */
+        if (gamepad [1].type == GAMEPAD_TYPE_SMS_PADDLE && state.capture_mouse)
+        {
+            float new_position = gamepad [1].paddle_position;
+
+            new_position += event->motion.xrel * 0.25;
+            new_position = CLAMP (0.0, new_position, 255.0);
+
+            gamepad [1].paddle_position = new_position;
+        }
+    }
     if (event->type == SDL_MOUSEBUTTONDOWN && event->button.button == SDL_BUTTON_LEFT &&
         state.cursor_in_gui == false)
     {
         state.cursor_button = true;
+        if (gamepad [1].type == GAMEPAD_TYPE_SMS_PADDLE && !state.capture_mouse)
+        {
+            SDL_SetRelativeMouseMode (SDL_TRUE);
+            state.capture_mouse = true;
+        }
     }
     else if (event->type == SDL_MOUSEBUTTONUP && event->button.button == SDL_BUTTON_LEFT)
     {
