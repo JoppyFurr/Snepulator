@@ -74,7 +74,7 @@ uint_pixel_t tms9928a_palette [16] = {
     { 0xff , 0xff, 0xff }  /* White */
 };
 
-/* Display mode details */
+/* Graphics I Mode */
 static const TMS9928A_ModeInfo Mode0_PAL = {
     .mode = TMS9928A_MODE_0,
     .lines_active = 192,
@@ -85,6 +85,20 @@ static const TMS9928A_ModeInfo Mode0_NTSC = {
     .lines_active = 192,
     .lines_total = 262,
 };
+
+/* Text Mode */
+static const TMS9928A_ModeInfo Mode1_PAL = {
+    .mode = TMS9928A_MODE_1,
+    .lines_active = 192,
+    .lines_total = 313,
+};
+static const TMS9928A_ModeInfo Mode1_NTSC = {
+    .mode = TMS9928A_MODE_1,
+    .lines_active = 192,
+    .lines_total = 262,
+};
+
+/* Graphics II Mode */
 static const TMS9928A_ModeInfo Mode2_PAL = {
     .mode = TMS9928A_MODE_2,
     .lines_active = 192,
@@ -95,6 +109,8 @@ static const TMS9928A_ModeInfo Mode2_NTSC = {
     .lines_active = 192,
     .lines_total = 262,
 };
+
+/* Multicolour Mode */
 static const TMS9928A_ModeInfo Mode3_PAL = {
     .mode = TMS9928A_MODE_3,
     .lines_active = 192,
@@ -245,6 +261,37 @@ static void tms9928a_draw_pattern_background (TMS9928A_Context *context, uint16_
         uint8_t colour_index = ((line_data & (0x80 >> x)) ? foreground_colour : background_colour);
 
         if (colour_index == TMS9928A_COLOUR_TRANSPARENT)
+        {
+            colour_index = context->state.regs.background_colour & 0x0f;
+        }
+
+        uint_pixel_t pixel = context->palette [colour_index];
+        context->frame_buffer.active_area [(offset.x + x) + line * context->frame_buffer.width] = pixel;
+    }
+}
+
+
+/*
+ * Render one line of an 8x8 pattern.
+ */
+static void tms9928a_draw_pattern_text (TMS9928A_Context *context, uint16_t line, TMS9928A_Pattern *pattern_base,
+                                        int_point_t offset)
+{
+    uint8_t line_data = pattern_base->data [line - offset.y];
+    uint8_t colour_index;
+
+    for (uint32_t x = 0; x < 6; x++)
+    {
+        /* Don't draw texture pixels that fall outside of the screen */
+        /* TODO: With no scrolling - These checks could be removed from TMS modes */
+        if (x + offset.x >= 240)
+            continue;
+
+        if (line_data & (0x80 >> x))
+        {
+            colour_index = (context->state.regs.background_colour >> 4) & 0x0f;
+        }
+        else
         {
             colour_index = context->state.regs.background_colour & 0x0f;
         }
@@ -437,6 +484,31 @@ void tms9928a_mode0_draw_background (TMS9928A_Context *context, uint16_t line)
 
 
 /*
+ * Render one line of the mode1 background layer.
+ */
+void tms9928a_mode1_draw_background (TMS9928A_Context *context, uint16_t line)
+{
+    uint16_t name_table_base;
+    uint16_t pattern_generator_base;
+    uint32_t tile_y = line / 8;
+    int_point_t position;
+
+    name_table_base = (((uint16_t) context->state.regs.name_table_base) << 10) & 0x3c00;
+    pattern_generator_base = (((uint16_t) context->state.regs.background_pg_base) << 11) & 0x3800;
+
+    for (uint32_t tile_x = 0; tile_x < 40; tile_x++)
+    {
+        uint16_t tile = context->vram [name_table_base + (tile_y * 40) + tile_x];
+        TMS9928A_Pattern *pattern = (TMS9928A_Pattern *) &context->vram [pattern_generator_base + (tile * sizeof (TMS9928A_Pattern))];
+
+        position.x = 6 * tile_x;
+        position.y = 8 * tile_y;
+        tms9928a_draw_pattern_text (context, line, pattern, position);
+    }
+}
+
+
+/*
  * Render one line of the mode2 background layer.
  */
 void tms9928a_mode2_draw_background (TMS9928A_Context *context, uint16_t line)
@@ -565,6 +637,10 @@ void tms9928a_render_line (TMS9928A_Context *context, uint16_t line)
         tms9928a_mode0_draw_background (context, line);
         tms9928a_draw_sprites (context, line);
     }
+    else if (context->mode & TMS9928A_MODE_1)
+    {
+        tms9928a_mode1_draw_background (context, line);
+    }
     else if (context->mode & TMS9928A_MODE_2)
     {
         tms9928a_mode2_draw_background (context, line);
@@ -590,6 +666,11 @@ static void tms9928a_vdp_update_mode (TMS9928A_Context *context)
     {
         case TMS9928A_MODE_0: /* Mode 0: 32 x 24 8-byte tiles, sprites enabled. */
             config = (context->format == VIDEO_FORMAT_NTSC) ? &Mode0_NTSC : &Mode0_PAL;
+            break;
+
+        case TMS9928A_MODE_1: /* Mode 1: 40 x 24 8-byte tiles, sprites disabled. Tiles are 6x8, ignoring the
+                                         most-significant two bits. Active-area width is reduced to 240 pixels. */
+            config = (context->format == VIDEO_FORMAT_NTSC) ? &Mode1_NTSC : &Mode1_PAL;
             break;
 
         case TMS9928A_MODE_2: /* Mode 2: 32 × 24 8-byte tiles, sprites enabled, three colour/pattern tables */
@@ -625,7 +706,14 @@ void tms9928a_run_one_scanline (TMS9928A_Context *context)
     if (context->state.line == 0)
     {
         tms9928a_vdp_update_mode (context);
-        context->frame_buffer.width = 256;
+        if (context->mode & TMS9928A_MODE_1)
+        {
+            context->frame_buffer.width = 240;
+        }
+        else
+        {
+            context->frame_buffer.width = 256;
+        }
         context->frame_buffer.height = 192;
     }
 

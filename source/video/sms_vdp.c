@@ -68,6 +68,20 @@ static const TMS9928A_ModeInfo Mode0_NTSC = {
     .v_counter_map = { { .first = 0x00, .last = 0xda },
                        { .first = 0xd5, .last = 0xff } }
 };
+static const TMS9928A_ModeInfo Mode1_PAL = {
+    .mode = TMS9928A_MODE_1,
+    .lines_active = 192,
+    .lines_total = 313,
+    .v_counter_map = { { .first = 0x00, .last = 0xf2 },
+                       { .first = 0xba, .last = 0xff } }
+};
+static const TMS9928A_ModeInfo Mode1_NTSC = {
+    .mode = TMS9928A_MODE_1,
+    .lines_active = 192,
+    .lines_total = 262,
+    .v_counter_map = { { .first = 0x00, .last = 0xda },
+                       { .first = 0xd5, .last = 0xff } }
+};
 static const TMS9928A_ModeInfo Mode2_PAL = {
     .mode = TMS9928A_MODE_2,
     .lines_active = 192,
@@ -77,6 +91,20 @@ static const TMS9928A_ModeInfo Mode2_PAL = {
 };
 static const TMS9928A_ModeInfo Mode2_NTSC = {
     .mode = TMS9928A_MODE_2,
+    .lines_active = 192,
+    .lines_total = 262,
+    .v_counter_map = { { .first = 0x00, .last = 0xda },
+                       { .first = 0xd5, .last = 0xff } }
+};
+static const TMS9928A_ModeInfo Mode3_PAL = {
+    .mode = TMS9928A_MODE_3,
+    .lines_active = 192,
+    .lines_total = 313,
+    .v_counter_map = { { .first = 0x00, .last = 0xf2 },
+                       { .first = 0xba, .last = 0xff } }
+};
+static const TMS9928A_ModeInfo Mode3_NTSC = {
+    .mode = TMS9928A_MODE_3,
     .lines_active = 192,
     .lines_total = 262,
     .v_counter_map = { { .first = 0x00, .last = 0xda },
@@ -753,9 +781,18 @@ static void sms_vdp_render_line (TMS9928A_Context *context, uint16_t line)
         tms9928a_mode0_draw_background (context, line);
         tms9928a_draw_sprites (context, line);
     }
+    else if (context->mode == TMS9928A_MODE_1)
+    {
+        tms9928a_mode1_draw_background (context, line);
+    }
     else if (context->mode == TMS9928A_MODE_2)
     {
         tms9928a_mode2_draw_background (context, line);
+        tms9928a_draw_sprites (context, line);
+    }
+    else if (context->mode == TMS9928A_MODE_3)
+    {
+        tms9928a_mode3_draw_background (context, line);
         tms9928a_draw_sprites (context, line);
     }
 }
@@ -775,8 +812,16 @@ void sms_vdp_update_mode (TMS9928A_Context *context)
             config = (context->format == VIDEO_FORMAT_NTSC) ? &Mode0_NTSC : &Mode0_PAL;
             break;
 
+        case TMS9928A_MODE_1:
+            config = (context->format == VIDEO_FORMAT_NTSC) ? &Mode1_NTSC : &Mode1_PAL;
+            break;
+
         case TMS9928A_MODE_2: /* Mode 2: 32 × 24 8-byte tiles, sprites enabled, three colour/pattern tables */
             config = (context->format == VIDEO_FORMAT_NTSC) ? &Mode2_NTSC : &Mode2_PAL;
+            break;
+
+        case TMS9928A_MODE_3:
+            config = (context->format == VIDEO_FORMAT_NTSC) ? &Mode3_NTSC : &Mode3_PAL;
             break;
 
         case SMS_VDP_MODE_4: /* Mode 4, 192 lines */
@@ -829,6 +874,8 @@ void sms_vdp_run_one_scanline (TMS9928A_Context *context)
     if (context->state.line == 0)
     {
         sms_vdp_update_mode (context);
+        context->crop_start.x = 0;
+        context->crop_start.y = 0;
 
         /* The Master System supports multiple resolutions that can be changed on the fly. */
         if (context->is_game_gear)
@@ -846,13 +893,15 @@ void sms_vdp_run_one_scanline (TMS9928A_Context *context)
                 context->frame_buffer.width = 248;
                 context->crop_start.x = 8;
             }
+            else if (context->mode == TMS9928A_MODE_1)
+            {
+                context->frame_buffer.width = 240;
+            }
             else
             {
                 context->frame_buffer.width = 256;
-                context->crop_start.x = 0;
             }
             context->frame_buffer.height = context->lines_active;
-            context->crop_start.y = 0;
         }
     }
 

@@ -212,8 +212,14 @@ void tms9928a_draw_sprites (TMS9928A_Context *context, uint16_t line);
 /* Render one line of the mode0 background layer. */
 void tms9928a_mode0_draw_background (TMS9928A_Context *context, uint16_t line);
 
+/* Render one line of the mode1 background layer. */
+void tms9928a_mode1_draw_background (TMS9928A_Context *context, uint16_t line);
+
 /* Render one line of the mode2 background layer. */
 void tms9928a_mode2_draw_background (TMS9928A_Context *context, uint16_t line);
+
+/* Render one line of the mode3 background layer. */
+void tms9928a_mode3_draw_background (TMS9928A_Context *context, uint16_t line);
 
 /* Run one scanline on the tms9928a. */
 void tms9928a_run_one_scanline (TMS9928A_Context *context);
