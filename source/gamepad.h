@@ -160,8 +160,8 @@ void gamepad_paddle_tick (uint32_t cycles);
 /* Handle strobe-signal for trackball. */
 void gamepad_trackball_strobe (bool strobe, uint64_t current_time);
 
-/* The nibble to show on the trackball output pins. */
-uint8_t gamepad_trackball_get_nibble (uint64_t current_time);
+/* Get the trackball output pin values. */
+uint8_t gamepad_trackball_get_port (uint64_t current_time);
 
 /* Return the number of players using the specified joystick id. */
 uint32_t gamepad_joystick_user_count (uint32_t id);

@@ -737,6 +737,15 @@ void snepulator_reset (void)
     state.run_timer = util_get_ticks_us ();
     state.micro_clocks = 0;
     state.clock_rate = 0;
+
+    /* Clean up any gamepad state */
+    for (uint32_t i = 0; i < 3; i++)
+    {
+        gamepad [i].paddle_data = 0;
+        gamepad [i].trackball_strobe_time = 0;
+        gamepad [i].trackball_x = 0;
+        gamepad [i].trackball_y = 0;
+    }
 }
 
 

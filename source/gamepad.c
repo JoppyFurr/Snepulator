@@ -19,6 +19,10 @@ extern Snepulator_State state;
 
 #define MAX_STRING_SIZE 1024
 
+/* SMS Player 1 TL / TR bits */
+#define BIT_TL BIT_4
+#define BIT_TR BIT_5
+
 const char *button_names [] = { "up", "down", "left", "right", "button-1", "button-2", "start" };
 
 
@@ -373,21 +377,89 @@ void gamepad_trackball_strobe (bool strobe, uint64_t current_time)
  * before the new nibble appears on the controller port. As no game
  * depends on this delay, the simulated outputs update instantaneously.
  */
-uint8_t gamepad_trackball_get_nibble (uint64_t current_time)
+uint8_t gamepad_trackball_get_port (uint64_t current_time)
 {
-    switch (gamepad [1].trackball_state)
+    uint64_t cycles_since_strobe = current_time - gamepad [1].trackball_strobe_time;
+    uint8_t port_levels;
+
+    /* Note:
+     * On real hardware, the Sports Pad decides shortly after power-up if it's
+     * going to run in Relative Mode or Absolute mode, based on how the TH pin
+     * is being driven. Once a mode is decided upon, it stays that way.
+     * This implementation is a bit more flexible, dynamically selecting the
+     * mode to use depending on if any strobes have been seen in the last
+     * three seconds. */
+    if (cycles_since_strobe > state.clock_rate * 3)
     {
-        case TRACKBALL_STATE_X_MSB:
-            return gamepad [1].trackball_x_high;
-        case TRACKBALL_STATE_X_LSB:
-            return gamepad [1].trackball_x_low;
-        case TRACKBALL_STATE_Y_MSB:
-            return gamepad [1].trackball_y_high;
-        case TRACKBALL_STATE_Y_LSB:
-            return gamepad [1].trackball_y_low;
-        default:
-            return 0;
+        /* Absolute Mode - Update coordinates and state. */
+        gamepad [1].trackball_x += (int) gamepad [1].trackball_delta.x;
+        gamepad [1].trackball_y += (int) gamepad [1].trackball_delta.y;
+        gamepad [1].trackball_delta.x -= (int) gamepad [1].trackball_delta.x;
+        gamepad [1].trackball_delta.y -= (int) gamepad [1].trackball_delta.y;
+
+        /* Split the time between the five nibbles. Each full loop takes 238 µs.
+         * Note that on the real Sports Pad the time is not evenly divided perfectly
+         * evenly between the five nibbles, some have slightly longer or shorter
+         * durations than others. */
+        uint32_t clocks_per_step = 238 * state.clock_rate / 1000000 / 5;
+        uint32_t step_in_sequence = (cycles_since_strobe / clocks_per_step) % 5;
+        switch (step_in_sequence)
+        {
+            case 0:
+                port_levels = BIT_TL | BIT_TR | BIT_2 |
+                              (state.mouse_button_left  ? 0 : BIT_0) |
+                              (state.mouse_button_right ? 0 : BIT_1);
+                break;
+            case 1:
+                port_levels = gamepad [1].trackball_x_high;
+                break;
+            case 2:
+                port_levels = BIT_TL | gamepad [1].trackball_x_low;
+                break;
+            case 3:
+                port_levels = gamepad [1].trackball_y_high;
+                break;
+            case 4:
+                port_levels = BIT_TL | gamepad [1].trackball_y_low;
+                break;
+            default:
+                break;
+        }
     }
+    else
+    {
+        /* Relative Mode */
+        switch (gamepad [1].trackball_state)
+        {
+            case TRACKBALL_STATE_X_MSB:
+                port_levels = gamepad [1].trackball_x_high;
+                break;
+            case TRACKBALL_STATE_X_LSB:
+                port_levels = gamepad [1].trackball_x_low;
+                break;
+            case TRACKBALL_STATE_Y_MSB:
+                port_levels = gamepad [1].trackball_y_high;
+                break;
+            case TRACKBALL_STATE_Y_LSB:
+                port_levels = gamepad [1].trackball_y_low;
+                break;
+            default:
+                port_levels = 0;
+                break;
+        }
+
+        if (!state.mouse_button_left)
+        {
+            port_levels |= BIT_TL;
+        }
+
+        if (!state.mouse_button_right)
+        {
+            port_levels |= BIT_TR;
+        }
+    }
+
+    return port_levels;
 }
 
 

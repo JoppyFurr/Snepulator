@@ -600,9 +600,7 @@ static uint8_t sms_io_read (void *context_ptr, uint8_t addr)
             }
             else if (gamepad [1].type == GAMEPAD_TYPE_SMS_SPORTS_PAD)
             {
-                port_value = (state.mouse_button_left  ? 0 : BIT_4) |
-                             (state.mouse_button_right ? 0 : BIT_5) |
-                             gamepad_trackball_get_nibble (context->z80_context->cycle_count);
+                port_value = gamepad_trackball_get_port (context->z80_context->cycle_count);
             }
             else
             {
