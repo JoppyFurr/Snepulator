@@ -25,8 +25,16 @@ typedef enum Gamepad_Index_e {
 typedef enum Gamepad_Type_e {
     GAMEPAD_TYPE_SMS = 0,
     GAMEPAD_TYPE_SMS_PHASER,
-    GAMEPAD_TYPE_SMS_PADDLE
+    GAMEPAD_TYPE_SMS_PADDLE,
+    GAMEPAD_TYPE_SMS_SPORTS_PAD
 } Gamepad_Type;
+
+typedef enum Trackball_State_e {
+    TRACKBALL_STATE_X_MSB = 0,
+    TRACKBALL_STATE_X_LSB,
+    TRACKBALL_STATE_Y_MSB,
+    TRACKBALL_STATE_Y_LSB
+} Trackball_State;
 
 
 typedef enum Gamepad_Button_e {
@@ -91,6 +99,8 @@ typedef struct Snepulator_Gamepad_t {
     int32_t         id;         /* ID associated with events for this gamepad. */
     Gamepad_Config *config;     /* Button mapping configuration */
     bool            state [GAMEPAD_BUTTON_COUNT];
+
+    /* SMS Paddle Controller */
     float           paddle_velocity;
     float           paddle_position;
     union {
@@ -98,6 +108,26 @@ typedef struct Snepulator_Gamepad_t {
         struct {
             uint8_t paddle_data_low:4;
             uint8_t paddle_data_high:4;
+        };
+    };
+
+    /* SMS Sports Pad */
+    Trackball_State trackball_state;
+    bool            trackball_strobe;
+    uint32_t        trackball_strobe_time;  /* Timestamp of the most recent strobe, in cycles */
+    float_point_t   trackball_delta;
+    union {
+        uint8_t     trackball_x;
+        struct {
+            uint8_t trackball_x_low:4;
+            uint8_t trackball_x_high:4;
+        };
+    };
+    union {
+        uint8_t     trackball_y;
+        struct {
+            uint8_t trackball_y_low:4;
+            uint8_t trackball_y_high:4;
         };
     };
 } Snepulator_Gamepad;
@@ -126,6 +156,12 @@ void gamepad_list_update (void);
 
 /* Called to simulate gamepad hardware. (paddle) */
 void gamepad_paddle_tick (uint32_t cycles);
+
+/* Handle strobe-signal for trackball. */
+void gamepad_trackball_strobe (bool strobe, uint64_t current_time);
+
+/* The nibble to show on the trackball output pins. */
+uint8_t gamepad_trackball_get_nibble (uint64_t current_time);
 
 /* Return the number of players using the specified joystick id. */
 uint32_t gamepad_joystick_user_count (uint32_t id);

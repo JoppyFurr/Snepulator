@@ -352,7 +352,7 @@ static uint8_t sg_1000_memory_read (void *context_ptr, uint16_t addr)
         {
             /* Bit 0: Button pressed
              * Bit 7: Busy */
-            return state.cursor_button ? 0x00 : 0x01;
+            return state.mouse_button_left ? 0x00 : 0x01;
         }
         else if (addr == 0xa000)
         {

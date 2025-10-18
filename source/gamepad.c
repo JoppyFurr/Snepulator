@@ -281,7 +281,6 @@ void gamepad_process_key_event (int32_t key, bool key_down)
  *
  * TODO: * Make paddle_speed configurable
  *       * Support variable speeds with analogue input
- *       * Mouse support?
  *       * Direct vs relative?
  *       * Latching of the data so that the high/low nibbles
  *         are from the same byte.
@@ -313,6 +312,82 @@ void gamepad_paddle_tick (uint32_t cycles)
     new_position = CLAMP (0.0, new_position, 255.0);
 
     gamepad [1].paddle_position = new_position;
+}
+
+
+/*
+ * Handle strobe-signal for trackball.
+ * current_time is in z80 cycles since power-on.
+ */
+void gamepad_trackball_strobe (bool strobe, uint64_t current_time)
+{
+    /* Nothing to do if TH hasn't changed. */
+    if (strobe == gamepad [1].trackball_strobe)
+    {
+        return;
+    }
+    gamepad [1].trackball_strobe = strobe;
+
+    /* Update the strobe timer */
+    uint32_t z80_cycles = current_time - gamepad [1].trackball_strobe_time;
+    gamepad [1].trackball_strobe_time = current_time;
+
+    /* Transition to X_MSB latches the accumulated delta into the data to send.
+     * A long delay (arbitrary choice of 50 lines for now), triggers this
+     * transition even if X_MSB wasn't the next state in the cycle. */
+    if (strobe == 0 && (gamepad [1].trackball_state == TRACKBALL_STATE_Y_LSB ||
+                       (gamepad [1].trackball_state == TRACKBALL_STATE_X_LSB && z80_cycles > 11400)))
+    {
+        /* Latch the integer-part of the trackball delta. */
+        gamepad [1].trackball_x = -gamepad [1].trackball_delta.x;
+        gamepad [1].trackball_y = -gamepad [1].trackball_delta.y;
+
+        /* The fractional part is left to accumulate. */
+        gamepad [1].trackball_delta.x += gamepad [1].trackball_x;
+        gamepad [1].trackball_delta.y += gamepad [1].trackball_y;
+        gamepad [1].trackball_state = TRACKBALL_STATE_X_MSB;
+    }
+
+    /* If not latching a new value, just advance to the next nibble  in the sequence. */
+    else if (strobe == 1 && gamepad [1].trackball_state == TRACKBALL_STATE_X_MSB)
+    {
+        gamepad [1].trackball_state = TRACKBALL_STATE_X_LSB;
+    }
+    else if (strobe == 0 && gamepad [1].trackball_state == TRACKBALL_STATE_X_LSB)
+    {
+        gamepad [1].trackball_state = TRACKBALL_STATE_Y_MSB;
+    }
+    else if (strobe == 1 && gamepad [1].trackball_state == TRACKBALL_STATE_Y_MSB)
+    {
+        gamepad [1].trackball_state = TRACKBALL_STATE_Y_LSB;
+    }
+}
+
+
+/*
+ * The nibble to show on the trackball output pins.
+ * current_time is in z80 cycles since power-on.
+ *
+ * Note:
+ * In relative mode, the real sports-pad takes some time, 40-80 µs,
+ * before the new nibble appears on the controller port. As no game
+ * depends on this delay, the simulated outputs update instantaneously.
+ */
+uint8_t gamepad_trackball_get_nibble (uint64_t current_time)
+{
+    switch (gamepad [1].trackball_state)
+    {
+        case TRACKBALL_STATE_X_MSB:
+            return gamepad [1].trackball_x_high;
+        case TRACKBALL_STATE_X_LSB:
+            return gamepad [1].trackball_x_low;
+        case TRACKBALL_STATE_Y_MSB:
+            return gamepad [1].trackball_y_high;
+        case TRACKBALL_STATE_Y_LSB:
+            return gamepad [1].trackball_y_low;
+        default:
+            return 0;
+    }
 }
 
 
