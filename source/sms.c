@@ -589,14 +589,20 @@ static uint8_t sms_io_read (void *context_ptr, uint8_t addr)
                     port_value = (gamepad [1].paddle_data_high) | BIT_5;
                 }
 
-                if (gamepad [1].state [GAMEPAD_BUTTON_1] || gamepad [1].state [GAMEPAD_BUTTON_2] || state.cursor_button)
+                if (gamepad [1].state [GAMEPAD_BUTTON_1] || gamepad [1].state [GAMEPAD_BUTTON_2] || state.mouse_button_left)
                 {
                     port_value |= BIT_4;
                 }
             }
             else if (gamepad [1].type == GAMEPAD_TYPE_SMS_PHASER)
             {
-                port_value = (state.cursor_button ? 0 : BIT_4) | 0x2f;
+                port_value = (state.mouse_button_left ? 0 : BIT_4) | 0x2f;
+            }
+            else if (gamepad [1].type == GAMEPAD_TYPE_SMS_SPORTS_PAD)
+            {
+                port_value = (state.mouse_button_left  ? 0 : BIT_4) |
+                             (state.mouse_button_right ? 0 : BIT_5) |
+                             gamepad_trackball_get_nibble (context->z80_context->cycle_count);
             }
             else
             {
@@ -726,6 +732,13 @@ static void sms_io_write (void *context_ptr, uint8_t addr, uint8_t data)
             if (th_rising_edge)
             {
                 sms_vdp_update_h_counter (context->vdp_context, context->z80_context->cycle_count);
+            }
+
+            if (gamepad [1].type == GAMEPAD_TYPE_SMS_SPORTS_PAD &&
+                context->hw_state.io_th_a_direction  == 0 &&
+                (data & SMS_IO_TH_A_LEVEL) != (context->hw_state.io_control & SMS_IO_TH_A_LEVEL))
+            {
+                gamepad_trackball_strobe (!!(data & SMS_IO_TH_A_LEVEL), context->z80_context->cycle_count);
             }
 
             context->hw_state.io_control = data;

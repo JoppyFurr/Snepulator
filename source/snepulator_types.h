@@ -35,6 +35,7 @@
 #define SIZE_48K    (48 << 10)
 #define SIZE_64K    (64 << 10)
 
+
 typedef union uint16_split_u {
     uint16_t w;
     struct {
@@ -42,6 +43,7 @@ typedef union uint16_split_u {
         uint8_t h;
     };
 } uint16_split_t;
+
 
 typedef union uint32_split_u {
     uint32_t l;
@@ -58,6 +60,13 @@ typedef struct int_point_s {
     int32_t x;
     int32_t y;
 } int_point_t;
+
+
+typedef struct float_point_s {
+    float x;
+    float y;
+} float_point_t;
+
 
 typedef struct uint_pixel_s {
     uint8_t r;

@@ -298,8 +298,9 @@ int main_loop (void)
                 SDL_free (event.drop.file);
             }
 
-            /* Use mouse motion to show / hide the menubar */
-            if (event.type == SDL_MOUSEMOTION)
+            /* Use mouse motion to show / hide the menubar,
+             * except when the mouse is captured (trackball / paddle) */
+            if (event.type == SDL_MOUSEMOTION && !state.capture_mouse)
             {
                 state.mouse_time = util_get_ticks ();
                 state.show_gui = true;

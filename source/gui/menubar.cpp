@@ -359,6 +359,11 @@ static void snepulator_input_menu (void)
                     gamepad [1].type = GAMEPAD_TYPE_SMS_PADDLE;
                     gamepad [1].type_auto = false;
                 }
+                if (ImGui::MenuItem ("SMS Sports Pad (Sports Mode)", NULL, gamepad [1].type == GAMEPAD_TYPE_SMS_SPORTS_PAD))
+                {
+                    gamepad [1].type = GAMEPAD_TYPE_SMS_SPORTS_PAD;
+                    gamepad [1].type_auto = false;
+                }
                 ImGui::EndMenu ();
             }
 
