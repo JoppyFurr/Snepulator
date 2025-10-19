@@ -261,7 +261,8 @@ void gamepad_sdl_process_event (SDL_Event *event)
 
         /* For the Sports Pad input, allow relative mouse input to steer the trackball */
         /* TODO: Option to adjust the scaling factor */
-        if (gamepad [1].type == GAMEPAD_TYPE_SMS_SPORTS_PAD && state.capture_mouse)
+        if ((gamepad [1].type == GAMEPAD_TYPE_SMS_SPORTS_PAD ||
+             gamepad [1].type == GAMEPAD_TYPE_SMS_SPORTS_PAD_CONTROL) && state.capture_mouse)
         {
             gamepad [1].trackball_delta.x += event->motion.xrel * 0.04;
             gamepad [1].trackball_delta.y += event->motion.yrel * 0.04;
@@ -274,8 +275,9 @@ void gamepad_sdl_process_event (SDL_Event *event)
             state.mouse_button_left = true;
 
             /* Left mouse button triggers capturing */
-            if ((gamepad [1].type == GAMEPAD_TYPE_SMS_PADDLE || gamepad [1].type == GAMEPAD_TYPE_SMS_SPORTS_PAD)
-                && !state.capture_mouse)
+            if ((gamepad [1].type == GAMEPAD_TYPE_SMS_PADDLE ||
+                 gamepad [1].type == GAMEPAD_TYPE_SMS_SPORTS_PAD ||
+                 gamepad [1].type == GAMEPAD_TYPE_SMS_SPORTS_PAD_CONTROL) && !state.capture_mouse)
             {
                 SDL_SetRelativeMouseMode (SDL_TRUE);
                 state.capture_mouse = true;

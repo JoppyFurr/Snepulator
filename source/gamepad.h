@@ -26,7 +26,8 @@ typedef enum Gamepad_Type_e {
     GAMEPAD_TYPE_SMS = 0,
     GAMEPAD_TYPE_SMS_PHASER,
     GAMEPAD_TYPE_SMS_PADDLE,
-    GAMEPAD_TYPE_SMS_SPORTS_PAD
+    GAMEPAD_TYPE_SMS_SPORTS_PAD,
+    GAMEPAD_TYPE_SMS_SPORTS_PAD_CONTROL
 } Gamepad_Type;
 
 typedef enum Trackball_State_e {
@@ -130,6 +131,14 @@ typedef struct Snepulator_Gamepad_t {
             uint8_t trackball_y_high:4;
         };
     };
+
+    /* SMS Sports Pad, Control Mode */
+    uint64_t control_last_poll;
+    uint64_t control_up_event;
+    uint64_t control_down_event;
+    uint64_t control_left_event;
+    uint64_t control_right_event;
+
 } Snepulator_Gamepad;
 
 
@@ -162,6 +171,9 @@ void gamepad_trackball_strobe (bool strobe, uint64_t current_time);
 
 /* Get the trackball output pin values. */
 uint8_t gamepad_trackball_get_port (uint64_t current_time);
+
+/* Get the trackball output pin values (control-mode). */
+uint8_t gamepad_trackball_control_get_port (uint64_t current_time);
 
 /* Return the number of players using the specified joystick id. */
 uint32_t gamepad_joystick_user_count (uint32_t id);
