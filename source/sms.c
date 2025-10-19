@@ -398,6 +398,10 @@ SMS_Context *sms_init (void)
         {
             gamepad [1].type = GAMEPAD_TYPE_SMS_PHASER;
         }
+        else if (context->rom_hints & SMS_HINT_SPORTS_PAD)
+        {
+            gamepad [1].type = GAMEPAD_TYPE_SMS_SPORTS_PAD;
+        }
         else
         {
             gamepad [1].type = GAMEPAD_TYPE_SMS;

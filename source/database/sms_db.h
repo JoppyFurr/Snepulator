@@ -9,15 +9,16 @@
 #define SMS_HINT_LIGHT_PHASER           0x0008
 #define SMS_HINT_RAM_PATTERN            0x0010
 #define SMS_HINT_NO_MEMORY_CONTROL      0x0020
+#define SMS_HINT_SPORTS_PAD             0x0040
 
-#define SMS_HINT_MAPPER_NONE            0x0040
-#define SMS_HINT_MAPPER_SEGA            0x0080
-#define SMS_HINT_MAPPER_CODEMASTERS     0x0100
-#define SMS_HINT_MAPPER_KOREAN          0x0200
-#define SMS_HINT_MAPPER_MSX             0x0400
-#define SMS_HINT_MAPPER_NEMESIS         0x0800
-#define SMS_HINT_MAPPER_4PAK            0x1000
-#define SMS_HINT_MAPPER_JANGGUN         0x2000
+#define SMS_HINT_MAPPER_NONE            0x0100
+#define SMS_HINT_MAPPER_SEGA            0x0200
+#define SMS_HINT_MAPPER_CODEMASTERS     0x0400
+#define SMS_HINT_MAPPER_KOREAN          0x0800
+#define SMS_HINT_MAPPER_MSX             0x1000
+#define SMS_HINT_MAPPER_NEMESIS         0x2000
+#define SMS_HINT_MAPPER_4PAK            0x4000
+#define SMS_HINT_MAPPER_JANGGUN         0x8000
 
 typedef struct SMS_DB_Entry_s {
     uint8_t hash [HASH_LENGTH];
