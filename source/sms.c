@@ -602,6 +602,10 @@ static uint8_t sms_io_read (void *context_ptr, uint8_t addr)
             {
                 port_value = gamepad_trackball_get_port (context->z80_context->cycle_count);
             }
+            else if (gamepad [1].type == GAMEPAD_TYPE_SMS_SPORTS_PAD_CONTROL)
+            {
+                port_value = gamepad_trackball_control_get_port (context->z80_context->cycle_count);
+            }
             else
             {
                 port_value = (gamepad [1].state [GAMEPAD_DIRECTION_UP]      ? 0 : BIT_0) |

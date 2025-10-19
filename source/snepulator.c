@@ -745,6 +745,12 @@ void snepulator_reset (void)
         gamepad [i].trackball_strobe_time = 0;
         gamepad [i].trackball_x = 0;
         gamepad [i].trackball_y = 0;
+
+        gamepad [i].control_last_poll = 0;
+        gamepad [i].control_up_event = 0;
+        gamepad [i].control_down_event = 0;
+        gamepad [i].control_left_event = 0;
+        gamepad [i].control_right_event = 0;
     }
 }
 

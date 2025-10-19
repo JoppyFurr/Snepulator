@@ -464,6 +464,84 @@ uint8_t gamepad_trackball_get_port (uint64_t current_time)
 
 
 /*
+ * Get the trackball output pin values (control-mode).
+ *
+ * In this mode, the trackball emulates a regular control-pad.
+ * Transitions on one of the two encoder outputs result in a
+ * ~18.5 ms pulse in the associated direction.
+ */
+uint8_t gamepad_trackball_control_get_port (uint64_t current_time)
+{
+    uint8_t port_levels = 0x3f;
+
+    /* For now, assume any new movement occurred at the mid-point between
+     * now and the time of the previous call. Possibly this could be made
+     * to use the SDL event's timestamp, but this should be accurate enough. */
+    uint64_t event_time = ((gamepad [1].control_last_poll + current_time) / 2);
+
+    /* First, check for any new movement and update the corresponding timers */
+    if (gamepad [1].trackball_delta.x >= 1.0)
+    {
+        gamepad [1].control_left_event = 0;
+        gamepad [1].control_right_event = event_time;
+        gamepad [1].trackball_delta.x -= (int) gamepad [1].trackball_delta.x;
+    }
+    else if (gamepad [1].trackball_delta.x <= -1.0)
+    {
+        gamepad [1].control_left_event = event_time;
+        gamepad [1].control_right_event = 0;
+        gamepad [1].trackball_delta.x -= (int) gamepad [1].trackball_delta.x;
+    }
+
+    if (gamepad [1].trackball_delta.y >= 1.0)
+    {
+        gamepad [1].control_up_event = 0;
+        gamepad [1].control_down_event = event_time;
+        gamepad [1].trackball_delta.y -= (int) gamepad [1].trackball_delta.y;
+    }
+    else if (gamepad [1].trackball_delta.y <= -1.0)
+    {
+        gamepad [1].control_up_event = event_time;
+        gamepad [1].control_down_event = 0;
+        gamepad [1].trackball_delta.y -= (int) gamepad [1].trackball_delta.y;
+    }
+
+    /* For any direction with movement in the last 18.5 ms, send the d-pad press */
+    if (gamepad [1].control_up_event + (185 * state.clock_rate / 10000) > current_time)
+    {
+        port_levels &= ~BIT_0;
+    }
+    else if (gamepad [1].control_down_event + (185 * state.clock_rate / 10000) > current_time)
+    {
+        port_levels &= ~BIT_1;
+    }
+
+    if (gamepad [1].control_left_event + (185 * state.clock_rate / 10000) > current_time)
+    {
+        port_levels &= ~BIT_2;
+    }
+    else if (gamepad [1].control_right_event + (185 * state.clock_rate / 10000) > current_time)
+    {
+        port_levels &= ~BIT_3;
+    }
+
+    if (state.mouse_button_left)
+    {
+        port_levels &= ~BIT_TL;
+    }
+
+    if (state.mouse_button_right)
+    {
+        port_levels &= ~BIT_TR;
+    }
+
+    gamepad [1].control_last_poll = current_time;
+
+    return port_levels;
+}
+
+
+/*
  * Refresh the list of detected gamepads.
  */
 void gamepad_list_update (void)
