@@ -8,7 +8,7 @@ set -e
 CC=gcc
 CXX=g++
 SDL2_CONFIG="sdl2-config"
-IMGUI_VERSION="imgui-1.86"
+IMGUI_VERSION="imgui-1.89.9"
 CLEAN_BUILD="false"
 DEVELOPER_BUILD="false"
 
@@ -109,7 +109,7 @@ build_imgui ()
     eval $CXX $CXXFLAGS -c ${IMGUI_PATH}/imgui_tables.cpp                -o work/imgui/imgui_tables.o
     eval $CXX $CXXFLAGS -c ${IMGUI_PATH}/imgui_widgets.cpp               -o work/imgui/imgui_widgets.o
     eval $CXX $CXXFLAGS -c ${IMGUI_PATH}/backends/imgui_impl_opengl3.cpp -o work/imgui/imgui_impl_opengl3.o
-    eval $CXX $CXXFLAGS -c ${IMGUI_PATH}/backends/imgui_impl_sdl.cpp     -o work/imgui/imgui_impl_sdl.o
+    eval $CXX $CXXFLAGS -c ${IMGUI_PATH}/backends/imgui_impl_sdl2.cpp    -o work/imgui/imgui_impl_sdl2.o
 }
 
 
