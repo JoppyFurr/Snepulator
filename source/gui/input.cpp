@@ -361,6 +361,7 @@ void snepulator_input_modal_render (void)
             {
                 uint32_t available_width = ImGui::GetContentRegionAvail().x;
 
+                ImGui::Spacing ();
                 ImGui::Text ("Sensitivity:");
                 ImGui::SetCursorPosX (available_width * 0.1);
                 ImGui::SetNextItemWidth (available_width * 0.8);
@@ -375,6 +376,7 @@ void snepulator_input_modal_render (void)
             {
                 uint32_t available_width = ImGui::GetContentRegionAvail().x;
 
+                ImGui::Spacing ();
                 ImGui::Text ("Sensitivity:");
                 ImGui::SetCursorPosX (available_width * 0.1);
                 ImGui::SetNextItemWidth (available_width * 0.8);

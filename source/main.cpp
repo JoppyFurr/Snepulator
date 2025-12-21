@@ -362,8 +362,10 @@ int main_loop (void)
                 ImGui::OpenPopup ("Configure device...");
             }
 
+            ImGui::PushStyleVar (ImGuiStyleVar_WindowBorderSize, 1.0);
             snepulator_open_modal_render ();
             snepulator_input_modal_render ();
+            ImGui::PopStyleVar ();
 
             if (state.error_title != NULL)
             {
@@ -646,6 +648,8 @@ int main (int argc, char **argv)
     ImGui::PushStyleColor (ImGuiCol_TabActive,      ImVec4 (0.7, 0.0, 0.0, 1.0));
     ImGui::PushStyleColor (ImGuiCol_SliderGrab,     ImVec4 (0.7, 0.0, 0.0, 1.0));
     ImGui::PushStyleColor (ImGuiCol_SliderGrabActive, ImVec4 (0.9, 0.0, 0.0, 1.0));
+    ImGui::PushStyleColor (ImGuiCol_ModalWindowDimBg, ImVec4 (0.0, 0.0, 0.0, 0.6));
+    ImGui::PushStyleColor (ImGuiCol_Border,         ImVec4 (0.4, 0.0, 0.0, 1.0));
     ImGui::PushStyleVar (ImGuiStyleVar_WindowRounding, 4.0);
     ImGui::PushStyleVar (ImGuiStyleVar_WindowBorderSize, 0.0);
 
