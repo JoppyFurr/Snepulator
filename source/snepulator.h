@@ -118,6 +118,8 @@ typedef struct Snepulator_State_s {
     bool            remove_sprite_limit;    /* Remove the single line sprite limit. */
     Video_3D_Mode   video_3d_mode;          /* Left / Right / Anaglyph selection. */
     float           video_3d_saturation;    /* Colour saturation for anaglyph modes. */
+    float           trackball_sensitivity;  /* Portion of a sport-pad pixel moved per host mouse pixel */
+    float           paddle_sensitivity;     /* Portion of a 1/256 step moved per host moues pixel */
 
     /* Host API */
     uint32_t     (*os_gamepad_create_default_config) (int32_t device_index);
@@ -241,6 +243,9 @@ void snepulator_overclock_set (bool overclock);
 /* Override the palette used for tms9928a modes. */
 void snepulator_override_tms9928a_palette (uint_pixel_t *palette);
 
+/* Set the paddle sensitivity. */
+void snepulator_paddle_sensitivity_set (double sensitivity);
+
 /* Animate the pause screen. */
 void snepulator_pause_animate (void);
 
@@ -270,6 +275,9 @@ void snepulator_state_save (void *context, const char *filename);
 
 /* Call the appropriate initialisation for the chosen ROM. */
 void snepulator_system_init (Console console);
+
+/* Set the trackball sensitivity. */
+void snepulator_trackball_sensitivity_set (double sensitivity);
 
 /* Set the video 3D mode. */
 void snepulator_video_3d_mode_set (Video_3D_Mode mode);

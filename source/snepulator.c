@@ -5,6 +5,7 @@
 
 #include <ctype.h>
 #include <math.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -127,6 +128,20 @@ int snepulator_config_import (void)
     if (config_uint_get ("sms", "fm-sound", &uint) == 0)
     {
         state.fm_sound = uint;
+    }
+
+    /* Trackball Sensitivity */
+    state.trackball_sensitivity = 0.04;
+    if (config_string_get ("input", "trackball-sensitivity", &string) == 0)
+    {
+        state.trackball_sensitivity = strtod (string, NULL);
+    }
+
+    /* Paddle Sensitivity */
+    state.paddle_sensitivity = 0.25;
+    if (config_string_get ("input", "paddle-sensitivity", &string) == 0)
+    {
+        state.paddle_sensitivity = strtod (string, NULL);
     }
 
     /* Overclock - Defaults to off */
@@ -411,6 +426,34 @@ void snepulator_fm_sound_set (bool enable)
         state.update_settings (state.console_context);
     }
 
+    config_write ();
+}
+
+
+/*
+ * Set the trackball sensitivity.
+ */
+void snepulator_trackball_sensitivity_set (double sensitivity)
+{
+    state.trackball_sensitivity = sensitivity;
+
+    char buf [20];
+    sprintf (buf, "%.3f", sensitivity);
+    config_string_set ("input", "trackball-sensitivity", buf);
+    config_write ();
+}
+
+
+/*
+ * Set the paddle sensitivity.
+ */
+void snepulator_paddle_sensitivity_set (double sensitivity)
+{
+    state.paddle_sensitivity = sensitivity;
+
+    char buf [20];
+    sprintf (buf, "%.3f", sensitivity);
+    config_string_set ("input", "paddle-sensitivity", buf);
     config_write ();
 }
 

@@ -640,6 +640,12 @@ int main (int argc, char **argv)
     ImGui::PushStyleColor (ImGuiCol_ButtonActive,   ImVec4 (0.9, 0.0, 0.0, 1.0));
     ImGui::PushStyleColor (ImGuiCol_FrameBg,        ImVec4 (0.3, 0.0, 0.0, 1.0));
     ImGui::PushStyleColor (ImGuiCol_FrameBgHovered, ImVec4 (0.4, 0.0, 0.0, 1.0));
+    ImGui::PushStyleColor (ImGuiCol_FrameBgActive,  ImVec4 (0.4, 0.0, 0.0, 1.0));
+    ImGui::PushStyleColor (ImGuiCol_Tab,            ImVec4 (0.4, 0.0, 0.0, 1.0));
+    ImGui::PushStyleColor (ImGuiCol_TabHovered,     ImVec4 (0.8, 0.0, 0.0, 1.0));
+    ImGui::PushStyleColor (ImGuiCol_TabActive,      ImVec4 (0.7, 0.0, 0.0, 1.0));
+    ImGui::PushStyleColor (ImGuiCol_SliderGrab,     ImVec4 (0.7, 0.0, 0.0, 1.0));
+    ImGui::PushStyleColor (ImGuiCol_SliderGrabActive, ImVec4 (0.9, 0.0, 0.0, 1.0));
     ImGui::PushStyleVar (ImGuiStyleVar_WindowRounding, 4.0);
     ImGui::PushStyleVar (ImGuiStyleVar_WindowBorderSize, 0.0);
 
