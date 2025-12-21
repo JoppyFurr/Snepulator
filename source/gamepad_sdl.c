@@ -248,24 +248,22 @@ void gamepad_sdl_process_event (SDL_Event *event)
                          / state.video_scale;
 
         /* For the paddle input, allow relative mouse input to steer the paddle. */
-        /* TODO: Option to adjust the scaling factor */
         if (gamepad [1].type == GAMEPAD_TYPE_SMS_PADDLE && state.capture_mouse)
         {
             float new_position = gamepad [1].paddle_position;
 
-            new_position += event->motion.xrel * 0.25;
+            new_position += event->motion.xrel * state.paddle_sensitivity;
             new_position = CLAMP (0.0, new_position, 255.0);
 
             gamepad [1].paddle_position = new_position;
         }
 
         /* For the Sports Pad input, allow relative mouse input to steer the trackball */
-        /* TODO: Option to adjust the scaling factor */
         if ((gamepad [1].type == GAMEPAD_TYPE_SMS_SPORTS_PAD ||
              gamepad [1].type == GAMEPAD_TYPE_SMS_SPORTS_PAD_CONTROL) && state.capture_mouse)
         {
-            gamepad [1].trackball_delta.x += event->motion.xrel * 0.04;
-            gamepad [1].trackball_delta.y += event->motion.yrel * 0.04;
+            gamepad [1].trackball_delta.x += event->motion.xrel * state.trackball_sensitivity;
+            gamepad [1].trackball_delta.y += event->motion.yrel * state.trackball_sensitivity;
         }
     }
     if (event->type == SDL_MOUSEBUTTONDOWN && state.cursor_in_gui == false)
