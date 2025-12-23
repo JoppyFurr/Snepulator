@@ -406,9 +406,18 @@ uint8_t gamepad_trackball_get_port (uint64_t current_time)
         switch (step_in_sequence)
         {
             case 0:
-                port_levels = BIT_TL | BIT_TR | BIT_2 |
-                              (state.mouse_button_left  ? 0 : BIT_0) |
-                              (state.mouse_button_right ? 0 : BIT_1);
+                if (state.trackball_button_swap)
+                {
+                    port_levels = BIT_TL | BIT_TR | BIT_2 |
+                                  (state.mouse_button_right  ? 0 : BIT_0) |
+                                  (state.mouse_button_left ? 0 : BIT_1);
+                }
+                else
+                {
+                    port_levels = BIT_TL | BIT_TR | BIT_2 |
+                                  (state.mouse_button_left  ? 0 : BIT_0) |
+                                  (state.mouse_button_right ? 0 : BIT_1);
+                }
                 break;
             case 1:
                 port_levels = gamepad [1].trackball_x_high;
@@ -448,14 +457,27 @@ uint8_t gamepad_trackball_get_port (uint64_t current_time)
                 break;
         }
 
-        if (!state.mouse_button_left)
+        if (state.trackball_button_swap)
         {
-            port_levels |= BIT_TL;
+            if (!state.mouse_button_right)
+            {
+                port_levels |= BIT_TL;
+            }
+            if (!state.mouse_button_left)
+            {
+                port_levels |= BIT_TR;
+            }
         }
-
-        if (!state.mouse_button_right)
+        else
         {
-            port_levels |= BIT_TR;
+            if (!state.mouse_button_left)
+            {
+                port_levels |= BIT_TL;
+            }
+            if (!state.mouse_button_right)
+            {
+                port_levels |= BIT_TR;
+            }
         }
     }
 
@@ -525,14 +547,27 @@ uint8_t gamepad_trackball_control_get_port (uint64_t current_time)
         port_levels &= ~BIT_3;
     }
 
-    if (state.mouse_button_left)
+    if (state.trackball_button_swap)
     {
-        port_levels &= ~BIT_TL;
+        if (state.mouse_button_right)
+        {
+            port_levels &= ~BIT_TL;
+        }
+        if (state.mouse_button_left)
+        {
+            port_levels &= ~BIT_TR;
+        }
     }
-
-    if (state.mouse_button_right)
+    else
     {
-        port_levels &= ~BIT_TR;
+        if (state.mouse_button_left)
+        {
+            port_levels &= ~BIT_TL;
+        }
+        if (state.mouse_button_right)
+        {
+            port_levels &= ~BIT_TR;
+        }
     }
 
     gamepad [1].control_last_poll = current_time;

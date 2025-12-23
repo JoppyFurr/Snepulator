@@ -35,6 +35,7 @@ extern uint32_t gamepad_remap_step;
 static uint32_t input_combo_index = 0;
 
 /* Settings in-flight, not yet committed by the "OK" button */
+static bool uncommitted_trackball_button_swap = false;
 static float uncommitted_trackball_sensitivity = 0.0;
 static float uncommitted_paddle_sensitivity = 0.0;
 
@@ -60,8 +61,9 @@ void input_start (void)
         }
     }
 
-    /* Sliders start at the currently configured values */
+    /* Settings in the GUI start at the currently configured values */
     uncommitted_trackball_sensitivity = state.trackball_sensitivity;
+    uncommitted_trackball_button_swap = state.trackball_button_swap;
     uncommitted_paddle_sensitivity = state.paddle_sensitivity;
 }
 
@@ -370,6 +372,8 @@ void snepulator_input_modal_render (void)
                 if (ImGui::Button ("Restore Default", ImVec2 (240,0))) {
                     uncommitted_trackball_sensitivity = 0.04;
                 };
+                ImGui::Spacing ();
+                ImGui::Checkbox ("Swap left and right mouse buttons", &uncommitted_trackball_button_swap);
                 ImGui::EndTabItem ();
             }
             if (ImGui::BeginTabItem ("Paddle"))
@@ -438,6 +442,11 @@ void snepulator_input_modal_render (void)
             if (uncommitted_trackball_sensitivity != state.trackball_sensitivity)
             {
                 snepulator_trackball_sensitivity_set (uncommitted_trackball_sensitivity);
+            }
+
+            if (uncommitted_trackball_button_swap != state.trackball_button_swap)
+            {
+                snepulator_trackball_button_swap_set (uncommitted_trackball_button_swap);
             }
 
             if (uncommitted_paddle_sensitivity != state.paddle_sensitivity)

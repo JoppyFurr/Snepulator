@@ -119,6 +119,7 @@ typedef struct Snepulator_State_s {
     Video_3D_Mode   video_3d_mode;          /* Left / Right / Anaglyph selection. */
     float           video_3d_saturation;    /* Colour saturation for anaglyph modes. */
     float           trackball_sensitivity;  /* Portion of a sport-pad pixel moved per host mouse pixel */
+    bool            trackball_button_swap;  /* Swap left and right mouse buttons when used for trackball input */
     float           paddle_sensitivity;     /* Portion of a 1/256 step moved per host moues pixel */
 
     /* Host API */
@@ -275,6 +276,9 @@ void snepulator_state_save (void *context, const char *filename);
 
 /* Call the appropriate initialisation for the chosen ROM. */
 void snepulator_system_init (Console console);
+
+/* Swap the left and right mouse buttons when used for the trackball. */
+void snepulator_trackball_button_swap_set (bool swap);
 
 /* Set the trackball sensitivity. */
 void snepulator_trackball_sensitivity_set (double sensitivity);
