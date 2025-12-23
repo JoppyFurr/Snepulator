@@ -137,6 +137,13 @@ int snepulator_config_import (void)
         state.trackball_sensitivity = strtod (string, NULL);
     }
 
+    /* Trackball left/right button swap */
+    state.trackball_button_swap = false;
+    if (config_uint_get ("input", "trackball-button-swap", &uint) == 0)
+    {
+        state.trackball_button_swap = uint;
+    }
+
     /* Paddle Sensitivity */
     state.paddle_sensitivity = 0.25;
     if (config_string_get ("input", "paddle-sensitivity", &string) == 0)
@@ -425,6 +432,18 @@ void snepulator_fm_sound_set (bool enable)
     {
         state.update_settings (state.console_context);
     }
+
+    config_write ();
+}
+
+
+/*
+ * Swap the left and right mouse buttons when used for the trackball.
+ */
+void snepulator_trackball_button_swap_set (bool swap)
+{
+    state.trackball_button_swap = swap;
+    config_uint_set ("input", "trackball-button-swap", swap);
 
     config_write ();
 }
