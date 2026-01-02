@@ -14,6 +14,7 @@ typedef enum SG_Mapper_e {
     SG_MAPPER_NONE,
     SG_MAPPER_SEGA,
     SG_MAPPER_GRAPHIC_BOARD,
+    SG_MAPPER_DAHJEE_RAM,
 } SG_Mapper;
 
 /* Console hardware state */

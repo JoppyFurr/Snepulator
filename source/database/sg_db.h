@@ -3,7 +3,8 @@
  * SG-1000 ROM Database.
  */
 
-#define SG_HINT_MAPPER_GRAPHIC_BOARD   0x0020
+#define SG_HINT_MAPPER_GRAPHIC_BOARD    0x0200
+#define SG_HINT_MAPPER_DAHJEE_RAM       0x0400
 
 typedef struct SG_DB_Entry_s {
     uint8_t hash [HASH_LENGTH];

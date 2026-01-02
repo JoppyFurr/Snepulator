@@ -221,6 +221,10 @@ SG_1000_Context *sg_1000_init (void)
         {
             context->hw_state.mapper = SG_MAPPER_GRAPHIC_BOARD;
         }
+        else if (context->rom_hints & SG_HINT_MAPPER_DAHJEE_RAM)
+        {
+            context->hw_state.mapper = SG_MAPPER_DAHJEE_RAM;
+        }
         else if (context->rom_size <= SIZE_48K)
         {
             context->hw_state.mapper = SG_MAPPER_NONE;
@@ -376,6 +380,15 @@ static uint8_t sg_1000_memory_read (void *context_ptr, uint16_t addr)
         }
     }
 
+    /* Taiwanese RAM Expander */
+    if (context->hw_state.mapper == SG_MAPPER_DAHJEE_RAM)
+    {
+        if (addr >= 0x2000 && addr <= 0x3fff)
+        {
+            return context->sram [addr & (SG_1000_SRAM_SIZE - 1)];
+        }
+    }
+
     /* Cartridge slot */
     if (addr >= 0x0000 && addr <= 0xbfff && addr < context->rom_size)
     {
@@ -419,6 +432,16 @@ static void sg_1000_memory_write (void *context_ptr, uint16_t addr, uint8_t data
     if (context->hw_state.mapper == SG_MAPPER_GRAPHIC_BOARD && addr == 0x6000)
     {
         context->graphic_board_axis = data & 0x01;
+    }
+
+    /* Taiwanese RAM Expander */
+    if (context->hw_state.mapper == SG_MAPPER_DAHJEE_RAM)
+    {
+        if (addr >= 0x2000 && addr <= 0x3fff)
+        {
+            context->sram [addr & (SG_1000_SRAM_SIZE - 1)] = data;
+            context->sram_used = true;
+        }
     }
 
     /* Up to 8 KiB of on-cartridge sram */
