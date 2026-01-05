@@ -221,6 +221,10 @@ SG_1000_Context *sg_1000_init (void)
         {
             context->hw_state.mapper = SG_MAPPER_GRAPHIC_BOARD;
         }
+        else if (context->rom_hints & SG_HINT_MAPPER_EXTRA_RAM)
+        {
+            context->hw_state.mapper = SG_MAPPER_EXTRA_RAM;
+        }
         else if (context->rom_hints & SG_HINT_MAPPER_DAHJEE_RAM)
         {
             context->hw_state.mapper = SG_MAPPER_DAHJEE_RAM;
@@ -228,6 +232,10 @@ SG_1000_Context *sg_1000_init (void)
         else if (context->rom_size <= SIZE_48K)
         {
             context->hw_state.mapper = SG_MAPPER_NONE;
+        }
+        else
+        {
+            context->hw_state.mapper = SG_MAPPER_SEGA;
         }
     }
 
@@ -380,10 +388,19 @@ static uint8_t sg_1000_memory_read (void *context_ptr, uint16_t addr)
         }
     }
 
-    /* Taiwanese RAM Expander */
+    /* Taiwanese RAM Expander, 8 KiB at 0x2000 (DahJee) */
     if (context->hw_state.mapper == SG_MAPPER_DAHJEE_RAM)
     {
         if (addr >= 0x2000 && addr <= 0x3fff)
+        {
+            return context->sram [addr & (SG_1000_SRAM_SIZE - 1)];
+        }
+    }
+
+    /* Taiwanese RAM Expander, 8 KB at 0xc000 */
+    if (context->hw_state.mapper == SG_MAPPER_EXTRA_RAM)
+    {
+        if (addr >= 0xc000 && addr <= 0xffff)
         {
             return context->sram [addr & (SG_1000_SRAM_SIZE - 1)];
         }
@@ -423,7 +440,7 @@ static void sg_1000_memory_write (void *context_ptr, uint16_t addr, uint8_t data
     SG_1000_Context *context = (SG_1000_Context *) context_ptr;
 
     /* Sega Mapper */
-    if (addr == 0xffff)
+    if (context->hw_state.mapper == SG_MAPPER_SEGA && addr == 0xffff)
     {
         context->hw_state.mapper_bank [2] = data & 0x3f;
     }
@@ -434,13 +451,24 @@ static void sg_1000_memory_write (void *context_ptr, uint16_t addr, uint8_t data
         context->graphic_board_axis = data & 0x01;
     }
 
-    /* Taiwanese RAM Expander */
+    /* Taiwanese RAM Expander, 8 KiB at 0x2000 (DahJee) */
     if (context->hw_state.mapper == SG_MAPPER_DAHJEE_RAM)
     {
         if (addr >= 0x2000 && addr <= 0x3fff)
         {
             context->sram [addr & (SG_1000_SRAM_SIZE - 1)] = data;
             context->sram_used = true;
+        }
+    }
+
+    /* Taiwanese RAM Expander, 8 KB at 0xc000 */
+    if (context->hw_state.mapper == SG_MAPPER_EXTRA_RAM)
+    {
+        if (addr >= 0xc000 && addr <= 0xffff)
+        {
+            context->sram [addr & (SG_1000_SRAM_SIZE - 1)] = data;
+            context->sram_used = true;
+            return; /* Avoid clobbering console RAM mirroring below */
         }
     }
 
