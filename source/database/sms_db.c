@@ -202,7 +202,6 @@ SMS_DB_Entry sms_db [] = {
  */
 uint16_t sms_db_get_hints (uint8_t *hash)
 {
-
     for (uint32_t i = 0; i < (sizeof (sms_db) / sizeof (SMS_DB_Entry)) ; i++)
     {
         if (memcmp (hash, sms_db [i].hash, HASH_LENGTH) == 0)
