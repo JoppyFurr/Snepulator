@@ -62,10 +62,11 @@ typedef struct int_point_s {
 } int_point_t;
 
 
-typedef struct float_point_s {
-    float x;
-    float y;
-} float_point_t;
+typedef struct double_point_s {
+    double x;
+    double y;
+    double z;
+} double_point_t;
 
 
 typedef struct uint_pixel_s {
