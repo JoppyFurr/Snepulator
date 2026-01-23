@@ -6,15 +6,11 @@
 #include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "../snepulator_types.h"
 #include "band_limit.h"
-
-#ifndef M_PI
-#define M_PI (3.14159265358979323846)
-#endif
 
 #define PHASE_COUNT 32
 #define PHASE_SAMPLES 48

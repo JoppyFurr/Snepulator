@@ -6,6 +6,12 @@
 #define HASH_LENGTH 12
 #define UUID_SIZE 16
 
+/* Extra mathematical constants */
+#ifndef M_PI
+#define M_PI    (3.14159265358979323846)
+#endif
+#define M_PHI   (1.61803398874989484820)
+
 /* Bits */
 #define BIT_0       (1 <<  0)
 #define BIT_1       (1 <<  1)

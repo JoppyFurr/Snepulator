@@ -19,10 +19,6 @@ extern Snepulator_State state;
 
 #include "ym2413.h"
 
-#ifndef M_PI
-#define M_PI (3.14159265358979323846)
-#endif
-
 /* Represents the level of a single melody channel at maximum volume */
 #define BASE_VOLUME 4096
 
