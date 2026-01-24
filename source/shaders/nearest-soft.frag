@@ -2,7 +2,6 @@ R"(#version 330 core
 
 layout (origin_upper_left) in vec4 gl_FragCoord;
 
-const vec2 buffer_size = vec2 (256, 240);
 const vec4 black = vec4 (0.0, 0.0, 0.0, 1.0);
 
 uniform sampler2D active_area;
