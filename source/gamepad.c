@@ -380,7 +380,7 @@ void gamepad_trackball_strobe (bool strobe, uint64_t current_time)
 uint8_t gamepad_trackball_get_port (uint64_t current_time)
 {
     uint64_t cycles_since_strobe = current_time - gamepad [1].trackball_strobe_time;
-    uint8_t port_levels;
+    uint8_t port_levels = 0;
 
     /* Note:
      * On real hardware, the Sports Pad decides shortly after power-up if it's
@@ -453,7 +453,6 @@ uint8_t gamepad_trackball_get_port (uint64_t current_time)
                 port_levels = gamepad [1].trackball_y_low;
                 break;
             default:
-                port_levels = 0;
                 break;
         }
 

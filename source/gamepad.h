@@ -118,14 +118,14 @@ typedef struct Snepulator_Gamepad_t {
     uint32_t        trackball_strobe_time;  /* Timestamp of the most recent strobe, in cycles */
     double_point_t  trackball_delta;
     union {
-        uint8_t     trackball_x;
+        int8_t      trackball_x;
         struct {
             uint8_t trackball_x_low:4;
             uint8_t trackball_x_high:4;
         };
     };
     union {
-        uint8_t     trackball_y;
+        int8_t      trackball_y;
         struct {
             uint8_t trackball_y_low:4;
             uint8_t trackball_y_high:4;
