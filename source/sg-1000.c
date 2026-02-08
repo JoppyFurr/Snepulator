@@ -292,14 +292,27 @@ static uint8_t sg_1000_io_read (void *context_ptr, uint8_t addr)
         if ((addr & 0x01) == 0x00)
         {
             /* I/O Port A/B */
-            return (gamepad [1].state [GAMEPAD_DIRECTION_UP]    ? 0 : BIT_0) |
-                   (gamepad [1].state [GAMEPAD_DIRECTION_DOWN]  ? 0 : BIT_1) |
-                   (gamepad [1].state [GAMEPAD_DIRECTION_LEFT]  ? 0 : BIT_2) |
-                   (gamepad [1].state [GAMEPAD_DIRECTION_RIGHT] ? 0 : BIT_3) |
-                   (gamepad [1].state [GAMEPAD_BUTTON_1]        ? 0 : BIT_4) |
-                   (gamepad [1].state [GAMEPAD_BUTTON_2]        ? 0 : BIT_5) |
-                   (gamepad [2].state [GAMEPAD_DIRECTION_UP]    ? 0 : BIT_6) |
-                   (gamepad [2].state [GAMEPAD_DIRECTION_DOWN]  ? 0 : BIT_7);
+            uint8_t port_value = 0;
+
+            /* TODO: For dpad-like inputs consider a common function to get controller input
+             *       so that each console's implementation doesn't need to handle each case. */
+            if (gamepad [1].type == GAMEPAD_TYPE_SMS_SPORTS_PAD_CONTROL)
+            {
+                port_value = gamepad_trackball_control_get_port (context->z80_context->cycle_count);
+            }
+            else
+            {
+                port_value = (gamepad [1].state [GAMEPAD_DIRECTION_UP]    ? 0 : BIT_0) |
+                             (gamepad [1].state [GAMEPAD_DIRECTION_DOWN]  ? 0 : BIT_1) |
+                             (gamepad [1].state [GAMEPAD_DIRECTION_LEFT]  ? 0 : BIT_2) |
+                             (gamepad [1].state [GAMEPAD_DIRECTION_RIGHT] ? 0 : BIT_3) |
+                             (gamepad [1].state [GAMEPAD_BUTTON_1]        ? 0 : BIT_4) |
+                             (gamepad [1].state [GAMEPAD_BUTTON_2]        ? 0 : BIT_5);
+            }
+
+            port_value |= (gamepad [2].state [GAMEPAD_DIRECTION_UP]    ? 0 : BIT_6) |
+                          (gamepad [2].state [GAMEPAD_DIRECTION_DOWN]  ? 0 : BIT_7);
+            return port_value;
         }
         else
         {
