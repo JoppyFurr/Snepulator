@@ -26,7 +26,8 @@
 typedef enum Run_State_e {
     RUN_STATE_INIT,     /* No ROM has been loaded. */
     RUN_STATE_RUNNING,  /* A ROM has been loaded and is running. */
-    RUN_STATE_PAUSED,   /* A ROM has been loaded and is paused. */
+    RUN_STATE_WAIT,     /* A ROM has been loaded, but paused for single-stepping frames. */
+    RUN_STATE_PAUSED,   /* A ROM has been loaded, but paused by the user. Shows animated pause screen. */
     RUN_STATE_STOP,     /* Running has completed, return to init once the run_mutex is free. */
     RUN_STATE_ERROR,    /* An error has been encountered. */
     RUN_STATE_EXIT      /* Shut down. */
@@ -121,6 +122,9 @@ typedef struct Snepulator_State_s {
     float           trackball_sensitivity;  /* Portion of a sport-pad pixel moved per host mouse pixel */
     bool            trackball_button_swap;  /* Swap left and right mouse buttons when used for trackball input */
     float           paddle_sensitivity;     /* Portion of a 1/256 step moved per host moues pixel */
+
+    /* Development Tools */
+    bool            step_single_frame;      /* Enable single-frame mode. */
 
     /* Host API */
     uint32_t     (*os_gamepad_create_default_config) (int32_t device_index);

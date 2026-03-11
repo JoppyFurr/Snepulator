@@ -76,7 +76,7 @@ static void menubar_diagnostics_print (const char *format, ...)
  */
 static void snepulator_file_menu (void)
 {
-    bool running_or_paused = (state.run == RUN_STATE_RUNNING || state.run == RUN_STATE_PAUSED);
+    bool running_or_paused = (state.run == RUN_STATE_RUNNING || state.run == RUN_STATE_WAIT || state.run == RUN_STATE_PAUSED);
 
     if (ImGui::BeginMenu ("File"))
     {
@@ -141,9 +141,10 @@ static void snepulator_file_menu (void)
             snepulator_rom_set (NULL);
         }
 
-        if (ImGui::MenuItem ("Pause", NULL, state.run == RUN_STATE_PAUSED, running_or_paused))
+        bool is_paused = (state.run == RUN_STATE_PAUSED || state.run == RUN_STATE_WAIT);
+        if (ImGui::MenuItem ("Pause", NULL, is_paused, running_or_paused))
         {
-            snepulator_pause_set (state.run != RUN_STATE_PAUSED);
+            snepulator_pause_set (!is_paused);
         }
         ImGui::Separator ();
         if (ImGui::MenuItem ("Quit", NULL))
@@ -442,6 +443,8 @@ static void snepulator_audio_menu (void)
  */
 static void snepulator_video_menu (void)
 {
+    bool running_or_paused = (state.run == RUN_STATE_RUNNING || state.run == RUN_STATE_WAIT || state.run == RUN_STATE_PAUSED);
+
     if (ImGui::BeginMenu ("Video"))
     {
         state.mouse_time = util_get_ticks ();
@@ -577,6 +580,11 @@ static void snepulator_video_menu (void)
         if (ImGui::MenuItem ("Take Screenshot"))
         {
             util_take_screenshot ();
+        }
+        if (ImGui::MenuItem ("Step single frame", "F10", false, running_or_paused))
+        {
+            state.step_single_frame = true;
+            state.run = RUN_STATE_RUNNING;
         }
 
         ImGui::EndMenu ();

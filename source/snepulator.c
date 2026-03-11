@@ -498,6 +498,11 @@ void snepulator_frame_done (Video_Frame *frame)
     state.video_ring [state.video_write_index % VIDEO_RING_SIZE].width = frame->width;
     state.video_ring [state.video_write_index % VIDEO_RING_SIZE].height = frame->height;
     pthread_mutex_unlock (&state.video_mutex);
+
+    if (state.step_single_frame && state.run == RUN_STATE_RUNNING)
+    {
+        state.run = RUN_STATE_WAIT;
+    }
 }
 
 
@@ -687,8 +692,9 @@ void snepulator_pause_set (bool pause)
     }
 
     /* Un-pause */
-    else if (pause == false && state.run == RUN_STATE_PAUSED)
+    else if (pause == false && (state.run == RUN_STATE_PAUSED || state.run == RUN_STATE_WAIT))
     {
+        state.step_single_frame = false;
         state.run = RUN_STATE_RUNNING;
     }
 }
@@ -743,6 +749,7 @@ void snepulator_reset (void)
 {
     /* Stop emulation */
     snepulator_pause_set (true);
+    state.step_single_frame = false;
 
     /* Save any battery-backed memory. */
     if (state.sync != NULL)
@@ -751,7 +758,7 @@ void snepulator_reset (void)
     }
 
     /* Mark the system as not-ready. */
-    if (state.run == RUN_STATE_RUNNING || state.run == RUN_STATE_PAUSED)
+    if (state.run == RUN_STATE_RUNNING || state.run == RUN_STATE_WAIT || state.run == RUN_STATE_PAUSED)
     {
         state.run = RUN_STATE_INIT;
     }

@@ -264,6 +264,16 @@ int main_loop (void)
          * gamepad, but also needs to be called from the main thread. */
         while (SDL_PollEvent (&event))
         {
+            /* F10 to single-step frames */
+            if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_F10)
+            {
+                if (state.run == RUN_STATE_RUNNING || state.run == RUN_STATE_PAUSED || state.run == RUN_STATE_WAIT)
+                {
+                    state.step_single_frame = true;
+                    state.run = RUN_STATE_RUNNING;
+                }
+                continue;
+            }
 
             /* Alt+Enter or F11 shortcuts for full-screen */
             if ((event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_F11) ||
@@ -629,6 +639,7 @@ int main (int argc, char **argv)
 
     /* Style */
     ImGui::PushStyleColor (ImGuiCol_MenuBarBg,      ImVec4 (0.4, 0.0, 0.0, 1.0));
+    ImGui::PushStyleColor (ImGuiCol_TextDisabled,   ImVec4 (0.6, 0.0, 0.0, 1.0)); /* Used for menubar hints */
     ImGui::PushStyleColor (ImGuiCol_TitleBgActive,  ImVec4 (0.5, 0.0, 0.0, 1.0));
     ImGui::PushStyleColor (ImGuiCol_PopupBg,        ImVec4 (0.2, 0.0, 0.0, 1.0));
     ImGui::PushStyleColor (ImGuiCol_Header,         ImVec4 (0.6, 0.0, 0.0, 1.0));
