@@ -44,6 +44,7 @@ extern Snepulator_State state;
 extern File_Open_State open_state;
 
 void snepulator_audio_device_open (const char *device);
+void toggle_fullscreen (void);
 
 extern bool open_modal_create;
 extern bool input_modal_create;
@@ -587,6 +588,10 @@ static void snepulator_video_menu (void)
         {
             state.step_single_frame = true;
             state.run = RUN_STATE_RUNNING;
+        }
+        if (ImGui::MenuItem ("Full Screen", "F11"))
+        {
+            toggle_fullscreen ();
         }
 
         ImGui::EndMenu ();
