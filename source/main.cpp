@@ -264,6 +264,12 @@ int main_loop (void)
          * gamepad, but also needs to be called from the main thread. */
         while (SDL_PollEvent (&event))
         {
+            /* F9 to take a screenshot */
+            if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_F9)
+            {
+                util_take_screenshot ();
+            }
+
             /* F10 to single-step frames */
             if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_F10)
             {

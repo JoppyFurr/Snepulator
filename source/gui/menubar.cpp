@@ -577,7 +577,9 @@ static void snepulator_video_menu (void)
             ImGui::EndMenu ();
         }
 
-        if (ImGui::MenuItem ("Take Screenshot"))
+        ImGui::Separator ();
+
+        if (ImGui::MenuItem ("Take Screenshot", "F9"))
         {
             util_take_screenshot ();
         }
