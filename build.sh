@@ -126,7 +126,12 @@ build_libraries ()
 }
 
 # Version from Git tag.
-TAG="$(git describe --tags)"
+if git describe --tags >/dev/null 2>&1
+then
+    TAG="$(git describe --tags)"
+else
+    TAG="_no-tag"
+fi
 
 # Build-host options
 if [ $(uname) = "Darwin" ]
