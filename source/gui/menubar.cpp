@@ -270,7 +270,7 @@ static void snepulator_console_menu ()
  */
 static void snepulator_state_menu (void)
 {
-    bool can_save_state = (state.run == RUN_STATE_RUNNING || state.run == RUN_STATE_PAUSED) && state.state_save != NULL;
+    bool can_save_state = (state.run == RUN_STATE_RUNNING || state.run == RUN_STATE_WAIT || state.run == RUN_STATE_PAUSED) && state.state_save != NULL;
 
     if (ImGui::BeginMenu ("State"))
     {
@@ -306,6 +306,14 @@ static void snepulator_state_menu (void)
                 char *path = path_save_slot (1, state.get_rom_hash (state.console_context));
                 snepulator_state_load (state.console_context, path);
                 free (path);
+                /* Note: For now, when loading a state, paused emulation is automatically resumed.
+                 *       This could be annoying when using single-step to debug, however, the state
+                 *       does not carry enough information to properly recreate the on-screen frame
+                 *       at the point the state was saved. This gives the option of resuming, or
+                 *       possibly running until the next complete frame is ready. A better option
+                 *       may be to start including a copy of the most recent frame inside the save
+                 *       state, which could double as a reminder when choosing a state to load.
+                 */
                 snepulator_pause_set (false);
             }
             if (ImGui::MenuItem ("Load from Slot 2", NULL))
