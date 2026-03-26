@@ -162,7 +162,7 @@ static void snepulator_file_menu (void)
  */
 static void snepulator_console_menu ()
 {
-    bool running_or_paused = (state.run == RUN_STATE_RUNNING || state.run == RUN_STATE_PAUSED);
+    bool running_or_paused = (state.run == RUN_STATE_RUNNING || state.run == RUN_STATE_WAIT || state.run == RUN_STATE_PAUSED);
 
     if (ImGui::BeginMenu ("Console"))
     {
