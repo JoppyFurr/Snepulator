@@ -393,9 +393,6 @@ VGM_Player_Context *vgm_player_init (void)
     fprintf (stdout, "%d KiB VGM %s loaded.\n", context->vgm_size >> 10, state.cart_filename);
 
     /* Initialise sound chips */
-    /* TODO: Right now, the PSG implementation only returns stereo sound
-     *       if state.console is set to CONSOLE_GAME_GEAR. This should
-     *       instead be a parameter when initializing. */
     sn76489_context = sn76489_init ();
     context->sn76489_context = sn76489_context;
     ym2413_context = ym2413_init ();
@@ -408,6 +405,20 @@ VGM_Player_Context *vgm_player_init (void)
     context->total_samples = *(uint32_t *) (&context->vgm [0x18]);
     context->vgm_loop      = *((uint32_t *) (&context->vgm [0x1c])) + 0x1c;
     context->loop_samples  = *(uint32_t *) (&context->vgm [0x20]);
+
+    /* GG stereo is enabled by default for compatibility with older VGM
+     * files, but can be disabled using the flags added in VGM 1.51 */
+    context->sn76489_context->has_gg_stereo = true;
+
+    if (context->version >= 0x151)
+    {
+        uint8_t sn76489_flags = context->vgm [0x2B];
+
+        if (sn76489_flags & BIT_2)
+        {
+            context->sn76489_context->has_gg_stereo = false;
+        }
+    }
 
     if (context->version >= 0x150)
     {

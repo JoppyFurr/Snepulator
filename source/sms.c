@@ -299,6 +299,12 @@ SMS_Context *sms_init (void)
     ym2413_context = ym2413_init ();
     context->ym2413_context = ym2413_context;
 
+    /* Enable GG Stereo */
+    if (context->console == CONSOLE_GAME_GEAR)
+    {
+        psg_context->has_gg_stereo = true;
+    }
+
     /* Defaults */
     context->hw_state.io_control = 0x0f;
     context->export_paddle = false;

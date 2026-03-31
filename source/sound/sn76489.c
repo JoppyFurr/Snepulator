@@ -248,7 +248,7 @@ void _sn76489_run_cycles (SN76489_Context *context, uint32_t clock_rate, uint32_
         if (context->state.tone_2 <= 1) { context->state.output_2 = 1; }
 
         /* Store this sample in the ring */
-        if (state.console == CONSOLE_GAME_GEAR)
+        if (context->has_gg_stereo)
         {
             context->sample_ring_l [context->write_index % SN76489_RING_SIZE] =
                 (context->state.gg_stereo & GG_CH0_LEFT ? context->state.output_0 * volume_table [context->state.vol_0] : 0)
@@ -359,7 +359,7 @@ void sn76489_get_samples (SN76489_Context *context, int32_t *stream, uint32_t co
         size_t sample_index = (context->read_index + i) & (SN76489_RING_SIZE - 1);
 
         /* Left, Right */
-        if (state.console == CONSOLE_GAME_GEAR)
+        if (context->has_gg_stereo)
         {
             stream [2 * i    ] += context->sample_ring_l [sample_index];
             stream [2 * i + 1] += context->sample_ring_r [sample_index];

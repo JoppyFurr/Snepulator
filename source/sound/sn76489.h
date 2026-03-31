@@ -70,6 +70,9 @@ typedef struct SN76489_Context_s {
     pthread_mutex_t mutex;
     SN76489_State state;
 
+    /* Chip variant */
+    bool has_gg_stereo;
+
     /* Ring buffer */
     int16_t sample_ring_l [SN76489_RING_SIZE];
     int16_t sample_ring_r [SN76489_RING_SIZE];
