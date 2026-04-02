@@ -952,7 +952,8 @@ static void sms_memory_write (void *context_ptr, uint16_t addr, uint8_t data)
     /* No early breaks - Register writes also affect RAM */
 
     /* 3D glasses */
-    if (addr >= 0xfff8 && addr <= 0xfffb)
+    if (context->console == CONSOLE_MASTER_SYSTEM &&
+        addr >= 0xfff8 && addr <= 0xfffb)
     {
         if (data & 0x01)
         {
