@@ -59,7 +59,7 @@ static uint8_t smd_memory_read_8 (void *context_ptr, uint32_t addr)
 {
     SMD_Context *context = (SMD_Context *) context_ptr;
 
-    /* Cartridge ROM */
+    /* Cartridge ROM: 0x000000 -- 0x3fffff */
     if (addr <= 0x3fffff)
     {
         if (context->rom != NULL)
@@ -79,11 +79,12 @@ static uint8_t smd_memory_read_8 (void *context_ptr, uint32_t addr)
         return 0xff;
     }
 
-    /* Z80 Address Space */
+    /* Z80 Address Space: 0xa00000 -- 0xa0ffff */
     else if (addr <= 0xa0ffff)
     {
-        snepulator_error (__func__, "Z80 address-space %06x not implemented.", addr);
-        return 0xff;
+        /* TODO: Find out if there is any mirroring going on here around reading
+         *       addresses in z80-space that point back to m68k-space */
+        return smd_z80_memory_read (context_ptr, addr);
     }
 
     /* I/O */
@@ -119,7 +120,7 @@ static uint8_t smd_memory_read_8 (void *context_ptr, uint32_t addr)
         return 0xff;
     }
 
-    /* VDP */
+    /* VDP: 0xc00000 -- 0xdfffff*/
     else if (addr <= 0xdfffff)
     {
         snepulator_error (__func__, "VDP address %06x not implemented.", addr);
@@ -144,7 +145,7 @@ static uint16_t smd_memory_read_16 (void *context_ptr, uint32_t addr)
 {
     SMD_Context *context = (SMD_Context *) context_ptr;
 
-    /* Cartridge ROM */
+    /* Cartridge ROM: 0x000000 -- 0x3fffff */
     if (addr <= 0x3fffff)
     {
         if (context->rom != NULL)
@@ -164,7 +165,7 @@ static uint16_t smd_memory_read_16 (void *context_ptr, uint32_t addr)
         return 0xffff;
     }
 
-    /* Z80 Address Space */
+    /* Z80 Address Space: 0xa00000 -- 0xa0ffff */
     else if (addr <= 0xa0ffff)
     {
         snepulator_error (__func__, "Z80 address-pace %06x not implemented.", addr);
@@ -197,7 +198,7 @@ static uint16_t smd_memory_read_16 (void *context_ptr, uint32_t addr)
         return 0xffff;
     }
 
-    /* VDP */
+    /* VDP: 0xc00000 -- 0xdfffff*/
     else if (addr <= 0xdfffff)
     {
         switch (addr)
@@ -441,7 +442,7 @@ static void smd_run (void *context_ptr, uint32_t cycles)
      *   assume the Mega Drive has similar timing, multiplying by 15, then
      *   we'd get 3420 master clocks per scanline. This may be accurate in
      *   some modes, but not all. Things may get funky around different
-     *   combinations of resulution and internal vs external pixel-clocks.
+     *   combinations of resolution and internal vs external pixel-clocks.
      *   This does however result in a non-integer number of m68k cycles
      *   per scanline.
      */
