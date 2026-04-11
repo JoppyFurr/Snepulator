@@ -12,6 +12,10 @@
 
 typedef struct SMD_State_s {
 
+    /* Controller port Data & Control registers */
+    uint8_t port1_data;
+    uint8_t port2_data;
+    uint8_t ext_data;
     uint8_t port1_ctrl;
     uint8_t port2_ctrl;
     uint8_t ext_ctrl;

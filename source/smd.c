@@ -241,6 +241,46 @@ static void smd_memory_write_8 (void *context_ptr, uint32_t addr, uint8_t data)
         smd_z80_memory_write (context, addr, data);
     }
 
+    /* Controller Port registers */
+    else if (addr >= 0xa10002 && addr <= 0xa1001f)
+    {
+        switch (addr)
+        {
+            case 0xa10002:
+            case 0xa10003:
+                context->state.port1_data = data;
+                break;
+
+            case 0xa10004:
+            case 0xa10005:
+                context->state.port2_data = data;
+                break;
+
+            case 0xa10006:
+            case 0xa10007:
+                context->state.ext_data = data;
+                break;
+
+            case 0xa10008:
+            case 0xa10009:
+                context->state.port1_ctrl = data;
+                break;
+
+            case 0xa1000a:
+            case 0xa1000b:
+                context->state.port2_ctrl = data;
+                break;
+
+            case 0xa1000c:
+            case 0xa1000d:
+                context->state.ext_ctrl = data;
+                break;
+
+            default:
+                snepulator_error (__func__, "Unmapped Controller register %06x.", addr);
+        }
+    }
+
     /* PSG */
     else if (addr == 0xc00011 || addr == 0xc00013)
     {
