@@ -972,6 +972,21 @@ static inline void m68k_clr_flags (M68000_Context *context)
 }
 
 
+/* clr.l (An)+ */
+static uint32_t m68k_4298_clr_l_anp (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    write_long (context, context->state.a [reg], 0x00000000);
+    context->state.a [reg] += 4;
+
+    m68k_clr_flags (context);
+
+    printf ("clr.l (a%d)+\n", reg);
+    return 0;
+}
+
+
 /* clr.l (xxx.w) */
 static uint32_t m68k_42b8_clr_l_aw (M68000_Context *context, uint16_t instruction)
 {
@@ -1005,6 +1020,21 @@ static uint32_t m68k_46fc_move_sr_imm (M68000_Context *context, uint16_t instruc
     context->state.sr = value;
 
     printf ("move sr ← #%04x\n", value);
+    return 0;
+}
+
+
+/* tst.b (xxx.w) */
+static uint32_t m68k_4a38_tst_b_aw (M68000_Context *context, uint16_t instruction)
+{
+    uint8_t value = read_byte_aw (context);
+
+    context->state.ccr_negative = ((int8_t) value < 0);
+    context->state.ccr_zero = (value == 0);
+    context->state.ccr_overflow = 0;
+    context->state.ccr_carry = 0;
+
+    printf ("tst.b (xxx.w)\n");
     return 0;
 }
 
@@ -1782,6 +1812,7 @@ static void m68k_init_instructions (void)
 
     /* misc */
     m68k_instruction [0x46fc] = m68k_46fc_move_sr_imm;
+    m68k_instruction [0x4a38] = m68k_4a38_tst_b_aw;
     m68k_instruction [0x4a79] = m68k_4a79_tst_w_al;
     m68k_instruction [0x4ab9] = m68k_4ab9_tst_l_al;
     m68k_instruction [0x4e71] = m68k_4e71_nop;
@@ -1805,6 +1836,10 @@ static void m68k_init_instructions (void)
     }
 
     /* clr */
+    for (uint16_t reg = 0; reg < 8; reg++)
+    {
+        m68k_instruction [0x4298 | reg] = m68k_4298_clr_l_anp;
+    }
     m68k_instruction [0x42b8] = m68k_42b8_clr_l_aw;
 
     /* addq / subq */
