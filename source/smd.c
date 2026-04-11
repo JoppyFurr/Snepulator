@@ -391,10 +391,20 @@ static void smd_z80_memory_write (void *context_ptr, uint16_t addr, uint8_t data
 {
     SMD_Context *context = (SMD_Context *) context_ptr;
 
-    /* RAM */
-    if (addr >= 0x0000 && addr <= 0x1fff)
+    /* 8 KiB RAM + mirror */
+    if (addr >= 0x0000 && addr <= 0x3fff)
     {
         context->z80_ram [addr & (SMD_Z80_RAM_SIZE - 1)] = data;
+    }
+    /* Bank Register */
+    else if (addr >= 0x6000 && addr <= 0x60ff)
+    {
+        context->state.z80_bank = (context->state.z80_bank >> 1) & 0xff1000;
+
+        if (data & 0x01)
+        {
+            context->state.z80_bank |= 0x800000;
+        }
     }
     else
     {
@@ -410,10 +420,15 @@ static uint8_t smd_z80_memory_read (void *context_ptr, uint16_t addr)
 {
     SMD_Context *context = (SMD_Context *) context_ptr;
 
-    /* RAM */
-    if (addr >= 0x0000 && addr <= 0x1fff)
+    /* 8 KiB RAM + mirror */
+    if (addr >= 0x0000 && addr <= 0x3fff)
     {
         return context->z80_ram [addr & (SMD_Z80_RAM_SIZE - 1)];
+    }
+    /* Bank Register - Always reads 0xff */
+    else if (addr >= 0x6000 && addr <= 0x60ff)
+    {
+        return 0xff;
     }
     else
     {

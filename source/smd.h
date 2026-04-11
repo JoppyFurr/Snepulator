@@ -20,8 +20,10 @@ typedef struct SMD_State_s {
     uint8_t port2_ctrl;
     uint8_t ext_ctrl;
 
+    /* Z80 Control */
     bool z80_reset_n;
     bool z80_busreq;
+    uint32_t z80_bank;
 
 } SMD_State;
 
