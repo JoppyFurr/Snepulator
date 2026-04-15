@@ -14,6 +14,7 @@ typedef struct SMD_VDP_State_s {
     uint8_t code;
     bool second_half_pending;
     bool fill_pending;
+    uint8_t interrupt;          /* Contains the highest priority pending interrupt */
 
     /* TODO: A method of listing configured features that are not yet implemented */
     union {
@@ -87,6 +88,9 @@ uint16_t smd_vdp_data_read (SMD_VDP_Context *context);
 
 /* Write to the VDP data port. */
 void smd_vdp_data_write (SMD_VDP_Context *context, uint16_t data);
+
+/* Check if the VDP is currently requesting an interrupt. */
+uint8_t smd_vdp_get_interrupt (SMD_VDP_Context *context);
 
 /* Run one scanline on the VDP. */
 void smd_vdp_run_one_scanline (SMD_VDP_Context *context);

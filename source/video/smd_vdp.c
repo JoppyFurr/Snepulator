@@ -16,7 +16,15 @@ uint16_t smd_vdp_status_read (SMD_VDP_Context *context)
 {
     context->state.second_half_pending = false;
 
-    /* TODO: Bit 0 for PAL */
+    /* TODO: VBlank / HBlank bits */
+    /* TODO: Bit  [8:9] - FIFO status (full / empty) */
+    /* TODO: Bit  [ 7 ] - Vertical Interrupt Occurred */
+    /* TODO: Bit  [ 6 ] - Sprite Overflow */
+    /* TODO: Bit  [ 5 ] - Sprite Collision */
+    /* TODO: Bit  [ 4 ] - Odd vs Even frame (interlace mode) */
+    /* TODO: Bits [3:2] - Blanking */
+    /* TODO: Bit  [ 1 ] - DMA in progress */
+    /* TODO: Bit  [ 0 ] - PAL */
     return 0x3400;
 }
 
@@ -166,6 +174,19 @@ void smd_vdp_data_write (SMD_VDP_Context *context, uint16_t data)
 
 
 /*
+ * Check if the VDP is currently requesting an interrupt.
+ */
+uint8_t smd_vdp_get_interrupt (SMD_VDP_Context *context)
+{
+    uint8_t interrupt = context->state.interrupt;
+
+    context->state.interrupt = 0;
+
+    return interrupt;
+}
+
+
+/*
  * Run one scanline on the VDP.
  */
 void smd_vdp_run_one_scanline (SMD_VDP_Context *context)
@@ -173,6 +194,13 @@ void smd_vdp_run_one_scanline (SMD_VDP_Context *context)
     /* Update the V-Counter */
     /* TODO: For now, hard-coded for NTSC mode. PAL is 313 lines. */
     context->state.line = (context->state.line + 1) % 262;
+
+    /* VBlank Interrupt */
+    if (context->state.line == 224 && context->state.mode_2_vertical_int_en)
+    {
+        /* VBlank has interrupt priority 6 (highest from the VDP) */
+        context->state.interrupt = 6;
+    }
 
     return;
 }
