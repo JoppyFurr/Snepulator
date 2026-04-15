@@ -35,6 +35,12 @@ typedef struct M68000_State_s {
             uint8_t ccr_zero:1;
             uint8_t ccr_negative:1;
             uint8_t ccr_extend:1;
+            uint8_t sr_unused_3_bits:3;
+            uint8_t sr_interrupt_priority:3;
+            uint8_t sr_unused_2_bits:2;
+            uint8_t sr_supervisor:1;
+            uint8_t sr_unused_1_bit:1;
+            uint8_t sr_trace:1;
         };
     };
 
