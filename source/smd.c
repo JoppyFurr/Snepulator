@@ -11,6 +11,7 @@
 #include "snepulator.h"
 #include "util.h"
 
+#include "gamepad.h"
 #include "cpu/m68k.h"
 #include "cpu/z80.h"
 #include "video/smd_vdp.h"
@@ -19,6 +20,7 @@
 #include "smd.h"
 
 extern Snepulator_State state;
+extern Snepulator_Gamepad gamepad [3];
 
 
 /*
@@ -94,14 +96,71 @@ static uint8_t smd_memory_read_8 (void *context_ptr, uint32_t addr)
         switch (addr & 0xfffffe)
         {
             case 0xa10000: /* Version Register */
+            case 0xa10001:
                 /* TODO: Value is different on PAL */
                 return 0xa1; /* Export NTSC console with no expansion unit. */
+
+            case 0xa10002: /* Player 1 - Data Register */
+            case 0xa10003:
+                /* TODO: For now, to get things going just assume TH is an output
+                 *       and ignore the most-significant bit behaviour. */
+                if ((context->state.port1_data & 0x40) == 0)
+                {
+                    return (gamepad [1].state [GAMEPAD_DIRECTION_UP]    ? 0 : BIT_0) |
+                           (gamepad [1].state [GAMEPAD_DIRECTION_DOWN]  ? 0 : BIT_1) |
+                           /* Button 'A' not implemented yet */
+                           (gamepad [1].state [GAMEPAD_BUTTON_START]    ? 0 : BIT_5);
+                }
+                else
+                {
+                    return (gamepad [1].state [GAMEPAD_DIRECTION_UP]    ? 0 : BIT_0) |
+                           (gamepad [1].state [GAMEPAD_DIRECTION_DOWN]  ? 0 : BIT_1) |
+                           (gamepad [1].state [GAMEPAD_DIRECTION_LEFT]  ? 0 : BIT_2) |
+                           (gamepad [1].state [GAMEPAD_DIRECTION_RIGHT] ? 0 : BIT_3) |
+                           /* Use SMS buttons for 'B' and 'C' */
+                           (gamepad [1].state [GAMEPAD_BUTTON_1]        ? 0 : BIT_4) |
+                           (gamepad [1].state [GAMEPAD_BUTTON_2]        ? 0 : BIT_5) | BIT_6;
+                }
+
+            case 0xa10004: /* Player 2 - Data Register */
+            case 0xa10005:
+                /* TODO: For now, to get things going just assume TH is an output
+                 *       and ignore the most-significant bit behaviour. */
+                if ((context->state.port1_data & 0x40) == 0)
+                {
+                    return (gamepad [2].state [GAMEPAD_DIRECTION_UP]    ? 0 : BIT_0) |
+                           (gamepad [2].state [GAMEPAD_DIRECTION_DOWN]  ? 0 : BIT_1) |
+                           /* Button 'A' not implemented yet */
+                           (gamepad [2].state [GAMEPAD_BUTTON_START]    ? 0 : BIT_5);
+                }
+                else
+                {
+                    return (gamepad [2].state [GAMEPAD_DIRECTION_UP]    ? 0 : BIT_0) |
+                           (gamepad [2].state [GAMEPAD_DIRECTION_DOWN]  ? 0 : BIT_1) |
+                           (gamepad [2].state [GAMEPAD_DIRECTION_LEFT]  ? 0 : BIT_2) |
+                           (gamepad [2].state [GAMEPAD_DIRECTION_RIGHT] ? 0 : BIT_3) |
+                           /* Use SMS buttons for 'B' and 'C' */
+                           (gamepad [2].state [GAMEPAD_BUTTON_1]        ? 0 : BIT_4) |
+                           (gamepad [2].state [GAMEPAD_BUTTON_2]        ? 0 : BIT_5) | BIT_6;
+                }
+
+            case 0xa10006: /* Player 3 - Data Register */
+            case 0xa10007:
+                snepulator_error (__func__, "Player 3 input not implemented.", addr);
+                return 0xff;
+
             case 0xa10008: /* Player 1 - Control Register */
+            case 0xa10009:
                 return context->state.port1_ctrl;
+
             case 0xa1000a: /* Player 1 - Control Register */
+            case 0xa1000b:
                 return context->state.port2_ctrl;
+
             case 0xa1000c: /* Player 1 - Control Register */
+            case 0xa1000d:
                 return context->state.ext_ctrl;
+
             default:
                 snepulator_error (__func__, "I/O address %06x not implemented.", addr);
         }
