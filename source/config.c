@@ -248,7 +248,7 @@ int32_t config_string_set (char const *section_name, char const *key, char const
     }
 
     /* Free the old string if any */
-    if ((entry->type = ENTRY_TYPE_STRING) && (entry->value != NULL))
+    if ((entry->type == ENTRY_TYPE_STRING) && (entry->value != NULL))
     {
         free (entry->value);
     }
