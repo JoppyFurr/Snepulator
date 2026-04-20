@@ -911,7 +911,7 @@ void snepulator_state_save (void *context, const char *filename)
 {
     pthread_mutex_lock (&state.run_mutex);
 
-    if (state.state_load != NULL)
+    if (state.state_save != NULL)
     {
         state.state_save (context, filename);
     }
