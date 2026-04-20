@@ -200,7 +200,7 @@ int32_t util_file_read_bytes (uint8_t *buffer, uint32_t offset, uint32_t count, 
     fseek (file, 0, SEEK_SET);
 
     /* Check the file is large enough for the requested bytes */
-    if (size < offset + count - 1)
+    if (size < offset + count)
     {
         fclose (file);
         return -1;
