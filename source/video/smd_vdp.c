@@ -7,6 +7,7 @@
 #include <stdlib.h>
 
 #include "../snepulator.h"
+#include "../util.h"
 #include "smd_vdp.h"
 
 /*
@@ -45,6 +46,10 @@ void smd_vdp_control_write (SMD_VDP_Context *context, uint16_t data)
 
         context->state.second_half_pending = false;
 
+        uint16_t dma_length;
+        uint32_t source_address;
+        uint16_t dest_address;
+
         /* Begin DMA */
         if (context->state.mode_2_dma_en && (context->state.code & ADDRESS_CODE_DMA))
         {
@@ -53,15 +58,76 @@ void smd_vdp_control_write (SMD_VDP_Context *context, uint16_t data)
             {
                 case 0x0: /* Memory Transfer */
                 case 0x1:
-                    printf ("[%s] DMA Operation: M68k Memory -> VDP transfer. (Not implemented)\n", __func__);
-                    printf ("[%s] DMA Source Address = %06x.\n", __func__, context->state.dma_source);
-                    printf ("[%s] DMA Dest Address = %04x.\n", __func__, context->state.address);
-                    printf ("[%s] DMA Length = %04x words.\n", __func__, context->state.dma_length);
-                    printf ("[%s] Increment = %d.\n", __func__, context->state.auto_increment);
+                    switch (context->state.code & 0x07)
+                    {
+                        case 1: /* VRAM */
+                            printf ("[%s] DMA Operation: M68k Memory -> VRAM transfer (%d words).\n",
+                                    __func__, context->state.dma_length);
+                            /* TODO: For VRAM, if source-address bit 0 is set, data may be byte-swapped */
+                            dma_length = context->state.dma_length;
+                            source_address = context->state.dma_source << 1;
+                            dest_address = context->state.address;
+                            do {
+                                uint16_t data = context->memory_read_16 (context->parent, source_address);
+
+                                /* TODO: Consider moving any endian-changes into m68k.c
+                                 *       to avoid changing twice during dma. */
+                                *(uint16_t *) (&context->state.vram [dest_address]) = util_hton16 (data);
+
+                                source_address += 2;
+                                dest_address += context->state.auto_increment;
+                                dma_length--;
+                            } while (dma_length > 0);
+                            break;
+
+                        case 3: /* CRAM */
+                            printf ("[%s] DMA Operation: M68k Memory -> CRAM transfer (%d words).\n",
+                                    __func__, context->state.dma_length);
+                            dma_length = context->state.dma_length;
+                            source_address = context->state.dma_source << 1;
+                            dest_address = context->state.address;
+
+                            /* TODO: Does the auto-incremented address used for DMA get written
+                             *       back to the address register? */
+                            do {
+                                uint32_t cram_index = (context->state.address >> 1) & 0x3f;
+                                uint16_t data = context->memory_read_16 (context->parent, source_address);
+
+                                context->state.cram [cram_index] = (uint_pixel_t) { .r = ((data >> 1) & 0x07) * 0xff / 7,
+                                                                                    .g = ((data >> 5) & 0x07) * 0xff / 7,
+                                                                                    .b = ((data >> 9) & 0x07) * 0xff / 7};
+
+                                if (data != 0)
+                                {
+                                    printf ("[%s] cram [%d] = rgb (%d, %d, %d)\n", __func__, cram_index,
+                                             (data >> 1) & 0x07, (data >> 5) & 0x07, (data >> 9) & 0x07);
+                                    snepulator_error ("SMD VDP", "First nonzero colour, time to start on drawing.");
+                                }
+
+                                source_address += 2;
+                                dest_address += context->state.auto_increment;
+                                dma_length--;
+                            } while (dma_length > 0);
+                            break;
+
+                        case 5: /* VSRAM */
+                            printf ("[%s] DMA Operation: M68k Memory -> VSRAM transfer. (Not implemented)\n", __func__);
+                            printf ("[%s] DMA Source: 0x%06x.\n", __func__, context->state.dma_source << 1);
+                            printf ("[%s] DMA Dest:   0x%04x.\n", __func__, context->state.address);
+                            printf ("[%s] DMA Length: %d words.\n", __func__, context->state.dma_length);
+                            printf ("[%s] Increment:  %d.\n", __func__, context->state.auto_increment);
+                            break;
+
+                        default:
+                            printf ("[%s] Invalid DMA Operation: M68k Memory -> ???\n", __func__);
+                            break;
+                    }
+
                     break;
                 case 0x2: /* VRAM Fill */
                     context->state.fill_pending = true;
                     break;
+
                 case 0x3: /* VRAM Copy */
                     printf ("[%s] DMA Operation: VRAM Copy. (Not implemented)\n", __func__);
                     printf ("[%s] DMA Source Address = %06x.\n", __func__, context->state.dma_source);
@@ -77,6 +143,8 @@ void smd_vdp_control_write (SMD_VDP_Context *context, uint16_t data)
     /* Register Writes */
     else if ((data & 0xe000) == 0x8000)
     {
+        /* TODO: Writes may clear the code bits too */
+
         uint8_t addr = (data >> 8) & 0x1f;
         if (addr < 0x18)
         {
@@ -88,6 +156,7 @@ void smd_vdp_control_write (SMD_VDP_Context *context, uint16_t data)
     /* First half of address */
     else
     {
+        /* TODO: Consider using bitfields to update these */
         context->state.address &= 0xc000;
         context->state.address |= data & 0x3fff;
 
@@ -129,7 +198,7 @@ void smd_vdp_data_write (SMD_VDP_Context *context, uint16_t data)
         uint8_t fill_value = data >> 8;
         for (uint16_t length = context->state.dma_length; length > 0; length--)
         {
-            context->vram [context->state.address] = fill_value;
+            context->state.vram [context->state.address] = fill_value;
             context->state.address += context->state.auto_increment;
         }
     }
@@ -151,8 +220,12 @@ void smd_vdp_data_write (SMD_VDP_Context *context, uint16_t data)
                                                        .b = ((data >> 9) & 0x07) * 0xff / 7};
 
         /* TODO: Wait until nonzero colours get written before implementing drawing */
-        printf ("[%s] cram [%d] = rgb (%d, %d, %d)\n", __func__, index,
-                 (data >> 1) & 0x07, (data >> 5) & 0x07, (data >> 9) & 0x07);
+        if (data != 0)
+        {
+            printf ("[%s] cram [%d] = rgb (%d, %d, %d)\n", __func__, index,
+                     (data >> 1) & 0x07, (data >> 5) & 0x07, (data >> 9) & 0x07);
+            snepulator_error ("SMD VDP", "First nonzero colour, time to start on drawing.");
+        }
     }
 
     /* VSRAM write */
@@ -209,7 +282,9 @@ void smd_vdp_run_one_scanline (SMD_VDP_Context *context)
 /*
  * Create an SMD VDP context with power-on defaults.
  */
-SMD_VDP_Context *smd_vdp_init (void *parent, void (* frame_done) (void *))
+SMD_VDP_Context *smd_vdp_init (void *parent,
+                               uint16_t (* memory_read_16)  (void *, uint32_t),
+                               void (* frame_done) (void *))
 {
     SMD_VDP_Context *context;
 
@@ -221,6 +296,7 @@ SMD_VDP_Context *smd_vdp_init (void *parent, void (* frame_done) (void *))
     }
 
     context->parent = parent;
+    context->memory_read_16  = memory_read_16;
     context->video_width = 256;
     context->video_height = 224;
 

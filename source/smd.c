@@ -700,7 +700,7 @@ SMD_Context *smd_init (void)
      *       needed, but only use what is needed. Remove the start-x / start-y
      *       and always start at zero. Pass around a struct to describe the
      *       size that has been used.  */
-    vdp_context = smd_vdp_init (context, smd_frame_done);
+    vdp_context = smd_vdp_init (context, smd_memory_read_16, smd_frame_done);
     context->vdp_context = vdp_context;
 
     /* Initialise sound chips */

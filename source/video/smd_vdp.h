@@ -50,12 +50,20 @@ typedef struct SMD_VDP_State_s {
             uint8_t window_h_pos;
             uint8_t window_v_pos;
             uint16_t dma_length;
-            uint32_t dma_source:22;
-            uint32_t dma_operation:2;
+            union {
+                struct {
+                    uint32_t dma_source:23;
+                };
+                struct {
+                    uint32_t unused_22:22;
+                    uint32_t dma_operation:2;
+                };
+            };
         };
 #pragma pack ()
     };
 
+    uint8_t vram [SMD_VDP_VRAM_SIZE];
     uint_pixel_t cram [64];
     uint16_t vsram [40];
 
@@ -64,9 +72,9 @@ typedef struct SMD_VDP_State_s {
 typedef struct SMD_VDP_Context_s {
 
     void *parent;
-    SMD_VDP_State state;
+    uint16_t (* memory_read_16) (void *, uint32_t);
 
-    uint8_t vram [SMD_VDP_VRAM_SIZE];
+    SMD_VDP_State state;
 
     /* Video output */
     uint32_t video_width;
@@ -96,4 +104,6 @@ uint8_t smd_vdp_get_interrupt (SMD_VDP_Context *context);
 void smd_vdp_run_one_scanline (SMD_VDP_Context *context);
 
 /* Create an SMD VDP context with power-on defaults. */
-SMD_VDP_Context *smd_vdp_init (void *parent, void (* frame_done) (void *));
+SMD_VDP_Context *smd_vdp_init (void *parent,
+                               uint16_t (* memory_read_16)  (void *, uint32_t),
+                               void (* frame_done) (void *));
