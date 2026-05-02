@@ -186,7 +186,7 @@ static uint8_t smd_memory_read_8 (void *context_ptr, uint32_t addr)
         return 0xff;
     }
 
-    /* RAM */
+    /* RAM: 0xff0000 -- 0xffffff */
     else
     {
         return * (uint16_t *) &context->ram [addr & 0x00ffff];
@@ -276,7 +276,7 @@ static uint16_t smd_memory_read_16 (void *context_ptr, uint32_t addr)
         }
     }
 
-    /* RAM */
+    /* RAM: 0xff0000 -- 0xffffff */
     else
     {
         return util_ntoh16 (* (uint16_t *) &context->ram [addr & 0x00ffff]);
@@ -444,6 +444,37 @@ static void smd_memory_write_16 (void *context_ptr, uint32_t addr, uint16_t data
 
 
 /*
+ * Handle Z80 address-space memory reads.
+ */
+static uint8_t smd_z80_memory_read (void *context_ptr, uint16_t addr)
+{
+    SMD_Context *context = (SMD_Context *) context_ptr;
+
+    /* 8 KiB RAM + mirror */
+    if (addr >= 0x0000 && addr <= 0x3fff)
+    {
+        return context->z80_ram [addr & (SMD_Z80_RAM_SIZE - 1)];
+    }
+    /* YM2612 */
+    else if (addr >= 0x4000 && addr <= 0x5fff)
+    {
+        /* TODO: Implement the YM2612 */
+        return 0x00;
+    }
+    /* Bank Register - Always reads 0xff */
+    else if (addr >= 0x6000 && addr <= 0x60ff)
+    {
+        return 0xff;
+    }
+    else
+    {
+        snepulator_error (__func__, "Unmapped Z80 address %04x.", addr);
+        return 0xff;
+    }
+}
+
+
+/*
  * Handle Z80 address-space memory writes.
  */
 static void smd_z80_memory_write (void *context_ptr, uint16_t addr, uint8_t data)
@@ -454,6 +485,11 @@ static void smd_z80_memory_write (void *context_ptr, uint16_t addr, uint8_t data
     if (addr >= 0x0000 && addr <= 0x3fff)
     {
         context->z80_ram [addr & (SMD_Z80_RAM_SIZE - 1)] = data;
+    }
+    /* YM2612 */
+    else if (addr >= 0x4000 && addr <= 0x5fff)
+    {
+        /* TODO: Implement the YM2612 */
     }
     /* Bank Register */
     else if (addr >= 0x6000 && addr <= 0x60ff)
@@ -468,31 +504,6 @@ static void smd_z80_memory_write (void *context_ptr, uint16_t addr, uint8_t data
     else
     {
         snepulator_error (__func__, "Unmapped Z80 address %04x.", addr);
-    }
-}
-
-
-/*
- * Handle Z80 address-space memory reads.
- */
-static uint8_t smd_z80_memory_read (void *context_ptr, uint16_t addr)
-{
-    SMD_Context *context = (SMD_Context *) context_ptr;
-
-    /* 8 KiB RAM + mirror */
-    if (addr >= 0x0000 && addr <= 0x3fff)
-    {
-        return context->z80_ram [addr & (SMD_Z80_RAM_SIZE - 1)];
-    }
-    /* Bank Register - Always reads 0xff */
-    else if (addr >= 0x6000 && addr <= 0x60ff)
-    {
-        return 0xff;
-    }
-    else
-    {
-        snepulator_error (__func__, "Unmapped Z80 address %04x.", addr);
-        return 0xff;
     }
 }
 
