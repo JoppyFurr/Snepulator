@@ -362,6 +362,86 @@ static inline void m68k_move_l_flags (M68000_Context *context, uint32_t value)
 }
 
 
+/*
+ * Update flags for add.b instructions.
+ */
+static inline void m68k_add_b_flags (M68000_Context *context, uint8_t a, uint8_t b, uint8_t result)
+{
+    context->state.ccr_negative = ((int8_t) result < 0);
+    context->state.ccr_zero = (result == 0);
+    context->state.ccr_overflow = (int8_t) a + (int8_t) b > 127 || (int8_t) a + (int8_t) b < -128;
+    context->state.ccr_carry = ((uint32_t) a + b) >> 8;
+    context->state.ccr_extend = ((uint32_t) a + b) >> 8;
+}
+
+
+/*
+ * Update flags for add.w instructions.
+ */
+static inline void m68k_add_w_flags (M68000_Context *context, uint16_t a, uint16_t b, uint16_t result)
+{
+    context->state.ccr_negative = ((int16_t) result < 0);
+    context->state.ccr_zero = (result == 0);
+    context->state.ccr_overflow = (int16_t) a + (int16_t) b > 32767 || (int16_t) a + (int16_t) b < -32768;
+    context->state.ccr_carry = ((uint32_t) a + b) >> 16;
+    context->state.ccr_extend = ((uint32_t) a + b) >> 16;
+}
+
+
+/*
+ * Update flags for add.l instructions.
+ */
+static inline void m68k_add_l_flags (M68000_Context *context, uint32_t a, uint32_t b, uint32_t result)
+{
+    context->state.ccr_negative = ((int32_t) result < 0);
+    context->state.ccr_zero = (result == 0);
+    context->state.ccr_overflow = (int64_t)(int32_t) a + (int32_t) b > 2147483647 ||
+                                  (int64_t)(int32_t) a + (int32_t) b < -2147483648;
+    context->state.ccr_carry = ((uint64_t) a + b) >> 32;
+    context->state.ccr_extend = ((uint64_t) a + b) >> 32;
+}
+
+
+/*
+ * Update flags for sub.b instructions.
+ */
+static inline void m68k_sub_b_flags (M68000_Context *context, uint8_t a, uint8_t b, uint8_t result)
+{
+    context->state.ccr_negative = ((int8_t) result < 0);
+    context->state.ccr_zero = (result == 0);
+    context->state.ccr_overflow = (int8_t) a - (int8_t) b > 127 || (int8_t) a - (int8_t) b < -128;
+    context->state.ccr_carry = ((uint32_t) a - b) >> 8;
+    context->state.ccr_extend = ((uint32_t) a - b) >> 8;
+}
+
+
+/*
+ * Update flags for sub.w instructions.
+ */
+static inline void m68k_sub_w_flags (M68000_Context *context, uint16_t a, uint16_t b, uint16_t result)
+{
+    context->state.ccr_negative = ((int16_t) result < 0);
+    context->state.ccr_zero = (result == 0);
+    context->state.ccr_overflow = (int16_t) a - (int16_t) b > 32767 || (int16_t) a - (int16_t) b < -32768;
+    context->state.ccr_carry = ((uint32_t) a - b) >> 16;
+    context->state.ccr_extend = ((uint32_t) a - b) >> 16;
+}
+
+
+/*
+ * Update flags for sub.l instructions.
+ */
+static inline void m68k_sub_l_flags (M68000_Context *context, uint32_t a, uint32_t b, uint32_t result)
+{
+    context->state.ccr_negative = ((int32_t) result < 0);
+    context->state.ccr_zero = (result == 0);
+    context->state.ccr_overflow = (int64_t)(int32_t) a - (int32_t) b > 2147483647 ||
+                                  (int64_t)(int32_t) a - (int32_t) b < -2147483648;
+    context->state.ccr_carry = ((uint64_t) a - b) >> 32;
+    context->state.ccr_extend = ((uint64_t) a - b) >> 32;
+}
+
+
 /* ori.w Dn ← Dn | #xxxx */
 static uint32_t m68k_0040_ori_w_dn (M68000_Context *context, uint16_t instruction)
 {
@@ -449,12 +529,7 @@ static uint32_t m68k_0400_subi_b_dn (M68000_Context *context, uint16_t instructi
 
     uint8_t result = a - b;
     context->state.d [reg].b = result;
-
-    context->state.ccr_negative = ((int8_t) result < 0);
-    context->state.ccr_zero = (result == 0);
-    context->state.ccr_overflow = (int8_t) a - (int8_t) b > 127 || (int8_t) a - (int8_t) b < -128;
-    context->state.ccr_carry = ((uint32_t) a - b) >> 8;
-    context->state.ccr_extend = ((uint32_t) a - b) >> 8;
+    m68k_sub_b_flags (context, a, b, result);
 
     printf ("subi.b d%d ← #%02x\n", reg, b);
     return 0;
@@ -471,12 +546,7 @@ static uint32_t m68k_0640_addi_w_dn (M68000_Context *context, uint16_t instructi
 
     uint16_t result = a + b;
     context->state.d [reg].w = result;
-
-    context->state.ccr_negative = ((int16_t) result < 0);
-    context->state.ccr_zero = (result == 0);
-    context->state.ccr_overflow = (int16_t) a + (int16_t) b > 32767 || (int16_t) a + (int16_t) b < -32768;
-    context->state.ccr_carry = ((uint32_t) a + b) >> 16;
-    context->state.ccr_extend = ((uint32_t) a + b) >> 16;
+    m68k_add_w_flags (context, a, b, result);
 
     printf ("addi.w d%d ← #%04x\n", reg, b);
     return 0;
@@ -2087,12 +2157,7 @@ static uint32_t m68k_5000_addq_b_dn (M68000_Context *context, uint16_t instructi
 
     uint8_t result = a + b;
     context->state.d [reg].b = result;
-
-    context->state.ccr_negative = ((int8_t) result < 0);
-    context->state.ccr_zero = (result == 0);
-    context->state.ccr_overflow = (int8_t) a + (int8_t) b > 127 || (int8_t) a + (int8_t) b < -128;
-    context->state.ccr_carry = ((uint32_t) a + b) >> 8;
-    context->state.ccr_extend = ((uint32_t) a + b) >> 8;
+    m68k_add_b_flags (context, a, b, result);
 
     printf ("addq.b d%d, #%x\n", reg, b);
     return 0;
@@ -2114,12 +2179,7 @@ static uint32_t m68k_5040_addq_w_dn (M68000_Context *context, uint16_t instructi
 
     uint16_t result = a + b;
     context->state.d [reg].w = result;
-
-    context->state.ccr_negative = ((int16_t) result < 0);
-    context->state.ccr_zero = (result == 0);
-    context->state.ccr_overflow = (int16_t) a + (int16_t) b > 32767 || (int16_t) a + (int16_t) b < -32768;
-    context->state.ccr_carry = ((uint32_t) a + b) >> 16;
-    context->state.ccr_extend = ((uint32_t) a + b) >> 16;
+    m68k_add_w_flags (context, a, b, result);
 
     printf ("addq.w d%d, #%x\n", reg, b);
     return 0;
@@ -2183,13 +2243,7 @@ static uint32_t m68k_50b8_addq_l_aw (M68000_Context *context, uint16_t instructi
 
     uint32_t result = a + b;
     write_long (context, (int32_t) addr, result);
-
-    context->state.ccr_negative = ((int32_t) result < 0);
-    context->state.ccr_zero = (result == 0);
-    context->state.ccr_overflow = (int64_t)(int32_t) a + (int32_t) b > 2147483647 ||
-                                  (int64_t)(int32_t) a + (int32_t) b < -2147483648;
-    context->state.ccr_carry = ((uint64_t) a + b) >> 32;
-    context->state.ccr_extend = ((uint64_t) a + b) >> 32;
+    m68k_add_l_flags (context, a, b, result);
 
     printf ("addq.l (xxx.w), #%x\n", b);
     return 0;
@@ -2208,19 +2262,14 @@ static uint32_t m68k_5128_subq_b_dan (M68000_Context *context, uint16_t instruct
 
     uint8_t result = a - b;
     write_byte (context, address, result);
-
-    /* TODO: Helper function for flags */
-    context->state.ccr_negative = ((int8_t) result < 0);
-    context->state.ccr_zero = (result == 0);
-    context->state.ccr_overflow = (int8_t) a - (int8_t) b > 127 || (int8_t) a - (int8_t) b < -128;
-    context->state.ccr_carry = ((uint32_t) a - b) >> 8;
-    context->state.ccr_extend = ((uint32_t) a - b) >> 8;
+    m68k_sub_b_flags (context, a, b, result);
 
     printf ("subq.b %04x(a%d), %d\n", displacement, reg, b);
     return 0;
 }
 
 
+/* subq.w Dn, #xx */
 static uint32_t m68k_5140_subq_w_dn (M68000_Context *context, uint16_t instruction)
 {
     uint16_t reg = instruction & 0x07;
@@ -2230,12 +2279,7 @@ static uint32_t m68k_5140_subq_w_dn (M68000_Context *context, uint16_t instructi
 
     uint16_t result = a - b;
     context->state.d [reg].w = result;
-
-    context->state.ccr_negative = ((int16_t) result < 0);
-    context->state.ccr_zero = (result == 0);
-    context->state.ccr_overflow = (int16_t) a - (int16_t) b > 32767 || (int16_t) a - (int16_t) b < -32768;
-    context->state.ccr_carry = ((uint32_t) a - b) >> 16;
-    context->state.ccr_extend = ((uint32_t) a - b) >> 16;
+    m68k_sub_w_flags (context, a, b, result);
 
     printf ("subq.w d%d, %d\n", reg, b);
     return 0;
@@ -2629,12 +2673,8 @@ static uint32_t m68k_9040_sub_w_dn_dn (M68000_Context *context, uint16_t instruc
     uint16_t b = context->state.d [source_reg].w;
     uint16_t result = a - b;
 
-    context->state.ccr_negative = ((int16_t) result < 0);
-    context->state.ccr_zero = (result == 0);
-    context->state.ccr_overflow = (int16_t) a - (int16_t) b > 32767 || (int16_t) a - (int16_t) b < -32768;
-    context->state.ccr_carry = ((uint32_t) a - b) >> 16;
-
     context->state.d [dest_reg].w = result;
+    m68k_sub_w_flags (context, a, b, result);
 
     printf ("sub.w d%d ← d%d - d%d\n", dest_reg, dest_reg, source_reg);
     return 0;
@@ -2651,12 +2691,8 @@ static uint32_t m68k_9048_sub_w_dn_an (M68000_Context *context, uint16_t instruc
     uint16_t b = context->state.a [source_reg];
     uint16_t result = a - b;
 
-    context->state.ccr_negative = ((int16_t) result < 0);
-    context->state.ccr_zero = (result == 0);
-    context->state.ccr_overflow = (int16_t) a - (int16_t) b > 32767 || (int16_t) a - (int16_t) b < -32768;
-    context->state.ccr_carry = ((uint32_t) a - b) >> 16;
-
     context->state.d [dest_reg].w = result;
+    m68k_sub_w_flags (context, a, b, result);
 
     printf ("sub.w d%d ← d%d - a%d\n", dest_reg, dest_reg, source_reg);
     return 0;
@@ -2839,12 +2875,8 @@ static uint32_t m68k_d000_add_b_dn_dn (M68000_Context *context, uint16_t instruc
     uint8_t b = context->state.d [source_reg].b;
     uint8_t result = a + b;
 
-    context->state.ccr_negative = ((int8_t) result < 0);
-    context->state.ccr_zero = (result == 0);
-    context->state.ccr_overflow = (int8_t) a + (int8_t) b > 127 || (int8_t) a + (int8_t) b < -128;
-    context->state.ccr_carry = ((uint32_t) a + b) >> 8;
-
     context->state.d [dest_reg].b = result;
+    m68k_add_b_flags (context, a, b, result);
 
     printf ("add.b d%d ← d%d + d%d\n", dest_reg, dest_reg, source_reg);
     return 0;
@@ -2861,12 +2893,8 @@ static uint32_t m68k_d040_add_w_dn_dn (M68000_Context *context, uint16_t instruc
     uint16_t b = context->state.d [source_reg].w;
     uint16_t result = a + b;
 
-    context->state.ccr_negative = ((int16_t) result < 0);
-    context->state.ccr_zero = (result == 0);
-    context->state.ccr_overflow = (int16_t) a + (int16_t) b > 32767 || (int16_t) a + (int16_t) b < -32768;
-    context->state.ccr_carry = ((uint32_t) a + b) >> 16;
-
     context->state.d [dest_reg].w = result;
+    m68k_add_w_flags (context, a, b, result);
 
     printf ("add.w d%d ← d%d + d%d\n", dest_reg, dest_reg, source_reg);
     return 0;
@@ -2884,12 +2912,8 @@ static uint32_t m68k_d058_add_w_dn_anp (M68000_Context *context, uint16_t instru
     context->state.a [source_reg] += 2;
     uint16_t result = a + b;
 
-    context->state.ccr_negative = ((int16_t) result < 0);
-    context->state.ccr_zero = (result == 0);
-    context->state.ccr_overflow = (int16_t) a + (int16_t) b > 32767 || (int16_t) a + (int16_t) b < -32768;
-    context->state.ccr_carry = ((uint32_t) a + b) >> 16;
-
     context->state.d [dest_reg].w = result;
+    m68k_add_w_flags (context, a, b, result);
 
     printf ("add.w d%d ← d%d + a(%d)+\n", dest_reg, dest_reg, source_reg);
     return 0;
@@ -3125,6 +3149,7 @@ static uint32_t m68k_e150_roxl_w_dn_imm (M68000_Context *context, uint16_t instr
 }
 
 
+/* lsl.w Dn ← Dn << Dn */
 static uint32_t m68k_e168_lsl_w_dn_dn (M68000_Context *context, uint16_t instruction)
 {
     uint16_t count_reg = (instruction >> 9) & 0x07;
