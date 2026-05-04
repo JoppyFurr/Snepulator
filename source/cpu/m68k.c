@@ -1483,6 +1483,24 @@ static uint32_t m68k_3180_move_w_danxi_dn (M68000_Context *context, uint16_t ins
 }
 
 
+/* move.w d(An+Xi) ← (An)+ */
+static uint32_t m68k_3198_move_w_danxi_anp (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint16_t value = read_word (context, context->state.a [source_reg]);
+    context->state.a [source_reg] += 2;
+    uint32_t addr = context->state.a [dest_reg];
+
+    write_word_with_index (context, addr, value);
+    m68k_move_w_flags (context, value);
+
+    printf ("move.w d(a%d, Xi) ← (a%d)+\n", dest_reg, source_reg);
+    return 0;
+}
+
+
 /* move.w (xxx.w) ← Dn */
 static uint32_t m68k_31c0_move_w_aw_dn (M68000_Context *context, uint16_t instruction)
 {
@@ -2686,6 +2704,45 @@ static uint32_t m68k_6b01_bmi_s (M68000_Context *context, uint16_t instruction)
 }
 
 
+/* blt.w */
+static uint32_t m68k_6d00_blt_w (M68000_Context *context, uint16_t instruction)
+{
+    int16_t displacement = read_extension (context);
+
+    if ((context->state.ccr_negative && !context->state.ccr_overflow) ||
+        (!context->state.ccr_negative && context->state.ccr_overflow))
+    {
+        context->state.pc += displacement - 2;
+        printf ("blt.w %+d\n", displacement);
+    }
+    else
+    {
+        printf ("blt.w (not taken).\n");
+    }
+
+    return 0;
+}
+
+
+/* blt.s */
+static uint32_t m68k_6d01_blt_s (M68000_Context *context, uint16_t instruction)
+{
+    if ((context->state.ccr_negative && !context->state.ccr_overflow) ||
+        (!context->state.ccr_negative && context->state.ccr_overflow))
+    {
+        int8_t displacement = instruction & 0xff;
+        context->state.pc += displacement;
+        printf ("blt.s %+d\n", displacement);
+    }
+    else
+    {
+        printf ("blt.s (not taken).\n");
+    }
+
+    return 0;
+}
+
+
 /* moveq Dn ← #xxxx */
 static uint32_t m68k_7000_moveq (M68000_Context *context, uint16_t instruction)
 {
@@ -3375,6 +3432,7 @@ static void m68k_init_instructions (void)
             m68k_instruction [0x30c0 | (reg_a << 9) | reg_b] = m68k_30c0_move_w_anp_dn;
             m68k_instruction [0x30c8 | (reg_a << 9) | reg_b] = m68k_30c8_move_w_anp_an;
             m68k_instruction [0x3180 | (reg_a << 9) | reg_b] = m68k_3180_move_w_danxi_dn;
+            m68k_instruction [0x3198 | (reg_a << 9) | reg_b] = m68k_3198_move_w_danxi_anp;
         }
         m68k_instruction [0x1038 | (reg_a << 9)] = m68k_1038_move_b_dn_aw;
         m68k_instruction [0x1039 | (reg_a << 9)] = m68k_1039_move_b_dn_al;
@@ -3523,6 +3581,7 @@ static void m68k_init_instructions (void)
     m68k_instruction [0x6700] = m68k_6700_beq_w;
     m68k_instruction [0x6a00] = m68k_6a00_bpl_w;
     m68k_instruction [0x6b00] = m68k_6b00_bmi_w;
+    m68k_instruction [0x6d00] = m68k_6d00_blt_w;
 
     /* Bcc/BSR/BRA with 8-bit displacement */
     for (uint16_t d = 0x01; d <= 0xff; d++)
@@ -3535,6 +3594,7 @@ static void m68k_init_instructions (void)
         m68k_instruction [0x6700 | d] = m68k_6701_beq_s;
         m68k_instruction [0x6a00 | d] = m68k_6a01_bpl_s;
         m68k_instruction [0x6b00 | d] = m68k_6b01_bmi_s;
+        m68k_instruction [0x6d00 | d] = m68k_6d01_blt_s;
     }
 
     /* moveq */
