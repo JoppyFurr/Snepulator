@@ -11,7 +11,7 @@
 #include "snepulator_compat.h"
 #include "snepulator_types.h"
 
-#define VIDEO_MAX_WIDTH 256
+#define VIDEO_MAX_WIDTH 320
 #define VIDEO_MAX_LINES 240
 
 #define VIDEO_RING_SIZE 3

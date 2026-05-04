@@ -1,6 +1,18 @@
 /*
  * Snepulator
  * Sega Mega Drive VDP implementation.
+ *
+ * TODO:
+ *  - Sprites
+ *  - Scrolling
+ *  - Priority
+ *  - Window
+ *  - Line interrupts
+ *  - Hacks (eg, removing sprite limit, disable blanking)
+ *  - Hilight & Shadow
+ *  - Width=256 mode
+ *  - PAL mode
+ *  - Interlace mode
  */
 
 #include <stdio.h>
@@ -48,7 +60,6 @@ void smd_vdp_control_write (SMD_VDP_Context *context, uint16_t data)
 
         uint16_t dma_length;
         uint32_t source_address;
-        uint16_t dest_address;
 
         /* Begin DMA */
         if (context->state.mode_2_dma_en && (context->state.code & ADDRESS_CODE_DMA))
@@ -66,16 +77,15 @@ void smd_vdp_control_write (SMD_VDP_Context *context, uint16_t data)
                             /* TODO: For VRAM, if source-address bit 0 is set, data may be byte-swapped */
                             dma_length = context->state.dma_length;
                             source_address = context->state.dma_source << 1;
-                            dest_address = context->state.address;
                             do {
                                 uint16_t data = context->memory_read_16 (context->parent, source_address);
 
                                 /* TODO: Consider moving any endian-changes into m68k.c
                                  *       to avoid changing twice during dma. */
-                                *(uint16_t *) (&context->state.vram [dest_address]) = util_hton16 (data);
+                                *(uint16_t *) (&context->state.vram [context->state.address]) = util_hton16 (data);
 
                                 source_address += 2;
-                                dest_address += context->state.auto_increment;
+                                context->state.address += context->state.auto_increment;
                                 dma_length--;
                             } while (dma_length > 0);
                             break;
@@ -85,7 +95,6 @@ void smd_vdp_control_write (SMD_VDP_Context *context, uint16_t data)
                                     __func__, context->state.dma_length);
                             dma_length = context->state.dma_length;
                             source_address = context->state.dma_source << 1;
-                            dest_address = context->state.address;
 
                             /* TODO: Does the auto-incremented address used for DMA get written
                              *       back to the address register? */
@@ -97,15 +106,8 @@ void smd_vdp_control_write (SMD_VDP_Context *context, uint16_t data)
                                                                                     .g = ((data >> 5) & 0x07) * 0xff / 7,
                                                                                     .b = ((data >> 9) & 0x07) * 0xff / 7};
 
-                                if (data != 0)
-                                {
-                                    printf ("[%s] cram [%d] = rgb (%d, %d, %d)\n", __func__, cram_index,
-                                             (data >> 1) & 0x07, (data >> 5) & 0x07, (data >> 9) & 0x07);
-                                    snepulator_error ("SMD VDP", "First nonzero colour, time to start on drawing.");
-                                }
-
                                 source_address += 2;
-                                dest_address += context->state.auto_increment;
+                                context->state.address += context->state.auto_increment;
                                 dma_length--;
                             } while (dma_length > 0);
                             break;
@@ -201,31 +203,25 @@ void smd_vdp_data_write (SMD_VDP_Context *context, uint16_t data)
             context->state.vram [context->state.address] = fill_value;
             context->state.address += context->state.auto_increment;
         }
+        context->state.fill_pending = false;
     }
 
     /* VRAM Write */
     else if (context->state.code == 0x01)
     {
-        printf ("[%s] VRAM Write not implemented.\n", __func__);
+        *(uint16_t *) &context->state.vram [context->state.address] = util_hton16 (data);
+        context->state.address += context->state.auto_increment;
     }
 
     /* CRAM Write */
     else if (context->state.code == 0x03)
     {
         uint32_t index = (context->state.address >> 1) & 0x3f;
-        context->state.address += context->state.auto_increment;
 
         context->state.cram [index] = (uint_pixel_t) { .r = ((data >> 1) & 0x07) * 0xff / 7,
                                                        .g = ((data >> 5) & 0x07) * 0xff / 7,
                                                        .b = ((data >> 9) & 0x07) * 0xff / 7};
-
-        /* TODO: Wait until nonzero colours get written before implementing drawing */
-        if (data != 0)
-        {
-            printf ("[%s] cram [%d] = rgb (%d, %d, %d)\n", __func__, index,
-                     (data >> 1) & 0x07, (data >> 5) & 0x07, (data >> 9) & 0x07);
-            snepulator_error ("SMD VDP", "First nonzero colour, time to start on drawing.");
-        }
+        context->state.address += context->state.auto_increment;
     }
 
     /* VSRAM write */
@@ -260,6 +256,177 @@ uint8_t smd_vdp_get_interrupt (SMD_VDP_Context *context)
 
 
 /*
+ * Render one line of an 8×8 pattern.
+ * Background version.
+ * Supports vertical and horizontal mirroring.
+ */
+static void smd_vdp_draw_pattern_background (SMD_VDP_Context *context, uint16_t line, SMD_VDP_Pattern *pattern_base,
+                                             uint_pixel_t *palette, int_point_t position,
+                                             bool flip_h, bool flip_v)
+{
+    uint32_t pattern_line;
+    uint32_t pixel_bit;
+
+    /* Get the line within the pattern */
+    if (flip_v)
+    {
+        pattern_line = ((uint32_t *) pattern_base) [position.y - line + 7];
+    }
+    else
+    {
+        pattern_line = ((uint32_t *) pattern_base) [line - position.y];
+    }
+
+    int32_t destination_start = position.x + line * context->frame_buffer.width;
+
+    for (int32_t x = 0; x < 8; x++)
+    {
+        /* Nothing to do outside of the active area. Continue if we're to the left,
+         * as the next pixel might be on-screen. Return if we're to the right. */
+        if (x + position.x < 0)
+        {
+            continue;
+        }
+        else if (x + position.x >= context->frame_buffer.width)
+        {
+            return;
+        }
+
+        if (flip_h)
+        {
+            pixel_bit = x;
+        }
+        else
+        {
+            pixel_bit = 7 - x;
+        }
+
+        uint8_t colour_index = ((pattern_line >> (pixel_bit     )) & 0x01) |
+                               ((pattern_line >> (pixel_bit +  7)) & 0x02) |
+                               ((pattern_line >> (pixel_bit + 14)) & 0x04) |
+                               ((pattern_line >> (pixel_bit + 21)) & 0x08);
+
+        if (colour_index != 0)
+        {
+            uint_pixel_t pixel = palette [colour_index];
+            context->frame_buffer.active_area [destination_start + x] = pixel;
+        }
+    }
+}
+
+
+/*
+ * Render one line of the background layer.
+ */
+static void smd_vdp_draw_background (SMD_VDP_Context *context, uint16_t line, uint16_t name_table_base)
+{
+    uint16_t num_rows;
+    uint16_t num_cols;
+
+    /* Plane size - Width */
+    switch (context->state.plane_size & 0x03)
+    {
+        case 0x00:
+            num_cols = 32;
+            break;
+        case 0x01:
+            num_cols = 64;
+            break;
+        case 0x02:
+            /* Invalid */
+            return;
+        case 0x03:
+        default:
+            num_cols = 128;
+            break;
+    }
+
+    /* Plane size - Height */
+    switch (context->state.plane_size & 0x30)
+    {
+        case 0x00:
+            num_rows = 32;
+            break;
+        case 0x10:
+            num_rows = 64;
+            break;
+        case 0x20:
+            /* Invalid */
+            return;
+        case 0x30:
+        default:
+            num_rows = 128;
+            break;
+    }
+
+    /* Name table cannot exceed 8 KiB */
+    if (num_rows * num_cols > 4096)
+    {
+        /* Invalid */
+        return;
+    }
+
+    /* Name-table row and starting-column for this line */
+    /* TODO: Scrolling */
+    uint16_t tile_y = (line >> 3) % num_rows;
+
+    int_point_t position; /* Position of the pattern on the display */
+
+    for (uint32_t tile_x = 0; tile_x < num_cols; tile_x++)
+    {
+        uint16_t tile_address = name_table_base + (tile_x + tile_y * num_cols) * 2;
+
+        SMD_VDP_Name_Table_Entry tile;
+        tile.data = util_ntoh16 (* (uint16_t *) &context->state.vram [tile_address]);
+
+        SMD_VDP_Pattern *pattern = (SMD_VDP_Pattern *) &context->state.vram [(tile.pattern) * sizeof (SMD_VDP_Pattern)];
+
+        uint_pixel_t *palette = &context->state.cram [tile.palette << 4];
+
+        position.x = 8 * tile_x;
+        position.y = 8 * tile_y;
+        smd_vdp_draw_pattern_background (context, line, pattern, palette, position, tile.h_flip, tile.v_flip);
+    }
+}
+
+
+/*
+ * Render one active line of output for the Mega Drive VDP.
+ * Note: For now, this assumes Mode-5, 320x224.
+ */
+void smd_vdp_render_line (SMD_VDP_Context *context, uint16_t line)
+{
+    /* Backdrop */
+    uint_pixel_t video_backdrop = context->state.cram [context->state.backdrop_colour & 0x3f];
+    context->frame_buffer.backdrop [line] = video_backdrop;
+
+    /* If blanking is enabled, fill the active area with the backdrop colour. */
+    if (!context->state.mode_2_blank)
+    {
+        uint32_t line_start = line * context->frame_buffer.width;
+        for (int x = 0; x < context->frame_buffer.width; x++)
+        {
+            context->frame_buffer.active_area [line_start + x] = video_backdrop;
+        }
+
+        /* TODO: Any work that occurs even when blanking is enabled.
+         *       Eg, like sprite-overflow on the SMS */
+        return;
+    }
+
+    /* Draw Plane B */
+    uint16_t plane_b_base = (context->state.plane_b_name_table_base & 0x07) << 13;
+    smd_vdp_draw_background (context, line, plane_b_base);
+
+    /* Draw Plane A */
+    uint16_t plane_a_base = (context->state.plane_a_name_table_base & 0x38) << 10;
+    smd_vdp_draw_background (context, line, plane_a_base);
+
+    /* TODO: Draw sprites */
+}
+
+
+/*
  * Run one scanline on the VDP.
  */
 void smd_vdp_run_one_scanline (SMD_VDP_Context *context)
@@ -267,6 +434,24 @@ void smd_vdp_run_one_scanline (SMD_VDP_Context *context)
     /* Update the V-Counter */
     /* TODO: For now, hard-coded for NTSC mode. PAL is 313 lines. */
     context->state.line = (context->state.line + 1) % 262;
+
+    /* TODO: If this is the first line, update the mode.
+     *       For now, the typical NTSC resolution is hard-coded. */
+    context->frame_buffer.width = 320;
+    context->frame_buffer.height = 224;
+    context->lines_active = 224;
+
+    /* If this is an active line, render it */
+    if (context->state.line < context->lines_active)
+    {
+        smd_vdp_render_line (context, context->state.line);
+    }
+
+    /* If this the final active line, copy the frame for output to the user */
+    if (context->state.line == context->lines_active - 1)
+    {
+        snepulator_frame_done (&context->frame_buffer);
+    }
 
     /* VBlank Interrupt */
     if (context->state.line == 224 && context->state.mode_2_vertical_int_en)
@@ -297,9 +482,6 @@ SMD_VDP_Context *smd_vdp_init (void *parent,
 
     context->parent = parent;
     context->memory_read_16  = memory_read_16;
-    context->video_width = 256;
-    context->video_height = 224;
-
     context->frame_done = frame_done;
 
     return context;

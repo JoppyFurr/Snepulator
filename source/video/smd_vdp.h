@@ -7,6 +7,21 @@
 
 #define ADDRESS_CODE_DMA 0x20
 
+typedef struct SMD_VDP_Pattern_t {
+    uint8_t data[32];
+} SMD_VDP_Pattern;
+
+typedef union SMD_VDP_Name_Table_Entry_u {
+    uint16_t data;
+    struct {
+        uint16_t pattern:11;
+        uint16_t h_flip:1;
+        uint16_t v_flip:1;
+        uint16_t palette:2;
+        uint16_t priority:1;
+    };
+} SMD_VDP_Name_Table_Entry;
+
 typedef struct SMD_VDP_State_s {
 
     uint16_t line;
@@ -32,12 +47,12 @@ typedef struct SMD_VDP_State_s {
             uint8_t mode_2_blank:1;
             uint8_t mode_2_unused_7:1;
 
-            uint8_t plane_a_nt_base;
-            uint8_t window_nt_base;
-            uint8_t plane_b_nt_base;
+            uint8_t plane_a_name_table_base;
+            uint8_t window_name_table_base;
+            uint8_t plane_b_name_table_base;
             uint8_t sprite_table_base;
             uint8_t unused_6; /* 128 KB only */
-            uint8_t background_colour;
+            uint8_t backdrop_colour;
             uint8_t unused_8; /* SMS H-Scroll */
             uint8_t unused_9; /* SMS V-Scroll */
             uint8_t line_counter_reset;
@@ -76,10 +91,10 @@ typedef struct SMD_VDP_Context_s {
 
     SMD_VDP_State state;
 
-    /* Video output */
-    uint32_t video_width;
-    uint32_t video_height;
+    /* Mode data */
+    uint32_t lines_active;
 
+    /* Video output */
     Video_Frame frame_buffer;
     void (* frame_done) (void *);
 
