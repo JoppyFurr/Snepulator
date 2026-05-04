@@ -400,15 +400,16 @@ void smd_vdp_render_line (SMD_VDP_Context *context, uint16_t line)
     uint_pixel_t video_backdrop = context->state.cram [context->state.backdrop_colour & 0x3f];
     context->frame_buffer.backdrop [line] = video_backdrop;
 
-    /* If blanking is enabled, fill the active area with the backdrop colour. */
+    /* Start by filling the screen with the backdrop colour */
+    uint32_t line_start = line * context->frame_buffer.width;
+    for (int x = 0; x < context->frame_buffer.width; x++)
+    {
+        context->frame_buffer.active_area [line_start + x] = video_backdrop;
+    }
+
+    /* If blanking is enabled, stop now, leaving the active area with only the backdrop colour. */
     if (!context->state.mode_2_blank)
     {
-        uint32_t line_start = line * context->frame_buffer.width;
-        for (int x = 0; x < context->frame_buffer.width; x++)
-        {
-            context->frame_buffer.active_area [line_start + x] = video_backdrop;
-        }
-
         /* TODO: Any work that occurs even when blanking is enabled.
          *       Eg, like sprite-overflow on the SMS */
         return;
