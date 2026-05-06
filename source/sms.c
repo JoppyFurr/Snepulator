@@ -599,10 +599,10 @@ static uint8_t sms_io_read (void *context_ptr, uint8_t addr)
                     port_value = (gamepad [1].paddle_data_high) | BIT_5;
                 }
 
-                if (gamepad [1].state [GAMEPAD_BUTTON_1] || gamepad [1].state [GAMEPAD_BUTTON_2] || state.mouse_button_left)
-                {
-                    port_value |= BIT_4;
-                }
+                /* Button */
+                port_value |= (gamepad [1].state [GAMEPAD_BUTTON_1] ||
+                               gamepad [1].state [GAMEPAD_BUTTON_2] || state.mouse_button_left) ? 0 : BIT_4;
+
             }
             else if (gamepad [1].type == GAMEPAD_TYPE_SMS_PHASER)
             {
