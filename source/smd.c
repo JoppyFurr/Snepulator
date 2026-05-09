@@ -466,6 +466,11 @@ static uint8_t smd_z80_memory_read (void *context_ptr, uint16_t addr)
     {
         return 0xff;
     }
+    /* M68k address space (banked) */
+    else if (addr >= 0x8000 && addr <= 0xffff)
+    {
+        return smd_memory_read_8 (context, context->state.z80_bank | (addr & 0x7fff));
+    }
     else
     {
         snepulator_error (__func__, "Unmapped Z80 address %04x.", addr);
@@ -494,7 +499,7 @@ static void smd_z80_memory_write (void *context_ptr, uint16_t addr, uint8_t data
     /* Bank Register */
     else if (addr >= 0x6000 && addr <= 0x60ff)
     {
-        context->state.z80_bank = (context->state.z80_bank >> 1) & 0xff1000;
+        context->state.z80_bank = (context->state.z80_bank >> 1) & 0xff8000;
 
         if (data & 0x01)
         {
