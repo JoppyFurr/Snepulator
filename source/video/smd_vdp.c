@@ -260,22 +260,15 @@ uint8_t smd_vdp_get_interrupt (SMD_VDP_Context *context)
  * Background version.
  * Supports vertical and horizontal mirroring.
  */
-static void smd_vdp_draw_pattern_background (SMD_VDP_Context *context, uint16_t line, SMD_VDP_Pattern *pattern_base,
+static void smd_vdp_draw_pattern_background (SMD_VDP_Context *context, uint16_t line, SMD_VDP_Pattern *pattern,
                                              uint_pixel_t *palette, int_point_t position,
                                              bool flip_h, bool flip_v)
 {
-    uint32_t pattern_line;
-    uint32_t pixel_bit;
 
-    /* Get the line within the pattern */
-    if (flip_v)
-    {
-        pattern_line = ((uint32_t *) pattern_base) [position.y - line + 7];
-    }
-    else
-    {
-        pattern_line = ((uint32_t *) pattern_base) [line - position.y];
-    }
+    /* Get the line within the pattern. Endian is chosen such that the
+     * pixel within the line can be selected with a single bit-shift. */
+    uint32_t pattern_line_index = (flip_v) ? position.y - line + 7 : line - position.y;
+    uint32_t pattern_line = util_ntoh32 (pattern->line [pattern_line_index]);
 
     int32_t destination_start = position.x + line * context->frame_buffer.width;
 
@@ -292,24 +285,12 @@ static void smd_vdp_draw_pattern_background (SMD_VDP_Context *context, uint16_t 
             return;
         }
 
-        if (flip_h)
-        {
-            pixel_bit = x;
-        }
-        else
-        {
-            pixel_bit = 7 - x;
-        }
-
-        uint8_t colour_index = ((pattern_line >> (pixel_bit     )) & 0x01) |
-                               ((pattern_line >> (pixel_bit +  7)) & 0x02) |
-                               ((pattern_line >> (pixel_bit + 14)) & 0x04) |
-                               ((pattern_line >> (pixel_bit + 21)) & 0x08);
+        uint32_t pattern_pixel = (flip_h) ? x : 7 - x;
+        uint32_t colour_index = pattern_line >> (pattern_pixel * 4) & 0x0f;
 
         if (colour_index != 0)
         {
-            uint_pixel_t pixel = palette [colour_index];
-            context->frame_buffer.active_area [destination_start + x] = pixel;
+            context->frame_buffer.active_area [destination_start + x] = palette [colour_index];
         }
     }
 }

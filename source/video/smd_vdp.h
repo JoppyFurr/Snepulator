@@ -8,7 +8,7 @@
 #define ADDRESS_CODE_DMA 0x20
 
 typedef struct SMD_VDP_Pattern_t {
-    uint8_t data[32];
+    uint32_t line [8];
 } SMD_VDP_Pattern;
 
 typedef union SMD_VDP_Name_Table_Entry_u {
