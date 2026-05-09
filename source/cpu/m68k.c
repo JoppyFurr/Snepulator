@@ -938,6 +938,19 @@ static uint32_t m68k_13c0_move_b_al_dn (M68000_Context *context, uint16_t instru
 }
 
 
+/* move.b (xxx.l) ← #xx */
+static uint32_t m68k_13fc_move_b_al_imm (M68000_Context *context, uint16_t instruction)
+{
+    uint8_t value = read_extension (context);
+
+    write_byte_al (context, value);
+    m68k_move_b_flags (context, value);
+
+    printf ("move.b (xxx.l) ← #%02x\n", value);
+    return 0;
+}
+
+
 /* move.l Dn ← (An) */
 static uint32_t m68k_2010_move_l_dn_an (M68000_Context *context, uint16_t instruction)
 {
@@ -2554,6 +2567,43 @@ static uint32_t m68k_6101_bsr_s (M68000_Context *context, uint16_t instruction)
 }
 
 
+/* bls.w */
+static uint32_t m68k_6300_bcc_w (M68000_Context *context, uint16_t instruction)
+{
+    int16_t displacement = read_extension (context);
+
+    if (context->state.ccr_carry || context->state.ccr_zero)
+    {
+        context->state.pc += displacement - 2;
+        printf ("bls.w %+d\n", displacement);
+    }
+    else
+    {
+        printf ("bls.w (not taken).\n");
+    }
+
+    return 0;
+}
+
+
+/* bls.s */
+static uint32_t m68k_6301_bcc_s (M68000_Context *context, uint16_t instruction)
+{
+    if (context->state.ccr_carry || context->state.ccr_zero)
+    {
+        int8_t displacement = instruction & 0xff;
+        context->state.pc += displacement;
+        printf ("bls.s %+d\n", displacement);
+    }
+    else
+    {
+        printf ("bls.s (not taken).\n");
+    }
+
+    return 0;
+}
+
+
 /* bcc.w / bhs.w */
 static uint32_t m68k_6400_bcc_w (M68000_Context *context, uint16_t instruction)
 {
@@ -2591,7 +2641,7 @@ static uint32_t m68k_6401_bcc_s (M68000_Context *context, uint16_t instruction)
 }
 
 
-/* bcs.w */
+/* bcs.w / blo.w */
 static uint32_t m68k_6500_bcs_w (M68000_Context *context, uint16_t instruction)
 {
     int16_t displacement = read_extension (context);
@@ -2610,7 +2660,7 @@ static uint32_t m68k_6500_bcs_w (M68000_Context *context, uint16_t instruction)
 }
 
 
-/* bcs.s */
+/* bcs.s / blo.w */
 static uint32_t m68k_6501_bcs_s (M68000_Context *context, uint16_t instruction)
 {
     if (context->state.ccr_carry)
@@ -2901,6 +2951,26 @@ static uint32_t m68k_9048_sub_w_dn_an (M68000_Context *context, uint16_t instruc
     m68k_sub_w_flags (context, a, b, result);
 
     printf ("sub.w d%d ← d%d - a%d\n", dest_reg, dest_reg, source_reg);
+    return 0;
+}
+
+
+/* cmp.b Dn - Dn */
+static uint32_t m68k_b000_cmp_b_dn_dn (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+    uint16_t source_reg = instruction & 0x07;
+
+    uint8_t a = context->state.d [dest_reg].b;
+    uint8_t b = context->state.d [source_reg].b;
+    uint8_t result = a - b;
+
+    context->state.ccr_negative = ((int8_t) result < 0);
+    context->state.ccr_zero = (result == 0);
+    context->state.ccr_overflow = (int8_t) a - (int8_t) b > 127 || (int8_t) a - (int8_t) b < -128;
+    context->state.ccr_carry = ((uint32_t) a - b) >> 8;
+
+    printf ("cmp.b d%d - d%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -3533,6 +3603,7 @@ static void m68k_init_instructions (void)
         m68k_instruction [0x4e68 | reg_a       ] = m68k_4e68_move_usp_an;
     }
     m68k_instruction [0x11fc] = m68k_11fc_move_b_aw_imm;
+    m68k_instruction [0x13fc] = m68k_13fc_move_b_al_imm;
     m68k_instruction [0x21fc] = m68k_21fc_move_l_aw_imm;
     m68k_instruction [0x23f8] = m68k_23f8_move_l_al_aw;
     m68k_instruction [0x23fc] = m68k_23fc_move_l_al_imm;
@@ -3650,6 +3721,7 @@ static void m68k_init_instructions (void)
     /* Bcc/BSR/BRA with 16-bit displacement */
     m68k_instruction [0x6000] = m68k_6000_bra_w;
     m68k_instruction [0x6100] = m68k_6100_bsr_w;
+    m68k_instruction [0x6300] = m68k_6300_bcc_w;
     m68k_instruction [0x6400] = m68k_6400_bcc_w;
     m68k_instruction [0x6500] = m68k_6500_bcs_w;
     m68k_instruction [0x6600] = m68k_6600_bne_w;
@@ -3663,6 +3735,7 @@ static void m68k_init_instructions (void)
     {
         m68k_instruction [0x6000 | d] = m68k_6001_bra_s;
         m68k_instruction [0x6100 | d] = m68k_6101_bsr_s;
+        m68k_instruction [0x6300 | d] = m68k_6301_bcc_s;
         m68k_instruction [0x6400 | d] = m68k_6401_bcc_s;
         m68k_instruction [0x6500 | d] = m68k_6501_bcs_s;
         m68k_instruction [0x6600 | d] = m68k_6601_bne_s;
@@ -3706,6 +3779,7 @@ static void m68k_init_instructions (void)
     {
         for (uint16_t reg_b = 0; reg_b < 8; reg_b++)
         {
+            m68k_instruction [0xb000 | (reg_a << 9) | reg_b] = m68k_b000_cmp_b_dn_dn;
             m68k_instruction [0xb050 | (reg_a << 9) | reg_b] = m68k_b050_cmp_w_dn_an;
             m68k_instruction [0xb088 | (reg_a << 9) | reg_b] = m68k_b088_cmp_l_dn_an;
         }
