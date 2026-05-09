@@ -94,8 +94,7 @@ void snepulator_render_error ()
     }
 
     if (ImGui::BeginPopupModal (state.error_title, NULL, ImGuiWindowFlags_AlwaysAutoResize |
-                                                        ImGuiWindowFlags_NoMove |
-                                                        ImGuiWindowFlags_NoScrollbar))
+                                                         ImGuiWindowFlags_NoScrollbar))
     {
         ImGui::Text ("%s", state.error_message);
 
