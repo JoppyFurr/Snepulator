@@ -17,6 +17,7 @@
 #include "video/smd_vdp.h"
 #include "sound/band_limit.h"
 #include "sound/sn76489.h"
+#include "sound/ym2612.h"
 #include "smd.h"
 
 extern Snepulator_State state;
@@ -37,6 +38,7 @@ static void smd_audio_callback (void *context_ptr, int32_t *stream, uint32_t cou
 {
     SMD_Context *context = (SMD_Context *) context_ptr;
 
+    ym2612_get_samples (context->ym2612_context, stream, count);
     sn76489_get_samples (context->psg_context, stream, count);
 }
 
@@ -395,6 +397,7 @@ static void smd_memory_write_16 (void *context_ptr, uint32_t addr, uint16_t data
         }
 
         /* Z80 and YM2612 Reset */
+        /* TODO: YM2612 reset */
         else if (addr == 0xa11200)
         {
             context->state.z80_reset_n = (data >> 8) & 0x01;
@@ -494,7 +497,18 @@ static void smd_z80_memory_write (void *context_ptr, uint16_t addr, uint8_t data
     /* YM2612 */
     else if (addr >= 0x4000 && addr <= 0x5fff)
     {
-        /* TODO: Implement the YM2612 */
+        switch (addr & 0x0003)
+        {
+            case 0:
+                ym2612_addr1_write (context->ym2612_context, data);
+                break;
+            case 2:
+                /* Group 2 registers not implemented */
+                break;
+            default:
+                ym2612_data_write (context->ym2612_context, data);
+                break;
+        }
     }
     /* Bank Register */
     else if (addr >= 0x6000 && addr <= 0x60ff)
@@ -586,7 +600,7 @@ static void smd_run (void *context_ptr, uint32_t cycles)
     while (lines--)
     {
         /* TODO: 489 is rounded up. A better solution is to add 3420 master_clock
-         *       cycles to a pool and subtract as mayn full m68k cycles as we can,
+         *       cycles to a pool and subtract as many full m68k cycles as we can,
          *       saving any leftovers for the next line. */
         m68k_run_cycles (context->m68k_context, 489);
 
@@ -598,6 +612,7 @@ static void smd_run (void *context_ptr, uint32_t cycles)
         smd_vdp_run_one_scanline (context->vdp_context);
 
         /* TODO: Variable clock rate when able to switch between PAL and NTSC */
+        ym2612_run_cycles (context->ym2612_context, SMD_NTSC_MASTER_CLOCK / 7, 489); /* TODO: Same note as m68k */
         sn76489_run_cycles (context->psg_context, SMD_NTSC_MASTER_CLOCK / 15 , 228);
     }
 }
@@ -650,7 +665,11 @@ static void smd_cleanup (void *context_ptr)
         context->vdp_context = NULL;
     }
 
-    /* TODO: Free the YM2612 context once we have one. */
+    if (context->ym2612_context != NULL)
+    {
+        free (context->ym2612_context);
+        context->ym2612_context = NULL;
+    }
 
     if (context->psg_context != NULL)
     {
@@ -684,6 +703,7 @@ SMD_Context *smd_init (void)
     M68000_Context *m68k_context;
     Z80_Context *z80_context;
     SMD_VDP_Context *vdp_context;
+    YM2612_Context *ym2612_context;
     SN76489_Context *psg_context;
 
     context = calloc (1, sizeof (SMD_Context));
@@ -720,6 +740,8 @@ SMD_Context *smd_init (void)
     context->vdp_context = vdp_context;
 
     /* Initialise sound chips */
+    ym2612_context = ym2612_init ();
+    context->ym2612_context = ym2612_context;
     psg_context = sn76489_init ();
     context->psg_context = psg_context;
 
