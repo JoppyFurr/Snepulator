@@ -33,6 +33,7 @@ typedef struct SMD_Context_s {
     M68000_Context *m68k_context;
     Z80_Context *z80_context;
     SMD_VDP_Context *vdp_context;
+    YM2612_Context *ym2612_context;
     SN76489_Context *psg_context;
     uint64_t pending_cycles;
 

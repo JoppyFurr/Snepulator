@@ -22,6 +22,7 @@
 #include "sound/band_limit.h"
 #include "sound/sn76489.h"
 #include "sound/ym2413.h"
+#include "sound/ym2612.h"
 #include "colecovision.h"
 #include "logo.h"
 #include "sg-1000.h"

@@ -54,6 +54,7 @@ build_snepulator ()
     eval $CC $CFLAGS -c source/sound/band_limit.c   -o work/band_limit.o
     eval $CC $CFLAGS -c source/sound/sn76489.c      -o work/sn76489.o
     eval $CC $CFLAGS -c source/sound/ym2413.c       -o work/ym2413.o
+    eval $CC $CFLAGS -c source/sound/ym2612.c       -o work/ym2612.o
     eval $CC $CFLAGS -c source/video/tms9928a.c     -o work/tms9928a.o
     eval $CC $CFLAGS -c source/video/sms_vdp.c      -o work/sms_vdp.o
     eval $CC $CFLAGS -c source/colecovision.c       -o work/colecovision.o
