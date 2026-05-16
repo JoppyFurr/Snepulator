@@ -11,6 +11,7 @@ typedef struct SMD_VDP_Pattern_t {
     uint32_t line [8];
 } SMD_VDP_Pattern;
 
+/* Name Table format - Assumes data has been converted to host-endian. */
 typedef union SMD_VDP_Name_Table_Entry_u {
     uint16_t data;
     struct {
@@ -21,6 +22,29 @@ typedef union SMD_VDP_Name_Table_Entry_u {
         uint16_t priority:1;
     };
 } SMD_VDP_Name_Table_Entry;
+
+/* Sprite Attribute Table format - Assumes data has been converted to host-endian. */
+typedef union SMD_VDP_Sprite_Table_Entry_u {
+    uint16_t data [4];
+    struct {
+        uint16_t y:10;
+        uint16_t unused_word0:6;
+        uint16_t link:7;
+        uint16_t unused_word1_low:1;
+        uint16_t height:2;
+        uint16_t width:2;
+        uint16_t unused_word1_high:4;
+        uint16_t pattern:11;
+        uint16_t h_flip:1;
+        uint16_t v_flip:1;
+        uint16_t palette:2;
+        uint16_t priority:1;
+        uint16_t x:10;
+        uint16_t unused_word3:6;
+    };
+
+} SMD_VDP_Sprite_Table_Entry;
+
 
 typedef struct SMD_VDP_State_s {
 

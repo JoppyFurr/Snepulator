@@ -10,9 +10,12 @@
  *  - Line interrupts
  *  - Hacks (eg, removing sprite limit, disable blanking)
  *  - Hilight & Shadow
- *  - Width=256 mode
+ *  - Width=256 mode, consider adjustment of aspect ratio to keep the image size the same?
  *  - PAL mode
  *  - Interlace mode
+ *  - Investigate sprite masking described in Charles MacDonald document.
+ *  - Sprite collisions
+ *  - Hack option to disable the per-line sprite limit
  */
 
 #include <stdio.h>
@@ -257,12 +260,11 @@ uint8_t smd_vdp_get_interrupt (SMD_VDP_Context *context)
 
 /*
  * Render one line of an 8×8 pattern.
- * Background version.
  * Supports vertical and horizontal mirroring.
+ * Note: This assumes that the pattern requested is on the line.
  */
-static void smd_vdp_draw_pattern_background (SMD_VDP_Context *context, uint16_t line, SMD_VDP_Pattern *pattern,
-                                             uint_pixel_t *palette, int_point_t position,
-                                             bool flip_h, bool flip_v)
+static void smd_vdp_draw_pattern_line (SMD_VDP_Context *context, uint16_t line, SMD_VDP_Pattern *pattern,
+                                       uint_pixel_t *palette, int_point_t position, bool flip_h, bool flip_v)
 {
 
     /* Get the line within the pattern. Endian is chosen such that the
@@ -291,6 +293,70 @@ static void smd_vdp_draw_pattern_background (SMD_VDP_Context *context, uint16_t 
         if (colour_index != 0)
         {
             context->frame_buffer.active_area [destination_start + x] = palette [colour_index];
+        }
+    }
+}
+
+
+/*
+ * Render one line of the sprite layer.
+ */
+static void smd_vdp_draw_sprites (SMD_VDP_Context *context, uint16_t line)
+{
+    /* TODO: In Width=320 mode, the base-address register only provides 6 bits
+     *       of the address. In Width=256 mode, it provides 7 bits. */
+    uint16_t *sprite_table = (uint16_t *) &context->state.vram [(context->state.sprite_table_base << 9) & 0xfc00];
+
+    uint32_t line_sprite_buffer [20];
+    uint32_t line_sprite_count = 0;
+    uint32_t sprite_index = 0;
+
+    /* Traverse the sprite list, filling the line sprite buffer */
+    /* TODO: When implementing Width=256 mode, the maximum is 64 sprites */
+    for (int count = 0; count < 80; count++)
+    {
+        SMD_VDP_Sprite_Table_Entry sprite;
+        sprite.data [0] = util_ntoh16 (sprite_table [sprite_index * 4]);
+        sprite.data [1] = util_ntoh16 (sprite_table [sprite_index * 4 + 1]);
+        int_point_t position = { .y = sprite.y - 128};
+
+        /* If the sprite is on this line, add it to the buffer */
+        if (line >= position.y && line < position.y + 8 + sprite.height * 8)
+        {
+            line_sprite_buffer [line_sprite_count++] = sprite_index;
+        }
+
+        /* TODO: When implementing Width=256 mode, there are only 16 sprites per line */
+        if (sprite.link == 0 || line_sprite_count == 20)
+        {
+            break;
+        }
+
+        sprite_index = sprite.link;
+    }
+
+    /* Render the sprites in the line sprite buffer.
+     * Done in reverse order so that the first sprite is the one left on the screen */
+    while (line_sprite_count--)
+    {
+        SMD_VDP_Sprite_Table_Entry sprite;
+        sprite.data [0] = util_ntoh16 (sprite_table [line_sprite_buffer [line_sprite_count] * 4]);
+        sprite.data [1] = util_ntoh16 (sprite_table [line_sprite_buffer [line_sprite_count] * 4 + 1]);
+        sprite.data [2] = util_ntoh16 (sprite_table [line_sprite_buffer [line_sprite_count] * 4 + 2]);
+        sprite.data [3] = util_ntoh16 (sprite_table [line_sprite_buffer [line_sprite_count] * 4 + 3]);
+        uint_pixel_t *palette = &context->state.cram [sprite.palette << 4];
+        int_point_t position = { .x = sprite.x - 128, .y=sprite.y - 128};
+
+        uint32_t tile_y = (line - position.y) / 8;
+        int_point_t tile_position = { .y = position.y + tile_y * 8 };
+
+        for (uint32_t tile_x = 0; tile_x < sprite.width + 1; tile_x++)
+        {
+            uint32_t pattern_index = sprite.pattern + tile_y + tile_x * (sprite.height + 1);
+            SMD_VDP_Pattern *pattern = (SMD_VDP_Pattern *) &context->state.vram [pattern_index * sizeof (SMD_VDP_Pattern)];
+            tile_position.x = position.x + tile_x * 8;
+
+            smd_vdp_draw_pattern_line (context, line, pattern, palette, tile_position, sprite.h_flip, sprite.v_flip);
         }
     }
 }
@@ -366,7 +432,7 @@ static void smd_vdp_draw_background (SMD_VDP_Context *context, uint16_t line, ui
 
         position.x = 8 * tile_x;
         position.y = 8 * tile_y;
-        smd_vdp_draw_pattern_background (context, line, pattern, palette, position, tile.h_flip, tile.v_flip);
+        smd_vdp_draw_pattern_line (context, line, pattern, palette, position, tile.h_flip, tile.v_flip);
     }
 }
 
@@ -404,7 +470,8 @@ void smd_vdp_render_line (SMD_VDP_Context *context, uint16_t line)
     uint16_t plane_a_base = (context->state.plane_a_name_table_base & 0x38) << 10;
     smd_vdp_draw_background (context, line, plane_a_base);
 
-    /* TODO: Draw sprites */
+    /* Draw Sprites */
+    smd_vdp_draw_sprites (context, line);
 }
 
 
