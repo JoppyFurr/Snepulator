@@ -323,7 +323,7 @@ Console snepulator_select_console_for_rom (const char *path)
     }
 
     /* First priority: Check for a known console-specific file extension */
-    char *extension_ptr = strrchr (path, '.');
+    const char *extension_ptr = strrchr (path, '.');
     if (extension_ptr != NULL)
     {
         char extension[16] = { '\0' };
