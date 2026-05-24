@@ -431,7 +431,7 @@ int main_loop (void)
         ImGui_ImplOpenGL3_RenderDrawData (ImGui::GetDrawData ());
         SDL_GL_SwapWindow (window);
 
-#if DEVELOPER_BUILD
+#ifdef DEVELOPER_BUILD
         /* Update statistics (rolling average) */
         static uint64_t host_previous_completion_time = 0;
         static uint64_t host_current_time = 0;

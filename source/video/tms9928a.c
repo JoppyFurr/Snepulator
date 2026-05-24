@@ -728,7 +728,7 @@ void tms9928a_run_one_scanline (TMS9928A_Context *context)
     {
         context->frame_done (context->parent);
 
-#if DEVELOPER_BUILD
+#ifdef DEVELOPER_BUILD
         /* Update statistics (rolling average) */
         static int64_t vdp_previous_completion_time = 0;
         static int64_t vdp_current_time = 0;

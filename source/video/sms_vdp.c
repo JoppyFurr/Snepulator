@@ -932,7 +932,7 @@ void sms_vdp_run_one_scanline (TMS9928A_Context *context)
     {
         context->frame_done (context->parent);
 
-#if DEVELOPER_BUILD
+#ifdef DEVELOPER_BUILD
         /* Update statistics (rolling average) */
         /* TODO: Move into a common "frame complete" function */
         static int64_t vdp_previous_completion_time = 0;

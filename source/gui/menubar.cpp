@@ -52,7 +52,7 @@ extern bool input_modal_create;
 /*
  * C-friendly wrapper for ImGui::Text
  */
-#if DEVELOPER_BUILD
+#ifdef DEVELOPER_BUILD
 static void menubar_diagnostics_print (const char *format, ...)
 {
     va_list args;
