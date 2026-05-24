@@ -4,7 +4,8 @@
  *
  * TODO:
  *  - Sprites
- *  - Scrolling
+ *  - Vertical Scrolling
+ *  - Horizontal Scrolling (strips-of-8 and invalid)
  *  - Priority
  *  - Window
  *  - Line interrupts
@@ -365,7 +366,7 @@ static void smd_vdp_draw_sprites (SMD_VDP_Context *context, uint16_t line)
 /*
  * Render one line of the background layer.
  */
-static void smd_vdp_draw_background (SMD_VDP_Context *context, uint16_t line, uint16_t name_table_base)
+static void smd_vdp_draw_background (SMD_VDP_Context *context, uint16_t line, uint16_t name_table_base, uint16_t h_scroll)
 {
     uint16_t num_rows;
     uint16_t num_cols;
@@ -413,15 +414,21 @@ static void smd_vdp_draw_background (SMD_VDP_Context *context, uint16_t line, ui
         return;
     }
 
+    uint16_t h_scroll_fine = h_scroll & 0x07;
+    uint16_t h_scroll_coarse = (h_scroll >> 3) & 0x7f;
+
     /* Name-table row and starting-column for this line */
     /* TODO: Scrolling */
     uint16_t tile_y = (line >> 3) % num_rows;
 
     int_point_t position; /* Position of the pattern on the display */
 
-    for (uint32_t tile_x = 0; tile_x < num_cols; tile_x++)
+    /* TODO: Stop when tile_x reaches 32 for Width=256 mode */
+    for (int32_t tile_x = -1; tile_x < 40; tile_x++)
     {
-        uint16_t tile_address = name_table_base + (tile_x + tile_y * num_cols) * 2;
+        /* Note: Starting at -1, subtracting a maximum coarse-scroll of 127 gives
+         *       a minimum value of -128. Add +128 to keep the result positive. */
+        uint16_t tile_address = name_table_base + ((tile_x - h_scroll_coarse + 128) % num_cols + tile_y * num_cols) * 2;
 
         SMD_VDP_Name_Table_Entry tile;
         tile.data = util_ntoh16 (* (uint16_t *) &context->state.vram [tile_address]);
@@ -430,7 +437,7 @@ static void smd_vdp_draw_background (SMD_VDP_Context *context, uint16_t line, ui
 
         uint_pixel_t *palette = &context->state.cram [tile.palette << 4];
 
-        position.x = 8 * tile_x;
+        position.x = 8 * tile_x + h_scroll_fine;
         position.y = 8 * tile_y;
         smd_vdp_draw_pattern_line (context, line, pattern, palette, position, tile.h_flip, tile.v_flip);
     }
@@ -462,13 +469,38 @@ void smd_vdp_render_line (SMD_VDP_Context *context, uint16_t line)
         return;
     }
 
+    uint16_t *h_scroll_table = (uint16_t *) &context->state.vram [(context->state.h_scroll_data_base & 0x3f) << 10];
+    uint16_t h_scroll_a = 0;
+    uint16_t h_scroll_b = 0;
+
+    switch (context->state.mode_3 & 0x03)
+    {
+        case 0: /* Full screen scrolling */
+            h_scroll_a = util_ntoh16 (h_scroll_table [0]);
+            h_scroll_b = util_ntoh16 (h_scroll_table [1]);
+            break;
+
+        case 1: /* Invalid */
+            printf ("[%s] Invalid scroll mode not implemented.\n", __func__);
+            break;
+
+        case 2: /* Scrolling per strip of 8 lines */
+            printf ("[%s] Scroll per 8-lines not implemented.\n", __func__);
+            break;
+
+        case 3: /* Scrolling per line */
+            h_scroll_a = util_ntoh16 (h_scroll_table [line * 2 + 0]);
+            h_scroll_b = util_ntoh16 (h_scroll_table [line * 2 + 1]);
+            break;
+    }
+
     /* Draw Plane B */
     uint16_t plane_b_base = (context->state.plane_b_name_table_base & 0x07) << 13;
-    smd_vdp_draw_background (context, line, plane_b_base);
+    smd_vdp_draw_background (context, line, plane_b_base, h_scroll_b);
 
     /* Draw Plane A */
     uint16_t plane_a_base = (context->state.plane_a_name_table_base & 0x38) << 10;
-    smd_vdp_draw_background (context, line, plane_a_base);
+    smd_vdp_draw_background (context, line, plane_a_base, h_scroll_a);
 
     /* Draw Sprites */
     smd_vdp_draw_sprites (context, line);
