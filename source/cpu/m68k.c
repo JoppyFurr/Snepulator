@@ -2297,6 +2297,22 @@ static uint32_t m68k_30d8_move_w_anp_anp (M68000_Context *context, uint16_t inst
 }
 
 
+/* move.w -(An) ← Dn */
+static uint32_t m68k_3100_move_w_pan_dn (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+    uint16_t source_reg = instruction & 0x07;
+
+    uint16_t value = context->state.d [source_reg].w;
+    context->state.a [dest_reg] -= 2;
+    write_word (context, context->state.a [dest_reg], value);
+    m68k_move_w_flags (context, value);
+
+    printf ("move.w -(a%d) ← d%d\n", dest_reg, source_reg);
+    return 0;
+}
+
+
 /* move.w d(An) ← Dn */
 static uint32_t m68k_3140_move_w_dan_dn (M68000_Context *context, uint16_t instruction)
 {
@@ -5482,6 +5498,7 @@ static void m68k_init_instructions (void)
             m68k_instruction [0x30c0 | (reg_a << 9) | reg_b] = m68k_30c0_move_w_anp_dn;
             m68k_instruction [0x30c8 | (reg_a << 9) | reg_b] = m68k_30c8_move_w_anp_an;
             m68k_instruction [0x30d8 | (reg_a << 9) | reg_b] = m68k_30d8_move_w_anp_anp;
+            m68k_instruction [0x3100 | (reg_a << 9) | reg_b] = m68k_3100_move_w_pan_dn;
             m68k_instruction [0x3140 | (reg_a << 9) | reg_b] = m68k_3140_move_w_dan_dn;
             m68k_instruction [0x3158 | (reg_a << 9) | reg_b] = m68k_3158_move_w_dan_anp;
             m68k_instruction [0x3170 | (reg_a << 9) | reg_b] = m68k_3170_move_b_dan_danxi;
