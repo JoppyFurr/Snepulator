@@ -972,7 +972,7 @@ static uint32_t m68k_0a80_eori_l_dn (M68000_Context *context, uint16_t instructi
     context->state.d [reg].l = result;
     m68k_move_l_flags (context, result);
 
-    printf ("eori.l (a%d) ← #%08x\n", reg, imm);
+    printf ("eori.l d%d ← #%08x\n", reg, imm);
     return 0;
 }
 
@@ -2723,14 +2723,14 @@ static uint32_t m68k_4428_neg_b_dan (M68000_Context *context, uint16_t instructi
     uint16_t reg = instruction & 0x07;
     int16_t displacement = read_extension (context);
 
-    uint16_t value = read_byte (context, context->state.a [reg] + displacement);
-    uint16_t result = 0 - value;
+    uint8_t value = read_byte (context, context->state.a [reg] + displacement);
+    uint8_t result = 0 - value;
 
     write_byte (context, context->state.a [reg] + displacement, result);
 
-    context->state.ccr_negative = ((int16_t) result < 0);
+    context->state.ccr_negative = ((int8_t) result < 0);
     context->state.ccr_zero = (result == 0);
-    context->state.ccr_overflow = ((int16_t) value == -32768);
+    context->state.ccr_overflow = ((int8_t) value == -128);
     context->state.ccr_carry = (result != 0);
     context->state.ccr_extend = (result != 0);
 
@@ -5342,7 +5342,7 @@ static uint32_t m68k_e180_asl_l_dn_imm (M68000_Context *context, uint16_t instru
     context->state.ccr_carry = last_out;
     context->state.ccr_extend = last_out;
 
-    context->state.d [reg].w = result;
+    context->state.d [reg].l = result;
 
     printf ("asl.l d%d << %d\n", reg, count);
     return 0;
@@ -5803,7 +5803,7 @@ static void m68k_init_instructions (void)
             m68k_instruction [0xe048 | (count << 9) | reg] = m68k_e048_lsr_w_dn_imm;
             m68k_instruction [0xe058 | (count << 9) | reg] = m68k_e058_ror_w_dn_imm;
             m68k_instruction [0xe068 | (count << 9) | reg] = m68k_e068_lsr_w_dn_dn;
-            m68k_instruction [0xe09b | (count << 9) | reg] = m68k_e098_ror_l_dn_imm;
+            m68k_instruction [0xe098 | (count << 9) | reg] = m68k_e098_ror_l_dn_imm;
             m68k_instruction [0xe108 | (count << 9) | reg] = m68k_e108_lsl_b_dn_imm;
             m68k_instruction [0xe118 | (count << 9) | reg] = m68k_e118_rol_b_dn_imm;
             m68k_instruction [0xe138 | (count << 9) | reg] = m68k_e138_rol_b_dn_dn;
