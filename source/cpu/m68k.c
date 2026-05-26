@@ -611,6 +611,25 @@ static uint32_t m68k_0110_btst_b_an_dn (M68000_Context *context, uint16_t instru
 }
 
 
+/* bset.b (xxx.w) [Dn] */
+static uint32_t m68k_01f8_bset_b_aw_dn (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t bit_reg = (instruction >> 9) & 0x07;
+    int16_t addr = read_extension (context);
+
+    uint8_t value = read_byte (context, addr);
+    uint32_t bit = context->state.d [bit_reg].l & 0x07;
+
+    context->state.ccr_zero = !((value >> bit) & 0x01);
+
+    value |= 1 << bit;
+    write_byte (context, addr, value);
+
+    printf ("bset.b (xxx.w) [d%d]\n", bit_reg);
+    return 0;
+}
+
+
 /* andi.b Dn ← Dn & #xx */
 static uint32_t m68k_0200_andi_b_dn (M68000_Context *context, uint16_t instruction)
 {
@@ -774,6 +793,23 @@ static uint32_t m68k_0678_addi_w_aw (M68000_Context *context, uint16_t instructi
 }
 
 
+/* addi.l (An)+ ← (An)+ + #xxxxxxxx */
+static uint32_t m68k_0698_addi_l_anp (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint32_t b = read_extension_long (context);
+    uint32_t a = read_long (context, context->state.a [reg]);
+
+    uint32_t result = a + b;
+    write_long (context, context->state.a [reg], result);
+    context->state.a [reg] += 4;
+    m68k_add_l_flags (context, a, b, result);
+
+    printf ("addi.w (a%d)+ ← #%08x\n", reg, b);
+    return 0;
+}
+
+
 /* btst.l Dn [#xx] */
 static uint32_t m68k_0800_btst_l_dn_imm (M68000_Context *context, uint16_t instruction)
 {
@@ -931,7 +967,7 @@ static uint32_t m68k_08e8_bset_b_dan_imm (M68000_Context *context, uint16_t inst
 
 
 /* bset.b (xxx.w) [#xx] */
-static uint32_t m68k_08f8_bset_aw_imm (M68000_Context *context, uint16_t instruction)
+static uint32_t m68k_08f8_bset_b_aw_imm (M68000_Context *context, uint16_t instruction)
 {
     uint16_t bit = read_extension (context) & 0x07;
     int16_t addr = read_extension (context);
@@ -5405,6 +5441,9 @@ static void m68k_init_instructions (void)
             m68k_instruction [0x0100 | (bit_reg << 9) | data_reg] = m68k_0100_btst_l_dn_dn;
             m68k_instruction [0x0110 | (bit_reg << 9) | data_reg] = m68k_0110_btst_b_an_dn;
         }
+        /* TODO: actually the bit-register, but loop currently structured to iterate
+         *       over data register or both.. So not a great fit for absolute-word. */
+        m68k_instruction [0x01f8 | (data_reg << 9)] = m68k_01f8_bset_b_aw_dn;
         m68k_instruction [0x0800 | data_reg] = m68k_0800_btst_l_dn_imm;
         m68k_instruction [0x0810 | data_reg] = m68k_0810_btst_b_an_imm;
         m68k_instruction [0x0828 | data_reg] = m68k_0828_btst_b_dan_imm;
@@ -5426,6 +5465,7 @@ static void m68k_init_instructions (void)
         m68k_instruction [0x0458 | reg] = m68k_0458_subi_w_anp;
         m68k_instruction [0x0600 | reg] = m68k_0600_addi_b_dn;
         m68k_instruction [0x0640 | reg] = m68k_0640_addi_w_dn;
+        m68k_instruction [0x0698 | reg] = m68k_0698_addi_l_anp;
         m68k_instruction [0x0880 | reg] = m68k_0880_bclr_l_dn_imm;
         m68k_instruction [0x0890 | reg] = m68k_0890_bclr_b_an_imm;
         m68k_instruction [0x08a8 | reg] = m68k_08a8_bclr_b_dan_imm;
@@ -5440,7 +5480,7 @@ static void m68k_init_instructions (void)
     }
     m68k_instruction [0x0238] = m68k_0238_andi_b_aw;
     m68k_instruction [0x0678] = m68k_0678_addi_w_aw;
-    m68k_instruction [0x08f8] = m68k_08f8_bset_aw_imm;
+    m68k_instruction [0x08f8] = m68k_08f8_bset_b_aw_imm;
     m68k_instruction [0x0a38] = m68k_0a38_eori_b_aw;
     m68k_instruction [0x0c38] = m68k_0c38_cmpi_b_aw;
     m68k_instruction [0x0c78] = m68k_0c78_cmpi_w_aw;
