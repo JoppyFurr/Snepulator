@@ -1,6 +1,11 @@
 /*
  * Snepulator
  * Motorola 68000 implementation
+ *
+ * TODO:
+ *  - Instruction timing
+ *  - Prefetch
+ *  - User/Supervisor
  */
 
 #include <stdlib.h>
@@ -5106,15 +5111,17 @@ static uint32_t m68k_e058_ror_w_dn_imm (M68000_Context *context, uint16_t instru
     uint16_t reg = instruction & 0x07;
     uint16_t value = context->state.d [reg].w;
 
-    uint16_t result = (value >> count) | (value << (16 - count));
-    bool last_out = !! ((value >> (count - 1)) & 0x0001);
+    for (uint32_t i = 0; i < count; i++)
+    {
+        context->state.ccr_carry = value & 0x0001;
+        value = (value >> 1) | (value << 15);
+    }
 
-    context->state.ccr_negative = ((int16_t) result < 0);
-    context->state.ccr_zero = (result == 0);
+    context->state.ccr_negative = ((int16_t) value < 0);
+    context->state.ccr_zero = (value == 0);
     context->state.ccr_overflow = 0;
-    context->state.ccr_carry = last_out;
 
-    context->state.d [reg].w = result;
+    context->state.d [reg].w = value;
 
     printf ("ror.w d%d >> %d\n", reg, count);
     return 0;
@@ -5162,15 +5169,17 @@ static uint32_t m68k_e098_ror_l_dn_imm (M68000_Context *context, uint16_t instru
     uint16_t reg = instruction & 0x07;
     uint32_t value = context->state.d [reg].l;
 
-    uint32_t result = (value >> count) | (value << (32 - count));
-    bool last_out = !! ((value >> (count - 1)) & 0x00000001);
+    for (uint32_t i = 0; i < count; i++)
+    {
+        context->state.ccr_carry = value & 0x00000001;
+        value = (value >> 1) | (value << 31);
+    }
 
-    context->state.ccr_negative = ((int32_t) result < 0);
-    context->state.ccr_zero = (result == 0);
+    context->state.ccr_negative = ((int32_t) value < 0);
+    context->state.ccr_zero = (value == 0);
     context->state.ccr_overflow = 0;
-    context->state.ccr_carry = last_out;
 
-    context->state.d [reg].l = result;
+    context->state.d [reg].l = value;
 
     printf ("ror.l d%d >> %d\n", reg, count);
     return 0;
@@ -5207,15 +5216,17 @@ static uint32_t m68k_e118_rol_b_dn_imm (M68000_Context *context, uint16_t instru
     uint16_t reg = instruction & 0x07;
     uint8_t value = context->state.d [reg].b;
 
-    uint8_t result = (value << count) | (value >> (8 - count));
-    bool last_out = !! ((value << (count - 1)) & 0x80);
+    for (uint32_t i = 0; i < count; i++)
+    {
+        value = (value << 1) | (value >> 7);
+        context->state.ccr_carry = value & 0x01;
+    }
 
-    context->state.ccr_negative = ((int8_t) result < 0);
-    context->state.ccr_zero = (result == 0);
+    context->state.ccr_negative = ((int8_t) value < 0);
+    context->state.ccr_zero = (value == 0);
     context->state.ccr_overflow = 0;
-    context->state.ccr_carry = last_out;
 
-    context->state.d [reg].b = result;
+    context->state.d [reg].b = value;
 
     printf ("rol.b d%d << %d\n", reg, count);
     return 0;
@@ -5226,23 +5237,21 @@ static uint32_t m68k_e118_rol_b_dn_imm (M68000_Context *context, uint16_t instru
 static uint32_t m68k_e138_rol_b_dn_dn (M68000_Context *context, uint16_t instruction)
 {
     uint16_t count_reg = (instruction >> 9) & 0x07;
-    /* TODO: Confirm this. Documentation says rotation count is calculated
-     *       modulo 64, but because the register is only 8 bits wide, the
-     *       result should be the same as modulo 8. Possibly though this might
-     *       upset the carry flag. */
-    uint8_t count = context->state.d [count_reg].b & 0x7;
+    uint8_t count = context->state.d [count_reg].b & 0x3f;
     uint16_t reg = instruction & 0x07;
     uint8_t value = context->state.d [reg].b;
 
-    uint8_t result = (value << count) | (value >> (8 - count));
-    bool last_out = !! ((value << (count - 1)) & 0x80);
+    for (uint32_t i = 0; i < count; i++)
+    {
+        value = (value << 1) | (value >> 7);
+        context->state.ccr_carry = value & 0x01;
+    }
 
-    context->state.ccr_negative = ((int8_t) result < 0);
-    context->state.ccr_zero = (result == 0);
+    context->state.ccr_negative = ((int8_t) value < 0);
+    context->state.ccr_zero = (value == 0);
     context->state.ccr_overflow = 0;
-    context->state.ccr_carry = last_out;
 
-    context->state.d [reg].b = result;
+    context->state.d [reg].b = value;
 
     printf ("rol.b d%d << d%d\n", reg, count_reg);
     return 0;
@@ -5314,18 +5323,18 @@ static uint32_t m68k_e150_roxl_w_dn_imm (M68000_Context *context, uint16_t instr
     uint16_t reg = instruction & 0x07;
     uint16_t value = context->state.d [reg].w;
 
-    uint16_t result = (value << count) |
-                      (context->state.ccr_extend << (count - 1)) |
-                      (value >> (17 - count));
-    bool last_out = !! ((value << (count - 1)) & 0x8000);
+    for (uint32_t i = 0; i < count; i++)
+    {
+        context->state.ccr_carry = value >> 15;
+        value = (value << 1) | context->state.ccr_extend;
+        context->state.ccr_extend = context->state.ccr_carry;
+    }
 
-    context->state.ccr_negative = ((int16_t) result < 0);
-    context->state.ccr_zero = (result == 0);
+    context->state.ccr_negative = ((int16_t) value < 0);
+    context->state.ccr_zero = (value == 0);
     context->state.ccr_overflow = 0;
-    context->state.ccr_carry = last_out;
-    context->state.ccr_extend = last_out;
 
-    context->state.d [reg].w = result;
+    context->state.d [reg].w = value;
 
     printf ("roxl.w d%d << %d\n", reg, count);
     return 0;
