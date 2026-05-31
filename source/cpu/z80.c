@@ -571,7 +571,7 @@ static uint16_t z80_ix_iy_39_add_ix_sp (Z80_Context *context, uint16_t ix)
     SET_FLAGS_ADD_16 (ix, context->state.sp);
     ix += context->state.sp;
     SET_FLAGS_XY_16 (ix);
-    context->used_cycles = 15;
+    context->used_cycles += 15;
     return ix;
 }
 
