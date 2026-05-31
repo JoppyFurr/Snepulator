@@ -2902,8 +2902,8 @@ static uint32_t m68k_4840_swap_dn (M68000_Context *context, uint16_t instruction
     uint32_t result = (value << 16) | (value >> 16);
     context->state.d [reg].l = result;
 
-    context->state.ccr_negative = (value < 0);
-    context->state.ccr_zero = (value == 0);
+    context->state.ccr_negative = ((int32_t) result < 0);
+    context->state.ccr_zero = (result == 0);
     context->state.ccr_overflow = 0;
     context->state.ccr_carry = 0;
 
