@@ -3857,7 +3857,6 @@ static void z80_75_ld_hl_l (Z80_Context *context)
 /* HALT */
 static void z80_76_halt (Z80_Context *context)
 {
-    context->state.pc--;
     context->state.halt = true;
     context->used_cycles += 4;
 }
@@ -5576,7 +5575,6 @@ void z80_run_cycles (Z80_Context *context, int64_t cycles)
                 if (context->state.halt)
                 {
                     context->state.halt = false;
-                    context->state.pc += 1;
                 }
                 context->state.iff1 = false;
                 context->memory_write (context->parent, --context->state.sp, context->state.pc_h);
@@ -5597,7 +5595,6 @@ void z80_run_cycles (Z80_Context *context, int64_t cycles)
                 if (context->state.halt)
                 {
                     context->state.halt = false;
-                    context->state.pc += 1;
                 }
 
                 context->state.iff1 = false;
