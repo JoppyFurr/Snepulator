@@ -6037,7 +6037,13 @@ M68000_Context *m68k_init (void *parent,
     context->memory_write_8  = memory_write_8;
     context->get_int         = get_int;
 
-    m68k_init_instructions ();
+    static bool first = true;
+    if (first)
+    {
+        /* Once-off initialisations */
+        first = false;
+        m68k_init_instructions ();
+    }
 
     return context;
 }
