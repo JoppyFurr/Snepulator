@@ -725,7 +725,7 @@ static uint32_t m68k_0440_subi_w_dn (M68000_Context *context, uint16_t instructi
     context->state.d [reg].w = result;
     m68k_sub_w_flags (context, a, b, result);
 
-    printf ("subi.b d%d ← #%04x\n", reg, b);
+    printf ("subi.w d%d ← #%04x\n", reg, b);
     return 0;
 }
 
@@ -2791,7 +2791,7 @@ static uint32_t m68k_4428_neg_b_dan (M68000_Context *context, uint16_t instructi
     context->state.ccr_carry = (result != 0);
     context->state.ccr_extend = (result != 0);
 
-    printf ("neg.w %04x(a%d)\n", displacement, reg);
+    printf ("neg.b %04x(a%d)\n", displacement, reg);
     return 0;
 }
 
@@ -4511,7 +4511,7 @@ static uint32_t m68k_b000_cmp_b_dn_dn (M68000_Context *context, uint16_t instruc
 }
 
 
-/* cmp.w Dn - (An) */
+/* cmp.b Dn - (An) */
 static uint32_t m68k_b010_cmp_b_dn_an (M68000_Context *context, uint16_t instruction)
 {
     uint16_t dest_reg = (instruction >> 9) & 0x07;
@@ -4789,7 +4789,7 @@ static uint32_t m68k_d028_add_b_dn_dan (M68000_Context *context, uint16_t instru
     context->state.d [dest_reg].b = result;
     m68k_add_b_flags (context, a, b, result);
 
-    printf ("add.b d%d ← d%d + d%d\n", dest_reg, dest_reg, source_reg);
+    printf ("add.b d%d ← d%d + %04x(a%d)\n", dest_reg, dest_reg, displacement, source_reg);
     return 0;
 }
 
