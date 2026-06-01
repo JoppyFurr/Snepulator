@@ -14,7 +14,7 @@
  *  - Width=256 mode, consider adjustment of aspect ratio to keep the image size the same?
  *  - PAL mode
  *  - Interlace mode
- *  - Investigate sprite masking described in Charles MacDonald document.
+ *  - Sprite masking (X=0, X=1)
  *  - Sprite collisions
  *  - Hack option to disable the per-line sprite limit
  */
@@ -314,6 +314,7 @@ static void smd_vdp_draw_sprites (SMD_VDP_Context *context, uint16_t line)
 
     /* Traverse the sprite list, filling the line sprite buffer */
     /* TODO: When implementing Width=256 mode, the maximum is 64 sprites */
+    uint32_t pixel_count = 0;
     for (int count = 0; count < 80; count++)
     {
         SMD_VDP_Sprite_Table_Entry sprite;
@@ -325,10 +326,12 @@ static void smd_vdp_draw_sprites (SMD_VDP_Context *context, uint16_t line)
         if (line >= position.y && line < position.y + 8 + sprite.height * 8)
         {
             line_sprite_buffer [line_sprite_count++] = sprite_index;
+            pixel_count += 8 * (sprite.width + 1);
         }
 
         /* TODO: When implementing Width=256 mode, there are only 16 sprites per line */
-        if (sprite.link == 0 || line_sprite_count == 20)
+        /* TODO: When implementing Width=256 mode, only 256 pixels worth of spite-data */
+        if (sprite.link == 0 || line_sprite_count == 20 || pixel_count >= 320)
         {
             break;
         }
