@@ -161,112 +161,66 @@ static inline uint32_t read_long_al (M68000_Context *context)
 
 
 /*
- * Ready a byte with indexing from the immediate 16-bit extension.
+ * Calculate the address using displacement+index in 16-bit extension.
+ *
  * Address is the sum of:
  *  -> An, passed here as a parameter
  *  -> Displacement, from the low byte of the extension
  *  -> Index register, An or Dn register described by the high byte of the extension.
+ */
+static inline uint32_t address_with_index (M68000_Context *context, uint32_t addr)
+{
+    uint16_t extension = read_extension (context);
+    int8_t displacement = extension & 0xff;
+
+    uint16_t reg = (extension >> 12) & 0x07;
+    uint32_t index;
+
+    /* Bit 15 selects Dn or An */
+    if ((extension & BIT_15) == 0)
+    {
+        index = context->state.d [reg].l;
+    }
+    else
+    {
+        index = context->state.a [reg];
+    }
+
+    /* Bit 11 selects index size, sign-extended word, or long */
+    if ((extension & BIT_11) == 0)
+    {
+        int16_t index_w = index & 0xffff;
+        index = index_w;
+    }
+
+    return addr + displacement + index;
+}
+
+
+/*
+ * Read a byte with indexing from the immediate 16-bit extension.
  */
 static inline uint8_t read_byte_with_index (M68000_Context *context, uint32_t addr)
 {
-    uint16_t extension = read_extension (context);
-    int8_t displacement = extension & 0xff;
-
-    uint16_t reg = (extension >> 12) & 0x07;
-    uint32_t index;
-
-    /* Bit 15 selects Dn or An */
-    if ((extension & BIT_15) == 0)
-    {
-        index = context->state.d [reg].l;
-    }
-    else
-    {
-        index = context->state.a [reg];
-    }
-
-    /* Bit 11 selects index size, sign-extended word, or long */
-    if ((extension & BIT_11) == 0)
-    {
-        int16_t index_w = index & 0xffff;
-        index = index_w;
-    }
-
-    return read_byte (context, addr + displacement + index);
+    return read_byte (context, address_with_index (context, addr));
 }
 
 
 /*
- * Ready a word with indexing from the immediate 16-bit extension.
- * Address is the sum of:
- *  -> An, passed here as a parameter
- *  -> Displacement, from the low byte of the extension
- *  -> Index register, An or Dn register described by the high byte of the extension.
+ * Read a word with indexing from the immediate 16-bit extension.
  */
 static inline uint16_t read_word_with_index (M68000_Context *context, uint32_t addr)
 {
-    uint16_t extension = read_extension (context);
-    int8_t displacement = extension & 0xff;
-
-
-    uint16_t reg = (extension >> 12) & 0x07;
-    uint32_t index;
-
-    /* Bit 15 selects Dn or An */
-    if ((extension & BIT_15) == 0)
-    {
-        index = context->state.d [reg].l;
-    }
-    else
-    {
-        index = context->state.a [reg];
-    }
-
-    /* Bit 11 selects index size, sign-extended word, or long */
-    if ((extension & BIT_11) == 0)
-    {
-        int16_t index_w = index & 0xffff;
-        index = index_w;
-    }
-
-    return read_word (context, addr + displacement + index);
+    return read_word (context, address_with_index (context, addr));
 }
 
 
 /*
- * Ready a long with indexing from the immediate 16-bit extension.
- * Address is the sum of:
- *  -> An, passed here as a parameter
- *  -> Displacement, from the low byte of the extension
- *  -> Index register, An or Dn register described by the high byte of the extension.
+ * Read a long with indexing from the immediate 16-bit extension.
  */
 static inline uint32_t read_long_with_index (M68000_Context *context, uint32_t addr)
 {
-    uint16_t extension = read_extension (context);
-    int8_t displacement = extension & 0xff;
-
-
-    uint16_t reg = (extension >> 12) & 0x07;
-    uint32_t index;
-
-    /* Bit 15 selects Dn or An */
-    if ((extension & BIT_15) == 0)
-    {
-        index = context->state.d [reg].l;
-    }
-    else
-    {
-        index = context->state.a [reg];
-    }
-
-    /* Bit 11 selects index size, sign-extended word, or long */
-    if ((extension & BIT_11) == 0)
-    {
-        int16_t index_w = index & 0xffff;
-        index = index_w;
-    }
-
-    return read_long (context, addr + displacement + index);
+    return read_long (context, address_with_index (context, addr));
 }
 
 
@@ -332,109 +286,28 @@ static inline void write_long_al (M68000_Context *context, uint32_t value)
 
 /*
  * Write a byte with indexing from the immediate 16-bit extension.
- * Address is the sum of:
- *  -> An, passed here as a parameter
- *  -> Displacement, from the low byte of the extension
- *  -> Index register, An or Dn register described by the high byte of the extension.
  */
 static inline void write_byte_with_index (M68000_Context *context, uint32_t addr, uint8_t value)
 {
-    uint16_t extension = read_extension (context);
-    int8_t displacement = extension & 0xff;
-
-    uint16_t reg = (extension >> 12) & 0x07;
-    uint32_t index;
-
-    /* Bit 15 selects Dn or An */
-    if ((extension & BIT_15) == 0)
-    {
-        index = context->state.d [reg].l;
-    }
-    else
-    {
-        index = context->state.a [reg];
-    }
-
-    /* Bit 11 selects index size, sign-extended word, or long */
-    if ((extension & BIT_11) == 0)
-    {
-        int16_t index_w = index & 0xffff;
-        index = index_w;
-    }
-
-    write_byte (context, addr + displacement + index, value);
+    write_byte (context, address_with_index (context, addr), value);
 }
 
 
 /*
  * Write a word with indexing from the immediate 16-bit extension.
- * Address is the sum of:
- *  -> An, passed here as a parameter
- *  -> Displacement, from the low byte of the extension
- *  -> Index register, An or Dn register described by the high byte of the extension.
  */
 static inline void write_word_with_index (M68000_Context *context, uint32_t addr, uint16_t value)
 {
-    uint16_t extension = read_extension (context);
-    int8_t displacement = extension & 0xff;
-
-    uint16_t reg = (extension >> 12) & 0x07;
-    uint32_t index;
-
-    /* Bit 15 selects Dn or An */
-    if ((extension & BIT_15) == 0)
-    {
-        index = context->state.d [reg].l;
-    }
-    else
-    {
-        index = context->state.a [reg];
-    }
-
-    /* Bit 11 selects index size, sign-extended word, or long */
-    if ((extension & BIT_11) == 0)
-    {
-        int16_t index_w = index & 0xffff;
-        index = index_w;
-    }
-
-    write_word (context, addr + displacement + index, value);
+    write_word (context, address_with_index (context, addr), value);
 }
 
 
 /*
  * Write a long with indexing from the immediate 16-bit extension.
- * Address is the sum of:
- *  -> An, passed here as a parameter
- *  -> Displacement, from the low byte of the extension
- *  -> Index register, An or Dn register described by the high byte of the extension.
  */
 static inline void write_long_with_index (M68000_Context *context, uint32_t addr, uint32_t value)
 {
-    uint16_t extension = read_extension (context);
-    int8_t displacement = extension & 0xff;
-
-    uint16_t reg = (extension >> 12) & 0x07;
-    uint32_t index;
-
-    /* Bit 15 selects Dn or An */
-    if ((extension & BIT_15) == 0)
-    {
-        index = context->state.d [reg].l;
-    }
-    else
-    {
-        index = context->state.a [reg];
-    }
-
-    /* Bit 11 selects index size, sign-extended word, or long */
-    if ((extension & BIT_11) == 0)
-    {
-        int16_t index_w = index & 0xffff;
-        index = index_w;
-    }
-
-    write_long (context, addr + displacement + index, value);
+    write_long (context, address_with_index (context, addr), value);
 }
 
 
@@ -2668,30 +2541,8 @@ static uint32_t m68k_41f0_lea_danxi (M68000_Context *context, uint16_t instructi
 {
     uint16_t source_reg = instruction & 0x07;
     uint16_t dest_reg = (instruction >> 9) & 0x07;
-    uint16_t extension = read_extension (context);
 
-    int8_t displacement = extension & 0xff;
-    uint16_t index_reg = (extension >> 12) & 0x07;
-    uint32_t index;
-
-    /* Bit 15 selects Dn or An */
-    if ((extension & BIT_15) == 0)
-    {
-        index = context->state.d [index_reg].l;
-    }
-    else
-    {
-        index = context->state.a [index_reg];
-    }
-
-    /* Bit 11 selects index size, sign-extended word, or long */
-    if ((extension & BIT_11) == 0)
-    {
-        int16_t index_w = index & 0xffff;
-        index = index_w;
-    }
-
-    context->state.a [dest_reg] = context->state.a [source_reg] + displacement + index;
+    context->state.a [dest_reg] = address_with_index (context, context->state.a [source_reg]);
 
     printf ("lea a%d ← d(a%d+Xi)\n", dest_reg, source_reg);
     return 0;
@@ -3825,30 +3676,7 @@ static uint32_t m68k_5130_subq_b_danxi (M68000_Context *context, uint16_t instru
 {
     uint16_t reg = instruction & 0x07;
 
-    /* TODO: Helper function for index */
-    uint16_t extension = read_extension (context);
-    int8_t displacement = extension & 0xff;
-    uint16_t index_reg = (extension >> 12) & 0x07;
-    uint32_t index;
-
-    /* Bit 15 selects Dn or An */
-    if ((extension & BIT_15) == 0)
-    {
-        index = context->state.d [index_reg].l;
-    }
-    else
-    {
-        index = context->state.a [index_reg];
-    }
-
-    /* Bit 11 selects index size, sign-extended word, or long */
-    if ((extension & BIT_11) == 0)
-    {
-        int16_t index_w = index & 0xffff;
-        index = index_w;
-    }
-
-    uint32_t address = context->state.a [reg] + displacement + index;
+    uint32_t address = address_with_index (context, context->state.a [reg]);
 
     uint8_t b = (instruction & 0x0e00) ? ((instruction >> 9) & 0x07) : 8;
     uint8_t a = read_byte (context, address);
@@ -3857,7 +3685,7 @@ static uint32_t m68k_5130_subq_b_danxi (M68000_Context *context, uint16_t instru
     write_byte (context, address, result);
     m68k_sub_b_flags (context, a, b, result);
 
-    printf ("subq.b %02x(a%d+Xi), #%x\n", displacement, reg, b);
+    printf ("subq.b d(a%d+Xi), #%x\n", reg, b);
 
     return 0;
 }
