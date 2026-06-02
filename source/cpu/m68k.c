@@ -5561,29 +5561,25 @@ static uint32_t m68k_e140_asl_w_dn_imm (M68000_Context *context, uint16_t instru
     uint16_t count = (instruction & 0x0e00) ? ((instruction >> 9) & 0x07) : 8;
     uint16_t reg = instruction & 0x07;
     uint16_t value = context->state.d [reg].w;
+
+    uint16_t initial_value = value;
     bool sign_changed = false;
+    context->state.ccr_carry = 0;
 
-    uint16_t result = value << count;
-    bool last_out = !! ((value << (count - 1)) & 0x8000);
-
-    /* TODO: Work this out without a loop */
     for (uint32_t i = 0; i < count; i++)
     {
-        uint16_t test = value << i;
-        if ((test & 0x8000) != (value & 0x8000))
-        {
-            sign_changed = true;
-            break;
-        }
+        context->state.ccr_carry = value >> 31;
+        context->state.ccr_extend = value >> 31;
+
+        value = value << 1;
+        sign_changed |= (value ^ initial_value) >> 15;
     }
 
-    context->state.ccr_negative = ((int16_t) result < 0);
-    context->state.ccr_zero = (result == 0);
+    context->state.ccr_negative = ((int16_t) value < 0);
+    context->state.ccr_zero = (value == 0);
     context->state.ccr_overflow = sign_changed;
-    context->state.ccr_carry = last_out;
-    context->state.ccr_extend = last_out;
 
-    context->state.d [reg].w = result;
+    context->state.d [reg].w = value;
 
     printf ("asl.w d%d << %d\n", reg, count);
     return 0;
@@ -5678,29 +5674,25 @@ static uint32_t m68k_e180_asl_l_dn_imm (M68000_Context *context, uint16_t instru
     uint16_t count = (instruction & 0x0e00) ? ((instruction >> 9) & 0x07) : 8;
     uint16_t reg = instruction & 0x07;
     uint32_t value = context->state.d [reg].l;
+
+    uint16_t initial_value = value;
     bool sign_changed = false;
+    context->state.ccr_carry = 0;
 
-    uint32_t result = value << count;
-    bool last_out = !! ((value << (count - 1)) & 0x80000000);
-
-    /* TODO: Work this out without a loop */
     for (uint32_t i = 0; i < count; i++)
     {
-        uint32_t test = value << i;
-        if ((test & 0x80000000) != (value & 0x80000000))
-        {
-            sign_changed = true;
-            break;
-        }
+        context->state.ccr_carry = value >> 31;
+        context->state.ccr_extend = value >> 31;
+
+        value = value << 1;
+        sign_changed |= (value ^ initial_value) >> 31;
     }
 
-    context->state.ccr_negative = ((int32_t) result < 0);
-    context->state.ccr_zero = (result == 0);
+    context->state.ccr_negative = ((int32_t) value < 0);
+    context->state.ccr_zero = (value == 0);
     context->state.ccr_overflow = sign_changed;
-    context->state.ccr_carry = last_out;
-    context->state.ccr_extend = last_out;
 
-    context->state.d [reg].l = result;
+    context->state.d [reg].l = value;
 
     printf ("asl.l d%d << %d\n", reg, count);
     return 0;
@@ -5732,7 +5724,6 @@ static uint32_t m68k_e188_lsl_l_dn_imm (M68000_Context *context, uint16_t instru
 
 /*
  * Initialise the instruction array.
- * TODO: This only needs to happen once
  */
 static void m68k_init_instructions (void)
 {
