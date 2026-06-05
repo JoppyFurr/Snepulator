@@ -463,6 +463,43 @@ static inline void m68k_tst_l_flags (M68000_Context *context, uint32_t value)
 }
 
 
+/*
+ * Update flags for cmp.b instructions.
+ */
+static inline void m68k_cmp_b_flags (M68000_Context *context, uint8_t a, uint8_t b, uint8_t result)
+{
+    context->state.ccr_negative = ((int8_t) result < 0);
+    context->state.ccr_zero = (result == 0);
+    context->state.ccr_overflow = (int8_t) a - (int8_t) b > 127 || (int8_t) a - (int8_t) b < -128;
+    context->state.ccr_carry = ((uint32_t) a - b) >> 8;
+}
+
+
+/*
+ * Update flags for cmp.b instructions.
+ */
+static inline void m68k_cmp_w_flags (M68000_Context *context, uint16_t a, uint16_t b, uint16_t result)
+{
+    context->state.ccr_negative = ((int16_t) result < 0);
+    context->state.ccr_zero = (result == 0);
+    context->state.ccr_overflow = (int16_t) a - (int16_t) b > 32767 || (int16_t) a - (int16_t) b < -32768;
+    context->state.ccr_carry = ((uint32_t) a - b) >> 16;
+}
+
+
+/*
+ * Update flags for cmp.b instructions.
+ */
+static inline void m68k_cmp_l_flags (M68000_Context *context, uint32_t a, uint32_t b, uint32_t result)
+{
+    context->state.ccr_negative = ((int32_t) result < 0);
+    context->state.ccr_zero = (result == 0);
+    context->state.ccr_overflow = (int64_t)(int32_t) a - (int32_t) b > 2147483647 ||
+                                  (int64_t)(int32_t) a - (int32_t) b < -2147483648;
+    context->state.ccr_carry = ((uint64_t) a - b) >> 32;
+}
+
+
 /* ori.b Dn ← Dn | #xxxx */
 static uint32_t m68k_0000_ori_b_dn (M68000_Context *context, uint16_t instruction)
 {
@@ -953,10 +990,7 @@ static uint32_t m68k_0c00_cmpi_b_dn (M68000_Context *context, uint16_t instructi
     uint8_t a = context->state.d [reg].b;
     uint8_t result = a - b;
 
-    context->state.ccr_negative = ((int8_t) result < 0);
-    context->state.ccr_zero = (result == 0);
-    context->state.ccr_overflow = (int8_t) a - (int8_t) b > 127 || (int8_t) a - (int8_t) b < -128;
-    context->state.ccr_carry = ((uint32_t) a - b) >> 8;
+    m68k_cmp_b_flags (context, a, b, result);
 
     printf ("cmpi.b d%d - #%02x\n", reg, b);
     return 0;
@@ -973,10 +1007,7 @@ static uint32_t m68k_0c28_cmpi_b_dan (M68000_Context *context, uint16_t instruct
     uint8_t a = read_byte (context, context->state.a [reg] + displacement);
     uint8_t result = a - b;
 
-    context->state.ccr_negative = ((int8_t) result < 0);
-    context->state.ccr_zero = (result == 0);
-    context->state.ccr_overflow = (int8_t) a - (int8_t) b > 127 || (int8_t) a - (int8_t) b < -128;
-    context->state.ccr_carry = ((uint32_t) a - b) >> 8;
+    m68k_cmp_b_flags (context, a, b, result);
 
     printf ("cmpi.b %04x(a%d) - #%02x\n", displacement, reg, b);
     return 0;
@@ -990,10 +1021,7 @@ static uint32_t m68k_0c38_cmpi_b_aw (M68000_Context *context, uint16_t instructi
     uint8_t a = read_byte_aw (context);
     uint8_t result = a - b;
 
-    context->state.ccr_negative = ((int8_t) result < 0);
-    context->state.ccr_zero = (result == 0);
-    context->state.ccr_overflow = (int8_t) a - (int8_t) b > 127 || (int8_t) a - (int8_t) b < -128;
-    context->state.ccr_carry = ((uint32_t) a - b) >> 8;
+    m68k_cmp_b_flags (context, a, b, result);
 
     printf ("cmpi.b (xxx.w) - #%02x\n", b);
     return 0;
@@ -1009,10 +1037,7 @@ static uint32_t m68k_0c40_cmpi_w_dn (M68000_Context *context, uint16_t instructi
     uint16_t a = context->state.d [reg].w;
     uint16_t result = a - b;
 
-    context->state.ccr_negative = ((int16_t) result < 0);
-    context->state.ccr_zero = (result == 0);
-    context->state.ccr_overflow = (int16_t) a - (int16_t) b > 32767 || (int16_t) a - (int16_t) b < -32768;
-    context->state.ccr_carry = ((uint32_t) a - b) >> 16;
+    m68k_cmp_w_flags (context, a, b, result);
 
     printf ("cmpi.w d%d - #%04x\n", reg, b);
     return 0;
@@ -1028,10 +1053,7 @@ static uint32_t m68k_0c50_cmpi_w_an (M68000_Context *context, uint16_t instructi
     uint16_t a = read_word (context, context->state.a [reg]);
     uint16_t result = a - b;
 
-    context->state.ccr_negative = ((int16_t) result < 0);
-    context->state.ccr_zero = (result == 0);
-    context->state.ccr_overflow = (int16_t) a - (int16_t) b > 32767 || (int16_t) a - (int16_t) b < -32768;
-    context->state.ccr_carry = ((uint32_t) a - b) >> 16;
+    m68k_cmp_w_flags (context, a, b, result);
 
     printf ("cmpi.w (a%d) - #%04x\n", reg, b);
     return 0;
@@ -1048,10 +1070,7 @@ static uint32_t m68k_0c68_cmpi_w_dan (M68000_Context *context, uint16_t instruct
     uint16_t a = read_word (context, context->state.a [reg] + displacement);
     uint16_t result = a - b;
 
-    context->state.ccr_negative = ((int16_t) result < 0);
-    context->state.ccr_zero = (result == 0);
-    context->state.ccr_overflow = (int16_t) a - (int16_t) b > 32767 || (int16_t) a - (int16_t) b < -32768;
-    context->state.ccr_carry = ((uint32_t) a - b) >> 16;
+    m68k_cmp_w_flags (context, a, b, result);
 
     printf ("cmpi.w %04x(a%d) - #%04x\n", displacement, reg, b);
     return 0;
@@ -1065,10 +1084,7 @@ static uint32_t m68k_0c78_cmpi_w_aw (M68000_Context *context, uint16_t instructi
     uint16_t a = read_word_aw (context);
     uint16_t result = a - b;
 
-    context->state.ccr_negative = ((int16_t) result < 0);
-    context->state.ccr_zero = (result == 0);
-    context->state.ccr_overflow = (int16_t) a - (int16_t) b > 32767 || (int16_t) a - (int16_t) b < -32768;
-    context->state.ccr_carry = ((uint32_t) a - b) >> 16;
+    m68k_cmp_w_flags (context, a, b, result);
 
     printf ("cmpi.w (xxx.w) - #%02x\n", b);
     return 0;
@@ -4569,10 +4585,7 @@ static uint32_t m68k_b000_cmp_b_dn_dn (M68000_Context *context, uint16_t instruc
     uint8_t a = context->state.d [dest_reg].b;
     uint8_t result = a - b;
 
-    context->state.ccr_negative = ((int8_t) result < 0);
-    context->state.ccr_zero = (result == 0);
-    context->state.ccr_overflow = (int8_t) a - (int8_t) b > 127 || (int8_t) a - (int8_t) b < -128;
-    context->state.ccr_carry = ((uint32_t) a - b) >> 8;
+    m68k_cmp_b_flags (context, a, b, result);
 
     printf ("cmp.b d%d - d%d\n", dest_reg, source_reg);
     return 0;
@@ -4589,10 +4602,7 @@ static uint32_t m68k_b010_cmp_b_dn_an (M68000_Context *context, uint16_t instruc
     uint8_t a = context->state.d [dest_reg].b;
     uint8_t result = a - b;
 
-    context->state.ccr_negative = ((int8_t) result < 0);
-    context->state.ccr_zero = (result == 0);
-    context->state.ccr_overflow = (int8_t) a - (int8_t) b > 127 || (int8_t) a - (int8_t) b < -128;
-    context->state.ccr_carry = ((uint32_t) a - b) >> 8;
+    m68k_cmp_b_flags (context, a, b, result);
 
     printf ("cmp.b d%d - (a%d)\n", dest_reg, source_reg);
     return 0;
@@ -4610,10 +4620,7 @@ static uint32_t m68k_b028_cmp_b_dn_dan (M68000_Context *context, uint16_t instru
     uint8_t a = context->state.d [dest_reg].b;
     uint8_t result = a - b;
 
-    context->state.ccr_negative = ((int8_t) result < 0);
-    context->state.ccr_zero = (result == 0);
-    context->state.ccr_overflow = (int8_t) a - (int8_t) b > 127 || (int8_t) a - (int8_t) b < -128;
-    context->state.ccr_carry = ((uint32_t) a - b) >> 8;
+    m68k_cmp_b_flags (context, a, b, result);
 
     printf ("cmp.b d%d - %04x(a%d)\n", dest_reg, displacement, source_reg);
     return 0;
@@ -4630,10 +4637,7 @@ static uint32_t m68k_b040_cmp_w_dn_dn (M68000_Context *context, uint16_t instruc
     uint16_t a = context->state.d [dest_reg].w;
     uint16_t result = a - b;
 
-    context->state.ccr_negative = ((int16_t) result < 0);
-    context->state.ccr_zero = (result == 0);
-    context->state.ccr_overflow = (int16_t) a - (int16_t) b > 32767 || (int16_t) a - (int16_t) b < -32768;
-    context->state.ccr_carry = ((uint32_t) a - b) >> 16;
+    m68k_cmp_w_flags (context, a, b, result);
 
     printf ("cmp.w d%d - d%d\n", dest_reg, source_reg);
     return 0;
@@ -4650,10 +4654,7 @@ static uint32_t m68k_b050_cmp_w_dn_an (M68000_Context *context, uint16_t instruc
     uint16_t a = context->state.d [dest_reg].w;
     uint16_t result = a - b;
 
-    context->state.ccr_negative = ((int16_t) result < 0);
-    context->state.ccr_zero = (result == 0);
-    context->state.ccr_overflow = (int16_t) a - (int16_t) b > 32767 || (int16_t) a - (int16_t) b < -32768;
-    context->state.ccr_carry = ((uint32_t) a - b) >> 16;
+    m68k_cmp_w_flags (context, a, b, result);
 
     printf ("cmp.w d%d - (a%d)\n", dest_reg, source_reg);
     return 0;
@@ -4671,10 +4672,7 @@ static uint32_t m68k_b068_cmp_w_dn_dan (M68000_Context *context, uint16_t instru
     uint16_t a = context->state.d [dest_reg].w;
     uint16_t result = a - b;
 
-    context->state.ccr_negative = ((int16_t) result < 0);
-    context->state.ccr_zero = (result == 0);
-    context->state.ccr_overflow = (int16_t) a - (int16_t) b > 32767 || (int16_t) a - (int16_t) b < -32768;
-    context->state.ccr_carry = ((uint32_t) a - b) >> 16;
+    m68k_cmp_w_flags (context, a, b, result);
 
     printf ("cmp.w d%d - %04x(a%d)\n", dest_reg, displacement, source_reg);
     return 0;
@@ -4690,10 +4688,7 @@ static uint32_t m68k_b078_cmp_w_dn_aw (M68000_Context *context, uint16_t instruc
     uint16_t a = context->state.d [dest_reg].w;
     uint16_t result = a - b;
 
-    context->state.ccr_negative = ((int16_t) result < 0);
-    context->state.ccr_zero = (result == 0);
-    context->state.ccr_overflow = (int16_t) a - (int16_t) b > 32767 || (int16_t) a - (int16_t) b < -32768;
-    context->state.ccr_carry = ((uint32_t) a - b) >> 16;
+    m68k_cmp_w_flags (context, a, b, result);
 
     printf ("cmp.w d%d - (xxx.w)\n", dest_reg);
     return 0;
@@ -4710,11 +4705,7 @@ static uint32_t m68k_b088_cmp_l_dn_an (M68000_Context *context, uint16_t instruc
     uint32_t a = context->state.d [dest_reg].l;
     uint32_t result = a - b;
 
-    context->state.ccr_negative = ((int32_t) result < 0);
-    context->state.ccr_zero = (result == 0);
-    context->state.ccr_overflow = (int64_t)(int32_t) a - (int32_t) b > 2147483647 ||
-                                  (int64_t)(int32_t) a - (int32_t) b < -2147483648;
-    context->state.ccr_carry = ((uint64_t) a - b) >> 32;
+    m68k_cmp_l_flags (context, a, b, result);
 
     printf ("cmp.l d%d - a%d\n", dest_reg, source_reg);
     return 0;
