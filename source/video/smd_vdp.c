@@ -3,8 +3,7 @@
  * Sega Mega Drive VDP implementation.
  *
  * TODO:
- *  - Sprites
- *  - Vertical Scrolling
+ *  - Vertical Scrolling (strips-of-16)
  *  - Horizontal Scrolling (strips-of-8 and invalid)
  *  - Priority
  *  - Window
@@ -16,7 +15,6 @@
  *  - Interlace mode
  *  - Sprite masking (X=0, X=1)
  *  - Sprite collisions
- *  - Hack option to disable the per-line sprite limit
  */
 
 #include <stdio.h>
@@ -354,9 +352,14 @@ static void smd_vdp_draw_sprites (SMD_VDP_Context *context, uint16_t line)
         uint32_t tile_y = (line - position.y) / 8;
         int_point_t tile_position = { .y = position.y + tile_y * 8 };
 
+        /* Update tile_y to account for v-flip, for use by the pattern-index calculation below */
+        tile_y = (sprite.v_flip) ? sprite.height - tile_y : tile_y;
+
         for (uint32_t tile_x = 0; tile_x < sprite.width + 1; tile_x++)
         {
-            uint32_t pattern_index = sprite.pattern + tile_y + tile_x * (sprite.height + 1);
+            /* For the pattern index account for h-flip. */
+            uint32_t pattern_index = sprite.pattern + tile_y + (sprite.h_flip ? sprite.width - tile_x : tile_x) * (sprite.height + 1);
+
             SMD_VDP_Pattern *pattern = (SMD_VDP_Pattern *) &context->state.vram [pattern_index * sizeof (SMD_VDP_Pattern)];
             tile_position.x = position.x + tile_x * 8;
 
