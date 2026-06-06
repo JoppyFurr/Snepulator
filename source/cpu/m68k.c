@@ -562,6 +562,44 @@ static uint32_t m68k_0110_btst_b_an_dn (M68000_Context *context, uint16_t instru
 }
 
 
+/* bclr.l Dn [Dn] */
+static uint32_t m68k_0180_bclr_l_dn_dn (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t data_reg = instruction & 0x07;
+    uint16_t bit_reg = (instruction >> 9) & 0x07;
+
+    uint32_t value = context->state.d [data_reg].l;
+    uint32_t bit = context->state.d [bit_reg].l & 0x1f;
+
+    context->state.ccr_zero = !((value >> bit) & 0x01);
+
+    value &= ~(1 << bit);
+    context->state.d [data_reg].l = value;
+
+    printf ("bclr.l d%d [d%d]\n", data_reg, bit_reg);
+    return 0;
+}
+
+
+/* bset.l Dn [Dn] */
+static uint32_t m68k_01c0_bset_l_dn_dn (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t data_reg = instruction & 0x07;
+    uint16_t bit_reg = (instruction >> 9) & 0x07;
+
+    uint32_t value = context->state.d [data_reg].l;
+    uint32_t bit = context->state.d [bit_reg].l & 0x1f;
+
+    context->state.ccr_zero = !((value >> bit) & 0x01);
+
+    value |= 1 << bit;
+    context->state.d [data_reg].l = value;
+
+    printf ("bset.l d%d [d%d]\n", data_reg, bit_reg);
+    return 0;
+}
+
+
 /* bset.b (xxx.w) [Dn] */
 static uint32_t m68k_01f8_bset_b_aw_dn (M68000_Context *context, uint16_t instruction)
 {
@@ -724,6 +762,24 @@ static uint32_t m68k_0640_addi_w_dn (M68000_Context *context, uint16_t instructi
     m68k_add_w_flags (context, a, b, result);
 
     printf ("addi.w d%d ← #%04x\n", reg, b);
+    return 0;
+}
+
+
+/* addi.w d(An) ← d(An) + #xxxx */
+static uint32_t m68k_0668_addi_w_dan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    uint16_t b = read_extension (context);
+    int16_t displacement = read_extension (context);
+    uint16_t a = read_word (context, context->state.a [reg] + displacement);
+
+    uint16_t result = a + b;
+    write_word (context, context->state.a [reg] + displacement, result);
+    m68k_add_w_flags (context, a, b, result);
+
+    printf ("addi.w %04x(a%d) ← #%04x\n", displacement, reg, b);
     return 0;
 }
 
@@ -932,6 +988,23 @@ static uint32_t m68k_08b0_bclr_b_danxi_imm (M68000_Context *context, uint16_t in
 }
 
 
+/* bclr.b (xxx.w) [#xx] */
+static uint32_t m68k_08b8_bclr_b_aw_imm (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t bit = read_extension (context) & 0x07;
+    uint32_t address = (int16_t) read_extension (context);
+
+    uint8_t value = read_byte (context, address);
+    context->state.ccr_zero = !((value >> bit) & 0x01);
+
+    value &= ~(1 << bit);
+    write_byte (context, address, value);
+
+    printf ("bclr.b (xxx.w) [#%x]\n", bit);
+    return 0;
+}
+
+
 /* bset.b (An) [#xx] */
 static uint32_t m68k_08d0_bset_b_an_imm (M68000_Context *context, uint16_t instruction)
 {
@@ -1018,7 +1091,22 @@ static uint32_t m68k_0a38_eori_b_aw (M68000_Context *context, uint16_t instructi
 }
 
 
-/* eori.l Dn ← Dn ^ #xx */
+/* eori.w Dn ← Dn ^ #xxxx */
+static uint32_t m68k_0a40_eori_w_dn (M68000_Context *context, uint16_t instruction)
+{
+    uint32_t imm = read_extension (context);
+    uint16_t reg = instruction & 0x07;
+
+    uint16_t result = context->state.d [reg].w ^ imm;
+    context->state.d [reg].w = result;
+    m68k_move_w_flags (context, result);
+
+    printf ("eori.w d%d ← #%04x\n", reg, imm);
+    return 0;
+}
+
+
+/* eori.l Dn ← Dn ^ #xxxxxxxx */
 static uint32_t m68k_0a80_eori_l_dn (M68000_Context *context, uint16_t instruction)
 {
     uint32_t imm = read_extension_long (context);
@@ -2954,6 +3042,48 @@ static uint32_t m68k_42b8_clr_l_aw (M68000_Context *context, uint16_t instructio
 }
 
 
+/* neg.b Dn */
+static uint32_t m68k_4400_neg_b_dn (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    uint8_t value = context->state.d [reg].b;
+    uint8_t result = 0 - value;
+
+    context->state.d [reg].b = result;
+
+    context->state.ccr_negative = ((int8_t) result < 0);
+    context->state.ccr_zero = (result == 0);
+    context->state.ccr_overflow = ((int8_t) value == -128);
+    context->state.ccr_carry = (result != 0);
+    context->state.ccr_extend = (result != 0);
+
+    printf ("neg.b d%d\n", reg);
+    return 0;
+}
+
+
+/* neg.b (An) */
+static uint32_t m68k_4410_neg_b_an (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    uint8_t value = read_byte (context, context->state.a [reg]);
+    uint8_t result = 0 - value;
+
+    write_byte (context, context->state.a [reg], result);
+
+    context->state.ccr_negative = ((int8_t) result < 0);
+    context->state.ccr_zero = (result == 0);
+    context->state.ccr_overflow = ((int8_t) value == -128);
+    context->state.ccr_carry = (result != 0);
+    context->state.ccr_extend = (result != 0);
+
+    printf ("neg.b (a%d)\n", reg);
+    return 0;
+}
+
+
 /* neg.b d(An) */
 static uint32_t m68k_4428_neg_b_dan (M68000_Context *context, uint16_t instruction)
 {
@@ -3859,6 +3989,25 @@ static uint32_t m68k_5058_addq_w_anp (M68000_Context *context, uint16_t instruct
 }
 
 
+/* addq.w d(An), #xx */
+static uint32_t m68k_5068_addq_w_dan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    int16_t displacement = read_extension (context);
+    uint32_t address = context->state.a [reg] + displacement;
+
+    uint16_t b = (instruction & 0x0e00) ? ((instruction >> 9) & 0x07) : 8;
+    uint16_t a = read_word (context, address);
+
+    uint16_t result = a + b;
+    write_word (context, address, result);
+    m68k_add_w_flags (context, a, b, result);
+
+    printf ("addq.w %04x(a%d), #%x\n", displacement, reg, b);
+    return 0;
+}
+
+
 /* addq.w (xxx.w), #xx */
 static uint32_t m68k_5078_addq_w_aw (M68000_Context *context, uint16_t instruction)
 {
@@ -4697,6 +4846,40 @@ static uint32_t m68k_8040_or_w_dn_dn (M68000_Context *context, uint16_t instruct
 }
 
 
+/* divu.w Dn ← Dn ÷ Dn */
+static uint32_t m68k_80c0_divu_w_dn_dn (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint32_t dividend = context->state.d [dest_reg].l;
+    uint16_t divisor = context->state.d [source_reg].w;
+
+    if (divisor == 0)
+    {
+        printf ("[%s] Division by zero - Trap not implemented.\n", __func__);
+        return 0;
+    }
+
+    int32_t quotient = dividend / divisor;
+    uint16_t remainder = dividend % divisor;
+
+    context->state.ccr_negative = (quotient < 0);
+    context->state.ccr_zero = (quotient == 0);
+    context->state.ccr_overflow = quotient > 32767 || quotient < -32768;
+    context->state.ccr_carry = 0;
+
+    if (!context->state.ccr_overflow)
+    {
+        context->state.d [dest_reg].w_low = quotient;
+        context->state.d [dest_reg].w_high = remainder;
+    }
+
+    printf ("divs.w d%d ← d%d ÷ d%d\n", dest_reg, dest_reg, source_reg);
+    return 0;
+}
+
+
 /* or.b d(An) ← d(An) | Dn */
 static uint32_t m68k_8128_or_b_dan_dn (M68000_Context *context, uint16_t instruction)
 {
@@ -4716,7 +4899,7 @@ static uint32_t m68k_8128_or_b_dan_dn (M68000_Context *context, uint16_t instruc
 }
 
 
-/* divs.w Dn, Imm */
+/* divu.w Dn ← Dn ÷ #xxxx */
 static uint32_t m68k_81fc_divs_w_dn_imm (M68000_Context *context, uint16_t instruction)
 {
     uint16_t dest_reg = (instruction >> 9) & 0x07;
@@ -4763,6 +4946,23 @@ static uint32_t m68k_9000_sub_b_dn_dn (M68000_Context *context, uint16_t instruc
     m68k_sub_b_flags (context, a, b, result);
 
     printf ("sub.b d%d ← d%d - d%d\n", dest_reg, dest_reg, source_reg);
+    return 0;
+}
+
+
+/* sub.b Dn ← Dn - d(PC+Xi) */
+static uint32_t m68k_903b_sub_b_dn_dpcxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint8_t b = read_byte_with_index (context, context->state.pc);
+    uint8_t a = context->state.d [dest_reg].b;
+    uint8_t result = a - b;
+
+    context->state.d [dest_reg].b = result;
+    m68k_sub_b_flags (context, a, b, result);
+
+    printf ("sub.b d%d ← d%d - d(PC+Xi)\n", dest_reg, dest_reg);
     return 0;
 }
 
@@ -5189,6 +5389,43 @@ static uint32_t m68k_c080_and_l_dn_dn (M68000_Context *context, uint16_t instruc
 }
 
 
+/* exg.l Dn ←→ Dn */
+static uint32_t m68k_c140_exg_l_dn_dn (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg_x = (instruction >> 9) & 0x07;
+    uint16_t reg_y = instruction & 0x07;
+
+    uint32_t temp = context->state.d [reg_x].l;
+    context->state.d [reg_x].l = context->state.d [reg_y].l;
+    context->state.d [reg_y].l = temp;
+
+    printf ("exg.l d%d ←→ %d.\n", reg_x, reg_x);
+    return 0;
+}
+
+
+/* muls.w Dn ← Dn × Dn */
+static uint32_t m68k_c1c0_muls_w_dn_dn (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    int16_t b = context->state.d [source_reg].w;
+    int16_t a = context->state.d [dest_reg].w;
+    int32_t result = a * b;
+
+    context->state.d [dest_reg].l = result;
+
+    context->state.ccr_negative = (result < 0);
+    context->state.ccr_zero = (result == 0);
+    context->state.ccr_overflow = 0;
+    context->state.ccr_carry = 0;
+
+    printf ("muls.w d%d ← d%d\n", dest_reg, source_reg);
+    return 0;
+}
+
+
 /* muls.w Dn ← Dn × d(An) */
 static uint32_t m68k_c1e8_muls_w_dn_dan (M68000_Context *context, uint16_t instruction)
 {
@@ -5606,6 +5843,34 @@ static uint32_t m68k_e008_lsr_b_dn_imm (M68000_Context *context, uint16_t instru
 }
 
 
+/* asr.w Dn ← Dn >> #xx */
+static uint32_t m68k_e040_asr_w_dn_imm (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t count = (instruction & 0x0e00) ? ((instruction >> 9) & 0x07) : 8;
+    uint16_t reg = instruction & 0x07;
+    uint16_t value = context->state.d [reg].w;
+
+    context->state.ccr_carry = 0;
+
+    for (uint32_t i = 0; i < count; i++)
+    {
+        context->state.ccr_carry = value & 0x0001;
+        context->state.ccr_extend = value & 0x0001;
+
+        value = (value >> 1) | (value & 0x8000);
+    }
+
+    context->state.ccr_negative = ((int16_t) value < 0);
+    context->state.ccr_zero = (value == 0);
+    context->state.ccr_overflow = 0;
+
+    context->state.d [reg].w = value;
+
+    printf ("asr.w d%d >> %d\n", reg, count);
+    return 0;
+}
+
+
 /* lsr.w Dn ← Dn >> #xx */
 static uint32_t m68k_e048_lsr_w_dn_imm (M68000_Context *context, uint16_t instruction)
 {
@@ -6017,6 +6282,8 @@ static void m68k_init_instructions (void)
         {
             m68k_instruction [0x0100 | (bit_reg << 9) | data_reg] = m68k_0100_btst_l_dn_dn;
             m68k_instruction [0x0110 | (bit_reg << 9) | data_reg] = m68k_0110_btst_b_an_dn;
+            m68k_instruction [0x0180 | (bit_reg << 9) | data_reg] = m68k_0180_bclr_l_dn_dn;
+            m68k_instruction [0x01c0 | (bit_reg << 9) | data_reg] = m68k_01c0_bset_l_dn_dn;
         }
         /* TODO: actually the bit-register, but loop currently structured to iterate
          *       over data register or both.. So not a great fit for absolute-word. */
@@ -6043,6 +6310,7 @@ static void m68k_init_instructions (void)
         m68k_instruction [0x0458 | reg] = m68k_0458_subi_w_anp;
         m68k_instruction [0x0600 | reg] = m68k_0600_addi_b_dn;
         m68k_instruction [0x0640 | reg] = m68k_0640_addi_w_dn;
+        m68k_instruction [0x0668 | reg] = m68k_0668_addi_w_dan;
         m68k_instruction [0x0680 | reg] = m68k_0680_addi_l_dn;
         m68k_instruction [0x0698 | reg] = m68k_0698_addi_l_anp;
         m68k_instruction [0x0880 | reg] = m68k_0880_bclr_l_dn_imm;
@@ -6052,6 +6320,7 @@ static void m68k_init_instructions (void)
         m68k_instruction [0x08d0 | reg] = m68k_08d0_bset_b_an_imm;
         m68k_instruction [0x08e8 | reg] = m68k_08e8_bset_b_dan_imm;
         m68k_instruction [0x08f0 | reg] = m68k_08f0_bset_b_danxi_imm;
+        m68k_instruction [0x0a40 | reg] = m68k_0a40_eori_w_dn;
         m68k_instruction [0x0a80 | reg] = m68k_0a80_eori_l_dn;
         m68k_instruction [0x0c00 | reg] = m68k_0c00_cmpi_b_dn;
         m68k_instruction [0x0c10 | reg] = m68k_0c10_cmpi_b_an;
@@ -6063,6 +6332,7 @@ static void m68k_init_instructions (void)
     }
     m68k_instruction [0x0238] = m68k_0238_andi_b_aw;
     m68k_instruction [0x0678] = m68k_0678_addi_w_aw;
+    m68k_instruction [0x08b8] = m68k_08b8_bclr_b_aw_imm;
     m68k_instruction [0x08f8] = m68k_08f8_bset_b_aw_imm;
     m68k_instruction [0x0a38] = m68k_0a38_eori_b_aw;
     m68k_instruction [0x0c38] = m68k_0c38_cmpi_b_aw;
@@ -6271,6 +6541,8 @@ static void m68k_init_instructions (void)
     /* neg / swap / ext */
     for (uint16_t reg = 0; reg < 8; reg++)
     {
+        m68k_instruction [0x4400 | reg] = m68k_4400_neg_b_dn;
+        m68k_instruction [0x4410 | reg] = m68k_4410_neg_b_an;
         m68k_instruction [0x4428 | reg] = m68k_4428_neg_b_dan;
         m68k_instruction [0x4440 | reg] = m68k_4440_neg_w_dn;
         m68k_instruction [0x4840 | reg] = m68k_4840_swap_dn;
@@ -6291,6 +6563,7 @@ static void m68k_init_instructions (void)
             m68k_instruction [0x5048 | (data << 9) | reg] = m68k_5048_addq_w_an;
             m68k_instruction [0x5050 | (data << 9) | reg] = m68k_5050_addq_w_an;
             m68k_instruction [0x5058 | (data << 9) | reg] = m68k_5058_addq_w_anp;
+            m68k_instruction [0x5068 | (data << 9) | reg] = m68k_5068_addq_w_dan;
             m68k_instruction [0x5088 | (data << 9) | reg] = m68k_5088_addq_l_an;
             m68k_instruction [0x5100 | (data << 9) | reg] = m68k_5100_subq_b_dn;
             m68k_instruction [0x5128 | (data << 9) | reg] = m68k_5128_subq_b_dan;
@@ -6371,10 +6644,14 @@ static void m68k_init_instructions (void)
         }
     }
 
-    /* divs */
-    for (uint16_t reg_a = 0; reg_a < 8; reg_a++)
+    /* divs / divu */
+    for (uint16_t reg = 0; reg < 8; reg++)
     {
-        m68k_instruction [0x81fc | (reg_a << 9)] = m68k_81fc_divs_w_dn_imm;
+        for (uint16_t ea = 0; ea < 8; ea++)
+        {
+            m68k_instruction [0x80c0 | (reg << 9) | ea] = m68k_80c0_divu_w_dn_dn;
+        }
+        m68k_instruction [0x81fc | (reg << 9)] = m68k_81fc_divs_w_dn_imm;
     }
 
     /* sub */
@@ -6390,6 +6667,7 @@ static void m68k_init_instructions (void)
             m68k_instruction [0x9080 | (reg_a << 9) | reg_b] = m68k_9080_sub_l_dn_dn;
             m68k_instruction [0x9128 | (reg_a << 9) | reg_b] = m68k_9128_sub_b_dan_dn;
         }
+        m68k_instruction [0x903b | (reg_a << 9)] = m68k_903b_sub_b_dn_dpcxi;
         m68k_instruction [0x9078 | (reg_a << 9)] = m68k_9078_sub_w_dn_aw;
         m68k_instruction [0x90b8 | (reg_a << 9)] = m68k_90b8_sub_l_dn_aw;
     }
@@ -6434,11 +6712,21 @@ static void m68k_init_instructions (void)
         m68k_instruction [0xc07b | (reg_a << 9)] = m68k_c07b_and_w_dn_dpcxi;
     }
 
+    /* exg */
+    for (uint16_t reg_x = 0; reg_x < 8; reg_x++)
+    {
+        for (uint16_t reg_y = 0; reg_y < 8; reg_y++)
+        {
+            m68k_instruction [0xc140 | (reg_x << 9) | reg_y] = m68k_c140_exg_l_dn_dn;
+        }
+    }
+
     /* muls */
     for (uint16_t reg = 0; reg < 8; reg++)
     {
         for (uint16_t ea = 0; ea < 8; ea++)
         {
+            m68k_instruction [0xc1c0 | (reg << 9) | ea] = m68k_c1c0_muls_w_dn_dn;
             m68k_instruction [0xc1e8 | (reg << 9) | ea] = m68k_c1e8_muls_w_dn_dan;
         }
         m68k_instruction [0xc1fc | (reg << 9)] = m68k_c1fc_muls_w_dn_imm;
@@ -6479,6 +6767,7 @@ static void m68k_init_instructions (void)
         for (uint16_t count = 0; count < 8; count++)
         {
             m68k_instruction [0xe008 | (count << 9) | reg] = m68k_e008_lsr_b_dn_imm;
+            m68k_instruction [0xe040 | (count << 9) | reg] = m68k_e040_asr_w_dn_imm;
             m68k_instruction [0xe048 | (count << 9) | reg] = m68k_e048_lsr_w_dn_imm;
             m68k_instruction [0xe058 | (count << 9) | reg] = m68k_e058_ror_w_dn_imm;
             m68k_instruction [0xe068 | (count << 9) | reg] = m68k_e068_lsr_w_dn_dn;
