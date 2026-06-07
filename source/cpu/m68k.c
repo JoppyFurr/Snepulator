@@ -1563,9 +1563,9 @@ static uint32_t m68k_1170_move_b_dan_danxi (M68000_Context *context, uint16_t in
 static uint32_t m68k_1178_move_b_dan_aw (M68000_Context *context, uint16_t instruction)
 {
     uint16_t dest_reg = (instruction >> 9) & 0x07;
-    int16_t displacement = read_extension (context);
 
     uint8_t value = read_byte_aw (context);
+    int16_t displacement = read_extension (context);
     write_byte (context, context->state.a [dest_reg] + displacement, value);
     m68k_move_b_flags (context, value);
 
