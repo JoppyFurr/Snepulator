@@ -1407,8 +1407,8 @@ static uint32_t m68k_1098_move_b_an_anp (M68000_Context *context, uint16_t instr
     uint16_t source_reg = instruction & 0x07;
 
     uint8_t value = read_byte (context, context->state.a [source_reg]);
-    write_byte (context, context->state.a [dest_reg], value);
     context->state.a [source_reg] += (source_reg == 7) ? 2 : 1;
+    write_byte (context, context->state.a [dest_reg], value);
     m68k_move_b_flags (context, value);
 
     printf ("move.b (a%d) ← (a%d)+\n", dest_reg, source_reg);
@@ -1468,8 +1468,8 @@ static uint32_t m68k_10d8_move_b_anp_anp (M68000_Context *context, uint16_t inst
     uint16_t source_reg = instruction & 0x07;
 
     uint8_t value = read_byte (context, context->state.a [source_reg]);
-    write_byte (context, context->state.a [dest_reg], value);
     context->state.a [source_reg] += (source_reg == 7) ? 2 : 1;
+    write_byte (context, context->state.a [dest_reg], value);
     context->state.a [dest_reg] += (dest_reg == 7) ? 2 : 1;
     m68k_move_b_flags (context, value);
 
@@ -1812,8 +1812,9 @@ static uint32_t m68k_2058_movea_l_an_anp (M68000_Context *context, uint16_t inst
     uint16_t dest_reg = (instruction >> 9) & 0x07;
     uint16_t source_reg = instruction & 0x07;
 
-    context->state.a [dest_reg] = read_long (context, context->state.a [source_reg]);
+    uint32_t value = read_long (context, context->state.a [source_reg]);
     context->state.a [source_reg] += 4;
+    context->state.a [dest_reg] = value;
 
     printf ("movea.l a%d ← (a%d)+\n", dest_reg, source_reg);
     return 0;
@@ -2112,7 +2113,7 @@ static uint32_t m68k_2188_move_l_danxi_an (M68000_Context *context, uint16_t ins
     uint16_t source_reg = instruction & 0x07;
     uint16_t dest_reg = (instruction >> 9) & 0x07;
 
-    uint32_t value = context->state.d [source_reg].l;
+    uint32_t value = context->state.a [source_reg];
     uint32_t addr = context->state.a [dest_reg];
 
     write_long_with_index (context, addr, value);
