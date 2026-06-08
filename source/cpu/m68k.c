@@ -5828,16 +5828,20 @@ static uint32_t m68k_e008_lsr_b_dn_imm (M68000_Context *context, uint16_t instru
     uint16_t reg = instruction & 0x07;
     uint8_t value = context->state.d [reg].b;
 
-    uint8_t result = value >> count;
-    bool last_out = (value >> (count - 1)) & 1;
+    context->state.ccr_carry = 0;
 
-    context->state.ccr_negative = ((int8_t) result < 0);
-    context->state.ccr_zero = (result == 0);
+    for (uint32_t i = 0; i < count; i++)
+    {
+        context->state.ccr_carry = value & 0x01;
+        context->state.ccr_extend = value & 0x01;
+        value = value >> 1;
+    }
+
+    context->state.ccr_negative = ((int8_t) value < 0);
+    context->state.ccr_zero = (value == 0);
     context->state.ccr_overflow = 0;
-    context->state.ccr_carry = last_out;
-    context->state.ccr_extend = last_out;
 
-    context->state.d [reg].b = result;
+    context->state.d [reg].b = value;
 
     printf ("lsr.b d%d >> %d\n", reg, count);
     return 0;
@@ -5879,16 +5883,20 @@ static uint32_t m68k_e048_lsr_w_dn_imm (M68000_Context *context, uint16_t instru
     uint16_t reg = instruction & 0x07;
     uint16_t value = context->state.d [reg].w;
 
-    uint16_t result = value >> count;
-    bool last_out = (value >> (count - 1)) & 1;
+    context->state.ccr_carry = 0;
 
-    context->state.ccr_negative = ((int16_t) result < 0);
-    context->state.ccr_zero = (result == 0);
+    for (uint32_t i = 0; i < count; i++)
+    {
+        context->state.ccr_carry = value & 0x0001;
+        context->state.ccr_extend = value & 0x0001;
+        value = value >> 1;
+    }
+
+    context->state.ccr_negative = ((int16_t) value < 0);
+    context->state.ccr_zero = (value == 0);
     context->state.ccr_overflow = 0;
-    context->state.ccr_carry = last_out;
-    context->state.ccr_extend = last_out;
 
-    context->state.d [reg].w = result;
+    context->state.d [reg].w = value;
 
     printf ("lsr.w d%d >> %d\n", reg, count);
     return 0;
@@ -5928,25 +5936,20 @@ static uint32_t m68k_e068_lsr_w_dn_dn (M68000_Context *context, uint16_t instruc
 
     uint8_t count = context->state.d [count_reg].b & 0x3f;
 
-    if (count)
-    {
-        uint16_t result = value >> count;
-        bool last_out = (value >> (count - 1)) & 1;
-        context->state.d [reg].w = result;
+    context->state.ccr_carry = 0;
 
-        context->state.ccr_negative = ((int16_t) result < 0);
-        context->state.ccr_zero = (result == 0);
-        context->state.ccr_overflow = 0;
-        context->state.ccr_carry = last_out;
-        context->state.ccr_extend = last_out;
-    }
-    else
+    for (uint32_t i = 0; i < count; i++)
     {
-        context->state.ccr_negative = ((int16_t) value < 0);
-        context->state.ccr_zero = (value == 0);
-        context->state.ccr_overflow = 0;
-        context->state.ccr_carry = 0;
+        context->state.ccr_carry = value & 0x0001;
+        context->state.ccr_extend = value & 0x0001;
+        value = value >> 1;
     }
+
+    context->state.ccr_negative = ((int16_t) value < 0);
+    context->state.ccr_zero = (value == 0);
+    context->state.ccr_overflow = 0;
+
+    context->state.d [reg].w = value;
 
     printf ("lsr.w d%d >> d%d\n", reg, count_reg);
     return 0;
@@ -5966,7 +5969,6 @@ static uint32_t m68k_e080_asr_l_dn_imm (M68000_Context *context, uint16_t instru
     {
         context->state.ccr_carry = value & 0x00000001;
         context->state.ccr_extend = value & 0x00000001;
-
         value = (value >> 1) | (value & 0x80000000);
     }
 
@@ -6012,16 +6014,20 @@ static uint32_t m68k_e108_lsl_b_dn_imm (M68000_Context *context, uint16_t instru
     uint16_t reg = instruction & 0x07;
     uint8_t value = context->state.d [reg].b;
 
-    uint8_t result = value << count;
-    bool last_out = !! ((value << (count - 1)) & 0x80);
+    context->state.ccr_carry = 0;
 
-    context->state.ccr_negative = ((int8_t) result < 0);
-    context->state.ccr_zero = (result == 0);
+    for (uint32_t i = 0; i < count; i++)
+    {
+        context->state.ccr_carry = value >> 7;
+        context->state.ccr_extend = value >> 7;
+        value = value << 1;
+    }
+
+    context->state.ccr_negative = ((int8_t) value < 0);
+    context->state.ccr_zero = (value == 0);
     context->state.ccr_overflow = 0;
-    context->state.ccr_carry = last_out;
-    context->state.ccr_extend = last_out;
 
-    context->state.d [reg].b = result;
+    context->state.d [reg].b = value;
 
     printf ("lsl.b d%d << %d\n", reg, count);
     return 0;
@@ -6035,6 +6041,7 @@ static uint32_t m68k_e118_rol_b_dn_imm (M68000_Context *context, uint16_t instru
     uint16_t reg = instruction & 0x07;
     uint8_t value = context->state.d [reg].b;
 
+    context->state.ccr_carry = 0;
     for (uint32_t i = 0; i < count; i++)
     {
         value = (value << 1) | (value >> 7);
@@ -6060,6 +6067,7 @@ static uint32_t m68k_e138_rol_b_dn_dn (M68000_Context *context, uint16_t instruc
     uint16_t reg = instruction & 0x07;
     uint8_t value = context->state.d [reg].b;
 
+    context->state.ccr_carry = 0;
     for (uint32_t i = 0; i < count; i++)
     {
         value = (value << 1) | (value >> 7);
@@ -6090,8 +6098,8 @@ static uint32_t m68k_e140_asl_w_dn_imm (M68000_Context *context, uint16_t instru
 
     for (uint32_t i = 0; i < count; i++)
     {
-        context->state.ccr_carry = value >> 31;
-        context->state.ccr_extend = value >> 31;
+        context->state.ccr_carry = value >> 15;
+        context->state.ccr_extend = value >> 15;
 
         value = value << 1;
         sign_changed |= (value ^ initial_value) >> 15;
@@ -6115,16 +6123,20 @@ static uint32_t m68k_e148_lsl_w_dn_imm (M68000_Context *context, uint16_t instru
     uint16_t reg = instruction & 0x07;
     uint16_t value = context->state.d [reg].w;
 
-    uint16_t result = value << count;
-    bool last_out = !! ((value << (count - 1)) & 0x8000);
+    context->state.ccr_carry = 0;
 
-    context->state.ccr_negative = ((int16_t) result < 0);
-    context->state.ccr_zero = (result == 0);
+    for (uint32_t i = 0; i < count; i++)
+    {
+        context->state.ccr_carry = value >> 15;
+        context->state.ccr_extend = value >> 15;
+        value = value << 1;
+    }
+
+    context->state.ccr_negative = ((int16_t) value < 0);
+    context->state.ccr_zero = (value == 0);
     context->state.ccr_overflow = 0;
-    context->state.ccr_carry = last_out;
-    context->state.ccr_extend = last_out;
 
-    context->state.d [reg].w = result;
+    context->state.d [reg].w = value;
 
     printf ("lsl.w d%d << %d\n", reg, count);
     return 0;
@@ -6173,7 +6185,7 @@ static uint32_t m68k_e158_rol_w_dn_imm (M68000_Context *context, uint16_t instru
     context->state.ccr_zero = (value == 0);
     context->state.ccr_overflow = 0;
 
-    context->state.d [reg].b = value;
+    context->state.d [reg].w = value;
 
     printf ("rol.w d%d << %d\n", reg, count);
     return 0;
@@ -6189,25 +6201,21 @@ static uint32_t m68k_e168_lsl_w_dn_dn (M68000_Context *context, uint16_t instruc
 
     uint8_t count = context->state.d [count_reg].b & 0x3f;
 
-    if (count)
-    {
-        uint16_t result = value << count;
-        bool last_out = !! ((value << (count - 1)) & 0x8000);
-        context->state.d [reg].w = result;
+    context->state.ccr_carry = 0;
 
-        context->state.ccr_negative = ((int16_t) result < 0);
-        context->state.ccr_zero = (result == 0);
-        context->state.ccr_overflow = 0;
-        context->state.ccr_carry = last_out;
-        context->state.ccr_extend = last_out;
-    }
-    else
+    for (uint32_t i = 0; i < count; i++)
     {
-        context->state.ccr_negative = ((int16_t) value < 0);
-        context->state.ccr_zero = (value == 0);
-        context->state.ccr_overflow = 0;
-        context->state.ccr_carry = 0;
+        context->state.ccr_carry = value >> 15;
+        context->state.ccr_extend = value >> 15;
+
+        value = value << 1;
     }
+
+    context->state.ccr_negative = ((int16_t) value < 0);
+    context->state.ccr_zero = (value == 0);
+    context->state.ccr_overflow = 0;
+
+    context->state.d [reg].w = value;
 
     printf ("lsl.w d%d << d%d\n", reg, count_reg);
     return 0;
@@ -6221,7 +6229,7 @@ static uint32_t m68k_e180_asl_l_dn_imm (M68000_Context *context, uint16_t instru
     uint16_t reg = instruction & 0x07;
     uint32_t value = context->state.d [reg].l;
 
-    uint16_t initial_value = value;
+    uint32_t initial_value = value;
     bool sign_changed = false;
     context->state.ccr_carry = 0;
 
