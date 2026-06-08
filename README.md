@@ -19,6 +19,7 @@ Developed in Ōtautahi, Aotearoa.
 * [Dear ImGui](https://github.com/ocornut/imgui)
 * [gl3w](https://github.com/skaslev/gl3w)
 * [libspng](https://github.com/randy408/libspng)
+* [cJSON](https://github.com/davegamble/cjson) (For SST Tests)
 
 ## Dependencies
 * [SDL 2](https://www.libsdl.org/index.php)
