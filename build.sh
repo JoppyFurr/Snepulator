@@ -188,6 +188,7 @@ CFLAGS="-std=c17 -O2 -Wall -Werror -D_POSIX_C_SOURCE=200809L \
         -I libraries/BLAKE3/ \
         -I libraries/gl3w/ \
         -I libraries/libspng-0.7.4/ \
+        -DHAVE_SAVE_STATES \
         -DBUILD_DATE=\\\"${DATE}\\\" \
         -DBUILD_TAG=\\\"${TAG:1}\\\" \
         ${EXTRA_FLAGS}"

@@ -135,8 +135,10 @@ Z80_Context *z80_init (void *parent,
 /* Simulate the Z80 for the specified number of clock cycles. */
 void z80_run_cycles (Z80_Context *context, int64_t cycles);
 
+#ifdef HAVE_SAVE_STATES
 /* Export Z80 state. */
 void z80_state_save (Z80_Context *context);
 
 /* Import Z80 state. */
 void z80_state_load (Z80_Context *context, uint32_t version, uint32_t size, void *data);
+#endif

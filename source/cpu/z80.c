@@ -5638,6 +5638,7 @@ void z80_run_cycles (Z80_Context *context, int64_t cycles)
 }
 
 
+#ifdef HAVE_SAVE_STATES
 /*
  * Export Z80 state.
  */
@@ -5705,3 +5706,4 @@ void z80_state_load (Z80_Context *context, uint32_t version, uint32_t size, void
         snepulator_error ("Error", "Save-state contains incorrect Z80 size");
     }
 }
+#endif

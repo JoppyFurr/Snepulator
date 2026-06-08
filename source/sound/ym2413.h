@@ -219,8 +219,10 @@ void ym2413_run_cycles (YM2413_Context *context, uint32_t clock_rate, uint32_t c
 /* Initialise a new YM2413 context. */
 YM2413_Context *ym2413_init (void);
 
+#ifdef HAVE_SAVE_STATES
 /* Export YM2413 state. */
 void ym2413_state_save (YM2413_Context *context);
 
 /* Import YM2413 state. */
 void ym2413_state_load (YM2413_Context *context, uint32_t version, uint32_t size, void *data);
+#endif

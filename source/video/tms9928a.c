@@ -775,6 +775,7 @@ TMS9928A_Context *tms9928a_init (void *parent, void (* frame_done) (void *))
 }
 
 
+#ifdef HAVE_SAVE_STATES
 /*
  * Export tms9928a state.
  */
@@ -837,3 +838,4 @@ void tms9928a_state_load (TMS9928A_Context *context, uint32_t version, uint32_t 
         snepulator_error ("Error", "Save-state contains incompatible VDP state size");
     }
 }
+#endif

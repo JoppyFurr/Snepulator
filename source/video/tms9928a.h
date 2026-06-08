@@ -233,8 +233,10 @@ uint8_t tms9928a_get_mode (TMS9928A_Context *context);
 /* Reset the tms9928a registers and memory to power-on defaults. */
 TMS9928A_Context *tms9928a_init (void *parent, void (* frame_done) (void *));
 
+#ifdef HAVE_SAVE_STATES
 /* Export tms9928a state. */
 void tms9928a_state_save (TMS9928A_Context *context);
 
 /* Import tms9928a state. */
 void tms9928a_state_load (TMS9928A_Context *context, uint32_t version, uint32_t size, void *data);
+#endif

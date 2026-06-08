@@ -375,6 +375,7 @@ void sn76489_get_samples (SN76489_Context *context, int32_t *stream, uint32_t co
 }
 
 
+#ifdef HAVE_SAVE_STATES
 /*
  * Export sn76489 state.
  */
@@ -444,3 +445,4 @@ void sn76489_state_load (SN76489_Context *context, uint32_t version, uint32_t si
         snepulator_error ("Error", "Save-state contains incorrect SN76489 size");
     }
 }
+#endif

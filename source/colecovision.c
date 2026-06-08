@@ -33,8 +33,10 @@ static void     colecovision_io_write (void *context_ptr, uint8_t addr, uint8_t 
 static uint8_t  colecovision_memory_read (void *context_ptr, uint16_t addr);
 static void     colecovision_memory_write (void *context_ptr, uint16_t addr, uint8_t data);
 static void     colecovision_run (void *context_ptr, uint32_t ms);
+#ifdef HAVE_SAVE_STATES
 static void     colecovision_state_load (void *context_ptr, const char *filename);
 static void     colecovision_state_save (void *context_ptr, const char *filename);
+#endif
 static void     colecovision_update_settings (void *context_ptr);
 
 
@@ -211,8 +213,10 @@ ColecoVision_Context *colecovision_init (void)
     state.cleanup = colecovision_cleanup;
     state.get_rom_hash = colecovision_get_rom_hash;
     state.run_callback = colecovision_run;
+#ifdef HAVE_SAVE_STATES
     state.state_load = colecovision_state_load;
     state.state_save = colecovision_state_save;
+#endif
     state.update_settings = colecovision_update_settings;
 
     /* Begin emulation */
@@ -450,6 +454,7 @@ static void colecovision_run (void *context_ptr, uint32_t cycles)
 }
 
 
+#ifdef HAVE_SAVE_STATES
 /*
  * Import ColecoVision state from a file.
  * Called with the run_mutex held.
@@ -561,6 +566,7 @@ static void colecovision_state_save (void *context_ptr, const char *filename)
 
     save_state_write (filename);
 }
+#endif
 
 
 /*

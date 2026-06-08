@@ -103,8 +103,10 @@ void sn76489_get_samples (SN76489_Context *context, int32_t *stream, uint32_t le
 /* Run the PSG for a number of CPU clock cycles. */
 void sn76489_run_cycles (SN76489_Context *context, uint32_t clock_rate, uint32_t cycles);
 
+#ifdef HAVE_SAVE_STATES
 /* Export sn76489 state. */
 void sn76489_state_save (SN76489_Context *context);
 
 /* Import sn76489 state. */
 void sn76489_state_load (SN76489_Context *context, uint32_t version, uint32_t size, void *data);
+#endif

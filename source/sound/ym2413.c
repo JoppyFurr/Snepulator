@@ -1086,6 +1086,7 @@ YM2413_Context *ym2413_init (void)
 }
 
 
+#ifdef HAVE_SAVE_STATES
 /*
  * Export YM2413 state.
  */
@@ -1181,3 +1182,4 @@ void ym2413_state_load (YM2413_Context *context, uint32_t version, uint32_t size
         snepulator_error ("Error", "Save-state contains incorrect YM2413 size");
     }
 }
+#endif

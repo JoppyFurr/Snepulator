@@ -32,8 +32,10 @@ static void     sg_1000_io_write (void *context_ptr, uint8_t addr, uint8_t data)
 static uint8_t  sg_1000_memory_read (void *context_ptr, uint16_t addr);
 static void     sg_1000_memory_write (void *context_ptr, uint16_t addr, uint8_t data);
 static void     sg_1000_run (void *context_ptr, uint32_t ms);
+#ifdef HAVE_SAVE_STATES
 static void     sg_1000_state_load (void *context_ptr, const char *filename);
 static void     sg_1000_state_save (void *context_ptr, const char *filename);
+#endif
 static void     sg_1000_update_settings (void *context_ptr);
 
 
@@ -244,8 +246,10 @@ SG_1000_Context *sg_1000_init (void)
     state.cleanup = sg_1000_cleanup;
     state.get_rom_hash = sg_1000_get_rom_hash;
     state.run_callback = sg_1000_run;
+#ifdef HAVE_SAVE_STATES
     state.state_load = sg_1000_state_load;
     state.state_save = sg_1000_state_save;
+#endif
     state.update_settings = sg_1000_update_settings;
 #ifdef DEVELOPER_BUILD
     state.diagnostics_show = sg_1000_diagnostics_show;
@@ -524,6 +528,7 @@ static void sg_1000_run (void *context_ptr, uint32_t cycles)
 }
 
 
+#ifdef HAVE_SAVE_STATES
 /*
  * Import SG-1000 state from a file.
  * Called with the run_mutex held.
@@ -653,6 +658,7 @@ static void sg_1000_state_save (void *context_ptr, const char *filename)
 
     save_state_write (filename);
 }
+#endif
 
 
 /*
