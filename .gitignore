@@ -6,6 +6,12 @@ Snepulator.exe
 *.zip
 *.AppImage
 
+# Ignore test data and binaries
+tests/z80
+tests/z80-sst
+tests/m68000
+tests/m68k-sst
+
 # Ignore OS & Tool files
 tags
 .DS_Store
