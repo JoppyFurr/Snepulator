@@ -15,6 +15,7 @@
 #include "../util.h"
 #include "m68k.h"
 
+#define SR_MASK 0xa71f
 
 static uint32_t (*m68k_instruction [SIZE_64K]) (M68000_Context *, uint16_t) = { };
 
@@ -3192,7 +3193,7 @@ static uint32_t m68k_46fc_move_sr_imm (M68000_Context *context, uint16_t instruc
 {
     uint16_t value = read_extension (context);
 
-    context->state.sr = value;
+    context->state.sr = value & SR_MASK;
 
     if (!context->state.sr_supervisor)
     {
@@ -3665,7 +3666,7 @@ static uint32_t m68k_4e71_nop (M68000_Context *context, uint16_t instruction)
 /* rte */
 static uint32_t m68k_4e73_rte (M68000_Context *context, uint16_t instruction)
 {
-    context->state.sr = read_word (context, context->state.a [7]);
+    context->state.sr = read_word (context, context->state.a [7]) & SR_MASK;
     context->state.a[7] += 2;
 
     context->state.pc = read_long (context, context->state.a [7]);
