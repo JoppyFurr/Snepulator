@@ -3326,6 +3326,8 @@ static uint32_t m68k_48e0_movem_l_pan_regs (M68000_Context *context, uint16_t in
     uint16_t reg = instruction & 0x07;
     uint16_t mask = read_extension (context);
 
+    uint32_t address = context->state.a [reg];
+
     /* For -(An), the bit-mask and order is reversed */
     for (int32_t i = 0; i < 16; i++)
     {
@@ -3333,16 +3335,18 @@ static uint32_t m68k_48e0_movem_l_pan_regs (M68000_Context *context, uint16_t in
         {
             if (i < 8)
             {
-                context->state.a [reg] -= 4;
-                write_long (context, context->state.a [reg], context->state.a [7 - i]);
+                address -= 4;
+                write_long (context, address, context->state.a [7 - i]);
             }
             else
             {
-                context->state.a [reg] -= 4;
-                write_long (context, context->state.a [reg], context->state.d [15 - i].l);
+                address -= 4;
+                write_long (context, address, context->state.d [15 - i].l);
             }
         }
     }
+
+    context->state.a [reg] = address;
 
     printf ("movem.l -(a%d) ← <registers>\n", reg);
     return 0;
@@ -3543,11 +3547,13 @@ static uint32_t m68k_4ab9_tst_l_al (M68000_Context *context, uint16_t instructio
 }
 
 
-/* movem.w (An)+ ← <registers> */
+/* movem.w <registers> ← (An)+ */
 static uint32_t m68k_4c98_movem_w_regs_anp (M68000_Context *context, uint16_t instruction)
 {
     uint16_t reg = instruction & 0x07;
     uint16_t mask = read_extension (context);
+
+    uint32_t address = context->state.a [reg];
 
     /* Data registers first */
     for (uint32_t i = 0; i < 16; i++)
@@ -3556,18 +3562,20 @@ static uint32_t m68k_4c98_movem_w_regs_anp (M68000_Context *context, uint16_t in
         {
             if (i < 8)
             {
-                context->state.d [i].l = (int16_t) read_word (context, context->state.a [reg]);
-                context->state.a [reg] += 2;
+                context->state.d [i].l = (int16_t) read_word (context, address);
+                address += 2;
             }
             else
             {
-                context->state.a [i - 8] = (int16_t) read_word (context, context->state.a [reg]);
-                context->state.a [reg] += 2;
+                context->state.a [i - 8] = (int16_t) read_word (context, address);
+                address += 2;
             }
         }
     }
 
-    printf ("movem.w <registers> ← (a%d)+\n", reg);
+    context->state.a [reg] = address;
+
+    printf ("movem.w (a%d)+ ← <registers>\n", reg);
     return 0;
 }
 
