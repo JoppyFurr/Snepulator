@@ -316,6 +316,15 @@ static uint32_t run_test (const cJSON *test, bool print_details)
             if (memcmp (test_context->ram, final_context->ram, sizeof (test_context->ram)) != 0)
             {
                 printf ("     RAM content does not match expected value.\n");
+                for (uint32_t addr = 0x000000; addr <= 0xffffff; addr += 2)
+                {
+                    uint16_t calculated = memory_read_16 (test_context, addr);
+                    uint16_t expected = memory_read_16 (final_context, addr);
+                    if (calculated != expected)
+                    {
+                        printf ("     [%06x] calculated %04x, expected %04x.\n", addr, calculated, expected);
+                    }
+                }
             }
         }
     }
