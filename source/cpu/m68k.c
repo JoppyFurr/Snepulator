@@ -2734,7 +2734,7 @@ static uint32_t m68k_3168_move_w_dan_dan (M68000_Context *context, uint16_t inst
 
 
 /* move.w d(An) ← d(An+Xi) */
-static uint32_t m68k_3170_move_b_dan_danxi (M68000_Context *context, uint16_t instruction)
+static uint32_t m68k_3170_move_w_dan_danxi (M68000_Context *context, uint16_t instruction)
 {
     uint16_t dest_reg = (instruction >> 9) & 0x07;
     uint16_t source_reg = instruction & 0x07;
@@ -2964,31 +2964,8 @@ static uint32_t m68k_41fa_lea_dpc (M68000_Context *context, uint16_t instruction
 static uint32_t m68k_41fb_lea_dpcxi (M68000_Context *context, uint16_t instruction)
 {
     uint16_t dest_reg = (instruction >> 9) & 0x07;
-    uint32_t pc = context->state.pc;
-    uint16_t extension = read_extension (context);
 
-    int8_t displacement = extension & 0xff;
-    uint16_t index_reg = (extension >> 12) & 0x07;
-    uint32_t index;
-
-    /* Bit 15 selects Dn or An */
-    if ((extension & BIT_15) == 0)
-    {
-        index = context->state.d [index_reg].l;
-    }
-    else
-    {
-        index = context->state.a [index_reg];
-    }
-
-    /* Bit 11 selects index size, sign-extended word, or long */
-    if ((extension & BIT_11) == 0)
-    {
-        int16_t index_w = index & 0xffff;
-        index = index_w;
-    }
-
-    context->state.a [dest_reg] = pc + displacement + index;
+    context->state.a [dest_reg] = address_with_index (context, context->state.pc);
 
     printf ("lea a%d ← d(PC+Xi)\n", dest_reg);
     return 0;
@@ -3747,12 +3724,15 @@ static uint32_t m68k_4e90_jsr_an (M68000_Context *context, uint16_t instruction)
 {
     uint16_t reg = instruction & 0x07;
 
+    /* Note: Take the new PC early in case it is affected by the stack push. */
+    uint32_t new_pc = context->state.a [reg];
+
     /* Push the current PC to the stack */
     context->state.a [7] -= 4;
     write_long (context, context->state.a [7], context->state.pc);
 
     /* Update the PC */
-    context->state.pc = context->state.a [reg];
+    context->state.pc = new_pc;
 
     printf ("jsr (a%d)\n", reg);
     return 0;
@@ -3793,38 +3773,18 @@ static uint32_t m68k_4eba_jsr_dpc (M68000_Context *context, uint16_t instruction
 }
 
 
-/* jsr d(PC, Xi) */
+/* jsr d(PC+Xi) */
 static uint32_t m68k_4ebb_jsr_dpcxi (M68000_Context *context, uint16_t instruction)
 {
-    uint16_t extension = read_extension (context);
-    int8_t displacement = extension & 0xff;
+    /* Note: Take the new PC early in case it is affected by the stack push. */
+    /* Note: The jump is from the location of the extension. */
+    uint32_t new_pc = address_with_index (context, context->state.pc);
 
-    uint16_t reg = (extension >> 12) & 0x07;
-    uint32_t index;
-
-    /* Bit 15 selects Dn or An */
-    if ((extension & BIT_15) == 0)
-    {
-        index = context->state.d [reg].l;
-    }
-    else
-    {
-        index = context->state.a [reg];
-    }
-
-    /* Bit 11 selects index size, sign-extended word, or long */
-    if ((extension & BIT_11) == 0)
-    {
-        int16_t index_w = index & 0xffff;
-        index = index_w;
-    }
-
-    /* Push the current PC to the stack */
+    /* Push the PC of the next instruction to the stack. */
     context->state.a [7] -= 4;
     write_long (context, context->state.a [7], context->state.pc);
 
-    /* Update the PC, subtract 2, the jump is from the location of the extension. */
-    context->state.pc += displacement + index - 2;
+    context->state.pc = new_pc;
 
     printf ("jsr d(PC+Xi)\n");
     return 0;
@@ -3858,31 +3818,8 @@ static uint32_t m68k_4ef9_jmp_al (M68000_Context *context, uint16_t instruction)
 /* jmp d(PC+Xi) */
 static uint32_t m68k_4efb_jmp_dpcxi (M68000_Context *context, uint16_t instruction)
 {
-    uint16_t extension = read_extension (context);
-    int8_t displacement = extension & 0xff;
-
-    uint16_t reg = (extension >> 12) & 0x07;
-    uint32_t index;
-
-    /* Bit 15 selects Dn or An */
-    if ((extension & BIT_15) == 0)
-    {
-        index = context->state.d [reg].l;
-    }
-    else
-    {
-        index = context->state.a [reg];
-    }
-
-    /* Bit 11 selects index size, sign-extended word, or long */
-    if ((extension & BIT_11) == 0)
-    {
-        int16_t index_w = index & 0xffff;
-        index = index_w;
-    }
-
-    /* Update the PC, subtract 2, the jump is from the location of the extension. */
-    context->state.pc += displacement + index - 2;
+    /* Note: The jump is from the location of the extension. */
+    context->state.pc = address_with_index (context, context->state.pc);
 
     printf ("jmp d(PC+Xi)\n");
     return 0;
@@ -6468,7 +6405,7 @@ static void m68k_init_instructions (void)
             m68k_instruction [0x3150 | (reg_a << 9) | reg_b] = m68k_3150_move_w_dan_an;
             m68k_instruction [0x3158 | (reg_a << 9) | reg_b] = m68k_3158_move_w_dan_anp;
             m68k_instruction [0x3168 | (reg_a << 9) | reg_b] = m68k_3168_move_w_dan_dan;
-            m68k_instruction [0x3170 | (reg_a << 9) | reg_b] = m68k_3170_move_b_dan_danxi;
+            m68k_instruction [0x3170 | (reg_a << 9) | reg_b] = m68k_3170_move_w_dan_danxi;
             m68k_instruction [0x3180 | (reg_a << 9) | reg_b] = m68k_3180_move_w_danxi_dn;
             m68k_instruction [0x3190 | (reg_a << 9) | reg_b] = m68k_3190_move_w_danxi_an;
             m68k_instruction [0x3198 | (reg_a << 9) | reg_b] = m68k_3198_move_w_danxi_anp;
