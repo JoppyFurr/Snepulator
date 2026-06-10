@@ -442,8 +442,22 @@ static void run_test_file (char *filename)
 /*
  * Loop over all test files for the z80.
  */
-int main (void)
+int main (int argc, char **argv)
 {
+    char *filter = NULL;
+
+    /* Optionally filter to run only a subset of tests */
+    if (argc == 3 && !strcmp (argv [1], "--filter"))
+    {
+        filter = argv [2];
+    }
+    else if (argc != 1)
+    {
+        fprintf (stderr, "Usage: %s [--filter <filter>]\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+
     DIR *dir = opendir (TEST_DIR);
     if (dir == NULL)
     {
@@ -465,6 +479,12 @@ int main (void)
         /* Make sure this is a json file */
         char *extension = strstr (entry->d_name, ".json");
         if (extension == NULL || strlen (extension) != 5)
+        {
+            continue;
+        }
+
+        /* Optional filtering to quickly test specific instructions */
+        if (filter && !strstr (entry->d_name, filter))
         {
             continue;
         }

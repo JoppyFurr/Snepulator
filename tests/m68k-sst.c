@@ -447,8 +447,20 @@ static void run_test_file (char *filename)
 /*
  * Loop over all test files for the z80.
  */
-int main (void)
+int main (int argc, char **argv)
 {
+    char *filter = NULL;
+
+    /* Optionally filter to run only a subset of tests */
+    if (argc == 3 && !strcmp (argv [1], "--filter"))
+    {
+        filter = argv [2];
+    }
+    else if (argc != 1)
+    {
+        fprintf (stderr, "Usage: %s [--filter <filter>]\n", argv[0]);
+        return EXIT_FAILURE;
+    }
 
     /* Create and destroy an initial context, to get through
      * logs generated as part of instruction registration. */
@@ -492,16 +504,11 @@ int main (void)
             continue;
         }
 
-#if 0
-        /* XXX for now, only test MOVE instructions XXX */
-        if (!strstr (entry->d_name, "MOVE.b") &&
-            !strstr (entry->d_name, "MOVE.w") &&
-            !strstr (entry->d_name, "MOVE.l"))
+        /* Optional filtering to quickly test specific instructions */
+        if (filter && !strstr (entry->d_name, filter))
         {
             continue;
         }
-#endif
-
 
         run_test_file (entry->d_name);
     }
