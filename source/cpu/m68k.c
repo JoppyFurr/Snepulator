@@ -4028,14 +4028,15 @@ static uint32_t m68k_4eb9_jsr_al (M68000_Context *context, uint16_t instruction)
 /* jsr d(PC) */
 static uint32_t m68k_4eba_jsr_dpc (M68000_Context *context, uint16_t instruction)
 {
+    uint32_t pc = context->state.pc;
     int16_t displacement = read_extension (context);
 
-    /* Push the current PC to the stack */
+    /* Push the address of the next instruction to the stack */
     context->state.a [7] -= 4;
     write_long (context, context->state.a [7], context->state.pc);
 
-    /* Update the PC, subtract 2, the jump is from the location of the extension. */
-    context->state.pc += displacement - 2;
+    /* Update the PC, the jump is from the location of the extension. */
+    context->state.pc = pc + displacement;
 
     printf ("jsr %+d(pc)\n", displacement);
     return 0;
@@ -5155,7 +5156,7 @@ static uint32_t m68k_80c0_divu_w_dn_dn (M68000_Context *context, uint16_t instru
         context->state.d [dest_reg].w_high = remainder;
     }
 
-    printf ("divs.w d%d ← d%d ÷ d%d\n", dest_reg, dest_reg, source_reg);
+    printf ("divu.w d%d ← d%d ÷ d%d\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -5179,7 +5180,7 @@ static uint32_t m68k_8128_or_b_dan_dn (M68000_Context *context, uint16_t instruc
 }
 
 
-/* divu.w Dn ← Dn ÷ #xxxx */
+/* divs.w Dn ← Dn ÷ #xxxx */
 static uint32_t m68k_81fc_divs_w_dn_imm (M68000_Context *context, uint16_t instruction)
 {
     uint16_t dest_reg = (instruction >> 9) & 0x07;
