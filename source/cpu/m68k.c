@@ -5729,7 +5729,7 @@ static uint32_t m68k_c0fc_mulu_w_dn_imm (M68000_Context *context, uint16_t instr
 
     uint16_t b = read_extension (context);
     uint16_t a = context->state.d [dest_reg].w;
-    uint32_t result = a * b;
+    uint32_t result = (uint32_t) a * (uint32_t) b;
 
     context->state.d [dest_reg].l = result;
 
