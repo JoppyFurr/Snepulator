@@ -749,6 +749,129 @@ static uint32_t m68k_0400_subi_b_dn (M68000_Context *context, uint16_t instructi
     return 0;
 }
 
+/* subi.b (An) ← (An) - #xx */
+static uint32_t m68k_0410_subi_b_an (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    uint8_t b = read_extension (context);
+    uint8_t a = read_byte (context, context->state.a [reg]);
+
+    uint8_t result = a - b;
+    write_byte (context, context->state.a [reg], result);
+    m68k_sub_b_flags (context, a, b, result);
+
+    printf ("subi.b (a%d) ← #%02x\n", reg, b);
+    return 0;
+}
+
+
+/* subi.b (An)+ ← (An)+ - #xx */
+static uint32_t m68k_0418_subi_b_anp (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    uint8_t b = read_extension (context);
+    uint8_t a = read_byte (context, context->state.a [reg]);
+
+    uint8_t result = a - b;
+    write_byte (context, context->state.a [reg], result);
+    context->state.a [reg] += (reg == 7) ? 2 : 1;
+    m68k_sub_b_flags (context, a, b, result);
+
+    printf ("subi.b (a%d)+ ← #%02x\n", reg, b);
+    return 0;
+}
+
+/* subi.b -(An) ← -(An) - #xx */
+static uint32_t m68k_0420_subi_b_pan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    context->state.a [reg] -= (reg == 7) ? 2 : 1;
+
+    uint8_t b = read_extension (context);
+    uint8_t a = read_byte (context, context->state.a [reg]);
+
+    uint8_t result = a - b;
+    write_byte (context, context->state.a [reg], result);
+    m68k_sub_b_flags (context, a, b, result);
+
+    printf ("subi.b -(a%d) ← #%02x\n", reg, b);
+    return 0;
+}
+
+
+/* subi.b d(An) ← d(An) - #xx */
+static uint32_t m68k_0428_subi_b_dan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    uint8_t b = read_extension (context);
+    uint32_t address = context->state.a [reg] + (int16_t) read_extension (context);
+    uint8_t a = read_byte (context, address);
+
+    uint8_t result = a - b;
+    write_byte (context, address, result);
+
+    m68k_sub_b_flags (context, a, b, result);
+
+    printf ("subi.b d(a%d) ← #%02x\n", reg, b);
+    return 0;
+}
+
+
+/* subi.b d(An+Xi) ← d(An+Xi) - #xx */
+static uint32_t m68k_0430_subi_b_danxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    uint8_t b = read_extension (context);
+    uint32_t address = address_with_index (context, context->state.a [reg]);
+    uint8_t a = read_byte (context, address);
+
+    uint8_t result = a - b;
+    write_byte (context, address, result);
+
+    m68k_sub_b_flags (context, a, b, result);
+
+    printf ("subi.b d(a%d+Xi) ← #%02x\n", reg, b);
+    return 0;
+}
+
+
+/* subi.b (xxx.w) ← (xxx.w) - #xx */
+static uint32_t m68k_0438_subi_b_aw (M68000_Context *context, uint16_t instruction)
+{
+    uint8_t b = read_extension (context);
+    uint32_t address = (int16_t) read_extension (context);
+    uint8_t a = read_byte (context, address);
+
+    uint8_t result = a - b;
+    write_byte (context, address, result);
+
+    m68k_sub_b_flags (context, a, b, result);
+
+    printf ("subi.b (xxx.w) ← #%02x\n", b);
+    return 0;
+}
+
+
+/* subi.b (xxx.l) ← (xxx.l) - #xx */
+static uint32_t m68k_0439_subi_b_al (M68000_Context *context, uint16_t instruction)
+{
+    uint8_t b = read_extension (context);
+    uint32_t address = read_extension_long (context);
+    uint8_t a = read_byte (context, address);
+
+    uint8_t result = a - b;
+    write_byte (context, address, result);
+
+    m68k_sub_b_flags (context, a, b, result);
+
+    printf ("subi.b (xxx.l) ← #%02x\n", b);
+    return 0;
+}
+
 
 /* subi.w Dn ← Dn - #xxxx */
 static uint32_t m68k_0440_subi_w_dn (M68000_Context *context, uint16_t instruction)
@@ -6860,6 +6983,11 @@ static void m68k_init_instructions (void)
         m68k_instruction [0x0228 | reg] = m68k_0228_andi_b_dan;
         m68k_instruction [0x0240 | reg] = m68k_0240_andi_w_dn;
         m68k_instruction [0x0400 | reg] = m68k_0400_subi_b_dn;
+        m68k_instruction [0x0410 | reg] = m68k_0410_subi_b_an;
+        m68k_instruction [0x0418 | reg] = m68k_0418_subi_b_anp;
+        m68k_instruction [0x0420 | reg] = m68k_0420_subi_b_pan;
+        m68k_instruction [0x0428 | reg] = m68k_0428_subi_b_dan;
+        m68k_instruction [0x0430 | reg] = m68k_0430_subi_b_danxi;
         m68k_instruction [0x0440 | reg] = m68k_0440_subi_w_dn;
         m68k_instruction [0x0458 | reg] = m68k_0458_subi_w_anp;
         m68k_instruction [0x0468 | reg] = m68k_0468_subi_w_dan;
@@ -6885,6 +7013,8 @@ static void m68k_init_instructions (void)
     }
     m68k_instruction [0x0038] = m68k_0038_ori_b_aw;
     m68k_instruction [0x0238] = m68k_0238_andi_b_aw;
+    m68k_instruction [0x0438] = m68k_0438_subi_b_aw;
+    m68k_instruction [0x0439] = m68k_0439_subi_b_al;
     m68k_instruction [0x0638] = m68k_0638_addi_b_aw;
     m68k_instruction [0x0639] = m68k_0639_addi_b_al;
     m68k_instruction [0x0678] = m68k_0678_addi_w_aw;
