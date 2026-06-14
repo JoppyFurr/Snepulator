@@ -300,7 +300,7 @@ static void smd_vdp_draw_pattern_line (SMD_VDP_Context *context, uint16_t line, 
 /*
  * Render one line of the sprite layer.
  */
-static void smd_vdp_draw_sprites (SMD_VDP_Context *context, uint16_t line)
+static void smd_vdp_draw_sprites (SMD_VDP_Context *context, uint16_t line, bool priority)
 {
     /* TODO: In Width=320 mode, the base-address register only provides 6 bits
      *       of the address. In Width=256 mode, it provides 7 bits. */
@@ -312,6 +312,7 @@ static void smd_vdp_draw_sprites (SMD_VDP_Context *context, uint16_t line)
 
     /* Traverse the sprite list, filling the line sprite buffer */
     /* TODO: When implementing Width=256 mode, the maximum is 64 sprites */
+    /* TODO: Only do this once - It doesn't need to happen for both low & high priority passes */
     uint32_t pixel_count = 0;
     for (int count = 0; count < 80; count++)
     {
@@ -346,6 +347,12 @@ static void smd_vdp_draw_sprites (SMD_VDP_Context *context, uint16_t line)
         sprite.data [1] = util_ntoh16 (sprite_table [line_sprite_buffer [line_sprite_count] * 4 + 1]);
         sprite.data [2] = util_ntoh16 (sprite_table [line_sprite_buffer [line_sprite_count] * 4 + 2]);
         sprite.data [3] = util_ntoh16 (sprite_table [line_sprite_buffer [line_sprite_count] * 4 + 3]);
+
+        if (sprite.priority != priority)
+        {
+            continue;
+        }
+
         uint_pixel_t *palette = &context->state.cram [sprite.palette << 4];
         int_point_t position = { .x = sprite.x - 128, .y=sprite.y - 128};
 
@@ -373,7 +380,7 @@ static void smd_vdp_draw_sprites (SMD_VDP_Context *context, uint16_t line)
  * Render one line of the background layer.
  */
 static void smd_vdp_draw_background (SMD_VDP_Context *context, uint16_t line, uint16_t *name_table,
-                                     uint16_t h_scroll, uint16_t v_scroll)
+                                     uint16_t h_scroll, uint16_t v_scroll, bool priority)
 {
     uint16_t num_rows;
     uint16_t num_cols;
@@ -441,6 +448,11 @@ static void smd_vdp_draw_background (SMD_VDP_Context *context, uint16_t line, ui
          *       a minimum value of -128. Add +128 to keep the result positive. */
         SMD_VDP_Name_Table_Entry tile;
         tile.data = util_ntoh16 (name_table_row [(screen_tile_x - h_scroll_coarse + 128) % num_cols]);
+
+        if (tile.priority != priority)
+        {
+            continue;
+        }
 
         SMD_VDP_Pattern *pattern = (SMD_VDP_Pattern *) &context->state.vram [(tile.pattern) * sizeof (SMD_VDP_Pattern)];
 
@@ -515,16 +527,18 @@ void smd_vdp_render_line (SMD_VDP_Context *context, uint16_t line)
             break;
     }
 
-    /* Draw Plane B */
     uint16_t *name_table_b = (uint16_t *) &context->state.vram [(context->state.plane_b_name_table_base & 0x07) << 13];
-    smd_vdp_draw_background (context, line, name_table_b, h_scroll_b, v_scroll_b);
-
-    /* Draw Plane A */
     uint16_t *name_table_a = (uint16_t *) &context->state.vram [(context->state.plane_a_name_table_base & 0x38) << 10];
-    smd_vdp_draw_background (context, line, name_table_a, h_scroll_a, v_scroll_a);
 
-    /* Draw Sprites */
-    smd_vdp_draw_sprites (context, line);
+    /* First pass - Low priority */
+    smd_vdp_draw_background (context, line, name_table_b, h_scroll_b, v_scroll_b, false);
+    smd_vdp_draw_background (context, line, name_table_a, h_scroll_a, v_scroll_a, false);
+    smd_vdp_draw_sprites (context, line, false);
+
+    /* Second pass - High priority */
+    smd_vdp_draw_background (context, line, name_table_b, h_scroll_b, v_scroll_b, true);
+    smd_vdp_draw_background (context, line, name_table_a, h_scroll_a, v_scroll_a, true);
+    smd_vdp_draw_sprites (context, line, true);
 }
 
 
