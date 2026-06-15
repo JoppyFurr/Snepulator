@@ -5593,6 +5593,396 @@ static uint32_t m68k_80c0_divu_w_dn_dn (M68000_Context *context, uint16_t instru
 }
 
 
+/* divu.w Dn ← Dn ÷ (An) */
+static uint32_t m68k_80d0_divu_w_dn_an (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint32_t dividend = context->state.d [dest_reg].l;
+    uint32_t divisor = read_word (context, context->state.a [source_reg]);
+
+    if (divisor == 0)
+    {
+        printf ("[%s] Division by zero - Trap not implemented.\n", __func__);
+        return 0;
+    }
+
+    uint32_t quotient = dividend / divisor;
+    uint16_t remainder = dividend % divisor;
+
+    context->state.ccr_overflow = quotient > 0xffff;
+    context->state.ccr_carry = 0;
+
+    if (context->state.ccr_overflow)
+    {
+        context->state.ccr_negative = true;
+        context->state.ccr_zero = false;
+    }
+    else
+    {
+        context->state.ccr_zero = (quotient == 0);
+        context->state.ccr_negative = (quotient >= 0x8000);
+        context->state.d [dest_reg].w_low = quotient;
+        context->state.d [dest_reg].w_high = remainder;
+    }
+
+    printf ("divu.w d%d ← d%d ÷ (a%d)\n", dest_reg, dest_reg, source_reg);
+    return 0;
+}
+
+
+/* divu.w Dn ← Dn ÷ (An)+ */
+static uint32_t m68k_80d8_divu_w_dn_anp (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint32_t dividend = context->state.d [dest_reg].l;
+    uint32_t divisor = read_word (context, context->state.a [source_reg]);
+    context->state.a [source_reg] += 2;
+
+    if (divisor == 0)
+    {
+        printf ("[%s] Division by zero - Trap not implemented.\n", __func__);
+        return 0;
+    }
+
+    uint32_t quotient = dividend / divisor;
+    uint16_t remainder = dividend % divisor;
+
+    context->state.ccr_overflow = quotient > 0xffff;
+    context->state.ccr_carry = 0;
+
+    if (context->state.ccr_overflow)
+    {
+        context->state.ccr_negative = true;
+        context->state.ccr_zero = false;
+    }
+    else
+    {
+        context->state.ccr_zero = (quotient == 0);
+        context->state.ccr_negative = (quotient >= 0x8000);
+        context->state.d [dest_reg].w_low = quotient;
+        context->state.d [dest_reg].w_high = remainder;
+    }
+
+    printf ("divu.w d%d ← d%d ÷ (a%d)+\n", dest_reg, dest_reg, source_reg);
+    return 0;
+}
+
+
+/* divu.w Dn ← Dn ÷ -(An) */
+static uint32_t m68k_80e0_divu_w_dn_pan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+    context->state.a [source_reg] -= 2;
+
+    uint32_t dividend = context->state.d [dest_reg].l;
+    uint32_t divisor = read_word (context, context->state.a [source_reg]);
+
+    if (divisor == 0)
+    {
+        printf ("[%s] Division by zero - Trap not implemented.\n", __func__);
+        return 0;
+    }
+
+    uint32_t quotient = dividend / divisor;
+    uint16_t remainder = dividend % divisor;
+
+    context->state.ccr_overflow = quotient > 0xffff;
+    context->state.ccr_carry = 0;
+
+    if (context->state.ccr_overflow)
+    {
+        context->state.ccr_negative = true;
+        context->state.ccr_zero = false;
+    }
+    else
+    {
+        context->state.ccr_zero = (quotient == 0);
+        context->state.ccr_negative = (quotient >= 0x8000);
+        context->state.d [dest_reg].w_low = quotient;
+        context->state.d [dest_reg].w_high = remainder;
+    }
+
+    printf ("divu.w d%d ← d%d ÷ -(a%d)\n", dest_reg, dest_reg, source_reg);
+    return 0;
+}
+
+
+/* divu.w Dn ← Dn ÷ d(An) */
+static uint32_t m68k_80e8_divu_w_dn_dan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+    int16_t displacement = read_extension (context);
+
+    uint32_t dividend = context->state.d [dest_reg].l;
+    uint32_t divisor = read_word (context, context->state.a [source_reg] + displacement);
+
+    if (divisor == 0)
+    {
+        printf ("[%s] Division by zero - Trap not implemented.\n", __func__);
+        return 0;
+    }
+
+    uint32_t quotient = dividend / divisor;
+    uint16_t remainder = dividend % divisor;
+
+    context->state.ccr_overflow = quotient > 0xffff;
+    context->state.ccr_carry = 0;
+
+    if (context->state.ccr_overflow)
+    {
+        context->state.ccr_negative = true;
+        context->state.ccr_zero = false;
+    }
+    else
+    {
+        context->state.ccr_zero = (quotient == 0);
+        context->state.ccr_negative = (quotient >= 0x8000);
+        context->state.d [dest_reg].w_low = quotient;
+        context->state.d [dest_reg].w_high = remainder;
+    }
+
+    printf ("divu.w d%d ← d%d ÷ %04x(a%d)\n", dest_reg, dest_reg, displacement, source_reg);
+    return 0;
+}
+
+
+/* divu.w Dn ← Dn ÷ d(An+Xi) */
+static uint32_t m68k_80f0_divu_w_dn_danxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint32_t dividend = context->state.d [dest_reg].l;
+    uint32_t divisor = read_word_with_index (context, context->state.a [source_reg]);
+
+    if (divisor == 0)
+    {
+        printf ("[%s] Division by zero - Trap not implemented.\n", __func__);
+        return 0;
+    }
+
+    uint32_t quotient = dividend / divisor;
+    uint16_t remainder = dividend % divisor;
+
+    context->state.ccr_overflow = quotient > 0xffff;
+    context->state.ccr_carry = 0;
+
+    if (context->state.ccr_overflow)
+    {
+        context->state.ccr_negative = true;
+        context->state.ccr_zero = false;
+    }
+    else
+    {
+        context->state.ccr_zero = (quotient == 0);
+        context->state.ccr_negative = (quotient >= 0x8000);
+        context->state.d [dest_reg].w_low = quotient;
+        context->state.d [dest_reg].w_high = remainder;
+    }
+
+    printf ("divu.w d%d ← d%d ÷ d(a%d+Xi)\n", dest_reg, dest_reg, source_reg);
+    return 0;
+}
+
+
+/* divu.w Dn ← Dn ÷ (xxx.w) */
+static uint32_t m68k_80f8_divu_w_dn_aw (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint32_t dividend = context->state.d [dest_reg].l;
+    uint32_t divisor = read_word_aw (context);
+
+    if (divisor == 0)
+    {
+        printf ("[%s] Division by zero - Trap not implemented.\n", __func__);
+        return 0;
+    }
+
+    uint32_t quotient = dividend / divisor;
+    uint16_t remainder = dividend % divisor;
+
+    context->state.ccr_overflow = quotient > 0xffff;
+    context->state.ccr_carry = 0;
+
+    if (context->state.ccr_overflow)
+    {
+        context->state.ccr_negative = true;
+        context->state.ccr_zero = false;
+    }
+    else
+    {
+        context->state.ccr_zero = (quotient == 0);
+        context->state.ccr_negative = (quotient >= 0x8000);
+        context->state.d [dest_reg].w_low = quotient;
+        context->state.d [dest_reg].w_high = remainder;
+    }
+
+    printf ("divu.w d%d ← d%d ÷ (xxx.w)\n", dest_reg, dest_reg);
+    return 0;
+}
+
+
+/* divu.w Dn ← Dn ÷ (xxx.l) */
+static uint32_t m68k_80f9_divu_w_dn_al (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint32_t dividend = context->state.d [dest_reg].l;
+    uint32_t divisor = read_word_al (context);
+
+    if (divisor == 0)
+    {
+        printf ("[%s] Division by zero - Trap not implemented.\n", __func__);
+        return 0;
+    }
+
+    uint32_t quotient = dividend / divisor;
+    uint16_t remainder = dividend % divisor;
+
+    context->state.ccr_overflow = quotient > 0xffff;
+    context->state.ccr_carry = 0;
+
+    if (context->state.ccr_overflow)
+    {
+        context->state.ccr_negative = true;
+        context->state.ccr_zero = false;
+    }
+    else
+    {
+        context->state.ccr_zero = (quotient == 0);
+        context->state.ccr_negative = (quotient >= 0x8000);
+        context->state.d [dest_reg].w_low = quotient;
+        context->state.d [dest_reg].w_high = remainder;
+    }
+
+    printf ("divu.w d%d ← d%d ÷ (xxx.l)\n", dest_reg, dest_reg);
+    return 0;
+}
+
+
+/* divu.w Dn ← Dn ÷ d(PC) */
+static uint32_t m68k_80fa_divu_w_dn_dpc (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+    uint32_t pc = context->state.pc;
+    int16_t displacement = read_extension (context);
+
+    uint32_t dividend = context->state.d [dest_reg].l;
+    uint32_t divisor = read_word (context, pc + displacement);
+
+    if (divisor == 0)
+    {
+        printf ("[%s] Division by zero - Trap not implemented.\n", __func__);
+        return 0;
+    }
+
+    uint32_t quotient = dividend / divisor;
+    uint16_t remainder = dividend % divisor;
+
+    context->state.ccr_overflow = quotient > 0xffff;
+    context->state.ccr_carry = 0;
+
+    if (context->state.ccr_overflow)
+    {
+        context->state.ccr_negative = true;
+        context->state.ccr_zero = false;
+    }
+    else
+    {
+        context->state.ccr_zero = (quotient == 0);
+        context->state.ccr_negative = (quotient >= 0x8000);
+        context->state.d [dest_reg].w_low = quotient;
+        context->state.d [dest_reg].w_high = remainder;
+    }
+
+    printf ("divu.w d%d ← d%d ÷ %04x(PC)\n", dest_reg, dest_reg, displacement);
+    return 0;
+}
+
+
+/* divu.w Dn ← Dn ÷ d(PC+Xi) */
+static uint32_t m68k_80fb_divu_w_dn_dpcxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint32_t dividend = context->state.d [dest_reg].l;
+    uint32_t divisor = read_word_with_index (context, context->state.pc);
+
+    if (divisor == 0)
+    {
+        printf ("[%s] Division by zero - Trap not implemented.\n", __func__);
+        return 0;
+    }
+
+    uint32_t quotient = dividend / divisor;
+    uint16_t remainder = dividend % divisor;
+
+    context->state.ccr_overflow = quotient > 0xffff;
+    context->state.ccr_carry = 0;
+
+    if (context->state.ccr_overflow)
+    {
+        context->state.ccr_negative = true;
+        context->state.ccr_zero = false;
+    }
+    else
+    {
+        context->state.ccr_zero = (quotient == 0);
+        context->state.ccr_negative = (quotient >= 0x8000);
+        context->state.d [dest_reg].w_low = quotient;
+        context->state.d [dest_reg].w_high = remainder;
+    }
+
+    printf ("divu.w d%d ← d%d ÷ d(PC+Xi)\n", dest_reg, dest_reg);
+    return 0;
+}
+
+
+/* divu.w Dn ← Dn ÷ #xxxx */
+static uint32_t m68k_80fc_divu_w_dn_imm (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint32_t dividend = context->state.d [dest_reg].l;
+    uint32_t divisor = read_extension (context);
+
+    if (divisor == 0)
+    {
+        printf ("[%s] Division by zero - Trap not implemented.\n", __func__);
+        return 0;
+    }
+
+    uint32_t quotient = dividend / divisor;
+    uint16_t remainder = dividend % divisor;
+
+    context->state.ccr_overflow = quotient > 0xffff;
+    context->state.ccr_carry = 0;
+
+    if (context->state.ccr_overflow)
+    {
+        context->state.ccr_negative = true;
+        context->state.ccr_zero = false;
+    }
+    else
+    {
+        context->state.ccr_zero = (quotient == 0);
+        context->state.ccr_negative = (quotient >= 0x8000);
+        context->state.d [dest_reg].w_low = quotient;
+        context->state.d [dest_reg].w_high = remainder;
+    }
+
+    printf ("divu.w d%d ← d%d ÷ %d\n", dest_reg, dest_reg, divisor);
+    return 0;
+}
+
+
 /* or.b d(An) ← d(An) | Dn */
 static uint32_t m68k_8128_or_b_dan_dn (M68000_Context *context, uint16_t instruction)
 {
@@ -7626,7 +8016,17 @@ static void m68k_init_instructions (void)
         for (uint16_t ea = 0; ea < 8; ea++)
         {
             m68k_instruction [0x80c0 | (reg << 9) | ea] = m68k_80c0_divu_w_dn_dn;
+            m68k_instruction [0x80d0 | (reg << 9) | ea] = m68k_80d0_divu_w_dn_an;
+            m68k_instruction [0x80d8 | (reg << 9) | ea] = m68k_80d8_divu_w_dn_anp;
+            m68k_instruction [0x80e0 | (reg << 9) | ea] = m68k_80e0_divu_w_dn_pan;
+            m68k_instruction [0x80e8 | (reg << 9) | ea] = m68k_80e8_divu_w_dn_dan;
+            m68k_instruction [0x80f0 | (reg << 9) | ea] = m68k_80f0_divu_w_dn_danxi;
         }
+        m68k_instruction [0x80f8 | (reg << 9)] = m68k_80f8_divu_w_dn_aw;
+        m68k_instruction [0x80f9 | (reg << 9)] = m68k_80f9_divu_w_dn_al;
+        m68k_instruction [0x80fa | (reg << 9)] = m68k_80fa_divu_w_dn_dpc;
+        m68k_instruction [0x80fb | (reg << 9)] = m68k_80fb_divu_w_dn_dpcxi;
+        m68k_instruction [0x80fc | (reg << 9)] = m68k_80fc_divu_w_dn_imm;
         m68k_instruction [0x81fc | (reg << 9)] = m68k_81fc_divs_w_dn_imm;
     }
 
