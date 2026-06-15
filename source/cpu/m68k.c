@@ -5561,7 +5561,7 @@ static uint32_t m68k_80c0_divu_w_dn_dn (M68000_Context *context, uint16_t instru
     uint16_t dest_reg = (instruction >> 9) & 0x07;
 
     uint32_t dividend = context->state.d [dest_reg].l;
-    uint16_t divisor = context->state.d [source_reg].w;
+    uint32_t divisor = context->state.d [source_reg].w;
 
     if (divisor == 0)
     {
@@ -5569,16 +5569,21 @@ static uint32_t m68k_80c0_divu_w_dn_dn (M68000_Context *context, uint16_t instru
         return 0;
     }
 
-    int32_t quotient = dividend / divisor;
+    uint32_t quotient = dividend / divisor;
     uint16_t remainder = dividend % divisor;
 
-    context->state.ccr_negative = (quotient < 0);
-    context->state.ccr_zero = (quotient == 0);
-    context->state.ccr_overflow = quotient > 32767 || quotient < -32768;
+    context->state.ccr_overflow = quotient > 0xffff;
     context->state.ccr_carry = 0;
 
-    if (!context->state.ccr_overflow)
+    if (context->state.ccr_overflow)
     {
+        context->state.ccr_negative = true;
+        context->state.ccr_zero = false;
+    }
+    else
+    {
+        context->state.ccr_zero = (quotient == 0);
+        context->state.ccr_negative = (quotient >= 0x8000);
         context->state.d [dest_reg].w_low = quotient;
         context->state.d [dest_reg].w_high = remainder;
     }
@@ -5613,7 +5618,7 @@ static uint32_t m68k_81fc_divs_w_dn_imm (M68000_Context *context, uint16_t instr
     uint16_t dest_reg = (instruction >> 9) & 0x07;
 
     int32_t dividend = context->state.d [dest_reg].l;
-    int16_t divisor = read_extension (context);
+    int32_t divisor = (int16_t) read_extension (context);
 
     if (divisor == 0)
     {
@@ -5624,13 +5629,18 @@ static uint32_t m68k_81fc_divs_w_dn_imm (M68000_Context *context, uint16_t instr
     int32_t quotient = dividend / divisor;
     int16_t remainder = dividend % divisor;
 
-    context->state.ccr_negative = (quotient < 0);
-    context->state.ccr_zero = (quotient == 0);
     context->state.ccr_overflow = quotient > 32767 || quotient < -32768;
     context->state.ccr_carry = 0;
 
-    if (!context->state.ccr_overflow)
+    if (context->state.ccr_overflow)
     {
+        context->state.ccr_negative = true;
+        context->state.ccr_zero = false;
+    }
+    else
+    {
+        context->state.ccr_negative = (quotient < 0);
+        context->state.ccr_zero = (quotient == 0);
         context->state.d [dest_reg].w_low = quotient;
         context->state.d [dest_reg].w_high = remainder;
     }
