@@ -722,13 +722,136 @@ static uint32_t m68k_0238_andi_b_aw (M68000_Context *context, uint16_t instructi
 static uint32_t m68k_0240_andi_w_dn (M68000_Context *context, uint16_t instruction)
 {
     uint16_t reg = instruction & 0x07;
-    uint16_t imm = read_extension (context);
 
-    uint16_t result = context->state.d [reg].w & imm;
+    uint16_t b = read_extension (context);
+    uint16_t a = context->state.d [reg].w;
+
+    uint16_t result = a & b;
     context->state.d [reg].w = result;
     m68k_move_w_flags (context, result);
 
-    printf ("andi.w d%d ← #%04x\n", reg, imm);
+    printf ("andi.w d%d ← #%04x\n", reg, b);
+    return 0;
+}
+
+
+/* andi.w (An) ← (An) & #xxxx */
+static uint32_t m68k_0250_andi_w_an (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    uint16_t b = read_extension (context);
+    uint16_t a = read_word (context, context->state.a [reg]);
+
+    uint16_t result = a & b;
+    write_word (context, context->state.a [reg], result);
+    m68k_move_w_flags (context, result);
+
+    printf ("andi.w (a%d) ← #%04x\n", reg, b);
+    return 0;
+}
+
+
+/* andi.w (An)+ ← (An)+ & #xxxx */
+static uint32_t m68k_0258_andi_w_anp (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    uint16_t b = read_extension (context);
+    uint16_t a = read_word (context, context->state.a [reg]);
+
+    uint16_t result = a & b;
+    write_word (context, context->state.a [reg], result);
+    context->state.a [reg] += 2;
+    m68k_move_w_flags (context, result);
+
+    printf ("andi.w (a%d)+ ← #%04x\n", reg, b);
+    return 0;
+}
+
+
+/* andi.w -(An) ← -(An) & #xxxx */
+static uint32_t m68k_0260_andi_w_pan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    context->state.a [reg] -= 2;
+
+    uint16_t b = read_extension (context);
+    uint16_t a = read_word (context, context->state.a [reg]);
+
+    uint16_t result = a & b;
+    write_word (context, context->state.a [reg], result);
+    m68k_move_w_flags (context, result);
+
+    printf ("andi.w -(a%d) ← #%04x\n", reg, b);
+    return 0;
+}
+
+
+/* andi.w d(An) ← d(An) & #xxxx */
+static uint32_t m68k_0268_andi_w_dan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    uint16_t b = read_extension (context);
+    int16_t displacement = read_extension (context);
+    uint16_t a = read_word (context, context->state.a [reg] + displacement);
+
+    uint16_t result = a & b;
+    write_word (context, context->state.a [reg] + displacement, result);
+    m68k_move_w_flags (context, result);
+
+    printf ("andi.w %04x(a%d) ← #%04x\n", displacement, reg, b);
+    return 0;
+}
+
+
+/* andi.w d(An+Xi) ← d(An+Xi) & #xxxx */
+static uint32_t m68k_0270_andi_w_danxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    uint16_t b = read_extension (context);
+    uint32_t address = address_with_index (context, context->state.a [reg]);
+    uint16_t a = read_word (context, address);
+
+    uint16_t result = a & b;
+    write_word (context, address, result);
+    m68k_move_w_flags (context, result);
+
+    printf ("andi.w d(a%d+Xi) ← #%04x\n", reg, b);
+    return 0;
+}
+
+
+/* andi.w (xxx.w) ← (xxx.w) & #xxxx */
+static uint32_t m68k_0278_andi_w_aw (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t b = read_extension (context);
+    uint32_t address = (int16_t) read_extension (context);
+    uint16_t a = read_word (context, address);
+
+    uint16_t result = a & b;
+    write_word (context, address, result);
+    m68k_move_w_flags (context, result);
+
+    printf ("andi.w (xxx.w) ← #%04x\n", b);
+    return 0;
+}
+
+
+/* andi.w (xxx.l) ← (xxx.l) & #xxxx */
+static uint32_t m68k_0279_andi_w_al (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t b = read_extension (context);
+    uint32_t address = read_extension_long (context);
+    uint16_t a = read_word (context, address);
+
+    uint16_t result = a & b;
+    write_word (context, address, result);
+    m68k_move_w_flags (context, result);
+
+    printf ("andi.w (xxx.l) ← #%04x\n", b);
     return 0;
 }
 
@@ -2726,7 +2849,7 @@ static uint32_t m68k_21fb_move_l_aw_dpcxi (M68000_Context *context, uint16_t ins
     write_long_aw (context, value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.w (xxx.w) ← d(PC+Xi)\n");
+    printf ("move.l (xxx.w) ← d(PC+Xi)\n");
     return 0;
 }
 
@@ -8029,6 +8152,11 @@ static void m68k_init_instructions (void)
         m68k_instruction [0x0200 | reg] = m68k_0200_andi_b_dn;
         m68k_instruction [0x0228 | reg] = m68k_0228_andi_b_dan;
         m68k_instruction [0x0240 | reg] = m68k_0240_andi_w_dn;
+        m68k_instruction [0x0250 | reg] = m68k_0250_andi_w_an;
+        m68k_instruction [0x0258 | reg] = m68k_0258_andi_w_anp;
+        m68k_instruction [0x0260 | reg] = m68k_0260_andi_w_pan;
+        m68k_instruction [0x0268 | reg] = m68k_0268_andi_w_dan;
+        m68k_instruction [0x0270 | reg] = m68k_0270_andi_w_danxi;
         m68k_instruction [0x0400 | reg] = m68k_0400_subi_b_dn;
         m68k_instruction [0x0410 | reg] = m68k_0410_subi_b_an;
         m68k_instruction [0x0418 | reg] = m68k_0418_subi_b_anp;
@@ -8063,6 +8191,8 @@ static void m68k_init_instructions (void)
     }
     m68k_instruction [0x0038] = m68k_0038_ori_b_aw;
     m68k_instruction [0x0238] = m68k_0238_andi_b_aw;
+    m68k_instruction [0x0278] = m68k_0278_andi_w_aw;
+    m68k_instruction [0x0279] = m68k_0279_andi_w_al;
     m68k_instruction [0x0438] = m68k_0438_subi_b_aw;
     m68k_instruction [0x0439] = m68k_0439_subi_b_al;
     m68k_instruction [0x0478] = m68k_0478_subi_w_aw;
