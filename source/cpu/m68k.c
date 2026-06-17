@@ -1554,7 +1554,7 @@ static uint32_t m68k_0840_bchg_l_dn_imm (M68000_Context *context, uint16_t instr
 
 
 /* bchg.b d(An) [#xx] */
-static uint32_t m68k_0868_bcgh_b_dan_imm (M68000_Context *context, uint16_t instruction)
+static uint32_t m68k_0868_bchg_b_dan_imm (M68000_Context *context, uint16_t instruction)
 {
     uint16_t reg = instruction & 0x07;
     uint16_t bit = read_extension (context) & 0x07;
@@ -2149,7 +2149,7 @@ static uint32_t m68k_10d8_move_b_anp_anp (M68000_Context *context, uint16_t inst
 
 
 /* move.b (An)+ ← #xxxx */
-static uint32_t m68k_30fc_move_b_anp_imm (M68000_Context *context, uint16_t instruction)
+static uint32_t m68k_10fc_move_b_anp_imm (M68000_Context *context, uint16_t instruction)
 {
     uint16_t dest_reg = (instruction >> 9) & 0x07;
 
@@ -8292,7 +8292,7 @@ static void m68k_init_instructions (void)
         m68k_instruction [0x0828 | data_reg] = m68k_0828_btst_b_dan_imm;
         m68k_instruction [0x0830 | data_reg] = m68k_0830_btst_b_danxi_imm;
         m68k_instruction [0x0840 | data_reg] = m68k_0840_bchg_l_dn_imm;
-        m68k_instruction [0x0868 | data_reg] = m68k_0868_bcgh_b_dan_imm;
+        m68k_instruction [0x0868 | data_reg] = m68k_0868_bchg_b_dan_imm;
         m68k_instruction [0x0880 | data_reg] = m68k_0880_bclr_l_dn_imm;
         m68k_instruction [0x0890 | data_reg] = m68k_0890_bclr_b_an_imm;
         m68k_instruction [0x08a8 | data_reg] = m68k_08a8_bclr_b_dan_imm;
@@ -8388,7 +8388,6 @@ static void m68k_init_instructions (void)
             m68k_instruction [0x10b0 | (reg_a << 9) | reg_b] = m68k_10b0_move_b_an_danxi;
             m68k_instruction [0x10c0 | (reg_a << 9) | reg_b] = m68k_10c0_move_b_anp_dn;
             m68k_instruction [0x10d8 | (reg_a << 9) | reg_b] = m68k_10d8_move_b_anp_anp;
-            m68k_instruction [0x10fc | (reg_a << 9) | reg_b] = m68k_30fc_move_b_anp_imm;
             m68k_instruction [0x1140 | (reg_a << 9) | reg_b] = m68k_1140_move_b_dan_dn;
             m68k_instruction [0x1150 | (reg_a << 9) | reg_b] = m68k_1150_move_b_dan_an;
             m68k_instruction [0x1158 | (reg_a << 9) | reg_b] = m68k_1158_move_b_dan_anp;
@@ -8455,6 +8454,7 @@ static void m68k_init_instructions (void)
         m68k_instruction [0x103b | (reg_a << 9)] = m68k_103b_move_b_dn_dpcxi;
         m68k_instruction [0x103c | (reg_a << 9)] = m68k_103c_move_b_dn_imm;
         m68k_instruction [0x10bc | (reg_a << 9)] = m68k_10bc_move_b_an_imm;
+        m68k_instruction [0x10fc | (reg_a << 9)] = m68k_10fc_move_b_anp_imm;
         m68k_instruction [0x1178 | (reg_a << 9)] = m68k_1178_move_b_dan_aw;
         m68k_instruction [0x117c | (reg_a << 9)] = m68k_117c_move_b_dan_imm;
         m68k_instruction [0x11c0 | reg_a       ] = m68k_11c0_move_b_aw_dn;
