@@ -1730,17 +1730,140 @@ static uint32_t m68k_08f8_bset_b_aw_imm (M68000_Context *context, uint16_t instr
 }
 
 
+/* eori.b Dn ← Dn ^ #xx */
+static uint32_t m68k_0a00_eori_b_dn (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    uint8_t b = read_extension (context);
+    uint8_t a = context->state.d [reg].b;
+
+    uint8_t result = a ^ b;
+    context->state.d [reg].b = result;
+    m68k_move_b_flags (context, result);
+
+    printf ("eori.b d%d ← #%02x\n", reg, b);
+    return 0;
+}
+
+
+/* eori.b (An) ← (An) ^ #xx */
+static uint32_t m68k_0a10_eori_b_an (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    uint8_t b = read_extension (context);
+    uint8_t a = read_byte (context, context->state.a [reg]);
+
+    uint8_t result = a ^ b;
+    write_byte (context, context->state.a [reg], result);
+    m68k_move_b_flags (context, result);
+
+    printf ("eori.b (a%d) ← #%02x\n", reg, b);
+    return 0;
+}
+
+
+/* eori.b (An)+ ← (An)+ ^ #xx */
+static uint32_t m68k_0a18_eori_b_anp (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    uint8_t b = read_extension (context);
+    uint8_t a = read_byte (context, context->state.a [reg]);
+
+    uint8_t result = a ^ b;
+    write_byte (context, context->state.a [reg], result);
+    context->state.a [reg] += (reg == 7) ? 2 : 1;
+    m68k_move_b_flags (context, result);
+
+    printf ("eori.b (a%d)+ ← #%02x\n", reg, b);
+    return 0;
+}
+
+
+/* eori.b -(An) ← -(An) ^ #xx */
+static uint32_t m68k_0a20_eori_b_pan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    context->state.a [reg] -= (reg == 7) ? 2 : 1;
+
+    uint8_t b = read_extension (context);
+    uint8_t a = read_byte (context, context->state.a [reg]);
+
+    uint8_t result = a ^ b;
+    write_byte (context, context->state.a [reg], result);
+    m68k_move_b_flags (context, result);
+
+    printf ("eori.b -(a%d) ← #%02x\n", reg, b);
+    return 0;
+}
+
+
+/* eori.b d(An) ← d(An) ^ #xx */
+static uint32_t m68k_0a28_eori_b_dan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    uint8_t b = read_extension (context);
+    uint32_t address = context->state.a [reg] + (int16_t) read_extension (context);
+    uint8_t a = read_byte (context, address);
+
+    uint8_t result = a ^ b;
+    write_byte (context, address, result);
+    m68k_move_b_flags (context, result);
+
+    printf ("eori.b d(a%d) ← #%02x\n", reg, b);
+    return 0;
+}
+
+
+/* eori.b d(An+Xi) ← d(An+Xi) ^ #xx */
+static uint32_t m68k_0a30_eori_b_danxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    uint8_t b = read_extension (context);
+    uint32_t address = address_with_index (context, context->state.a [reg]);
+    uint8_t a = read_byte (context, address);
+
+    uint8_t result = a ^ b;
+    write_byte (context, address, result);
+    m68k_move_b_flags (context, result);
+
+    printf ("eori.b d(a%d+Xi) ← #%02x\n", reg, b);
+    return 0;
+}
+
+
 /* eori.b (xxx.w) ← (xxx.w) ^ #xx */
 static uint32_t m68k_0a38_eori_b_aw (M68000_Context *context, uint16_t instruction)
 {
-    uint8_t imm = read_extension (context);
-    int16_t addr = read_extension (context);
+    uint8_t b = read_extension (context);
+    uint32_t address = (int16_t) read_extension (context);
+    uint8_t a = read_byte (context, address);
 
-    uint8_t result = read_byte (context, (int32_t) addr) ^ imm;
-    write_byte (context, (int32_t) addr, result);
+    uint8_t result = a ^ b;
+    write_byte (context, address, result);
     m68k_move_b_flags (context, result);
 
-    printf ("eori.b (xxx.w) ← #%02x\n", imm & 0xff);
+    printf ("eori.b (xxx.w) ← #%02x\n", b);
+    return 0;
+}
+
+
+/* eori.b (xxx.l) ← (xxx.l) ^ #xx */
+static uint32_t m68k_0a39_eori_b_al (M68000_Context *context, uint16_t instruction)
+{
+    uint8_t b = read_extension (context);
+    uint32_t address = read_extension_long (context);
+    uint8_t a = read_byte (context, address);
+
+    uint8_t result = a ^ b;
+    write_byte (context, address, result);
+    m68k_move_b_flags (context, result);
+
+    printf ("eori.b (xxx.l) ← #%02x\n", b);
     return 0;
 }
 
@@ -8347,6 +8470,12 @@ static void m68k_init_instructions (void)
         m68k_instruction [0x0670 | reg] = m68k_0670_addi_w_danxi;
         m68k_instruction [0x0680 | reg] = m68k_0680_addi_l_dn;
         m68k_instruction [0x0698 | reg] = m68k_0698_addi_l_anp;
+        m68k_instruction [0x0a00 | reg] = m68k_0a00_eori_b_dn;
+        m68k_instruction [0x0a10 | reg] = m68k_0a10_eori_b_an;
+        m68k_instruction [0x0a18 | reg] = m68k_0a18_eori_b_anp;
+        m68k_instruction [0x0a20 | reg] = m68k_0a20_eori_b_pan;
+        m68k_instruction [0x0a28 | reg] = m68k_0a28_eori_b_dan;
+        m68k_instruction [0x0a30 | reg] = m68k_0a30_eori_b_danxi;
         m68k_instruction [0x0a40 | reg] = m68k_0a40_eori_w_dn;
         m68k_instruction [0x0a80 | reg] = m68k_0a80_eori_l_dn;
         m68k_instruction [0x0c00 | reg] = m68k_0c00_cmpi_b_dn;
@@ -8370,6 +8499,7 @@ static void m68k_init_instructions (void)
     m68k_instruction [0x0678] = m68k_0678_addi_w_aw;
     m68k_instruction [0x0679] = m68k_0679_addi_w_al;
     m68k_instruction [0x0a38] = m68k_0a38_eori_b_aw;
+    m68k_instruction [0x0a39] = m68k_0a39_eori_b_al;
     m68k_instruction [0x0c38] = m68k_0c38_cmpi_b_aw;
     m68k_instruction [0x0c78] = m68k_0c78_cmpi_w_aw;
 
