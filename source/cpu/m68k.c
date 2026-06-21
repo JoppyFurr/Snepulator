@@ -4581,6 +4581,71 @@ static uint32_t m68k_4440_neg_w_dn (M68000_Context *context, uint16_t instructio
 }
 
 
+/* neg.w (An) */
+static uint32_t m68k_4450_neg_w_an (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    uint16_t value = read_word (context, context->state.a [reg]);
+    uint16_t result = 0 - value;
+
+    write_word (context, context->state.a [reg], result);
+
+    context->state.ccr_negative = ((int16_t) result < 0);
+    context->state.ccr_zero = (result == 0);
+    context->state.ccr_overflow = ((int16_t) value == -32768);
+    context->state.ccr_carry = (result != 0);
+    context->state.ccr_extend = (result != 0);
+
+    printf ("neg.w (a%d)\n", reg);
+    return 0;
+}
+
+
+/* neg.w (An)+ */
+static uint32_t m68k_4458_neg_w_anp (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    uint16_t value = read_word (context, context->state.a [reg]);
+    uint16_t result = 0 - value;
+
+    write_word (context, context->state.a [reg], result);
+    context->state.a [reg] += 2;
+
+    context->state.ccr_negative = ((int16_t) result < 0);
+    context->state.ccr_zero = (result == 0);
+    context->state.ccr_overflow = ((int16_t) value == -32768);
+    context->state.ccr_carry = (result != 0);
+    context->state.ccr_extend = (result != 0);
+
+    printf ("neg.w (a%d)+\n", reg);
+    return 0;
+}
+
+
+/* neg.w -(An) */
+static uint32_t m68k_4460_neg_w_pan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    context->state.a [reg] -= 2;
+
+    uint16_t value = read_word (context, context->state.a [reg]);
+    uint16_t result = 0 - value;
+
+    write_word (context, context->state.a [reg], result);
+
+    context->state.ccr_negative = ((int16_t) result < 0);
+    context->state.ccr_zero = (result == 0);
+    context->state.ccr_overflow = ((int16_t) value == -32768);
+    context->state.ccr_carry = (result != 0);
+    context->state.ccr_extend = (result != 0);
+
+    printf ("neg.w -(a%d)\n", reg);
+    return 0;
+}
+
+
 /* neg.w d(An) */
 static uint32_t m68k_4468_neg_w_dan (M68000_Context *context, uint16_t instruction)
 {
@@ -4599,6 +4664,70 @@ static uint32_t m68k_4468_neg_w_dan (M68000_Context *context, uint16_t instructi
     context->state.ccr_extend = (result != 0);
 
     printf ("neg.w d(a%d)\n", reg);
+    return 0;
+}
+
+
+/* neg.w d(An+Xi) */
+static uint32_t m68k_4470_neg_w_danxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint32_t address = address_with_index (context, context->state.a [reg]);
+
+    uint16_t value = read_word (context, address);
+    uint16_t result = 0 - value;
+
+    write_word (context, address, result);
+
+    context->state.ccr_negative = ((int16_t) result < 0);
+    context->state.ccr_zero = (result == 0);
+    context->state.ccr_overflow = ((int16_t) value == -32768);
+    context->state.ccr_carry = (result != 0);
+    context->state.ccr_extend = (result != 0);
+
+    printf ("neg.w d(a%d+Xi)\n", reg);
+    return 0;
+}
+
+
+/* neg.w (xxx.w) */
+static uint32_t m68k_4478_neg_w_aw (M68000_Context *context, uint16_t instruction)
+{
+    uint32_t address = (int16_t) read_extension (context);
+
+    uint16_t value = read_word (context, address);
+    uint16_t result = 0 - value;
+
+    write_word (context, address, result);
+
+    context->state.ccr_negative = ((int16_t) result < 0);
+    context->state.ccr_zero = (result == 0);
+    context->state.ccr_overflow = ((int16_t) value == -32768);
+    context->state.ccr_carry = (result != 0);
+    context->state.ccr_extend = (result != 0);
+
+    printf ("neg.w (xxx.w)\n");
+    return 0;
+}
+
+
+/* neg.w (xxx.l) */
+static uint32_t m68k_4479_neg_w_al (M68000_Context *context, uint16_t instruction)
+{
+    uint32_t address = read_extension_long (context);
+
+    uint16_t value = read_word (context, address);
+    uint16_t result = 0 - value;
+
+    write_word (context, address, result);
+
+    context->state.ccr_negative = ((int16_t) result < 0);
+    context->state.ccr_zero = (result == 0);
+    context->state.ccr_overflow = ((int16_t) value == -32768);
+    context->state.ccr_carry = (result != 0);
+    context->state.ccr_extend = (result != 0);
+
+    printf ("neg.w (xxx.l)\n");
     return 0;
 }
 
@@ -9833,11 +9962,17 @@ static void m68k_init_instructions (void)
         m68k_instruction [0x4410 | reg] = m68k_4410_neg_b_an;
         m68k_instruction [0x4428 | reg] = m68k_4428_neg_b_dan;
         m68k_instruction [0x4440 | reg] = m68k_4440_neg_w_dn;
+        m68k_instruction [0x4450 | reg] = m68k_4450_neg_w_an;
+        m68k_instruction [0x4458 | reg] = m68k_4458_neg_w_anp;
+        m68k_instruction [0x4460 | reg] = m68k_4460_neg_w_pan;
         m68k_instruction [0x4468 | reg] = m68k_4468_neg_w_dan;
+        m68k_instruction [0x4470 | reg] = m68k_4470_neg_w_danxi;
         m68k_instruction [0x4840 | reg] = m68k_4840_swap_dn;
         m68k_instruction [0x4880 | reg] = m68k_4880_ext_w_dn;
         m68k_instruction [0x48c0 | reg] = m68k_48c0_ext_l_dn;
     }
+    m68k_instruction [0x4478] = m68k_4478_neg_w_aw;
+    m68k_instruction [0x4479] = m68k_4479_neg_w_al;
 
     /* addq / subq */
     for (uint16_t data = 0; data < 8; data++)
