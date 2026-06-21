@@ -102,66 +102,6 @@ static inline uint32_t read_extension_long (M68000_Context *context)
 
 
 /*
- * Read a byte from the immediate 16-bit address.
- */
-static inline uint8_t read_byte_aw (M68000_Context *context)
-{
-    int16_t addr = read_extension (context);
-    return read_byte (context, (int32_t) addr);
-}
-
-
-/*
- * Read a word from the immediate 16-bit address.
- */
-static inline uint16_t read_word_aw (M68000_Context *context)
-{
-    int16_t addr = read_extension (context);
-    return read_word (context, (int32_t) addr);
-}
-
-
-/*
- * Read a long from the immediate 16-bit address.
- */
-static inline uint32_t read_long_aw (M68000_Context *context)
-{
-    int16_t addr = read_extension (context);
-    return read_long (context, (int32_t) addr);
-}
-
-
-/*
- * Read a byte from the immediate 32-bit address.
- */
-static inline uint8_t read_byte_al (M68000_Context *context)
-{
-    uint32_t addr = read_extension_long (context);
-    return read_byte (context, addr);
-}
-
-
-/*
- * Read a word from the immediate 32-bit address.
- */
-static inline uint16_t read_word_al (M68000_Context *context)
-{
-    uint32_t addr = read_extension_long (context);
-    return read_word (context, addr);
-}
-
-
-/*
- * Read a long from the immediate 32-bit address.
- */
-static inline uint32_t read_long_al (M68000_Context *context)
-{
-    uint32_t addr = read_extension_long (context);
-    return read_long (context, addr);
-}
-
-
-/*
  * Calculate the address using displacement+index in 16-bit extension.
  *
  * Address is the sum of:
@@ -208,6 +148,15 @@ static inline uint8_t read_byte_with_index (M68000_Context *context, uint32_t ad
 
 
 /*
+ * Write a byte with indexing from the immediate 16-bit extension.
+ */
+static inline void write_byte_with_index (M68000_Context *context, uint32_t addr, uint8_t value)
+{
+    write_byte (context, address_with_index (context, addr), value);
+}
+
+
+/*
  * Read a word with indexing from the immediate 16-bit extension.
  */
 static inline uint16_t read_word_with_index (M68000_Context *context, uint32_t addr)
@@ -217,11 +166,39 @@ static inline uint16_t read_word_with_index (M68000_Context *context, uint32_t a
 
 
 /*
+ * Write a word with indexing from the immediate 16-bit extension.
+ */
+static inline void write_word_with_index (M68000_Context *context, uint32_t addr, uint16_t value)
+{
+    write_word (context, address_with_index (context, addr), value);
+}
+
+
+/*
  * Read a long with indexing from the immediate 16-bit extension.
  */
 static inline uint32_t read_long_with_index (M68000_Context *context, uint32_t addr)
 {
     return read_long (context, address_with_index (context, addr));
+}
+
+
+/*
+ * Write a long with indexing from the immediate 16-bit extension.
+ */
+static inline void write_long_with_index (M68000_Context *context, uint32_t addr, uint32_t value)
+{
+    write_long (context, address_with_index (context, addr), value);
+}
+
+
+/*
+ * Read a byte from the immediate 16-bit address.
+ */
+static inline uint8_t read_byte_aw (M68000_Context *context)
+{
+    int16_t addr = read_extension (context);
+    return read_byte (context, (int32_t) addr);
 }
 
 
@@ -236,12 +213,32 @@ static inline void write_byte_aw (M68000_Context *context, uint8_t value)
 
 
 /*
+ * Read a word from the immediate 16-bit address.
+ */
+static inline uint16_t read_word_aw (M68000_Context *context)
+{
+    int16_t addr = read_extension (context);
+    return read_word (context, (int32_t) addr);
+}
+
+
+/*
  * Write a word from the immediate 16-bit address.
  */
 static inline void write_word_aw (M68000_Context *context, uint16_t value)
 {
     int16_t addr = read_extension (context);
     write_word (context, (int32_t) addr, value);
+}
+
+
+/*
+ * Read a long from the immediate 16-bit address.
+ */
+static inline uint32_t read_long_aw (M68000_Context *context)
+{
+    int16_t addr = read_extension (context);
+    return read_long (context, (int32_t) addr);
 }
 
 
@@ -256,12 +253,32 @@ static inline void write_long_aw (M68000_Context *context, uint32_t value)
 
 
 /*
+ * Read a byte from the immediate 32-bit address.
+ */
+static inline uint8_t read_byte_al (M68000_Context *context)
+{
+    uint32_t addr = read_extension_long (context);
+    return read_byte (context, addr);
+}
+
+
+/*
  * Write a byte from the immediate 16-bit address.
  */
 static inline void write_byte_al (M68000_Context *context, uint8_t value)
 {
     uint32_t addr = read_extension_long (context);
     write_byte (context, addr, value);
+}
+
+
+/*
+ * Read a word from the immediate 32-bit address.
+ */
+static inline uint16_t read_word_al (M68000_Context *context)
+{
+    uint32_t addr = read_extension_long (context);
+    return read_word (context, addr);
 }
 
 
@@ -276,39 +293,22 @@ static inline void write_word_al (M68000_Context *context, uint16_t value)
 
 
 /*
+ * Read a long from the immediate 32-bit address.
+ */
+static inline uint32_t read_long_al (M68000_Context *context)
+{
+    uint32_t addr = read_extension_long (context);
+    return read_long (context, addr);
+}
+
+
+/*
  * Write a long from the immediate 16-bit address.
  */
 static inline void write_long_al (M68000_Context *context, uint32_t value)
 {
     uint32_t addr = read_extension_long (context);
     write_long (context, addr, value);
-}
-
-
-/*
- * Write a byte with indexing from the immediate 16-bit extension.
- */
-static inline void write_byte_with_index (M68000_Context *context, uint32_t addr, uint8_t value)
-{
-    write_byte (context, address_with_index (context, addr), value);
-}
-
-
-/*
- * Write a word with indexing from the immediate 16-bit extension.
- */
-static inline void write_word_with_index (M68000_Context *context, uint32_t addr, uint16_t value)
-{
-    write_word (context, address_with_index (context, addr), value);
-}
-
-
-/*
- * Write a long with indexing from the immediate 16-bit extension.
- */
-static inline void write_long_with_index (M68000_Context *context, uint32_t addr, uint32_t value)
-{
-    write_long (context, address_with_index (context, addr), value);
 }
 
 
