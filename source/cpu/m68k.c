@@ -1328,7 +1328,7 @@ static uint32_t m68k_04b8_subi_l_aw (M68000_Context *context, uint16_t instructi
 
 
 /* subi.l (xxx.l) ← (xxx.l) - #xxxxxxxx */
-static uint32_t m68k_04b8_subi_l_al (M68000_Context *context, uint16_t instruction)
+static uint32_t m68k_04b9_subi_l_al (M68000_Context *context, uint16_t instruction)
 {
     uint32_t b = read_extension_long (context);
     uint32_t address = read_extension_long (context);
@@ -9594,6 +9594,160 @@ static uint32_t m68k_e188_lsl_l_dn_imm (M68000_Context *context, uint16_t instru
 }
 
 
+/* asl.w (An) ← (An) << 1 */
+static uint32_t m68k_e1d0_asl_w_an (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint32_t address = context->state.a [reg];
+    uint16_t value = read_word (context, address);
+
+    context->state.ccr_carry = value >> 15;
+    context->state.ccr_extend = value >> 15;
+    context->state.ccr_overflow = (value >> 14) ^ (value >> 15);
+    value = value << 1;
+
+    context->state.ccr_negative = ((int16_t) value < 0);
+    context->state.ccr_zero = (value == 0);
+
+    write_word (context, address, value);
+
+    printf ("asl.w (a%d) << 1\n", reg);
+    return 0;
+}
+
+
+/* asl.w (An)+ ← (An)+ << 1 */
+static uint32_t m68k_e1d8_asl_w_anp (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint32_t address = context->state.a [reg];
+    context->state.a [reg] += 2;
+    uint16_t value = read_word (context, address);
+
+    context->state.ccr_carry = value >> 15;
+    context->state.ccr_extend = value >> 15;
+    context->state.ccr_overflow = (value >> 14) ^ (value >> 15);
+    value = value << 1;
+
+    context->state.ccr_negative = ((int16_t) value < 0);
+    context->state.ccr_zero = (value == 0);
+
+    write_word (context, address, value);
+
+    printf ("asl.w (a%d)+ << 1\n", reg);
+    return 0;
+}
+
+
+/* asl.w -(An) ← -(An) << 1 */
+static uint32_t m68k_e1e0_asl_w_pan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    context->state.a [reg] -= 2;
+    uint32_t address = context->state.a [reg];
+    uint16_t value = read_word (context, address);
+
+    context->state.ccr_carry = value >> 15;
+    context->state.ccr_extend = value >> 15;
+    context->state.ccr_overflow = (value >> 14) ^ (value >> 15);
+    value = value << 1;
+
+    context->state.ccr_negative = ((int16_t) value < 0);
+    context->state.ccr_zero = (value == 0);
+
+    write_word (context, address, value);
+
+    printf ("asl.w -(a%d) << 1\n", reg);
+    return 0;
+}
+
+
+/* asl.w d(An) ← d(An) << 1 */
+static uint32_t m68k_e1e8_asl_w_dan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint32_t address = address_with_displacement (context, context->state.a [reg]);
+    uint16_t value = read_word (context, address);
+
+    context->state.ccr_carry = value >> 15;
+    context->state.ccr_extend = value >> 15;
+    context->state.ccr_overflow = (value >> 14) ^ (value >> 15);
+    value = value << 1;
+
+    context->state.ccr_negative = ((int16_t) value < 0);
+    context->state.ccr_zero = (value == 0);
+
+    write_word (context, address, value);
+
+    printf ("asl.w d(a%d+Xi) << 1\n", reg);
+    return 0;
+}
+
+
+/* asl.w d(An+Xi) ← d(An+Xi) << 1 */
+static uint32_t m68k_e1f0_asl_w_danxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint32_t address = address_with_index (context, context->state.a [reg]);
+    uint16_t value = read_word (context, address);
+
+    context->state.ccr_carry = value >> 15;
+    context->state.ccr_extend = value >> 15;
+    context->state.ccr_overflow = (value >> 14) ^ (value >> 15);
+    value = value << 1;
+
+    context->state.ccr_negative = ((int16_t) value < 0);
+    context->state.ccr_zero = (value == 0);
+
+    write_word (context, address, value);
+
+    printf ("asl.w d(a%d+Xi) << 1\n", reg);
+    return 0;
+}
+
+
+/* asl.w (xxx.w) ← (xxx.w) << 1 */
+static uint32_t m68k_e1f8_asl_w_aw (M68000_Context *context, uint16_t instruction)
+{
+    uint32_t address = (int16_t) read_extension (context);
+    uint16_t value = read_word (context, address);
+
+    context->state.ccr_carry = value >> 15;
+    context->state.ccr_extend = value >> 15;
+    context->state.ccr_overflow = (value >> 14) ^ (value >> 15);
+    value = value << 1;
+
+    context->state.ccr_negative = ((int16_t) value < 0);
+    context->state.ccr_zero = (value == 0);
+
+    write_word (context, address, value);
+
+    printf ("asl.w (xxx.w) << 1\n");
+    return 0;
+}
+
+
+/* asl.w (xxx.l) ← (xxx.l) << 1 */
+static uint32_t m68k_e1f9_asl_w_al (M68000_Context *context, uint16_t instruction)
+{
+    uint32_t address = read_extension_long (context);
+    uint16_t value = read_word (context, address);
+
+    context->state.ccr_carry = value >> 15;
+    context->state.ccr_extend = value >> 15;
+    context->state.ccr_overflow = (value >> 14) ^ (value >> 15);
+    value = value << 1;
+
+    context->state.ccr_negative = ((int16_t) value < 0);
+    context->state.ccr_zero = (value == 0);
+
+    write_word (context, address, value);
+
+    printf ("asl.w (xxx.l) << 1\n");
+    return 0;
+}
+
+
 /*
  * Initialise the instruction array.
  */
@@ -9707,7 +9861,7 @@ static void m68k_init_instructions (void)
     m68k_instruction [0x0478] = m68k_0478_subi_w_aw;
     m68k_instruction [0x0479] = m68k_0479_subi_w_al;
     m68k_instruction [0x04b8] = m68k_04b8_subi_l_aw;
-    m68k_instruction [0x04b9] = m68k_04b8_subi_l_al;
+    m68k_instruction [0x04b9] = m68k_04b9_subi_l_al;
     m68k_instruction [0x0638] = m68k_0638_addi_b_aw;
     m68k_instruction [0x0639] = m68k_0639_addi_b_al;
     m68k_instruction [0x0678] = m68k_0678_addi_w_aw;
@@ -10278,9 +10432,15 @@ static void m68k_init_instructions (void)
             m68k_instruction [0xe180 | (count << 9) | reg] = m68k_e180_asl_l_dn_imm;
             m68k_instruction [0xe188 | (count << 9) | reg] = m68k_e188_lsl_l_dn_imm;
         }
-
         m68k_instruction [0xe0e8 | reg] = m68k_e0e8_asr_w_dan;
+        m68k_instruction [0xe1d0 | reg] = m68k_e1d0_asl_w_an;
+        m68k_instruction [0xe1d8 | reg] = m68k_e1d8_asl_w_anp;
+        m68k_instruction [0xe1e0 | reg] = m68k_e1e0_asl_w_pan;
+        m68k_instruction [0xe1e8 | reg] = m68k_e1e8_asl_w_dan;
+        m68k_instruction [0xe1f0 | reg] = m68k_e1f0_asl_w_danxi;
     }
+    m68k_instruction [0xe1f8] = m68k_e1f8_asl_w_aw;
+    m68k_instruction [0xe1f9] = m68k_e1f9_asl_w_al;
 
     /* An estimate of progress, note, opcodes beginning with 1010 and 1111
      * are unassigned, so are subtracted from the total number.. */
