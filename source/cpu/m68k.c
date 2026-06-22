@@ -4331,6 +4331,32 @@ static inline void m68k_clr_flags (M68000_Context *context)
 }
 
 
+/* clr.b Dn */
+static uint32_t m68k_4200_clr_d_an (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    context->state.d [reg].b = 0x00;
+    m68k_clr_flags (context);
+
+    printf ("clr.b (a%d)\n", reg);
+    return 0;
+}
+
+
+/* clr.b (An) */
+static uint32_t m68k_4210_clr_b_an (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    write_byte (context, context->state.a [reg], 0x00);
+    m68k_clr_flags (context);
+
+    printf ("clr.b (a%d)\n", reg);
+    return 0;
+}
+
+
 /* clr.b (An)+ */
 static uint32_t m68k_4218_clr_b_anp (M68000_Context *context, uint16_t instruction)
 {
@@ -4338,10 +4364,23 @@ static uint32_t m68k_4218_clr_b_anp (M68000_Context *context, uint16_t instructi
 
     write_byte (context, context->state.a [reg], 0x00);
     context->state.a [reg] += (reg == 7) ? 2 : 1;
-
     m68k_clr_flags (context);
 
     printf ("clr.b (a%d)+\n", reg);
+    return 0;
+}
+
+
+/* clr.b -(An) */
+static uint32_t m68k_4220_clr_b_pan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    context->state.a [reg] -= (reg == 7) ? 2 : 1;
+    write_byte (context, context->state.a [reg], 0x00);
+    m68k_clr_flags (context);
+
+    printf ("clr.b -(a%d)\n", reg);
     return 0;
 }
 
@@ -4359,6 +4398,19 @@ static uint32_t m68k_4228_clr_b_dan (M68000_Context *context, uint16_t instructi
 }
 
 
+/* clr.b d(An+Xi) */
+static uint32_t m68k_4230_clr_b_danxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    write_byte_with_index (context, context->state.a [reg], 0x00);
+    m68k_clr_flags (context);
+
+    printf ("clr.b d(a%d+Xi)\n", reg);
+    return 0;
+}
+
+
 /* clr.b (xxx.w) */
 static uint32_t m68k_4238_clr_b_aw (M68000_Context *context, uint16_t instruction)
 {
@@ -4366,6 +4418,17 @@ static uint32_t m68k_4238_clr_b_aw (M68000_Context *context, uint16_t instructio
     m68k_clr_flags (context);
 
     printf ("clr.b (xxx.w)\n");
+    return 0;
+}
+
+
+/* clr.b (xxx.l) */
+static uint32_t m68k_4239_clr_b_al (M68000_Context *context, uint16_t instruction)
+{
+    write_byte_al (context, 0x00);
+    m68k_clr_flags (context);
+
+    printf ("clr.b (xxx.l)\n");
     return 0;
 }
 
@@ -10094,8 +10157,12 @@ static void m68k_init_instructions (void)
     /* clr */
     for (uint16_t reg = 0; reg < 8; reg++)
     {
+        m68k_instruction [0x4200 | reg] = m68k_4200_clr_d_an;
+        m68k_instruction [0x4210 | reg] = m68k_4210_clr_b_an;
         m68k_instruction [0x4218 | reg] = m68k_4218_clr_b_anp;
+        m68k_instruction [0x4220 | reg] = m68k_4220_clr_b_pan;
         m68k_instruction [0x4228 | reg] = m68k_4228_clr_b_dan;
+        m68k_instruction [0x4230 | reg] = m68k_4230_clr_b_danxi;
         m68k_instruction [0x4268 | reg] = m68k_4268_clr_w_dan;
         m68k_instruction [0x4280 | reg] = m68k_4280_clr_l_dn;
         m68k_instruction [0x4290 | reg] = m68k_4290_clr_l_an;
@@ -10105,6 +10172,7 @@ static void m68k_init_instructions (void)
         m68k_instruction [0x42b0 | reg] = m68k_42b0_clr_l_danxi;
     }
     m68k_instruction [0x4238] = m68k_4238_clr_b_aw;
+    m68k_instruction [0x4239] = m68k_4239_clr_b_al;
     m68k_instruction [0x4278] = m68k_4278_clr_w_aw;
     m68k_instruction [0x42b8] = m68k_42b8_clr_l_aw;
     m68k_instruction [0x42b9] = m68k_42b9_clr_l_al;
