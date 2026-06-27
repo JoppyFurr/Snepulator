@@ -837,21 +837,101 @@ static uint32_t m68k_01c0_bset_l_dn_dn (M68000_Context *context, uint16_t instru
 }
 
 
-/* bset.l d(An+Xi) [Dn] */
-static uint32_t m68k_01f0_bset_b_danxi_dn (M68000_Context *context, uint16_t instruction)
+/* bset.b (An) [Dn] */
+static uint32_t m68k_01d0_bset_b_an_dn (M68000_Context *context, uint16_t instruction)
 {
     uint16_t data_reg = instruction & 0x07;
     uint16_t bit_reg = (instruction >> 9) & 0x07;
 
-    uint32_t addr = address_with_index (context, context->state.a [data_reg]);
-
-    uint8_t value = read_byte (context, addr);
+    uint8_t value = read_byte (context, context->state.a [data_reg]);
     uint32_t bit = context->state.d [bit_reg].l & 0x07;
 
     context->state.ccr_zero = !((value >> bit) & 0x01);
 
     value |= 1 << bit;
-    write_byte (context, addr, value);
+    write_byte (context, context->state.a [data_reg], value);
+
+    printf ("bset.b (a%d) [d%d]\n", data_reg, bit_reg);
+    return 0;
+}
+
+
+/* bset.b (An)+ [Dn] */
+static uint32_t m68k_01d8_bset_b_anp_dn (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t data_reg = instruction & 0x07;
+    uint16_t bit_reg = (instruction >> 9) & 0x07;
+
+    uint8_t value = read_byte (context, context->state.a [data_reg]);
+    uint32_t bit = context->state.d [bit_reg].l & 0x07;
+
+    context->state.ccr_zero = !((value >> bit) & 0x01);
+
+    value |= 1 << bit;
+    write_byte (context, context->state.a [data_reg], value);
+    context->state.a [data_reg] += (data_reg == 7) ? 2 : 1;
+
+    printf ("bset.b (a%d)+ [d%d]\n", data_reg, bit_reg);
+    return 0;
+}
+
+
+/* bset.b -(An) [Dn] */
+static uint32_t m68k_01e0_bset_b_pan_dn (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t data_reg = instruction & 0x07;
+    uint16_t bit_reg = (instruction >> 9) & 0x07;
+
+    context->state.a [data_reg] -= (data_reg == 7) ? 2 : 1;
+    uint8_t value = read_byte (context, context->state.a [data_reg]);
+    uint32_t bit = context->state.d [bit_reg].l & 0x07;
+
+    context->state.ccr_zero = !((value >> bit) & 0x01);
+
+    value |= 1 << bit;
+    write_byte (context, context->state.a [data_reg], value);
+
+    printf ("bset.b -(a%d) [d%d]\n", data_reg, bit_reg);
+    return 0;
+}
+
+
+/* bset.b d(An) [Dn] */
+static uint32_t m68k_01e8_bset_b_dan_dn (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t data_reg = instruction & 0x07;
+    uint16_t bit_reg = (instruction >> 9) & 0x07;
+
+    uint32_t address = address_with_displacement (context, context->state.a [data_reg]);
+
+    uint8_t value = read_byte (context, address);
+    uint32_t bit = context->state.d [bit_reg].l & 0x07;
+
+    context->state.ccr_zero = !((value >> bit) & 0x01);
+
+    value |= 1 << bit;
+    write_byte (context, address, value);
+
+    printf ("bset.b d(a%d) [d%d]\n", data_reg, bit_reg);
+    return 0;
+}
+
+
+/* bset.b d(An+Xi) [Dn] */
+static uint32_t m68k_01f0_bset_b_danxi_dn (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t data_reg = instruction & 0x07;
+    uint16_t bit_reg = (instruction >> 9) & 0x07;
+
+    uint32_t address = address_with_index (context, context->state.a [data_reg]);
+
+    uint8_t value = read_byte (context, address);
+    uint32_t bit = context->state.d [bit_reg].l & 0x07;
+
+    context->state.ccr_zero = !((value >> bit) & 0x01);
+
+    value |= 1 << bit;
+    write_byte (context, address, value);
 
     printf ("bset.b d(a%d+Xi) [d%d]\n", data_reg, bit_reg);
     return 0;
@@ -862,17 +942,36 @@ static uint32_t m68k_01f0_bset_b_danxi_dn (M68000_Context *context, uint16_t ins
 static uint32_t m68k_01f8_bset_b_aw_dn (M68000_Context *context, uint16_t instruction)
 {
     uint16_t bit_reg = (instruction >> 9) & 0x07;
-    int16_t addr = read_extension (context);
+    uint32_t address = (int16_t) read_extension (context);
 
-    uint8_t value = read_byte (context, addr);
+    uint8_t value = read_byte (context, address);
     uint32_t bit = context->state.d [bit_reg].l & 0x07;
 
     context->state.ccr_zero = !((value >> bit) & 0x01);
 
     value |= 1 << bit;
-    write_byte (context, addr, value);
+    write_byte (context, address, value);
 
     printf ("bset.b (xxx.w) [d%d]\n", bit_reg);
+    return 0;
+}
+
+
+/* bset.b (xxx.l) [Dn] */
+static uint32_t m68k_01f9_bset_b_al_dn (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t bit_reg = (instruction >> 9) & 0x07;
+    uint32_t address = read_extension_long (context);
+
+    uint8_t value = read_byte (context, address);
+    uint32_t bit = context->state.d [bit_reg].l & 0x07;
+
+    context->state.ccr_zero = !((value >> bit) & 0x01);
+
+    value |= 1 << bit;
+    write_byte (context, address, value);
+
+    printf ("bset.b (xxx.l) [d%d]\n", bit_reg);
     return 0;
 }
 
@@ -2291,6 +2390,23 @@ static uint32_t m68k_08b9_bclr_b_al_imm (M68000_Context *context, uint16_t instr
 }
 
 
+/* bset.l Dn [#xx] */
+static uint32_t m68k_08c0_bset_l_dn_imm (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint16_t bit = read_extension (context) & 0x1f;
+
+    uint32_t value = context->state.d [reg].l;
+    context->state.ccr_zero = !((value >> bit) & 0x00000001);
+
+    value |= 1 << bit;
+    context->state.d [reg].l = value;
+
+    printf ("bset.l d%d [#%x]\n", reg, bit);
+    return 0;
+}
+
+
 /* bset.b (An) [#xx] */
 static uint32_t m68k_08d0_bset_b_an_imm (M68000_Context *context, uint16_t instruction)
 {
@@ -2304,6 +2420,42 @@ static uint32_t m68k_08d0_bset_b_an_imm (M68000_Context *context, uint16_t instr
     write_byte (context, context->state.a [reg], value);
 
     printf ("bset.b (a%d) [#%x]\n", reg, bit);
+    return 0;
+}
+
+
+/* bset.b (An)+ [#xx] */
+static uint32_t m68k_08d8_bset_b_anp_imm (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint16_t bit = read_extension (context) & 0x07;
+
+    uint8_t value = read_byte (context, context->state.a [reg]);
+    context->state.ccr_zero = !((value >> bit) & 0x01);
+
+    value |= 1 << bit;
+    write_byte (context, context->state.a [reg], value);
+    context->state.a [reg] += (reg == 7) ? 2 : 1;
+
+    printf ("bset.b (a%d)+ [#%x]\n", reg, bit);
+    return 0;
+}
+
+
+/* bset.b -(An) [#xx] */
+static uint32_t m68k_08e0_bset_b_pan_imm (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint16_t bit = read_extension (context) & 0x07;
+
+    context->state.a [reg] -= (reg == 7) ? 2 : 1;
+    uint8_t value = read_byte (context, context->state.a [reg]);
+    context->state.ccr_zero = !((value >> bit) & 0x01);
+
+    value |= 1 << bit;
+    write_byte (context, context->state.a [reg], value);
+
+    printf ("bset.b -(a%d) [#%x]\n", reg, bit);
     return 0;
 }
 
@@ -2349,15 +2501,32 @@ static uint32_t m68k_08f0_bset_b_danxi_imm (M68000_Context *context, uint16_t in
 static uint32_t m68k_08f8_bset_b_aw_imm (M68000_Context *context, uint16_t instruction)
 {
     uint16_t bit = read_extension (context) & 0x07;
-    int16_t addr = read_extension (context);
+    uint32_t address = (int16_t) read_extension (context);
 
-    uint8_t value = read_byte (context, addr);
+    uint8_t value = read_byte (context, address);
     context->state.ccr_zero = !((value >> bit) & 0x01);
 
     value |= 1 << bit;
-    write_byte (context, addr, value);
+    write_byte (context, address, value);
 
     printf ("bset.b (xxx.w) [#%x]\n", bit);
+    return 0;
+}
+
+
+/* bset.b (xxx.l) [#xx] */
+static uint32_t m68k_08f9_bset_b_al_imm (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t bit = read_extension (context) & 0x07;
+    uint32_t address = read_extension_long (context);
+
+    uint8_t value = read_byte (context, address);
+    context->state.ccr_zero = !((value >> bit) & 0x01);
+
+    value |= 1 << bit;
+    write_byte (context, address, value);
+
+    printf ("bset.b (xxx.l) [#%x]\n", bit);
     return 0;
 }
 
@@ -11945,11 +12114,16 @@ static void m68k_init_instructions (void)
             m68k_instruction [0x01a8 | (bit_reg << 9) | data_reg] = m68k_01a8_bclr_b_dan_dn;
             m68k_instruction [0x01b0 | (bit_reg << 9) | data_reg] = m68k_01b0_bclr_b_danxi_dn;
             m68k_instruction [0x01c0 | (bit_reg << 9) | data_reg] = m68k_01c0_bset_l_dn_dn;
+            m68k_instruction [0x01d0 | (bit_reg << 9) | data_reg] = m68k_01d0_bset_b_an_dn;
+            m68k_instruction [0x01d8 | (bit_reg << 9) | data_reg] = m68k_01d8_bset_b_anp_dn;
+            m68k_instruction [0x01e0 | (bit_reg << 9) | data_reg] = m68k_01e0_bset_b_pan_dn;
+            m68k_instruction [0x01e8 | (bit_reg << 9) | data_reg] = m68k_01e8_bset_b_dan_dn;
             m68k_instruction [0x01f0 | (bit_reg << 9) | data_reg] = m68k_01f0_bset_b_danxi_dn;
         }
         m68k_instruction [0x01b8 | (data_reg << 9)] = m68k_01b8_bclr_b_aw_dn; /* actually the bit-register. */
         m68k_instruction [0x01b9 | (data_reg << 9)] = m68k_01b9_bclr_b_al_dn; /* actually the bit-register. */
         m68k_instruction [0x01f8 | (data_reg << 9)] = m68k_01f8_bset_b_aw_dn; /* actually the bit-register. */
+        m68k_instruction [0x01f9 | (data_reg << 9)] = m68k_01f9_bset_b_al_dn; /* actually the bit-register. */
         m68k_instruction [0x0800 | data_reg] = m68k_0800_btst_l_dn_imm;
         m68k_instruction [0x0810 | data_reg] = m68k_0810_btst_b_an_imm;
         m68k_instruction [0x0828 | data_reg] = m68k_0828_btst_b_dan_imm;
@@ -11962,7 +12136,10 @@ static void m68k_init_instructions (void)
         m68k_instruction [0x08a0 | data_reg] = m68k_08a0_bclr_b_pan_imm;
         m68k_instruction [0x08a8 | data_reg] = m68k_08a8_bclr_b_dan_imm;
         m68k_instruction [0x08b0 | data_reg] = m68k_08b0_bclr_b_danxi_imm;
+        m68k_instruction [0x08c0 | data_reg] = m68k_08c0_bset_l_dn_imm;
         m68k_instruction [0x08d0 | data_reg] = m68k_08d0_bset_b_an_imm;
+        m68k_instruction [0x08d8 | data_reg] = m68k_08d8_bset_b_anp_imm;
+        m68k_instruction [0x08e0 | data_reg] = m68k_08e0_bset_b_pan_imm;
         m68k_instruction [0x08e8 | data_reg] = m68k_08e8_bset_b_dan_imm;
         m68k_instruction [0x08f0 | data_reg] = m68k_08f0_bset_b_danxi_imm;
     }
@@ -11972,6 +12149,7 @@ static void m68k_init_instructions (void)
     m68k_instruction [0x08b8] = m68k_08b8_bclr_b_aw_imm;
     m68k_instruction [0x08b9] = m68k_08b9_bclr_b_al_imm;
     m68k_instruction [0x08f8] = m68k_08f8_bset_b_aw_imm;
+    m68k_instruction [0x08f9] = m68k_08f9_bset_b_al_imm;
 
     /* immediate */
     for (uint16_t reg = 0; reg < 8; reg++)
