@@ -5,7 +5,6 @@
  * TODO:
  *  - Instruction timing
  *  - Prefetch
- *  - User/Supervisor
  */
 
 #include <stdlib.h>
@@ -18,6 +17,34 @@
 #define SR_MASK 0xa71f
 
 static uint32_t (*m68k_instruction [SIZE_64K]) (M68000_Context *, uint16_t) = { };
+
+
+/*
+ * Save the current stack-pointer from state.a [7] into either state.ssp
+ * or state.usp. This is done before altering the supervisor bit.
+ */
+static inline void m68k_store_stack_pointer (M68000_Context *context)
+{
+    if (context->state.sr_supervisor)
+    {
+        context->state.ssp = context->state.a [7];
+    }
+    else
+    {
+        context->state.usp = context->state.a [7];
+    }
+}
+
+
+/*
+ * Load the current stack-pointer from either state.ssp or state.usp
+ * into state.a [7]. This is done after altering the supervisor bit.
+ */
+static inline void m68k_load_stack_pointer (M68000_Context *context)
+{
+    context->state.a [7] = (context->state.sr_supervisor) ? context->state.ssp
+                                                          : context->state.usp;
+}
 
 
 /*
@@ -377,6 +404,33 @@ static inline void write_long_al (M68000_Context *context, uint32_t value)
 {
     uint32_t address = read_extension_long (context);
     write_long (context, address, value);
+}
+
+
+/*
+ * Handle an m68k exception.
+ */
+static inline void m68k_exception (M68000_Context *context, uint32_t vector)
+{
+    uint16_t sr_was = context->state.sr;
+
+    m68k_store_stack_pointer (context);
+    context->state.sr_supervisor = 1;
+    m68k_load_stack_pointer (context);
+    context->state.sr_trace = 0;
+
+    /* Push the current PC to the stack */
+    context->state.a [7] -= 4;
+    write_long (context, context->state.a [7], context->state.pc);
+
+    /* Push the status register to the stack */
+    context->state.a [7] -= 2;
+    write_word (context, context->state.a [7], sr_was);
+
+    /* Update PC from vector table */
+    context->state.pc = read_long (context, vector);
+
+    context->clock_cycles -= 10; /* TODO - Work out the real timing */
 }
 
 
@@ -7926,19 +7980,23 @@ static uint32_t m68k_4680_not_l_dn (M68000_Context *context, uint16_t instructio
 
 
 /* move sr ← #xxxx */
-/* TODO: Privileged instruction. */
 static uint32_t m68k_46fc_move_sr_imm (M68000_Context *context, uint16_t instruction)
 {
-    uint16_t value = read_extension (context);
-
-    context->state.sr = value & SR_MASK;
-
-    if (!context->state.sr_supervisor)
+    if (context->state.sr_supervisor)
     {
-        snepulator_error ("M68000 Error", "User-mode not implemented");
+        uint16_t value = read_extension (context);
+        m68k_store_stack_pointer (context);
+        context->state.sr = value & SR_MASK;
+        m68k_load_stack_pointer (context);
+        printf ("move sr ← #%04x\n", value);
+    }
+    else
+    {
+        context->state.pc -= 2;
+        m68k_exception (context, 0x20);
+        printf ("move sr ← #---- (exception)\n");
     }
 
-    printf ("move sr ← #%04x\n", value);
     return 0;
 }
 
@@ -8407,12 +8465,19 @@ static uint32_t m68k_4cf8_movem_l_regs_aw (M68000_Context *context, uint16_t ins
 
 
 /* move usp ← An */
-/* TODO: Privileged instruction. */
 static uint32_t m68k_4e60_move_an_usp (M68000_Context *context, uint16_t instruction)
 {
     uint16_t reg = instruction & 0x07;
 
-    context->state.usp = context->state.a [reg];
+    if (context->state.sr_supervisor)
+    {
+        context->state.usp = context->state.a [reg];
+    }
+    else
+    {
+        context->state.pc -= 2;
+        m68k_exception (context, 0x20);
+    }
 
     printf ("move usp ← A%d\n", reg);
     return 0;
@@ -8420,12 +8485,19 @@ static uint32_t m68k_4e60_move_an_usp (M68000_Context *context, uint16_t instruc
 
 
 /* move An ← usp */
-/* TODO: Privileged instruction. */
 static uint32_t m68k_4e68_move_usp_an (M68000_Context *context, uint16_t instruction)
 {
     uint16_t reg = instruction & 0x07;
 
-    context->state.a [reg] = context->state.usp;
+    if (context->state.sr_supervisor)
+    {
+        context->state.a [reg] = context->state.usp;
+    }
+    else
+    {
+        context->state.pc -= 2;
+        m68k_exception (context, 0x20);
+    }
 
     printf ("move A%d ← usp\n", reg);
     return 0;
@@ -8443,11 +8515,23 @@ static uint32_t m68k_4e71_nop (M68000_Context *context, uint16_t instruction)
 /* rte */
 static uint32_t m68k_4e73_rte (M68000_Context *context, uint16_t instruction)
 {
-    context->state.sr = read_word (context, context->state.a [7]) & SR_MASK;
-    context->state.a[7] += 2;
+    if (context->state.sr_supervisor)
+    {
+        uint16_t new_sr = read_word (context, context->state.a [7]) & SR_MASK;
+        context->state.a [7] += 2;
 
-    context->state.pc = read_long (context, context->state.a [7]);
-    context->state.a[7] += 4;
+        context->state.pc = read_long (context, context->state.a [7]);
+        context->state.a [7] += 4;
+
+        m68k_store_stack_pointer (context);
+        context->state.sr = new_sr;
+        m68k_load_stack_pointer (context);
+    }
+    else
+    {
+        context->state.pc -= 2;
+        m68k_exception (context, 0x20);
+    }
 
     printf ("rte\n");
     return 0;
@@ -14170,25 +14254,8 @@ void m68k_run_cycles (M68000_Context *context, int64_t cycles)
         uint8_t interrupt = context->get_int (context->parent);
         if (interrupt > context->state.sr_interrupt_priority)
         {
-            uint16_t sr_was = context->state.sr;
-
-            context->state.sr_supervisor = 1;
-            context->state.sr_trace = 0;
+            m68k_exception (context, 0x60 + (interrupt << 2));
             context->state.sr_interrupt_priority = interrupt;
-
-            /* Push the current PC to the stack */
-            /* TODO: Consider inline helpers for push/pop operations */
-            context->state.a [7] -= 4;
-            write_long (context, context->state.a [7], context->state.pc);
-
-            /* Save status */
-            context->state.a [7] -= 2;
-            write_word (context, context->state.a [7], sr_was);
-
-            /* Update PC from vector table */
-            context->state.pc    = read_long (context, (24 + interrupt) << 2);
-
-            context->clock_cycles += 10; /* TODO - Work out the real timing */
 
             /* TODO: Investigate behaviour of interrupt acknowledgement. Right
              *       now, the VDP implementation just treats get_interrupt as

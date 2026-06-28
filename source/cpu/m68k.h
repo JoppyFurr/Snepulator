@@ -6,14 +6,13 @@
 /* Structs */
 typedef struct M68000_State_s {
 
-    /* TODO: The last address register, a[7] is used as the stack pointer.
-     *       There are actually two of it, one for the supervisor and one
-     *       for the user. If we switch between the two modes, we'll need
-     *       to swap the a[7] values. */
-    uint32_split_t d[8];
-    uint32_t a[8];
+    uint32_split_t d [8];
+    uint32_t a [8];
 
-    /* TODO: For now, we assume supervisor mode, so keep usp separate. */
+    /* The current stack-pointer lives in a [7]. When a change in
+     * the supervisor bit is detected, swap it out for the appropriate
+     * copy in here */
+    uint32_t ssp;
     uint32_t usp;
 
     union {
