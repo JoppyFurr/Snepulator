@@ -8477,6 +8477,18 @@ static uint32_t m68k_4cf8_movem_l_regs_aw (M68000_Context *context, uint16_t ins
 }
 
 
+/* trap */
+static uint32_t m68k_4e40_trap (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t vector = instruction & 0x0f;
+
+    m68k_exception (context, 0x80 + (vector << 2));
+
+    printf ("trap %d\n", vector);
+    return 0;
+}
+
+
 /* move usp ← An */
 static uint32_t m68k_4e60_move_an_usp (M68000_Context *context, uint16_t instruction)
 {
@@ -8558,6 +8570,19 @@ static uint32_t m68k_4e75_rts (M68000_Context *context, uint16_t instruction)
     context->state.a[7] += 4;
 
     printf ("rts\n");
+    return 0;
+}
+
+
+/* trapv */
+static uint32_t m68k_4e76_trapv (M68000_Context *context, uint16_t instruction)
+{
+    if (context->state.ccr_overflow)
+    {
+        m68k_exception (context, 0x1c);
+    }
+
+    printf ("trapv\n");
     return 0;
 }
 
@@ -14261,6 +14286,7 @@ static void m68k_init_instructions (void)
     m68k_instruction [0x4e71] = m68k_4e71_nop;
     m68k_instruction [0x4e73] = m68k_4e73_rte;
     m68k_instruction [0x4e75] = m68k_4e75_rts;
+    m68k_instruction [0x4e76] = m68k_4e76_trapv;
 
     /* jsr / jmp */
     for (uint16_t reg = 0; reg < 8; reg++)
@@ -14343,6 +14369,12 @@ static void m68k_init_instructions (void)
     }
     m68k_instruction [0x4478] = m68k_4478_neg_w_aw;
     m68k_instruction [0x4479] = m68k_4479_neg_w_al;
+
+    /* trap */
+    for (uint32_t vector = 0; vector < 16; vector++)
+    {
+        m68k_instruction [0x4e40 | vector] = m68k_4e40_trap;
+    }
 
     /* addq / subq */
     for (uint16_t data = 0; data < 8; data++)
