@@ -11232,6 +11232,17 @@ static uint32_t m68k_91b9_sub_l_al_dn (M68000_Context *context, uint16_t instruc
 }
 
 
+/* Unimplemented - Line-A */
+static uint32_t m68k_a000_line_a (M68000_Context *context, uint16_t instruction)
+{
+    context->state.pc -= 2;
+    m68k_exception (context, 0x28);
+
+    printf ("line-a exception %04x\n", instruction);
+    return 0;
+}
+
+
 /* cmp.b Dn - Dn */
 static uint32_t m68k_b000_cmp_b_dn_dn (M68000_Context *context, uint16_t instruction)
 {
@@ -13257,6 +13268,17 @@ static uint32_t m68k_e1f9_asl_w_al (M68000_Context *context, uint16_t instructio
 }
 
 
+/* Unimplemented - Line-F */
+static uint32_t m68k_f000_line_f (M68000_Context *context, uint16_t instruction)
+{
+    context->state.pc -= 2;
+    m68k_exception (context, 0x2c);
+
+    printf ("line-f exception %04x\n", instruction);
+    return 0;
+}
+
+
 /*
  * Initialise the instruction array.
  */
@@ -14012,6 +14034,12 @@ static void m68k_init_instructions (void)
         m68k_instruction [0x91b9 | (reg_a << 9)] = m68k_91b9_sub_l_al_dn;
     }
 
+    /* Line-A exception */
+    for (uint32_t i = 0x0000; i <= 0x0fff; i++)
+    {
+        m68k_instruction [0xa000 | i] = m68k_a000_line_a;
+    }
+
     /* cmp / cmpa */
     for (uint16_t reg = 0; reg < 8; reg++)
     {
@@ -14171,8 +14199,13 @@ static void m68k_init_instructions (void)
     m68k_instruction [0xe1f8] = m68k_e1f8_asl_w_aw;
     m68k_instruction [0xe1f9] = m68k_e1f9_asl_w_al;
 
-    /* An estimate of progress, note, opcodes beginning with 1010 and 1111
-     * are unassigned, so are subtracted from the total number.. */
+    /* Line-F exception */
+    for (uint32_t i = 0x0000; i <= 0x0fff; i++)
+    {
+        m68k_instruction [0xf000 | i] = m68k_f000_line_f;
+    }
+
+    /* An estimate of progress */
     uint32_t populated = 0;
     for (uint32_t i = 0; i < SIZE_64K; i++)
     {
@@ -14182,8 +14215,7 @@ static void m68k_init_instructions (void)
         }
     }
     printf ("[%s] %d of %d opcodes populated. (%2.1f%%)\n", __func__,
-            populated, SIZE_64K - 8192,
-            100.0 * (populated / (float) (SIZE_64K - 8192)));
+            populated, SIZE_64K, 100.0 * (populated / (float) SIZE_64K));
 }
 
 
