@@ -7369,6 +7369,19 @@ static uint32_t m68k_40c0_move_dn_sr (M68000_Context *context, uint16_t instruct
 }
 
 
+/* lea An ← (An) */
+static uint32_t m68k_41d0_lea_an (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    context->state.a [dest_reg] = context->state.a [source_reg];
+
+    printf ("lea a%d ← (a%d)\n", dest_reg, source_reg);
+    return 0;
+}
+
+
 /* lea An ← d(An) */
 static uint32_t m68k_41e8_lea_dan (M68000_Context *context, uint16_t instruction)
 {
@@ -13812,6 +13825,7 @@ static void m68k_init_instructions (void)
     {
         for (uint16_t reg = 0; reg < 8; reg++)
         {
+            m68k_instruction [0x41d0 | (an << 9) | reg] = m68k_41d0_lea_an;
             m68k_instruction [0x41e8 | (an << 9) | reg] = m68k_41e8_lea_dan;
             m68k_instruction [0x41f0 | (an << 9) | reg] = m68k_41f0_lea_danxi;
         }
