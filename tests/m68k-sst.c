@@ -122,6 +122,34 @@ static void memory_write_16 (void *context_ptr, uint32_t addr, uint16_t data)
 
 
 /*
+ * Save the current stack-pointer from state.a [7] into either state.ssp
+ * or state.usp. This is done before altering the supervisor bit.
+ */
+static inline void m68k_store_stack_pointer (M68000_Context *context)
+{
+    if (context->state.sr_supervisor)
+    {
+        context->state.ssp = context->state.a [7];
+    }
+    else
+    {
+        context->state.usp = context->state.a [7];
+    }
+}
+
+
+/*
+ * Load the current stack-pointer from either state.ssp or state.usp
+ * into state.a [7]. This is done after altering the supervisor bit.
+ */
+static inline void m68k_load_stack_pointer (M68000_Context *context)
+{
+    context->state.a [7] = (context->state.sr_supervisor) ? context->state.ssp
+                                                          : context->state.usp;
+}
+
+
+/*
  * Read state from JSON - Note: Assumes expected fields exist.
  */
 static void read_state_from_json (Test_Context *context, cJSON *state)
@@ -143,9 +171,11 @@ static void read_state_from_json (Test_Context *context, cJSON *state)
     context->m68k_context->state.a [4] = cJSON_GetObjectItemCaseSensitive (state, "a4")->valuedouble;
     context->m68k_context->state.a [5] = cJSON_GetObjectItemCaseSensitive (state, "a5")->valuedouble;
     context->m68k_context->state.a [6] = cJSON_GetObjectItemCaseSensitive (state, "a6")->valuedouble;
-    context->m68k_context->state.a [7] = cJSON_GetObjectItemCaseSensitive (state, "ssp")->valuedouble;
+    context->m68k_context->state.ssp = cJSON_GetObjectItemCaseSensitive (state, "ssp")->valuedouble;
     context->m68k_context->state.usp = cJSON_GetObjectItemCaseSensitive (state, "usp")->valuedouble;
     context->m68k_context->state.sr = cJSON_GetObjectItemCaseSensitive (state, "sr")->valuedouble;
+
+    m68k_load_stack_pointer (context->m68k_context);
 
     cJSON *ram = cJSON_GetObjectItemCaseSensitive (state, "ram");
     cJSON *row = NULL;
@@ -198,12 +228,9 @@ static uint32_t run_test (const cJSON *test, bool print_details)
     }
     read_state_from_json (final_context, final);
 
-    /* Skip if:
-     *  -> the instruction has not been implemented
-     *  -> The test case is not running in supervisor mode */
+    /* Skip if the instruction has not been implemented */
     uint16_t opcode = memory_read_16 (test_context, m68k_context->state.pc);
-    if (m68k_instruction [opcode] == NULL ||
-        (m68k_context->state.sr & BIT_13) == 0)
+    if (m68k_instruction [opcode] == NULL)
     {
         result = RESULT_SKIP;
     }
@@ -237,6 +264,8 @@ static uint32_t run_test (const cJSON *test, bool print_details)
 
     if (result != RESULT_SKIP)
     {
+        m68k_store_stack_pointer (m68k_context);
+
         /* Compare final state */
         /* Note: For now the flags are masked with 0xd7 to ignore the undocumented X and Y flags */
         if (m68k_context->state.pc == final_m68k_context->state.pc &&
@@ -255,7 +284,7 @@ static uint32_t run_test (const cJSON *test, bool print_details)
             m68k_context->state.a [4] == final_m68k_context->state.a [4] &&
             m68k_context->state.a [5] == final_m68k_context->state.a [5] &&
             m68k_context->state.a [6] == final_m68k_context->state.a [6] &&
-            m68k_context->state.a [7] == final_m68k_context->state.a [7] &&
+            m68k_context->state.ssp == final_m68k_context->state.ssp &&
             m68k_context->state.usp == final_m68k_context->state.usp &&
             m68k_context->state.sr == final_m68k_context->state.sr &&
             memcmp (test_context->ram, final_context->ram, sizeof (test_context->ram)) == 0)
@@ -277,13 +306,17 @@ static uint32_t run_test (const cJSON *test, bool print_details)
                                                                               dn, final_m68k_context->state.d [dn].l);
                 }
             }
-            for (uint32_t an = 0; an < 8; an++)
+            for (uint32_t an = 0; an < 7; an++)
             {
                 if (m68k_context->state.a [an] != final_m68k_context->state.a [an])
                 {
                     printf ("     Calculated a%d=%08x. Expected a%d=%08x.\n", an, m68k_context->state.a [an],
                                                                               an, final_m68k_context->state.a [an]);
                 }
+            }
+            if (m68k_context->state.ssp != final_m68k_context->state.ssp)
+            {
+                printf ("     Calculated ssp=%08x. Expected ssp=%08x.\n", m68k_context->state.ssp, final_m68k_context->state.ssp);
             }
             if (m68k_context->state.usp != final_m68k_context->state.usp)
             {
