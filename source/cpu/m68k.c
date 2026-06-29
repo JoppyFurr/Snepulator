@@ -10720,6 +10720,62 @@ static uint32_t m68k_9000_sub_b_dn_dn (M68000_Context *context, uint16_t instruc
 }
 
 
+/* sub.b Dn ← Dn - (An) */
+static uint32_t m68k_9010_sub_b_dn_an (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+    uint16_t source_reg = instruction & 0x07;
+
+    uint8_t b = read_byte (context, context->state.a [source_reg]);
+    uint8_t a = context->state.d [dest_reg].b;
+    uint8_t result = a - b;
+
+    context->state.d [dest_reg].b = result;
+    m68k_sub_b_flags (context, a, b, result);
+
+    printf ("sub.b d%d ← d%d - (a%d)\n", dest_reg, dest_reg, source_reg);
+    return 0;
+}
+
+
+/* sub.b Dn ← Dn - (An)+ */
+static uint32_t m68k_9018_sub_b_dn_anp (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+    uint16_t source_reg = instruction & 0x07;
+
+    uint8_t b = read_byte (context, context->state.a [source_reg]);
+    context->state.a [source_reg] += (source_reg == 7) ? 2 : 1;
+    uint8_t a = context->state.d [dest_reg].b;
+    uint8_t result = a - b;
+
+    context->state.d [dest_reg].b = result;
+    m68k_sub_b_flags (context, a, b, result);
+
+    printf ("sub.b d%d ← d%d - (a%d)+\n", dest_reg, dest_reg, source_reg);
+    return 0;
+}
+
+
+/* sub.b Dn ← Dn - -(An) */
+static uint32_t m68k_9020_sub_b_dn_pan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+    uint16_t source_reg = instruction & 0x07;
+
+    context->state.a [source_reg] -= (source_reg == 7) ? 2 : 1;
+    uint8_t b = read_byte (context, context->state.a [source_reg]);
+    uint8_t a = context->state.d [dest_reg].b;
+    uint8_t result = a - b;
+
+    context->state.d [dest_reg].b = result;
+    m68k_sub_b_flags (context, a, b, result);
+
+    printf ("sub.b d%d ← d%d - -(a%d)\n", dest_reg, dest_reg, source_reg);
+    return 0;
+}
+
+
 /* sub.b Dn ← Dn - d(An) */
 static uint32_t m68k_9028_sub_b_dn_dan (M68000_Context *context, uint16_t instruction)
 {
@@ -10738,6 +10794,75 @@ static uint32_t m68k_9028_sub_b_dn_dan (M68000_Context *context, uint16_t instru
 }
 
 
+/* sub.b Dn ← Dn - d(An+Xi) */
+static uint32_t m68k_9030_sub_b_dn_danxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+    uint16_t source_reg = instruction & 0x07;
+
+    uint8_t b = read_byte_with_index (context, context->state.a [source_reg]);
+    uint8_t a = context->state.d [dest_reg].b;
+    uint8_t result = a - b;
+
+    context->state.d [dest_reg].b = result;
+    m68k_sub_b_flags (context, a, b, result);
+
+    printf ("sub.b d%d ← d%d - d(a%d+Xi)\n", dest_reg, dest_reg, source_reg);
+    return 0;
+}
+
+
+/* sub.b Dn ← Dn - (xxx.w) */
+static uint32_t m68k_9038_sub_b_dn_aw (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint8_t b = read_byte_aw (context);
+    uint8_t a = context->state.d [dest_reg].b;
+    uint8_t result = a - b;
+
+    context->state.d [dest_reg].b = result;
+    m68k_sub_b_flags (context, a, b, result);
+
+    printf ("sub.b d%d ← d%d - (xxx.w)\n", dest_reg, dest_reg);
+    return 0;
+}
+
+
+/* sub.b Dn ← Dn - (xxx.l) */
+static uint32_t m68k_9039_sub_b_dn_al (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint8_t b = read_byte_al (context);
+    uint8_t a = context->state.d [dest_reg].b;
+    uint8_t result = a - b;
+
+    context->state.d [dest_reg].b = result;
+    m68k_sub_b_flags (context, a, b, result);
+
+    printf ("sub.b d%d ← d%d - (xxx.l)\n", dest_reg, dest_reg);
+    return 0;
+}
+
+
+/* sub.b Dn ← Dn - d(PC) */
+static uint32_t m68k_903a_sub_b_dn_dpc (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint8_t b = read_byte_with_displacement (context, context->state.pc);
+    uint8_t a = context->state.d [dest_reg].b;
+    uint8_t result = a - b;
+
+    context->state.d [dest_reg].b = result;
+    m68k_sub_b_flags (context, a, b, result);
+
+    printf ("sub.b d%d ← d%d - d(PC)\n", dest_reg, dest_reg);
+    return 0;
+}
+
+
 /* sub.b Dn ← Dn - d(PC+Xi) */
 static uint32_t m68k_903b_sub_b_dn_dpcxi (M68000_Context *context, uint16_t instruction)
 {
@@ -10751,6 +10876,23 @@ static uint32_t m68k_903b_sub_b_dn_dpcxi (M68000_Context *context, uint16_t inst
     m68k_sub_b_flags (context, a, b, result);
 
     printf ("sub.b d%d ← d%d - d(PC+Xi)\n", dest_reg, dest_reg);
+    return 0;
+}
+
+
+/* sub.b Dn ← Dn - #xx */
+static uint32_t m68k_903c_sub_b_dn_imm (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint8_t b = read_extension (context);
+    uint8_t a = context->state.d [dest_reg].b;
+    uint8_t result = a - b;
+
+    context->state.d [dest_reg].b = result;
+    m68k_sub_b_flags (context, a, b, result);
+
+    printf ("sub.b d%d ← d%d - #%02x\n", dest_reg, dest_reg, b);
     return 0;
 }
 
@@ -11059,6 +11201,62 @@ static uint32_t m68k_90bc_sub_l_dn_imm (M68000_Context *context, uint16_t instru
 }
 
 
+/* sub.b (An) ← (An) - Dn */
+static uint32_t m68k_9110_sub_b_an_dn (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = (instruction >> 9) & 0x07;
+    uint16_t dest_reg = instruction & 0x07;
+
+    uint8_t b = context->state.d [source_reg].b;
+    uint8_t a = read_byte (context, context->state.a [dest_reg]);
+    uint8_t result = a - b;
+
+    write_byte (context, context->state.a [dest_reg], result);
+    m68k_sub_b_flags (context, a, b, result);
+
+    printf ("sub.b (a%d) ← (a%d) - d%d\n", dest_reg, dest_reg, source_reg);
+    return 0;
+}
+
+
+/* sub.b (An)+ ← (An)+ - Dn */
+static uint32_t m68k_9118_sub_b_anp_dn (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = (instruction >> 9) & 0x07;
+    uint16_t dest_reg = instruction & 0x07;
+
+    uint8_t b = context->state.d [source_reg].b;
+    uint8_t a = read_byte (context, context->state.a [dest_reg]);
+    uint8_t result = a - b;
+
+    write_byte (context, context->state.a [dest_reg], result);
+    context->state.a [dest_reg] += (dest_reg == 7) ? 2 : 1;
+    m68k_sub_b_flags (context, a, b, result);
+
+    printf ("sub.b (a%d)+ ← (a%d)+ - d%d\n", dest_reg, dest_reg, source_reg);
+    return 0;
+}
+
+
+/* sub.b -(An) ← -(An) - Dn */
+static uint32_t m68k_9120_sub_b_pan_dn (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = (instruction >> 9) & 0x07;
+    uint16_t dest_reg = instruction & 0x07;
+
+    uint8_t b = context->state.d [source_reg].b;
+    context->state.a [dest_reg] -= (dest_reg == 7) ? 2 : 1;
+    uint8_t a = read_byte (context, context->state.a [dest_reg]);
+    uint8_t result = a - b;
+
+    write_byte (context, context->state.a [dest_reg], result);
+    m68k_sub_b_flags (context, a, b, result);
+
+    printf ("sub.b -(a%d) ← -(a%d) - d%d\n", dest_reg, dest_reg, source_reg);
+    return 0;
+}
+
+
 /* sub.b d(An) ← d(An) - Dn */
 static uint32_t m68k_9128_sub_b_dan_dn (M68000_Context *context, uint16_t instruction)
 {
@@ -11074,6 +11272,61 @@ static uint32_t m68k_9128_sub_b_dan_dn (M68000_Context *context, uint16_t instru
     m68k_sub_b_flags (context, a, b, result);
 
     printf ("sub.b d(a%d) ← d(a%d) - d%d\n", dest_reg, dest_reg, source_reg);
+    return 0;
+}
+
+
+/* sub.b d(An+Xi) ← d(An+Xi) - Dn */
+static uint32_t m68k_9130_sub_b_danxi_dn (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = instruction & 0x07;
+    uint16_t source_reg = (instruction >> 9) & 0x07;
+    uint32_t address = address_with_index (context, context->state.a [dest_reg]);
+
+    uint8_t b = context->state.d [source_reg].b;
+    uint8_t a = read_byte (context, address);
+    uint8_t result = a - b;
+
+    write_byte (context, address, result);
+    m68k_sub_b_flags (context, a, b, result);
+
+    printf ("sub.b d(a%d+Xi) ← d(a%d+Xi) - d%d\n", dest_reg, dest_reg, source_reg);
+    return 0;
+}
+
+
+/* sub.b (xxx.w) ← (xxx.w) - Dn */
+static uint32_t m68k_9138_sub_b_aw_dn (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = (instruction >> 9) & 0x07;
+    uint32_t address = (int16_t) read_extension (context);
+
+    uint8_t b = context->state.d [source_reg].b;
+    uint8_t a = read_byte (context, address);
+    uint8_t result = a - b;
+
+    write_byte (context, address, result);
+    m68k_sub_b_flags (context, a, b, result);
+
+    printf ("sub.b (xxx.w) ← (xxx.w) - d%d\n", source_reg);
+    return 0;
+}
+
+
+/* sub.b (xxx.l) ← (xxx.l) - Dn */
+static uint32_t m68k_9139_sub_b_al_dn (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = (instruction >> 9) & 0x07;
+    uint32_t address = read_extension_long (context);
+
+    uint8_t b = context->state.d [source_reg].b;
+    uint8_t a = read_byte (context, address);
+    uint8_t result = a - b;
+
+    write_byte (context, address, result);
+    m68k_sub_b_flags (context, a, b, result);
+
+    printf ("sub.b (xxx.l) ← (xxx.l) - d%d\n", source_reg);
     return 0;
 }
 
@@ -14016,7 +14269,11 @@ static void m68k_init_instructions (void)
         for (uint16_t reg_b = 0; reg_b < 8; reg_b++)
         {
             m68k_instruction [0x9000 | (reg_a << 9) | reg_b] = m68k_9000_sub_b_dn_dn;
+            m68k_instruction [0x9010 | (reg_a << 9) | reg_b] = m68k_9010_sub_b_dn_an;
+            m68k_instruction [0x9018 | (reg_a << 9) | reg_b] = m68k_9018_sub_b_dn_anp;
+            m68k_instruction [0x9020 | (reg_a << 9) | reg_b] = m68k_9020_sub_b_dn_pan;
             m68k_instruction [0x9028 | (reg_a << 9) | reg_b] = m68k_9028_sub_b_dn_dan;
+            m68k_instruction [0x9030 | (reg_a << 9) | reg_b] = m68k_9030_sub_b_dn_danxi;
             m68k_instruction [0x9040 | (reg_a << 9) | reg_b] = m68k_9040_sub_w_dn_dn;
             m68k_instruction [0x9048 | (reg_a << 9) | reg_b] = m68k_9048_sub_w_dn_an;
             m68k_instruction [0x9050 | (reg_a << 9) | reg_b] = m68k_9050_sub_w_dn_an;
@@ -14028,7 +14285,11 @@ static void m68k_init_instructions (void)
             m68k_instruction [0x90a0 | (reg_a << 9) | reg_b] = m68k_90a0_sub_l_dn_pan;
             m68k_instruction [0x90a8 | (reg_a << 9) | reg_b] = m68k_90a8_sub_l_dn_dan;
             m68k_instruction [0x90b0 | (reg_a << 9) | reg_b] = m68k_90b0_sub_l_dn_danxi;
+            m68k_instruction [0x9110 | (reg_a << 9) | reg_b] = m68k_9110_sub_b_an_dn;
+            m68k_instruction [0x9118 | (reg_a << 9) | reg_b] = m68k_9118_sub_b_anp_dn;
+            m68k_instruction [0x9120 | (reg_a << 9) | reg_b] = m68k_9120_sub_b_pan_dn;
             m68k_instruction [0x9128 | (reg_a << 9) | reg_b] = m68k_9128_sub_b_dan_dn;
+            m68k_instruction [0x9130 | (reg_a << 9) | reg_b] = m68k_9130_sub_b_danxi_dn;
             m68k_instruction [0x9168 | (reg_a << 9) | reg_b] = m68k_9168_sub_w_dan_dn;
             m68k_instruction [0x9190 | (reg_a << 9) | reg_b] = m68k_9190_sub_l_an_dn;
             m68k_instruction [0x9198 | (reg_a << 9) | reg_b] = m68k_9198_sub_l_anp_dn;
@@ -14036,13 +14297,19 @@ static void m68k_init_instructions (void)
             m68k_instruction [0x91a8 | (reg_a << 9) | reg_b] = m68k_91a8_sub_l_dan_dn;
             m68k_instruction [0x91b0 | (reg_a << 9) | reg_b] = m68k_91b0_sub_l_danxi_dn;
         }
+        m68k_instruction [0x9038 | (reg_a << 9)] = m68k_9038_sub_b_dn_aw;
+        m68k_instruction [0x9039 | (reg_a << 9)] = m68k_9039_sub_b_dn_al;
+        m68k_instruction [0x903a | (reg_a << 9)] = m68k_903a_sub_b_dn_dpc;
         m68k_instruction [0x903b | (reg_a << 9)] = m68k_903b_sub_b_dn_dpcxi;
+        m68k_instruction [0x903c | (reg_a << 9)] = m68k_903c_sub_b_dn_imm;
         m68k_instruction [0x9078 | (reg_a << 9)] = m68k_9078_sub_w_dn_aw;
         m68k_instruction [0x90b8 | (reg_a << 9)] = m68k_90b8_sub_l_dn_aw;
         m68k_instruction [0x90b9 | (reg_a << 9)] = m68k_90b9_sub_l_dn_al;
         m68k_instruction [0x90ba | (reg_a << 9)] = m68k_90ba_sub_l_dn_dpc;
         m68k_instruction [0x90bb | (reg_a << 9)] = m68k_90bb_sub_l_dn_dpcxi;
         m68k_instruction [0x90bc | (reg_a << 9)] = m68k_90bc_sub_l_dn_imm;
+        m68k_instruction [0x9138 | (reg_a << 9)] = m68k_9138_sub_b_aw_dn;
+        m68k_instruction [0x9139 | (reg_a << 9)] = m68k_9139_sub_b_al_dn;
         m68k_instruction [0x9178 | (reg_a << 9)] = m68k_9178_sub_w_aw_dn;
         m68k_instruction [0x91b8 | (reg_a << 9)] = m68k_91b8_sub_l_aw_dn;
         m68k_instruction [0x91b9 | (reg_a << 9)] = m68k_91b9_sub_l_al_dn;
