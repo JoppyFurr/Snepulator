@@ -8789,6 +8789,24 @@ static uint32_t m68k_5010_addq_b_an (M68000_Context *context, uint16_t instructi
 }
 
 
+/* addq.b (An)+, #xx */
+static uint32_t m68k_5018_addq_b_anp (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    uint8_t b = (instruction & 0x0e00) ? ((instruction >> 9) & 0x07) : 8;
+    uint8_t a = read_byte (context, context->state.a [reg]);
+
+    uint8_t result = a + b;
+    write_byte (context, context->state.a [reg], result);
+    context->state.a [reg] += (reg == 7) ? 2 : 1;
+    m68k_add_b_flags (context, a, b, result);
+
+    printf ("addq.b (a%d)+, #%x\n", reg, b);
+    return 0;
+}
+
+
 /* addq.b -(An), #xx */
 static uint32_t m68k_5020_addq_b_pan (M68000_Context *context, uint16_t instruction)
 {
@@ -8825,19 +8843,54 @@ static uint32_t m68k_5028_addq_b_dan (M68000_Context *context, uint16_t instruct
 }
 
 
+/* addq.b d(An+Xi), #xx */
+static uint32_t m68k_5030_addq_b_danxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint32_t address = address_with_index (context, context->state.a [reg]);
+
+    uint8_t b = (instruction & 0x0e00) ? ((instruction >> 9) & 0x07) : 8;
+    uint8_t a = read_byte (context, address);
+
+    uint8_t result = a + b;
+    write_byte (context, address, result);
+    m68k_add_b_flags (context, a, b, result);
+
+    printf ("addq.b d(a%d+Xi), #%x\n", reg, b);
+    return 0;
+}
+
+
 /* addq.b (xxx.w), #xx */
 static uint32_t m68k_5038_addq_b_aw (M68000_Context *context, uint16_t instruction)
 {
-    int16_t addr = read_extension (context);
+    uint32_t address = (int16_t) read_extension (context);
 
     uint8_t b = (instruction & 0x0e00) ? ((instruction >> 9) & 0x07) : 8;
-    uint8_t a = read_byte (context, (int32_t) addr);
+    uint8_t a = read_byte (context, address);
 
     uint8_t result = a + b;
-    write_byte (context, (int32_t) addr, result);
+    write_byte (context, (int32_t) address, result);
     m68k_add_b_flags (context, a, b, result);
 
     printf ("addq.b (xxx.w), #%x\n", b);
+    return 0;
+}
+
+
+/* addq.b (xxx.l), #xx */
+static uint32_t m68k_5039_addq_b_al (M68000_Context *context, uint16_t instruction)
+{
+    uint32_t address = read_extension_long (context);
+
+    uint8_t b = (instruction & 0x0e00) ? ((instruction >> 9) & 0x07) : 8;
+    uint8_t a = read_byte (context, address);
+
+    uint8_t result = a + b;
+    write_byte (context, (int32_t) address, result);
+    m68k_add_b_flags (context, a, b, result);
+
+    printf ("addq.b (xxx.l), #%x\n", b);
     return 0;
 }
 
@@ -14451,8 +14504,10 @@ static void m68k_init_instructions (void)
         {
             m68k_instruction [0x5000 | (data << 9) | reg] = m68k_5000_addq_b_dn;
             m68k_instruction [0x5010 | (data << 9) | reg] = m68k_5010_addq_b_an;
+            m68k_instruction [0x5018 | (data << 9) | reg] = m68k_5018_addq_b_anp;
             m68k_instruction [0x5020 | (data << 9) | reg] = m68k_5020_addq_b_pan;
             m68k_instruction [0x5028 | (data << 9) | reg] = m68k_5028_addq_b_dan;
+            m68k_instruction [0x5030 | (data << 9) | reg] = m68k_5030_addq_b_danxi;
             m68k_instruction [0x5040 | (data << 9) | reg] = m68k_5040_addq_w_dn;
             m68k_instruction [0x5048 | (data << 9) | reg] = m68k_5048_addq_w_an;
             m68k_instruction [0x5050 | (data << 9) | reg] = m68k_5050_addq_w_an;
@@ -14477,6 +14532,7 @@ static void m68k_init_instructions (void)
             m68k_instruction [0x51b0 | (data << 9) | reg] = m68k_51b0_subq_l_danxi;
         }
         m68k_instruction [0x5038 | (data << 9)] = m68k_5038_addq_b_aw;
+        m68k_instruction [0x5039 | (data << 9)] = m68k_5039_addq_b_al;
         m68k_instruction [0x5078 | (data << 9)] = m68k_5078_addq_w_aw;
         m68k_instruction [0x50b8 | (data << 9)] = m68k_50b8_addq_l_aw;
         m68k_instruction [0x5138 | (data << 9)] = m68k_5138_subq_b_aw;
