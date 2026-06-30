@@ -2785,6 +2785,40 @@ static uint32_t m68k_0c10_cmpi_b_an (M68000_Context *context, uint16_t instructi
 }
 
 
+/* cmpi.b (An)+ - #xx */
+static uint32_t m68k_0c18_cmpi_b_anp (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    uint8_t b = read_extension (context);
+    uint8_t a = read_byte (context, context->state.a [reg]);
+    context->state.a [reg] += (reg == 7) ? 2 : 1;
+    uint8_t result = a - b;
+
+    m68k_cmp_b_flags (context, a, b, result);
+
+    printf ("cmpi.b (a%d)+ - #%02x\n", reg, b);
+    return 0;
+}
+
+
+/* cmpi.b -(An) - #xx */
+static uint32_t m68k_0c20_cmpi_b_pan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    context->state.a [reg] -= (reg == 7) ? 2 : 1;
+    uint8_t b = read_extension (context);
+    uint8_t a = read_byte (context, context->state.a [reg]);
+    uint8_t result = a - b;
+
+    m68k_cmp_b_flags (context, a, b, result);
+
+    printf ("cmpi.b -(a%d) - #%02x\n", reg, b);
+    return 0;
+}
+
+
 /* cmpi.b d(An) - #xx */
 static uint32_t m68k_0c28_cmpi_b_dan (M68000_Context *context, uint16_t instruction)
 {
@@ -2801,6 +2835,22 @@ static uint32_t m68k_0c28_cmpi_b_dan (M68000_Context *context, uint16_t instruct
 }
 
 
+/* cmpi.b d(An+Xi) - #xx */
+static uint32_t m68k_0c30_cmpi_b_danxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    uint8_t b = read_extension (context);
+    uint8_t a = read_byte_with_index (context, context->state.a [reg]);
+    uint8_t result = a - b;
+
+    m68k_cmp_b_flags (context, a, b, result);
+
+    printf ("cmpi.b d(a%d+Xi) - #%02x\n", reg, b);
+    return 0;
+}
+
+
 /* cmpi.b (xxx.w) - #xx */
 static uint32_t m68k_0c38_cmpi_b_aw (M68000_Context *context, uint16_t instruction)
 {
@@ -2811,6 +2861,20 @@ static uint32_t m68k_0c38_cmpi_b_aw (M68000_Context *context, uint16_t instructi
     m68k_cmp_b_flags (context, a, b, result);
 
     printf ("cmpi.b (xxx.w) - #%02x\n", b);
+    return 0;
+}
+
+
+/* cmpi.b (xxx.l) - #xx */
+static uint32_t m68k_0c39_cmpi_b_al (M68000_Context *context, uint16_t instruction)
+{
+    uint8_t b = read_extension (context);
+    uint8_t a = read_byte_al (context);
+    uint8_t result = a - b;
+
+    m68k_cmp_b_flags (context, a, b, result);
+
+    printf ("cmpi.b (xxx.l) - #%02x\n", b);
     return 0;
 }
 
@@ -13909,7 +13973,10 @@ static void m68k_init_instructions (void)
         m68k_instruction [0x0a80 | reg] = m68k_0a80_eori_l_dn;
         m68k_instruction [0x0c00 | reg] = m68k_0c00_cmpi_b_dn;
         m68k_instruction [0x0c10 | reg] = m68k_0c10_cmpi_b_an;
+        m68k_instruction [0x0c18 | reg] = m68k_0c18_cmpi_b_anp;
+        m68k_instruction [0x0c20 | reg] = m68k_0c20_cmpi_b_pan;
         m68k_instruction [0x0c28 | reg] = m68k_0c28_cmpi_b_dan;
+        m68k_instruction [0x0c30 | reg] = m68k_0c30_cmpi_b_danxi;
         m68k_instruction [0x0c40 | reg] = m68k_0c40_cmpi_w_dn;
         m68k_instruction [0x0c50 | reg] = m68k_0c50_cmpi_w_an;
         m68k_instruction [0x0c68 | reg] = m68k_0c68_cmpi_w_dan;
@@ -13936,6 +14003,7 @@ static void m68k_init_instructions (void)
     m68k_instruction [0x0a38] = m68k_0a38_eori_b_aw;
     m68k_instruction [0x0a39] = m68k_0a39_eori_b_al;
     m68k_instruction [0x0c38] = m68k_0c38_cmpi_b_aw;
+    m68k_instruction [0x0c39] = m68k_0c39_cmpi_b_al;
     m68k_instruction [0x0c78] = m68k_0c78_cmpi_w_aw;
 
     /* move */
