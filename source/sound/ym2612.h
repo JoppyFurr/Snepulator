@@ -32,6 +32,9 @@ typedef struct YM2612_Context_s {
 /* Latch a register address. */
 void ym2612_addr1_write (YM2612_Context *context, uint8_t addr);
 
+/* Latch a register address. */
+void ym2612_addr2_write (YM2612_Context *context, uint8_t addr);
+
 /* Write data to the latched register address. */
 void ym2612_data_write (YM2612_Context *context, uint8_t data);
 

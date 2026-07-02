@@ -503,7 +503,7 @@ static void smd_z80_memory_write (void *context_ptr, uint16_t addr, uint8_t data
                 ym2612_addr1_write (context->ym2612_context, data);
                 break;
             case 2:
-                /* Group 2 registers not implemented */
+                ym2612_addr2_write (context->ym2612_context, data);
                 break;
             default:
                 ym2612_data_write (context->ym2612_context, data);
