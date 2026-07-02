@@ -9485,7 +9485,7 @@ static uint32_t m68k_6201_bhi_s (M68000_Context *context, uint16_t instruction)
 
 
 /* bls.w */
-static uint32_t m68k_6300_bcc_w (M68000_Context *context, uint16_t instruction)
+static uint32_t m68k_6300_bls_w (M68000_Context *context, uint16_t instruction)
 {
     uint32_t address = address_with_displacement (context, context->state.pc);
 
@@ -9504,7 +9504,7 @@ static uint32_t m68k_6300_bcc_w (M68000_Context *context, uint16_t instruction)
 
 
 /* bls.s */
-static uint32_t m68k_6301_bcc_s (M68000_Context *context, uint16_t instruction)
+static uint32_t m68k_6301_bls_s (M68000_Context *context, uint16_t instruction)
 {
     if (context->state.ccr_carry || context->state.ccr_zero)
     {
@@ -14791,7 +14791,7 @@ static void m68k_init_instructions (void)
     m68k_instruction [0x6000] = m68k_6000_bra_w;
     m68k_instruction [0x6100] = m68k_6100_bsr_w;
     m68k_instruction [0x6200] = m68k_6200_bhi_w;
-    m68k_instruction [0x6300] = m68k_6300_bcc_w;
+    m68k_instruction [0x6300] = m68k_6300_bls_w;
     m68k_instruction [0x6400] = m68k_6400_bcc_w;
     m68k_instruction [0x6500] = m68k_6500_bcs_w;
     m68k_instruction [0x6600] = m68k_6600_bne_w;
@@ -14809,7 +14809,7 @@ static void m68k_init_instructions (void)
         m68k_instruction [0x6000 | d] = m68k_6001_bra_s;
         m68k_instruction [0x6100 | d] = m68k_6101_bsr_s;
         m68k_instruction [0x6200 | d] = m68k_6201_bhi_s;
-        m68k_instruction [0x6300 | d] = m68k_6301_bcc_s;
+        m68k_instruction [0x6300 | d] = m68k_6301_bls_s;
         m68k_instruction [0x6400 | d] = m68k_6401_bcc_s;
         m68k_instruction [0x6500 | d] = m68k_6501_bcs_s;
         m68k_instruction [0x6600 | d] = m68k_6601_bne_s;
