@@ -183,6 +183,14 @@ do
     shift
 done
 
+# Caching
+if command -v ccache > /dev/null
+then
+    echo "Using ccache"
+    CC="ccache $CC"
+    CXX="ccache $CXX"
+fi
+
 CFLAGS="-std=c17 -O2 -Wall -Werror -D_POSIX_C_SOURCE=200809L \
         $(${SDL2_CONFIG} --cflags) \
         -I libraries/BLAKE3/ \
