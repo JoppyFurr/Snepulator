@@ -128,7 +128,7 @@ static uint8_t smd_memory_read_8 (void *context_ptr, uint32_t addr)
             case 0xa10005:
                 /* TODO: For now, to get things going just assume TH is an output
                  *       and ignore the most-significant bit behaviour. */
-                if ((context->state.port1_data & 0x40) == 0)
+                if ((context->state.port2_data & 0x40) == 0)
                 {
                     return (gamepad [2].state [GAMEPAD_DIRECTION_UP]    ? 0 : BIT_0) |
                            (gamepad [2].state [GAMEPAD_DIRECTION_DOWN]  ? 0 : BIT_1) |
@@ -191,7 +191,7 @@ static uint8_t smd_memory_read_8 (void *context_ptr, uint32_t addr)
     /* RAM: 0xff0000 -- 0xffffff */
     else
     {
-        return * (uint16_t *) &context->ram [addr & 0x00ffff];
+        return context->ram [addr & 0x00ffff];
     }
 
     snepulator_error (__func__, "Unmapped address %06x.", addr);
