@@ -11343,6 +11343,207 @@ static uint32_t m68k_90bc_sub_l_dn_imm (M68000_Context *context, uint16_t instru
 }
 
 
+/* suba.w An ← An - Dn */
+static uint32_t m68k_90c0_suba_w_an_dn (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint32_t b = (int16_t) context->state.d [source_reg].w;
+    uint32_t a = context->state.a [dest_reg];
+    uint32_t result = a - b;
+
+    context->state.a [dest_reg] = result;
+
+    printf ("suba.w a%d ← a%d - d%d\n", dest_reg, dest_reg, source_reg);
+    return 0;
+}
+
+
+/* suba.w An ← An - An */
+static uint32_t m68k_90c8_suba_w_an_an (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint32_t b = (int16_t) (context->state.a [source_reg] & 0xffff);
+    uint32_t a = context->state.a [dest_reg];
+    uint32_t result = a - b;
+
+    context->state.a [dest_reg] = result;
+
+    printf ("suba.w a%d ← a%d - a%d\n", dest_reg, dest_reg, source_reg);
+    return 0;
+}
+
+
+/* suba.w An ← An - (An) */
+static uint32_t m68k_90d0_suba_w_an_an (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint32_t b = (int16_t) read_word (context, context->state.a [source_reg]);
+    uint32_t a = context->state.a [dest_reg];
+    uint32_t result = a - b;
+
+    context->state.a [dest_reg] = result;
+
+    printf ("suba.w a%d ← a%d - (a%d)\n", dest_reg, dest_reg, source_reg);
+    return 0;
+}
+
+
+/* suba.w An ← An - (An)+ */
+static uint32_t m68k_90d8_suba_w_an_anp (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint32_t b = (int16_t) read_word (context, context->state.a [source_reg]);
+    context->state.a [source_reg] += 2;
+    uint32_t a = context->state.a [dest_reg];
+    uint32_t result = a - b;
+
+    context->state.a [dest_reg] = result;
+
+    printf ("suba.w a%d ← a%d - (a%d)+\n", dest_reg, dest_reg, source_reg);
+    return 0;
+}
+
+
+/* suba.w An ← An - -(An) */
+static uint32_t m68k_90e0_suba_w_an_pan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    context->state.a [source_reg] -= 2;
+    uint32_t b = (int16_t) read_word (context, context->state.a [source_reg]);
+    uint32_t a = context->state.a [dest_reg];
+    uint32_t result = a - b;
+
+    context->state.a [dest_reg] = result;
+
+    printf ("suba.w a%d ← a%d - -(a%d)\n", dest_reg, dest_reg, source_reg);
+    return 0;
+}
+
+
+/* suba.w An ← An - d(An) */
+static uint32_t m68k_90e8_suba_w_an_dan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint32_t b = (int16_t) read_word_with_displacement (context, context->state.a [source_reg]);
+    uint32_t a = context->state.a [dest_reg];
+    uint32_t result = a - b;
+
+    context->state.a [dest_reg] = result;
+
+    printf ("suba.w a%d ← a%d - d(a%d)\n", dest_reg, dest_reg, source_reg);
+    return 0;
+}
+
+
+/* suba.w An ← An - d(An+Xi) */
+static uint32_t m68k_90f0_suba_w_an_danxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint32_t b = (int16_t) read_word_with_index (context, context->state.a [source_reg]);
+    uint32_t a = context->state.a [dest_reg];
+    uint32_t result = a - b;
+
+    context->state.a [dest_reg] = result;
+
+    printf ("suba.w a%d ← a%d - d(a%d+Xi)\n", dest_reg, dest_reg, source_reg);
+    return 0;
+}
+
+
+/* suba.w An ← An - (xxx.w) */
+static uint32_t m68k_90f8_suba_w_an_aw (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint32_t b = (int16_t) read_word_aw (context);
+    uint32_t a = context->state.a [dest_reg];
+    uint32_t result = a - b;
+
+    context->state.a [dest_reg] = result;
+
+    printf ("suba.w a%d ← a%d - (xxx.w)\n", dest_reg, dest_reg);
+    return 0;
+}
+
+
+/* suba.w An ← An - (xxx.l) */
+static uint32_t m68k_90f9_suba_w_an_al (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint32_t b = (int16_t) read_word_al (context);
+    uint32_t a = context->state.a [dest_reg];
+    uint32_t result = a - b;
+
+    context->state.a [dest_reg] = result;
+
+    printf ("suba.w a%d ← a%d - (xxx.l)\n", dest_reg, dest_reg);
+    return 0;
+}
+
+
+/* suba.w An ← An - d(PC) */
+static uint32_t m68k_90fa_suba_w_an_dpc (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint32_t b = (int16_t) read_word_with_displacement (context, context->state.pc);
+    uint32_t a = context->state.a [dest_reg];
+    uint32_t result = a - b;
+
+    context->state.a [dest_reg] = result;
+
+    printf ("suba.w a%d ← a%d - d(PC)\n", dest_reg, dest_reg);
+    return 0;
+}
+
+
+/* suba.w An ← An - d(PC+Xi) */
+static uint32_t m68k_90fb_suba_w_an_dpcxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint32_t b = (int16_t) read_word_with_index (context, context->state.pc);
+    uint32_t a = context->state.a [dest_reg];
+    uint32_t result = a - b;
+
+    context->state.a [dest_reg] = result;
+
+    printf ("suba.w a%d ← a%d - d(PC+Xi)\n", dest_reg, dest_reg);
+    return 0;
+}
+
+
+/* suba.w An ← An - #xxxx */
+static uint32_t m68k_90fc_suba_w_an_imm (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint32_t b = (int16_t) read_extension (context);
+    uint32_t a = context->state.a [dest_reg];
+    uint32_t result = a - b;
+
+    context->state.a [dest_reg] = result;
+
+    printf ("suba.w a%d ← a%d - #%04x\n", dest_reg, dest_reg, b);
+    return 0;
+}
+
+
 /* sub.b (An) ← (An) - Dn */
 static uint32_t m68k_9110_sub_b_an_dn (M68000_Context *context, uint16_t instruction)
 {
@@ -11636,6 +11837,207 @@ static uint32_t m68k_91b9_sub_l_al_dn (M68000_Context *context, uint16_t instruc
     m68k_sub_l_flags (context, a, b, result);
 
     printf ("sub.l (xxx.l) ← (xxx.l) - d%d\n", source_reg);
+    return 0;
+}
+
+
+/* suba.l An ← An - Dn */
+static uint32_t m68k_91c0_suba_l_an_dn (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint32_t b = context->state.d [source_reg].l;
+    uint32_t a = context->state.a [dest_reg];
+    uint32_t result = a - b;
+
+    context->state.a [dest_reg] = result;
+
+    printf ("suba.l a%d ← a%d - d%d\n", dest_reg, dest_reg, source_reg);
+    return 0;
+}
+
+
+/* suba.l An ← An - An */
+static uint32_t m68k_91c8_suba_l_an_an (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint32_t b = context->state.a [source_reg];
+    uint32_t a = context->state.a [dest_reg];
+    uint32_t result = a - b;
+
+    context->state.a [dest_reg] = result;
+
+    printf ("suba.l a%d ← a%d - a%d\n", dest_reg, dest_reg, source_reg);
+    return 0;
+}
+
+
+/* suba.l An ← An - (An) */
+static uint32_t m68k_91d0_suba_l_an_an (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint32_t b = read_long (context, context->state.a [source_reg]);
+    uint32_t a = context->state.a [dest_reg];
+    uint32_t result = a - b;
+
+    context->state.a [dest_reg] = result;
+
+    printf ("suba.l a%d ← a%d - (a%d)\n", dest_reg, dest_reg, source_reg);
+    return 0;
+}
+
+
+/* suba.l An ← An - (An)+ */
+static uint32_t m68k_91d8_suba_l_an_anp (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint32_t b = read_long (context, context->state.a [source_reg]);
+    context->state.a [source_reg] += 4;
+    uint32_t a = context->state.a [dest_reg];
+    uint32_t result = a - b;
+
+    context->state.a [dest_reg] = result;
+
+    printf ("suba.l a%d ← a%d - (a%d)+\n", dest_reg, dest_reg, source_reg);
+    return 0;
+}
+
+
+/* suba.l An ← An - -(An) */
+static uint32_t m68k_91e0_suba_l_an_pan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    context->state.a [source_reg] -= 4;
+    uint32_t b = read_long (context, context->state.a [source_reg]);
+    uint32_t a = context->state.a [dest_reg];
+    uint32_t result = a - b;
+
+    context->state.a [dest_reg] = result;
+
+    printf ("suba.l a%d ← a%d - -(a%d)\n", dest_reg, dest_reg, source_reg);
+    return 0;
+}
+
+
+/* suba.l An ← An - d(An) */
+static uint32_t m68k_91e8_suba_l_an_dan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint32_t b = read_long_with_displacement (context, context->state.a [source_reg]);
+    uint32_t a = context->state.a [dest_reg];
+    uint32_t result = a - b;
+
+    context->state.a [dest_reg] = result;
+
+    printf ("suba.l a%d ← a%d - d(a%d)\n", dest_reg, dest_reg, source_reg);
+    return 0;
+}
+
+
+/* suba.l An ← An - d(An+Xi) */
+static uint32_t m68k_91f0_suba_l_an_danxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint32_t b = read_long_with_index (context, context->state.a [source_reg]);
+    uint32_t a = context->state.a [dest_reg];
+    uint32_t result = a - b;
+
+    context->state.a [dest_reg] = result;
+
+    printf ("suba.l a%d ← a%d - d(a%d+Xi)\n", dest_reg, dest_reg, source_reg);
+    return 0;
+}
+
+
+/* suba.l An ← An - (xxx.w) */
+static uint32_t m68k_91f8_suba_l_an_aw (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint32_t b = read_long_aw (context);
+    uint32_t a = context->state.a [dest_reg];
+    uint32_t result = a - b;
+
+    context->state.a [dest_reg] = result;
+
+    printf ("suba.l a%d ← a%d - (xxx.w)\n", dest_reg, dest_reg);
+    return 0;
+}
+
+
+/* suba.l An ← An - (xxx.l) */
+static uint32_t m68k_91f9_suba_l_an_al (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint32_t b = read_long_al (context);
+    uint32_t a = context->state.a [dest_reg];
+    uint32_t result = a - b;
+
+    context->state.a [dest_reg] = result;
+
+    printf ("suba.l a%d ← a%d - (xxx.l)\n", dest_reg, dest_reg);
+    return 0;
+}
+
+
+/* suba.l An ← An - d(PC) */
+static uint32_t m68k_91fa_suba_l_an_dpc (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint32_t b = read_long_with_displacement (context, context->state.pc);
+    uint32_t a = context->state.a [dest_reg];
+    uint32_t result = a - b;
+
+    context->state.a [dest_reg] = result;
+
+    printf ("suba.l a%d ← a%d - d(PC)\n", dest_reg, dest_reg);
+    return 0;
+}
+
+
+/* suba.l An ← An - d(PC+Xi) */
+static uint32_t m68k_91fb_suba_l_an_dpcxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint32_t b = read_long_with_index (context, context->state.pc);
+    uint32_t a = context->state.a [dest_reg];
+    uint32_t result = a - b;
+
+    context->state.a [dest_reg] = result;
+
+    printf ("suba.l a%d ← a%d - d(PC+Xi)\n", dest_reg, dest_reg);
+    return 0;
+}
+
+
+/* suba.l An ← An - #xxxxxxxx */
+static uint32_t m68k_91fc_suba_l_an_imm (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint32_t b = read_extension_long (context);
+    uint32_t a = context->state.a [dest_reg];
+    uint32_t result = a - b;
+
+    context->state.a [dest_reg] = result;
+
+    printf ("suba.l a%d ← a%d - #%08x\n", dest_reg, dest_reg, b);
     return 0;
 }
 
@@ -15280,6 +15682,13 @@ static void m68k_init_instructions (void)
             m68k_instruction [0x90a0 | (reg_a << 9) | reg_b] = m68k_90a0_sub_l_dn_pan;
             m68k_instruction [0x90a8 | (reg_a << 9) | reg_b] = m68k_90a8_sub_l_dn_dan;
             m68k_instruction [0x90b0 | (reg_a << 9) | reg_b] = m68k_90b0_sub_l_dn_danxi;
+            m68k_instruction [0x90c0 | (reg_a << 9) | reg_b] = m68k_90c0_suba_w_an_dn;
+            m68k_instruction [0x90c8 | (reg_a << 9) | reg_b] = m68k_90c8_suba_w_an_an;
+            m68k_instruction [0x90d0 | (reg_a << 9) | reg_b] = m68k_90d0_suba_w_an_an;
+            m68k_instruction [0x90d8 | (reg_a << 9) | reg_b] = m68k_90d8_suba_w_an_anp;
+            m68k_instruction [0x90e0 | (reg_a << 9) | reg_b] = m68k_90e0_suba_w_an_pan;
+            m68k_instruction [0x90e8 | (reg_a << 9) | reg_b] = m68k_90e8_suba_w_an_dan;
+            m68k_instruction [0x90f0 | (reg_a << 9) | reg_b] = m68k_90f0_suba_w_an_danxi;
             m68k_instruction [0x9110 | (reg_a << 9) | reg_b] = m68k_9110_sub_b_an_dn;
             m68k_instruction [0x9118 | (reg_a << 9) | reg_b] = m68k_9118_sub_b_anp_dn;
             m68k_instruction [0x9120 | (reg_a << 9) | reg_b] = m68k_9120_sub_b_pan_dn;
@@ -15291,6 +15700,13 @@ static void m68k_init_instructions (void)
             m68k_instruction [0x91a0 | (reg_a << 9) | reg_b] = m68k_91a0_sub_l_pan_dn;
             m68k_instruction [0x91a8 | (reg_a << 9) | reg_b] = m68k_91a8_sub_l_dan_dn;
             m68k_instruction [0x91b0 | (reg_a << 9) | reg_b] = m68k_91b0_sub_l_danxi_dn;
+            m68k_instruction [0x91c0 | (reg_a << 9) | reg_b] = m68k_91c0_suba_l_an_dn;
+            m68k_instruction [0x91c8 | (reg_a << 9) | reg_b] = m68k_91c8_suba_l_an_an;
+            m68k_instruction [0x91d0 | (reg_a << 9) | reg_b] = m68k_91d0_suba_l_an_an;
+            m68k_instruction [0x91d8 | (reg_a << 9) | reg_b] = m68k_91d8_suba_l_an_anp;
+            m68k_instruction [0x91e0 | (reg_a << 9) | reg_b] = m68k_91e0_suba_l_an_pan;
+            m68k_instruction [0x91e8 | (reg_a << 9) | reg_b] = m68k_91e8_suba_l_an_dan;
+            m68k_instruction [0x91f0 | (reg_a << 9) | reg_b] = m68k_91f0_suba_l_an_danxi;
         }
         m68k_instruction [0x9038 | (reg_a << 9)] = m68k_9038_sub_b_dn_aw;
         m68k_instruction [0x9039 | (reg_a << 9)] = m68k_9039_sub_b_dn_al;
@@ -15303,11 +15719,21 @@ static void m68k_init_instructions (void)
         m68k_instruction [0x90ba | (reg_a << 9)] = m68k_90ba_sub_l_dn_dpc;
         m68k_instruction [0x90bb | (reg_a << 9)] = m68k_90bb_sub_l_dn_dpcxi;
         m68k_instruction [0x90bc | (reg_a << 9)] = m68k_90bc_sub_l_dn_imm;
+        m68k_instruction [0x90f8 | (reg_a << 9)] = m68k_90f8_suba_w_an_aw;
+        m68k_instruction [0x90f9 | (reg_a << 9)] = m68k_90f9_suba_w_an_al;
+        m68k_instruction [0x90fa | (reg_a << 9)] = m68k_90fa_suba_w_an_dpc;
+        m68k_instruction [0x90fb | (reg_a << 9)] = m68k_90fb_suba_w_an_dpcxi;
+        m68k_instruction [0x90fc | (reg_a << 9)] = m68k_90fc_suba_w_an_imm;
         m68k_instruction [0x9138 | (reg_a << 9)] = m68k_9138_sub_b_aw_dn;
         m68k_instruction [0x9139 | (reg_a << 9)] = m68k_9139_sub_b_al_dn;
         m68k_instruction [0x9178 | (reg_a << 9)] = m68k_9178_sub_w_aw_dn;
         m68k_instruction [0x91b8 | (reg_a << 9)] = m68k_91b8_sub_l_aw_dn;
         m68k_instruction [0x91b9 | (reg_a << 9)] = m68k_91b9_sub_l_al_dn;
+        m68k_instruction [0x91f8 | (reg_a << 9)] = m68k_91f8_suba_l_an_aw;
+        m68k_instruction [0x91f9 | (reg_a << 9)] = m68k_91f9_suba_l_an_al;
+        m68k_instruction [0x91fa | (reg_a << 9)] = m68k_91fa_suba_l_an_dpc;
+        m68k_instruction [0x91fb | (reg_a << 9)] = m68k_91fb_suba_l_an_dpcxi;
+        m68k_instruction [0x91fc | (reg_a << 9)] = m68k_91fc_suba_l_an_imm;
     }
 
     /* Line-A exception */
