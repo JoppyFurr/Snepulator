@@ -74,8 +74,6 @@ void smd_vdp_control_write (SMD_VDP_Context *context, uint16_t data)
                     switch (context->state.code & 0x07)
                     {
                         case 1: /* VRAM */
-                            printf ("[%s] DMA Operation: M68k Memory -> VRAM transfer (%d words).\n",
-                                    __func__, context->state.dma_length);
                             /* TODO: For VRAM, if source-address bit 0 is set, data may be byte-swapped */
                             dma_length = context->state.dma_length;
                             source_address = context->state.dma_source << 1;
@@ -93,8 +91,6 @@ void smd_vdp_control_write (SMD_VDP_Context *context, uint16_t data)
                             break;
 
                         case 3: /* CRAM */
-                            printf ("[%s] DMA Operation: M68k Memory -> CRAM transfer (%d words).\n",
-                                    __func__, context->state.dma_length);
                             dma_length = context->state.dma_length;
                             source_address = context->state.dma_source << 1;
 

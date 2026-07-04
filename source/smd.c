@@ -393,7 +393,6 @@ static void smd_memory_write_16 (void *context_ptr, uint32_t addr, uint16_t data
         else if (addr == 0xa11100)
         {
             context->state.z80_busreq = (data >> 8) & 0x01;
-            printf ("[%s] z80_busreq ← %d.\n", __func__, context->state.z80_busreq);
         }
 
         /* Z80 and YM2612 Reset */
@@ -406,7 +405,6 @@ static void smd_memory_write_16 (void *context_ptr, uint32_t addr, uint16_t data
             {
                 z80_reset (context->z80_context);
             }
-            printf ("[%s] z80_reset_n ← %d.\n", __func__, context->state.z80_reset_n);
         }
 
         else
