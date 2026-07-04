@@ -633,7 +633,6 @@ static uint32_t m68k_0000_ori_b_dn (M68000_Context *context, uint16_t instructio
     context->state.d [reg].b = result;
     m68k_move_b_flags (context, result);
 
-    printf ("ori.b d%d ← #%02x\n", reg, imm);
     return 0;
 }
 
@@ -649,7 +648,6 @@ static uint32_t m68k_0028_ori_b_dan (M68000_Context *context, uint16_t instructi
     write_byte (context, address, result);
     m68k_move_b_flags (context, result);
 
-    printf ("ori.b d(a%d) ← #%02x\n", reg, imm);
     return 0;
 }
 
@@ -664,7 +662,6 @@ static uint32_t m68k_0038_ori_b_aw (M68000_Context *context, uint16_t instructio
     write_byte (context, address, result);
     m68k_move_b_flags (context, result);
 
-    printf ("ori.b (xxx.w) ← #%02x\n", imm);
     return 0;
 }
 
@@ -679,7 +676,6 @@ static uint32_t m68k_0040_ori_w_dn (M68000_Context *context, uint16_t instructio
     context->state.d [reg].w = result;
     m68k_move_w_flags (context, result);
 
-    printf ("ori.w d%d ← #%04x\n", reg, imm);
     return 0;
 }
 
@@ -695,7 +691,6 @@ static uint32_t m68k_0100_btst_l_dn_dn (M68000_Context *context, uint16_t instru
 
     context->state.ccr_zero = !((value >> bit) & 0x01);
 
-    printf ("btst.l d%d [d%d]\n", data_reg, bit_reg);
     return 0;
 }
 
@@ -711,7 +706,6 @@ static uint32_t m68k_0110_btst_b_an_dn (M68000_Context *context, uint16_t instru
 
     context->state.ccr_zero = !((value >> bit) & 0x01);
 
-    printf ("btst.b (a%d) [d%d]\n", data_reg, bit_reg);
     return 0;
 }
 
@@ -730,7 +724,6 @@ static uint32_t m68k_0180_bclr_l_dn_dn (M68000_Context *context, uint16_t instru
     value &= ~(1 << bit);
     context->state.d [data_reg].l = value;
 
-    printf ("bclr.l d%d [d%d]\n", data_reg, bit_reg);
     return 0;
 }
 
@@ -749,7 +742,6 @@ static uint32_t m68k_0190_bclr_b_an_dn (M68000_Context *context, uint16_t instru
     value &= ~(1 << bit);
     write_byte (context, context->state.a [data_reg], value);
 
-    printf ("bclr.b (a%d) [d%d]\n", data_reg, bit_reg);
     return 0;
 }
 
@@ -769,7 +761,6 @@ static uint32_t m68k_0198_bclr_b_anp_dn (M68000_Context *context, uint16_t instr
     write_byte (context, context->state.a [data_reg], value);
     context->state.a [data_reg] += (data_reg == 7) ? 2 : 1;
 
-    printf ("bclr.b (a%d)+ [d%d]\n", data_reg, bit_reg);
     return 0;
 }
 
@@ -789,7 +780,6 @@ static uint32_t m68k_01a0_bclr_b_pan_dn (M68000_Context *context, uint16_t instr
     value &= ~(1 << bit);
     write_byte (context, context->state.a [data_reg], value);
 
-    printf ("bclr.b -(a%d) [d%d]\n", data_reg, bit_reg);
     return 0;
 }
 
@@ -809,7 +799,6 @@ static uint32_t m68k_01a8_bclr_b_dan_dn (M68000_Context *context, uint16_t instr
     value &= ~(1 << bit);
     write_byte (context, address, value);
 
-    printf ("bclr.b d(a%d) [d%d]\n", data_reg, bit_reg);
     return 0;
 }
 
@@ -829,7 +818,6 @@ static uint32_t m68k_01b0_bclr_b_danxi_dn (M68000_Context *context, uint16_t ins
     value &= ~(1 << bit);
     write_byte (context, address, value);
 
-    printf ("bclr.b d(a%d+Xi) [d%d]\n", data_reg, bit_reg);
     return 0;
 }
 
@@ -848,7 +836,6 @@ static uint32_t m68k_01b8_bclr_b_aw_dn (M68000_Context *context, uint16_t instru
     value &= ~(1 << bit);
     write_byte (context, address, value);
 
-    printf ("bclr.b (xxx.w) [d%d]\n", bit_reg);
     return 0;
 }
 
@@ -867,7 +854,6 @@ static uint32_t m68k_01b9_bclr_b_al_dn (M68000_Context *context, uint16_t instru
     value &= ~(1 << bit);
     write_byte (context, address, value);
 
-    printf ("bclr.b (xxx.l) [d%d]\n", bit_reg);
     return 0;
 }
 
@@ -886,7 +872,6 @@ static uint32_t m68k_01c0_bset_l_dn_dn (M68000_Context *context, uint16_t instru
     value |= 1 << bit;
     context->state.d [data_reg].l = value;
 
-    printf ("bset.l d%d [d%d]\n", data_reg, bit_reg);
     return 0;
 }
 
@@ -905,7 +890,6 @@ static uint32_t m68k_01d0_bset_b_an_dn (M68000_Context *context, uint16_t instru
     value |= 1 << bit;
     write_byte (context, context->state.a [data_reg], value);
 
-    printf ("bset.b (a%d) [d%d]\n", data_reg, bit_reg);
     return 0;
 }
 
@@ -925,7 +909,6 @@ static uint32_t m68k_01d8_bset_b_anp_dn (M68000_Context *context, uint16_t instr
     write_byte (context, context->state.a [data_reg], value);
     context->state.a [data_reg] += (data_reg == 7) ? 2 : 1;
 
-    printf ("bset.b (a%d)+ [d%d]\n", data_reg, bit_reg);
     return 0;
 }
 
@@ -945,7 +928,6 @@ static uint32_t m68k_01e0_bset_b_pan_dn (M68000_Context *context, uint16_t instr
     value |= 1 << bit;
     write_byte (context, context->state.a [data_reg], value);
 
-    printf ("bset.b -(a%d) [d%d]\n", data_reg, bit_reg);
     return 0;
 }
 
@@ -966,7 +948,6 @@ static uint32_t m68k_01e8_bset_b_dan_dn (M68000_Context *context, uint16_t instr
     value |= 1 << bit;
     write_byte (context, address, value);
 
-    printf ("bset.b d(a%d) [d%d]\n", data_reg, bit_reg);
     return 0;
 }
 
@@ -987,7 +968,6 @@ static uint32_t m68k_01f0_bset_b_danxi_dn (M68000_Context *context, uint16_t ins
     value |= 1 << bit;
     write_byte (context, address, value);
 
-    printf ("bset.b d(a%d+Xi) [d%d]\n", data_reg, bit_reg);
     return 0;
 }
 
@@ -1006,7 +986,6 @@ static uint32_t m68k_01f8_bset_b_aw_dn (M68000_Context *context, uint16_t instru
     value |= 1 << bit;
     write_byte (context, address, value);
 
-    printf ("bset.b (xxx.w) [d%d]\n", bit_reg);
     return 0;
 }
 
@@ -1025,7 +1004,6 @@ static uint32_t m68k_01f9_bset_b_al_dn (M68000_Context *context, uint16_t instru
     value |= 1 << bit;
     write_byte (context, address, value);
 
-    printf ("bset.b (xxx.l) [d%d]\n", bit_reg);
     return 0;
 }
 
@@ -1040,7 +1018,6 @@ static uint32_t m68k_0200_andi_b_dn (M68000_Context *context, uint16_t instructi
     context->state.d [reg].b = result;
     m68k_move_b_flags (context, result);
 
-    printf ("andi.b d%d ← #%02x\n", reg, imm & 0xff);
     return 0;
 }
 
@@ -1056,7 +1033,6 @@ static uint32_t m68k_0228_andi_b_dan (M68000_Context *context, uint16_t instruct
     write_byte (context, address, result);
     m68k_move_b_flags (context, result);
 
-    printf ("andi.b d(a%d) ← #%02x\n", reg, imm & 0xff);
     return 0;
 }
 
@@ -1071,7 +1047,6 @@ static uint32_t m68k_0238_andi_b_aw (M68000_Context *context, uint16_t instructi
     write_byte (context, address, result);
     m68k_move_b_flags (context, result);
 
-    printf ("andi.b (xxx.w) ← #%02x\n", imm & 0xff);
     return 0;
 }
 
@@ -1088,7 +1063,6 @@ static uint32_t m68k_0240_andi_w_dn (M68000_Context *context, uint16_t instructi
     context->state.d [reg].w = result;
     m68k_move_w_flags (context, result);
 
-    printf ("andi.w d%d ← #%04x\n", reg, b);
     return 0;
 }
 
@@ -1105,7 +1079,6 @@ static uint32_t m68k_0250_andi_w_an (M68000_Context *context, uint16_t instructi
     write_word (context, context->state.a [reg], result);
     m68k_move_w_flags (context, result);
 
-    printf ("andi.w (a%d) ← #%04x\n", reg, b);
     return 0;
 }
 
@@ -1123,7 +1096,6 @@ static uint32_t m68k_0258_andi_w_anp (M68000_Context *context, uint16_t instruct
     context->state.a [reg] += 2;
     m68k_move_w_flags (context, result);
 
-    printf ("andi.w (a%d)+ ← #%04x\n", reg, b);
     return 0;
 }
 
@@ -1141,7 +1113,6 @@ static uint32_t m68k_0260_andi_w_pan (M68000_Context *context, uint16_t instruct
     write_word (context, context->state.a [reg], result);
     m68k_move_w_flags (context, result);
 
-    printf ("andi.w -(a%d) ← #%04x\n", reg, b);
     return 0;
 }
 
@@ -1159,7 +1130,6 @@ static uint32_t m68k_0268_andi_w_dan (M68000_Context *context, uint16_t instruct
     write_word (context, address, result);
     m68k_move_w_flags (context, result);
 
-    printf ("andi.w d(a%d) ← #%04x\n", reg, b);
     return 0;
 }
 
@@ -1177,7 +1147,6 @@ static uint32_t m68k_0270_andi_w_danxi (M68000_Context *context, uint16_t instru
     write_word (context, address, result);
     m68k_move_w_flags (context, result);
 
-    printf ("andi.w d(a%d+Xi) ← #%04x\n", reg, b);
     return 0;
 }
 
@@ -1193,7 +1162,6 @@ static uint32_t m68k_0278_andi_w_aw (M68000_Context *context, uint16_t instructi
     write_word (context, address, result);
     m68k_move_w_flags (context, result);
 
-    printf ("andi.w (xxx.w) ← #%04x\n", b);
     return 0;
 }
 
@@ -1209,7 +1177,6 @@ static uint32_t m68k_0279_andi_w_al (M68000_Context *context, uint16_t instructi
     write_word (context, address, result);
     m68k_move_w_flags (context, result);
 
-    printf ("andi.w (xxx.l) ← #%04x\n", b);
     return 0;
 }
 
@@ -1226,7 +1193,6 @@ static uint32_t m68k_0280_andi_l_dn (M68000_Context *context, uint16_t instructi
     context->state.d [reg].l = result;
     m68k_move_l_flags (context, result);
 
-    printf ("andi.l d%d ← #%08x\n", reg, b);
     return 0;
 }
 
@@ -1243,7 +1209,6 @@ static uint32_t m68k_0290_andi_l_an (M68000_Context *context, uint16_t instructi
     write_long (context, context->state.a [reg], result);
     m68k_move_l_flags (context, result);
 
-    printf ("andi.l (a%d) ← #%08x\n", reg, b);
     return 0;
 }
 
@@ -1261,7 +1226,6 @@ static uint32_t m68k_0298_andi_l_anp (M68000_Context *context, uint16_t instruct
     context->state.a [reg] += 4;
     m68k_move_l_flags (context, result);
 
-    printf ("andi.l (a%d)+ ← #%08x\n", reg, b);
     return 0;
 }
 
@@ -1279,7 +1243,6 @@ static uint32_t m68k_02a0_andi_l_pan (M68000_Context *context, uint16_t instruct
     write_long (context, context->state.a [reg], result);
     m68k_move_l_flags (context, result);
 
-    printf ("andi.l -(a%d) ← #%08x\n", reg, b);
     return 0;
 }
 
@@ -1297,7 +1260,6 @@ static uint32_t m68k_02a8_andi_l_dan (M68000_Context *context, uint16_t instruct
     write_long (context, address, result);
     m68k_move_l_flags (context, result);
 
-    printf ("andi.l d(a%d) ← #%08x\n", reg, b);
     return 0;
 }
 
@@ -1315,7 +1277,6 @@ static uint32_t m68k_02b0_andi_l_danxi (M68000_Context *context, uint16_t instru
     write_long (context, address, result);
     m68k_move_l_flags (context, result);
 
-    printf ("andi.l d(a%d+Xi) ← #%08x\n", reg, b);
     return 0;
 }
 
@@ -1331,7 +1292,6 @@ static uint32_t m68k_02b8_andi_l_aw (M68000_Context *context, uint16_t instructi
     write_long (context, address, result);
     m68k_move_l_flags (context, result);
 
-    printf ("andi.l (xxx.w) ← #%08x\n", b);
     return 0;
 }
 
@@ -1347,7 +1307,6 @@ static uint32_t m68k_02b9_andi_l_al (M68000_Context *context, uint16_t instructi
     write_long (context, address, result);
     m68k_move_l_flags (context, result);
 
-    printf ("andi.l (xxx.l) ← #%08x\n", b);
     return 0;
 }
 
@@ -1364,7 +1323,6 @@ static uint32_t m68k_0400_subi_b_dn (M68000_Context *context, uint16_t instructi
     context->state.d [reg].b = result;
     m68k_sub_b_flags (context, a, b, result);
 
-    printf ("subi.b d%d ← #%02x\n", reg, b);
     return 0;
 }
 
@@ -1380,7 +1338,6 @@ static uint32_t m68k_0410_subi_b_an (M68000_Context *context, uint16_t instructi
     write_byte (context, context->state.a [reg], result);
     m68k_sub_b_flags (context, a, b, result);
 
-    printf ("subi.b (a%d) ← #%02x\n", reg, b);
     return 0;
 }
 
@@ -1398,7 +1355,6 @@ static uint32_t m68k_0418_subi_b_anp (M68000_Context *context, uint16_t instruct
     context->state.a [reg] += (reg == 7) ? 2 : 1;
     m68k_sub_b_flags (context, a, b, result);
 
-    printf ("subi.b (a%d)+ ← #%02x\n", reg, b);
     return 0;
 }
 
@@ -1415,7 +1371,6 @@ static uint32_t m68k_0420_subi_b_pan (M68000_Context *context, uint16_t instruct
     write_byte (context, context->state.a [reg], result);
     m68k_sub_b_flags (context, a, b, result);
 
-    printf ("subi.b -(a%d) ← #%02x\n", reg, b);
     return 0;
 }
 
@@ -1434,7 +1389,6 @@ static uint32_t m68k_0428_subi_b_dan (M68000_Context *context, uint16_t instruct
 
     m68k_sub_b_flags (context, a, b, result);
 
-    printf ("subi.b d(a%d) ← #%02x\n", reg, b);
     return 0;
 }
 
@@ -1453,7 +1407,6 @@ static uint32_t m68k_0430_subi_b_danxi (M68000_Context *context, uint16_t instru
 
     m68k_sub_b_flags (context, a, b, result);
 
-    printf ("subi.b d(a%d+Xi) ← #%02x\n", reg, b);
     return 0;
 }
 
@@ -1470,7 +1423,6 @@ static uint32_t m68k_0438_subi_b_aw (M68000_Context *context, uint16_t instructi
 
     m68k_sub_b_flags (context, a, b, result);
 
-    printf ("subi.b (xxx.w) ← #%02x\n", b);
     return 0;
 }
 
@@ -1487,7 +1439,6 @@ static uint32_t m68k_0439_subi_b_al (M68000_Context *context, uint16_t instructi
 
     m68k_sub_b_flags (context, a, b, result);
 
-    printf ("subi.b (xxx.l) ← #%02x\n", b);
     return 0;
 }
 
@@ -1504,7 +1455,6 @@ static uint32_t m68k_0440_subi_w_dn (M68000_Context *context, uint16_t instructi
     context->state.d [reg].w = result;
     m68k_sub_w_flags (context, a, b, result);
 
-    printf ("subi.w d%d ← #%04x\n", reg, b);
     return 0;
 }
 
@@ -1521,7 +1471,6 @@ static uint32_t m68k_0450_subi_w_an (M68000_Context *context, uint16_t instructi
     write_word (context, context->state.a [reg], result);
     m68k_sub_w_flags (context, a, b, result);
 
-    printf ("subi.w (a%d) ← #%04x\n", reg, b);
     return 0;
 }
 
@@ -1539,7 +1488,6 @@ static uint32_t m68k_0458_subi_w_anp (M68000_Context *context, uint16_t instruct
     context->state.a [reg] += 2;
     m68k_sub_w_flags (context, a, b, result);
 
-    printf ("subi.w (a%d)+ ← #%04x\n", reg, b);
     return 0;
 }
 
@@ -1557,7 +1505,6 @@ static uint32_t m68k_0460_subi_w_pan (M68000_Context *context, uint16_t instruct
     write_word (context, context->state.a [reg], result);
     m68k_sub_w_flags (context, a, b, result);
 
-    printf ("subi.w -(a%d) ← #%04x\n", reg, b);
     return 0;
 }
 
@@ -1575,7 +1522,6 @@ static uint32_t m68k_0468_subi_w_dan (M68000_Context *context, uint16_t instruct
     write_word (context, address, result);
     m68k_sub_w_flags (context, a, b, result);
 
-    printf ("subi.w d(a%d) ← #%04x\n", reg, b);
     return 0;
 }
 
@@ -1594,7 +1540,6 @@ static uint32_t m68k_0470_subi_w_danxi (M68000_Context *context, uint16_t instru
 
     m68k_sub_w_flags (context, a, b, result);
 
-    printf ("subi.w d(a%d+Xi) ← #%02x\n", reg, b);
     return 0;
 }
 
@@ -1611,7 +1556,6 @@ static uint32_t m68k_0478_subi_w_aw (M68000_Context *context, uint16_t instructi
 
     m68k_sub_w_flags (context, a, b, result);
 
-    printf ("subi.w (xxx.w) ← #%02x\n", b);
     return 0;
 }
 
@@ -1628,7 +1572,6 @@ static uint32_t m68k_0479_subi_w_al (M68000_Context *context, uint16_t instructi
 
     m68k_sub_w_flags (context, a, b, result);
 
-    printf ("subi.w (xxx.l) ← #%02x\n", b);
     return 0;
 }
 
@@ -1645,7 +1588,6 @@ static uint32_t m68k_0480_subi_l_dn (M68000_Context *context, uint16_t instructi
     context->state.d [reg].l = result;
     m68k_sub_l_flags (context, a, b, result);
 
-    printf ("subi.l d%d ← #%04x\n", reg, b);
     return 0;
 }
 
@@ -1662,7 +1604,6 @@ static uint32_t m68k_0490_subi_l_an (M68000_Context *context, uint16_t instructi
     write_long (context, context->state.a [reg], result);
     m68k_sub_l_flags (context, a, b, result);
 
-    printf ("subi.l (a%d) ← #%04x\n", reg, b);
     return 0;
 }
 
@@ -1680,7 +1621,6 @@ static uint32_t m68k_0498_subi_l_anp (M68000_Context *context, uint16_t instruct
     context->state.a [reg] += 4;
     m68k_sub_l_flags (context, a, b, result);
 
-    printf ("subi.l (a%d)+ ← #%04x\n", reg, b);
     return 0;
 }
 
@@ -1698,7 +1638,6 @@ static uint32_t m68k_04a0_subi_l_pan (M68000_Context *context, uint16_t instruct
     write_long (context, context->state.a [reg], result);
     m68k_sub_l_flags (context, a, b, result);
 
-    printf ("subi.l -(a%d) ← #%04x\n", reg, b);
     return 0;
 }
 
@@ -1716,7 +1655,6 @@ static uint32_t m68k_04a8_subi_l_dan (M68000_Context *context, uint16_t instruct
     write_long (context, address, result);
     m68k_sub_l_flags (context, a, b, result);
 
-    printf ("subi.l d(a%d) ← #%04x\n", reg, b);
     return 0;
 }
 
@@ -1734,7 +1672,6 @@ static uint32_t m68k_04b0_subi_l_danxi (M68000_Context *context, uint16_t instru
     write_long (context, address, result);
     m68k_sub_l_flags (context, a, b, result);
 
-    printf ("subi.l d(a%d+Xi) ← #%04x\n", reg, b);
     return 0;
 }
 
@@ -1750,7 +1687,6 @@ static uint32_t m68k_04b8_subi_l_aw (M68000_Context *context, uint16_t instructi
     write_long (context, address, result);
     m68k_sub_l_flags (context, a, b, result);
 
-    printf ("subi.l (xxx.w) ← #%04x\n", b);
     return 0;
 }
 
@@ -1766,7 +1702,6 @@ static uint32_t m68k_04b9_subi_l_al (M68000_Context *context, uint16_t instructi
     write_long (context, address, result);
     m68k_sub_l_flags (context, a, b, result);
 
-    printf ("subi.l (xxx.l) ← #%04x\n", b);
     return 0;
 }
 
@@ -1783,7 +1718,6 @@ static uint32_t m68k_0600_addi_b_dn (M68000_Context *context, uint16_t instructi
     context->state.d [reg].b = result;
     m68k_add_b_flags (context, a, b, result);
 
-    printf ("addi.b d%d ← #%02x\n", reg, b);
     return 0;
 }
 
@@ -1800,7 +1734,6 @@ static uint32_t m68k_0610_addi_b_an (M68000_Context *context, uint16_t instructi
     write_byte (context, context->state.a [reg], result);
     m68k_add_b_flags (context, a, b, result);
 
-    printf ("addi.b (a%d) ← #%02x\n", reg, b);
     return 0;
 }
 
@@ -1819,7 +1752,6 @@ static uint32_t m68k_0618_addi_b_anp (M68000_Context *context, uint16_t instruct
 
     m68k_add_b_flags (context, a, b, result);
 
-    printf ("addi.b (a%d)+ ← #%02x\n", reg, b);
     return 0;
 }
 
@@ -1838,7 +1770,6 @@ static uint32_t m68k_0620_addi_b_pan (M68000_Context *context, uint16_t instruct
 
     m68k_add_b_flags (context, a, b, result);
 
-    printf ("addi.b -(a%d) ← #%02x\n", reg, b);
     return 0;
 }
 
@@ -1857,7 +1788,6 @@ static uint32_t m68k_0628_addi_b_dan (M68000_Context *context, uint16_t instruct
 
     m68k_add_b_flags (context, a, b, result);
 
-    printf ("addi.b d(a%d) ← #%02x\n", reg, b);
     return 0;
 }
 
@@ -1876,7 +1806,6 @@ static uint32_t m68k_0630_addi_b_danxi (M68000_Context *context, uint16_t instru
 
     m68k_add_b_flags (context, a, b, result);
 
-    printf ("addi.b d(a%d+Xi) ← #%02x\n", reg, b);
     return 0;
 }
 
@@ -1893,7 +1822,6 @@ static uint32_t m68k_0638_addi_b_aw (M68000_Context *context, uint16_t instructi
 
     m68k_add_b_flags (context, a, b, result);
 
-    printf ("addi.b (xxx.w) ← #%02x\n", b);
     return 0;
 }
 
@@ -1910,7 +1838,6 @@ static uint32_t m68k_0639_addi_b_al (M68000_Context *context, uint16_t instructi
 
     m68k_add_b_flags (context, a, b, result);
 
-    printf ("addi.b (xxx.l) ← #%02x\n", b);
     return 0;
 }
 
@@ -1927,7 +1854,6 @@ static uint32_t m68k_0640_addi_w_dn (M68000_Context *context, uint16_t instructi
     context->state.d [reg].w = result;
     m68k_add_w_flags (context, a, b, result);
 
-    printf ("addi.w d%d ← #%04x\n", reg, b);
     return 0;
 }
 
@@ -1944,7 +1870,6 @@ static uint32_t m68k_0650_addi_w_an (M68000_Context *context, uint16_t instructi
     write_word (context, context->state.a [reg], result);
     m68k_add_w_flags (context, a, b, result);
 
-    printf ("addi.w (a%d) ← #%04x\n", reg, b);
     return 0;
 }
 
@@ -1962,7 +1887,6 @@ static uint32_t m68k_0658_addi_w_anp (M68000_Context *context, uint16_t instruct
     context->state.a [reg] += 2;
     m68k_add_w_flags (context, a, b, result);
 
-    printf ("addi.w (a%d)+ ← #%04x\n", reg, b);
     return 0;
 }
 
@@ -1980,7 +1904,6 @@ static uint32_t m68k_0660_addi_w_pan (M68000_Context *context, uint16_t instruct
     write_word (context, context->state.a [reg], result);
     m68k_add_w_flags (context, a, b, result);
 
-    printf ("addi.w -(a%d) ← #%04x\n", reg, b);
     return 0;
 }
 
@@ -1998,7 +1921,6 @@ static uint32_t m68k_0668_addi_w_dan (M68000_Context *context, uint16_t instruct
     write_word (context, address, result);
     m68k_add_w_flags (context, a, b, result);
 
-    printf ("addi.w d(a%d) ← #%04x\n", reg, b);
     return 0;
 }
 
@@ -2016,7 +1938,6 @@ static uint32_t m68k_0670_addi_w_danxi (M68000_Context *context, uint16_t instru
     write_word (context, address, result);
     m68k_add_w_flags (context, a, b, result);
 
-    printf ("addi.w d(a%d+Xi) ← #%04x\n", reg, b);
     return 0;
 }
 
@@ -2032,7 +1953,6 @@ static uint32_t m68k_0678_addi_w_aw (M68000_Context *context, uint16_t instructi
     write_word (context, address, result);
     m68k_add_w_flags (context, a, b, result);
 
-    printf ("addi.w (xxx.w) ← #%04x\n", b);
     return 0;
 }
 
@@ -2048,7 +1968,6 @@ static uint32_t m68k_0679_addi_w_al (M68000_Context *context, uint16_t instructi
     write_word (context, address, result);
     m68k_add_w_flags (context, a, b, result);
 
-    printf ("addi.w (xxx.l) ← #%04x\n", b);
     return 0;
 }
 
@@ -2065,7 +1984,6 @@ static uint32_t m68k_0680_addi_l_dn (M68000_Context *context, uint16_t instructi
     context->state.d [reg].l = result;
     m68k_add_l_flags (context, a, b, result);
 
-    printf ("addi.l d%d ← #%08x\n", reg, b);
     return 0;
 }
 
@@ -2081,7 +1999,6 @@ static uint32_t m68k_0690_addi_l_an (M68000_Context *context, uint16_t instructi
     write_long (context, context->state.a [reg], result);
     m68k_add_l_flags (context, a, b, result);
 
-    printf ("addi.l (a%d) ← #%08x\n", reg, b);
     return 0;
 }
 
@@ -2098,7 +2015,6 @@ static uint32_t m68k_0698_addi_l_anp (M68000_Context *context, uint16_t instruct
     context->state.a [reg] += 4;
     m68k_add_l_flags (context, a, b, result);
 
-    printf ("addi.l (a%d)+ ← #%08x\n", reg, b);
     return 0;
 }
 
@@ -2115,7 +2031,6 @@ static uint32_t m68k_06a0_addi_l_pan (M68000_Context *context, uint16_t instruct
     write_long (context, context->state.a [reg], result);
     m68k_add_l_flags (context, a, b, result);
 
-    printf ("addi.l -(a%d) ← #%08x\n", reg, b);
     return 0;
 }
 
@@ -2132,7 +2047,6 @@ static uint32_t m68k_06a8_addi_l_dan (M68000_Context *context, uint16_t instruct
     write_long (context, address, result);
     m68k_add_l_flags (context, a, b, result);
 
-    printf ("addi.l d(a%d) ← #%08x\n", reg, b);
     return 0;
 }
 
@@ -2149,7 +2063,6 @@ static uint32_t m68k_06b0_addi_l_danxi (M68000_Context *context, uint16_t instru
     write_long (context, address, result);
     m68k_add_l_flags (context, a, b, result);
 
-    printf ("addi.l d(a%d+Xi) ← #%08x\n", reg, b);
     return 0;
 }
 
@@ -2165,7 +2078,6 @@ static uint32_t m68k_06b8_addi_l_aw (M68000_Context *context, uint16_t instructi
     write_long (context, address, result);
     m68k_add_l_flags (context, a, b, result);
 
-    printf ("addi.l (xxx.w) ← #%08x\n", b);
     return 0;
 }
 
@@ -2181,7 +2093,6 @@ static uint32_t m68k_06b9_addi_l_al (M68000_Context *context, uint16_t instructi
     write_long (context, address, result);
     m68k_add_l_flags (context, a, b, result);
 
-    printf ("addi.l (xxx.l) ← #%08x\n", b);
     return 0;
 }
 
@@ -2195,7 +2106,6 @@ static uint32_t m68k_0800_btst_l_dn_imm (M68000_Context *context, uint16_t instr
 
     context->state.ccr_zero = !((value >> bit) & 0x01);
 
-    printf ("btst.l d%d [#%x]\n", data_reg, bit);
     return 0;
 }
 
@@ -2209,7 +2119,6 @@ static uint32_t m68k_0810_btst_b_an_imm (M68000_Context *context, uint16_t instr
 
     context->state.ccr_zero = !((value >> bit) & 0x01);
 
-    printf ("btst.b (a%d) [#%x]\n", data_reg, bit);
     return 0;
 }
 
@@ -2223,7 +2132,6 @@ static uint32_t m68k_0828_btst_b_dan_imm (M68000_Context *context, uint16_t inst
 
     context->state.ccr_zero = !((value >> bit) & 0x01);
 
-    printf ("btst.b d(a%d) [#%x]\n", data_reg, bit);
     return 0;
 }
 
@@ -2237,7 +2145,6 @@ static uint32_t m68k_0830_btst_b_danxi_imm (M68000_Context *context, uint16_t in
 
     context->state.ccr_zero = !((value >> bit) & 0x01);
 
-    printf ("btst.b d(a%d+Xi) [#%x]\n", data_reg, bit);
     return 0;
 }
 
@@ -2250,7 +2157,6 @@ static uint32_t m68k_0838_btst_b_aw_imm (M68000_Context *context, uint16_t instr
 
     context->state.ccr_zero = !((value >> bit) & 0x01);
 
-    printf ("btst.b (xxx.w) [#%x]\n", bit);
     return 0;
 }
 
@@ -2263,7 +2169,6 @@ static uint32_t m68k_0839_btst_b_al_imm (M68000_Context *context, uint16_t instr
 
     context->state.ccr_zero = !((value >> bit) & 0x01);
 
-    printf ("btst.b (xxx.l) [#%x]\n", bit);
     return 0;
 }
 
@@ -2280,7 +2185,6 @@ static uint32_t m68k_0840_bchg_l_dn_imm (M68000_Context *context, uint16_t instr
     value ^= 1 << bit;
     context->state.d [reg].l = value;
 
-    printf ("bchg.l d%d [#%x]\n", reg, bit);
     return 0;
 }
 
@@ -2298,7 +2202,6 @@ static uint32_t m68k_0868_bchg_b_dan_imm (M68000_Context *context, uint16_t inst
     value ^= 1 << bit;
     write_byte (context, address, value);
 
-    printf ("bchg.b d(a%d) [#%x]\n", reg, bit);
     return 0;
 }
 
@@ -2315,7 +2218,6 @@ static uint32_t m68k_0880_bclr_l_dn_imm (M68000_Context *context, uint16_t instr
     value &= ~(1 << bit);
     context->state.d [reg].l = value;
 
-    printf ("bclr.l d%d [#%x]\n", reg, bit);
     return 0;
 }
 
@@ -2332,7 +2234,6 @@ static uint32_t m68k_0890_bclr_b_an_imm (M68000_Context *context, uint16_t instr
     value &= ~(1 << bit);
     write_byte (context, context->state.a [reg], value);
 
-    printf ("bclr.b (a%d) [#%x]\n", reg, bit);
     return 0;
 }
 
@@ -2350,7 +2251,6 @@ static uint32_t m68k_0898_bclr_b_anp_imm (M68000_Context *context, uint16_t inst
     write_byte (context, context->state.a [reg], value);
     context->state.a [reg] += (reg == 7) ? 2 : 1;
 
-    printf ("bclr.b (a%d)+ [#%x]\n", reg, bit);
     return 0;
 }
 
@@ -2368,7 +2268,6 @@ static uint32_t m68k_08a0_bclr_b_pan_imm (M68000_Context *context, uint16_t inst
     value &= ~(1 << bit);
     write_byte (context, context->state.a [reg], value);
 
-    printf ("bclr.b -(a%d) [#%x]\n", reg, bit);
     return 0;
 }
 
@@ -2386,7 +2285,6 @@ static uint32_t m68k_08a8_bclr_b_dan_imm (M68000_Context *context, uint16_t inst
     value &= ~(1 << bit);
     write_byte (context, address, value);
 
-    printf ("bclr.b d(a%d) [#%x]\n", reg, bit);
     return 0;
 }
 
@@ -2405,7 +2303,6 @@ static uint32_t m68k_08b0_bclr_b_danxi_imm (M68000_Context *context, uint16_t in
     value &= ~(1 << bit);
     write_byte (context, address, value);
 
-    printf ("bclr.b d(a%d+Xi) [#%x]\n", reg, bit);
     return 0;
 }
 
@@ -2422,7 +2319,6 @@ static uint32_t m68k_08b8_bclr_b_aw_imm (M68000_Context *context, uint16_t instr
     value &= ~(1 << bit);
     write_byte (context, address, value);
 
-    printf ("bclr.b (xxx.w) [#%x]\n", bit);
     return 0;
 }
 
@@ -2439,7 +2335,6 @@ static uint32_t m68k_08b9_bclr_b_al_imm (M68000_Context *context, uint16_t instr
     value &= ~(1 << bit);
     write_byte (context, address, value);
 
-    printf ("bclr.b (xxx.l) [#%x]\n", bit);
     return 0;
 }
 
@@ -2456,7 +2351,6 @@ static uint32_t m68k_08c0_bset_l_dn_imm (M68000_Context *context, uint16_t instr
     value |= 1 << bit;
     context->state.d [reg].l = value;
 
-    printf ("bset.l d%d [#%x]\n", reg, bit);
     return 0;
 }
 
@@ -2473,7 +2367,6 @@ static uint32_t m68k_08d0_bset_b_an_imm (M68000_Context *context, uint16_t instr
     value |= 1 << bit;
     write_byte (context, context->state.a [reg], value);
 
-    printf ("bset.b (a%d) [#%x]\n", reg, bit);
     return 0;
 }
 
@@ -2491,7 +2384,6 @@ static uint32_t m68k_08d8_bset_b_anp_imm (M68000_Context *context, uint16_t inst
     write_byte (context, context->state.a [reg], value);
     context->state.a [reg] += (reg == 7) ? 2 : 1;
 
-    printf ("bset.b (a%d)+ [#%x]\n", reg, bit);
     return 0;
 }
 
@@ -2509,7 +2401,6 @@ static uint32_t m68k_08e0_bset_b_pan_imm (M68000_Context *context, uint16_t inst
     value |= 1 << bit;
     write_byte (context, context->state.a [reg], value);
 
-    printf ("bset.b -(a%d) [#%x]\n", reg, bit);
     return 0;
 }
 
@@ -2527,7 +2418,6 @@ static uint32_t m68k_08e8_bset_b_dan_imm (M68000_Context *context, uint16_t inst
     value |= 1 << bit;
     write_byte (context, address, value);
 
-    printf ("bset.b d(a%d) [#%x]\n", reg, bit);
     return 0;
 }
 
@@ -2546,7 +2436,6 @@ static uint32_t m68k_08f0_bset_b_danxi_imm (M68000_Context *context, uint16_t in
     value |= 1 << bit;
     write_byte (context, address, value);
 
-    printf ("bset.b d(a%d+Xi) [#%x]\n", reg, bit);
     return 0;
 }
 
@@ -2563,7 +2452,6 @@ static uint32_t m68k_08f8_bset_b_aw_imm (M68000_Context *context, uint16_t instr
     value |= 1 << bit;
     write_byte (context, address, value);
 
-    printf ("bset.b (xxx.w) [#%x]\n", bit);
     return 0;
 }
 
@@ -2580,7 +2468,6 @@ static uint32_t m68k_08f9_bset_b_al_imm (M68000_Context *context, uint16_t instr
     value |= 1 << bit;
     write_byte (context, address, value);
 
-    printf ("bset.b (xxx.l) [#%x]\n", bit);
     return 0;
 }
 
@@ -2597,7 +2484,6 @@ static uint32_t m68k_0a00_eori_b_dn (M68000_Context *context, uint16_t instructi
     context->state.d [reg].b = result;
     m68k_move_b_flags (context, result);
 
-    printf ("eori.b d%d ← #%02x\n", reg, b);
     return 0;
 }
 
@@ -2614,7 +2500,6 @@ static uint32_t m68k_0a10_eori_b_an (M68000_Context *context, uint16_t instructi
     write_byte (context, context->state.a [reg], result);
     m68k_move_b_flags (context, result);
 
-    printf ("eori.b (a%d) ← #%02x\n", reg, b);
     return 0;
 }
 
@@ -2632,7 +2517,6 @@ static uint32_t m68k_0a18_eori_b_anp (M68000_Context *context, uint16_t instruct
     context->state.a [reg] += (reg == 7) ? 2 : 1;
     m68k_move_b_flags (context, result);
 
-    printf ("eori.b (a%d)+ ← #%02x\n", reg, b);
     return 0;
 }
 
@@ -2650,7 +2534,6 @@ static uint32_t m68k_0a20_eori_b_pan (M68000_Context *context, uint16_t instruct
     write_byte (context, context->state.a [reg], result);
     m68k_move_b_flags (context, result);
 
-    printf ("eori.b -(a%d) ← #%02x\n", reg, b);
     return 0;
 }
 
@@ -2668,7 +2551,6 @@ static uint32_t m68k_0a28_eori_b_dan (M68000_Context *context, uint16_t instruct
     write_byte (context, address, result);
     m68k_move_b_flags (context, result);
 
-    printf ("eori.b d(a%d) ← #%02x\n", reg, b);
     return 0;
 }
 
@@ -2686,7 +2568,6 @@ static uint32_t m68k_0a30_eori_b_danxi (M68000_Context *context, uint16_t instru
     write_byte (context, address, result);
     m68k_move_b_flags (context, result);
 
-    printf ("eori.b d(a%d+Xi) ← #%02x\n", reg, b);
     return 0;
 }
 
@@ -2702,7 +2583,6 @@ static uint32_t m68k_0a38_eori_b_aw (M68000_Context *context, uint16_t instructi
     write_byte (context, address, result);
     m68k_move_b_flags (context, result);
 
-    printf ("eori.b (xxx.w) ← #%02x\n", b);
     return 0;
 }
 
@@ -2718,7 +2598,6 @@ static uint32_t m68k_0a39_eori_b_al (M68000_Context *context, uint16_t instructi
     write_byte (context, address, result);
     m68k_move_b_flags (context, result);
 
-    printf ("eori.b (xxx.l) ← #%02x\n", b);
     return 0;
 }
 
@@ -2733,7 +2612,6 @@ static uint32_t m68k_0a40_eori_w_dn (M68000_Context *context, uint16_t instructi
     context->state.d [reg].w = result;
     m68k_move_w_flags (context, result);
 
-    printf ("eori.w d%d ← #%04x\n", reg, imm);
     return 0;
 }
 
@@ -2748,7 +2626,6 @@ static uint32_t m68k_0a80_eori_l_dn (M68000_Context *context, uint16_t instructi
     context->state.d [reg].l = result;
     m68k_move_l_flags (context, result);
 
-    printf ("eori.l d%d ← #%08x\n", reg, imm);
     return 0;
 }
 
@@ -2764,7 +2641,6 @@ static uint32_t m68k_0c00_cmpi_b_dn (M68000_Context *context, uint16_t instructi
 
     m68k_cmp_b_flags (context, a, b, result);
 
-    printf ("cmpi.b d%d - #%02x\n", reg, b);
     return 0;
 }
 
@@ -2780,7 +2656,6 @@ static uint32_t m68k_0c10_cmpi_b_an (M68000_Context *context, uint16_t instructi
 
     m68k_cmp_b_flags (context, a, b, result);
 
-    printf ("cmpi.b (a%d) - #%02x\n", reg, b);
     return 0;
 }
 
@@ -2797,7 +2672,6 @@ static uint32_t m68k_0c18_cmpi_b_anp (M68000_Context *context, uint16_t instruct
 
     m68k_cmp_b_flags (context, a, b, result);
 
-    printf ("cmpi.b (a%d)+ - #%02x\n", reg, b);
     return 0;
 }
 
@@ -2814,7 +2688,6 @@ static uint32_t m68k_0c20_cmpi_b_pan (M68000_Context *context, uint16_t instruct
 
     m68k_cmp_b_flags (context, a, b, result);
 
-    printf ("cmpi.b -(a%d) - #%02x\n", reg, b);
     return 0;
 }
 
@@ -2830,7 +2703,6 @@ static uint32_t m68k_0c28_cmpi_b_dan (M68000_Context *context, uint16_t instruct
 
     m68k_cmp_b_flags (context, a, b, result);
 
-    printf ("cmpi.b d(a%d) - #%02x\n", reg, b);
     return 0;
 }
 
@@ -2846,7 +2718,6 @@ static uint32_t m68k_0c30_cmpi_b_danxi (M68000_Context *context, uint16_t instru
 
     m68k_cmp_b_flags (context, a, b, result);
 
-    printf ("cmpi.b d(a%d+Xi) - #%02x\n", reg, b);
     return 0;
 }
 
@@ -2860,7 +2731,6 @@ static uint32_t m68k_0c38_cmpi_b_aw (M68000_Context *context, uint16_t instructi
 
     m68k_cmp_b_flags (context, a, b, result);
 
-    printf ("cmpi.b (xxx.w) - #%02x\n", b);
     return 0;
 }
 
@@ -2874,7 +2744,6 @@ static uint32_t m68k_0c39_cmpi_b_al (M68000_Context *context, uint16_t instructi
 
     m68k_cmp_b_flags (context, a, b, result);
 
-    printf ("cmpi.b (xxx.l) - #%02x\n", b);
     return 0;
 }
 
@@ -2890,7 +2759,6 @@ static uint32_t m68k_0c40_cmpi_w_dn (M68000_Context *context, uint16_t instructi
 
     m68k_cmp_w_flags (context, a, b, result);
 
-    printf ("cmpi.w d%d - #%04x\n", reg, b);
     return 0;
 }
 
@@ -2906,7 +2774,6 @@ static uint32_t m68k_0c50_cmpi_w_an (M68000_Context *context, uint16_t instructi
 
     m68k_cmp_w_flags (context, a, b, result);
 
-    printf ("cmpi.w (a%d) - #%04x\n", reg, b);
     return 0;
 }
 
@@ -2922,7 +2789,6 @@ static uint32_t m68k_0c68_cmpi_w_dan (M68000_Context *context, uint16_t instruct
 
     m68k_cmp_w_flags (context, a, b, result);
 
-    printf ("cmpi.w d(a%d) - #%04x\n", reg, b);
     return 0;
 }
 
@@ -2936,7 +2802,6 @@ static uint32_t m68k_0c78_cmpi_w_aw (M68000_Context *context, uint16_t instructi
 
     m68k_cmp_w_flags (context, a, b, result);
 
-    printf ("cmpi.w (xxx.w) - #%02x\n", b);
     return 0;
 }
 
@@ -2953,7 +2818,6 @@ static uint32_t m68k_0c98_cmpi_l_anp (M68000_Context *context, uint16_t instruct
 
     m68k_cmp_l_flags (context, a, b, result);
 
-    printf ("cmpi.l (a%d)+ - #%04x\n", reg, b);
     return 0;
 }
 
@@ -2969,7 +2833,6 @@ static uint32_t m68k_1000_move_b_dn_dn (M68000_Context *context, uint16_t instru
 
     m68k_move_b_flags (context, value);
 
-    printf ("move.b d%d ← d%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -2984,7 +2847,6 @@ static uint32_t m68k_1010_move_b_dn_an (M68000_Context *context, uint16_t instru
     context->state.d [dest_reg].b = value;
     m68k_move_b_flags (context, value);
 
-    printf ("move.b d%d ← (a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -3000,7 +2862,6 @@ static uint32_t m68k_1018_move_b_dn_anp (M68000_Context *context, uint16_t instr
     context->state.d [dest_reg].b = value;
     m68k_move_b_flags (context, value);
 
-    printf ("move.b d%d ← (a%d)+\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -3016,7 +2877,6 @@ static uint32_t m68k_1020_move_b_dn_pan (M68000_Context *context, uint16_t instr
     context->state.d [dest_reg].b = value;
     m68k_move_b_flags (context, value);
 
-    printf ("move.b d%d ← -(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -3031,7 +2891,6 @@ static uint32_t m68k_1028_move_b_dn_dan (M68000_Context *context, uint16_t instr
     context->state.d [dest_reg].b = value;
     m68k_move_b_flags (context, value);
 
-    printf ("move.b d%d ← d(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -3047,7 +2906,6 @@ static uint32_t m68k_1030_move_b_dn_danxi (M68000_Context *context, uint16_t ins
 
     m68k_move_b_flags (context, value);
 
-    printf ("move.b d%d ← d(a%d+Xi)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -3061,7 +2919,6 @@ static uint32_t m68k_1038_move_b_dn_aw (M68000_Context *context, uint16_t instru
     context->state.d [dest_reg].b = value;
     m68k_move_b_flags (context, value);
 
-    printf ("move.b d%d ← (xxx.w)\n", dest_reg);
     return 0;
 }
 
@@ -3075,7 +2932,6 @@ static uint32_t m68k_1039_move_b_dn_al (M68000_Context *context, uint16_t instru
     context->state.d [dest_reg].b = value;
     m68k_move_b_flags (context, value);
 
-    printf ("move.b d%d ← (xxx.l)\n", dest_reg);
     return 0;
 }
 
@@ -3089,7 +2945,6 @@ static uint32_t m68k_103a_move_b_dn_dpc (M68000_Context *context, uint16_t instr
     context->state.d [dest_reg].b = value;
     m68k_move_b_flags (context, value);
 
-    printf ("move.b d%d ← d(PC)\n", dest_reg);
     return 0;
 }
 
@@ -3103,7 +2958,6 @@ static uint32_t m68k_103b_move_b_dn_dpcxi (M68000_Context *context, uint16_t ins
     context->state.d [dest_reg].b = value;
     m68k_move_b_flags (context, value);
 
-    printf ("move.b d%d ← d(PC+Xi)\n", dest_reg);
     return 0;
 }
 
@@ -3117,7 +2971,6 @@ static uint32_t m68k_103c_move_b_dn_imm (M68000_Context *context, uint16_t instr
     context->state.d [dest_reg].b = value;
     m68k_move_b_flags (context, value);
 
-    printf ("move.b d%d ← #%02x\n", dest_reg, value);
     return 0;
 }
 
@@ -3132,7 +2985,6 @@ static uint32_t m68k_1080_move_b_an_dn (M68000_Context *context, uint16_t instru
     write_byte (context, context->state.a [dest_reg], value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b (a%d) ← d%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -3147,7 +2999,6 @@ static uint32_t m68k_1090_move_b_an_an (M68000_Context *context, uint16_t instru
     write_byte (context, context->state.a [dest_reg], value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b (a%d) ← (a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -3163,7 +3014,6 @@ static uint32_t m68k_1098_move_b_an_anp (M68000_Context *context, uint16_t instr
     write_byte (context, context->state.a [dest_reg], value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b (a%d) ← (a%d)+\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -3179,7 +3029,6 @@ static uint32_t m68k_10a0_move_b_an_pan (M68000_Context *context, uint16_t instr
     write_byte (context, context->state.a [dest_reg], value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b (a%d) ← -(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -3194,7 +3043,6 @@ static uint32_t m68k_10a8_move_b_an_dan (M68000_Context *context, uint16_t instr
     write_byte (context, context->state.a [dest_reg], value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b (a%d) ← d(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -3209,7 +3057,6 @@ static uint32_t m68k_10b0_move_b_an_danxi (M68000_Context *context, uint16_t ins
     write_byte (context, context->state.a [dest_reg], value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b (a%d) ← d(a%d+Xi)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -3223,7 +3070,6 @@ static uint32_t m68k_10b8_move_b_an_aw (M68000_Context *context, uint16_t instru
     write_byte (context, context->state.a [dest_reg], value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b (a%d) ← (xxx.w)\n", dest_reg);
     return 0;
 }
 
@@ -3237,7 +3083,6 @@ static uint32_t m68k_10b9_move_b_an_al (M68000_Context *context, uint16_t instru
     write_byte (context, context->state.a [dest_reg], value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b (a%d) ← (xxx.l)\n", dest_reg);
     return 0;
 }
 
@@ -3251,7 +3096,6 @@ static uint32_t m68k_10ba_move_b_an_dpc (M68000_Context *context, uint16_t instr
     write_byte (context, context->state.a [dest_reg], value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b (a%d) ← d(PC)\n", dest_reg);
     return 0;
 }
 
@@ -3265,7 +3109,6 @@ static uint32_t m68k_10bb_move_b_an_dpcxi (M68000_Context *context, uint16_t ins
     write_byte (context, context->state.a [dest_reg], value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b (a%d) ← d(PC+Xi)\n", dest_reg);
     return 0;
 }
 
@@ -3279,7 +3122,6 @@ static uint32_t m68k_10bc_move_b_an_imm (M68000_Context *context, uint16_t instr
     write_byte (context, context->state.a [dest_reg], value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b (a%d) ← #%02x\n", dest_reg, value);
     return 0;
 }
 
@@ -3295,7 +3137,6 @@ static uint32_t m68k_10c0_move_b_anp_dn (M68000_Context *context, uint16_t instr
     context->state.a [dest_reg] += (dest_reg == 7) ? 2 : 1;
     m68k_move_b_flags (context, value);
 
-    printf ("move.b (a%d)+ ← d%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -3311,7 +3152,6 @@ static uint32_t m68k_10d0_move_b_anp_an (M68000_Context *context, uint16_t instr
     context->state.a [dest_reg] += (dest_reg == 7) ? 2 : 1;
     m68k_move_b_flags (context, value);
 
-    printf ("move.b (a%d)+ ← (a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -3328,7 +3168,6 @@ static uint32_t m68k_10d8_move_b_anp_anp (M68000_Context *context, uint16_t inst
     context->state.a [dest_reg] += (dest_reg == 7) ? 2 : 1;
     m68k_move_b_flags (context, value);
 
-    printf ("move.b (a%d)+ ← (a%d)+\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -3345,7 +3184,6 @@ static uint32_t m68k_10e0_move_b_anp_pan (M68000_Context *context, uint16_t inst
     context->state.a [dest_reg] += (dest_reg == 7) ? 2 : 1;
     m68k_move_b_flags (context, value);
 
-    printf ("move.b (a%d)+ ← -(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -3361,7 +3199,6 @@ static uint32_t m68k_10e8_move_b_anp_dan (M68000_Context *context, uint16_t inst
     context->state.a [dest_reg] += (dest_reg == 7) ? 2 : 1;
     m68k_move_b_flags (context, value);
 
-    printf ("move.b (a%d)+ ← d(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -3377,7 +3214,6 @@ static uint32_t m68k_10f0_move_b_anp_danxi (M68000_Context *context, uint16_t in
     context->state.a [dest_reg] += (dest_reg == 7) ? 2 : 1;
     m68k_move_b_flags (context, value);
 
-    printf ("move.b (a%d)+ ← d(a%d+Xi)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -3392,7 +3228,6 @@ static uint32_t m68k_10f8_move_b_anp_aw (M68000_Context *context, uint16_t instr
     context->state.a [dest_reg] += (dest_reg == 7) ? 2 : 1;
     m68k_move_b_flags (context, value);
 
-    printf ("move.b (a%d)+ ← (xxx.w)\n", dest_reg);
     return 0;
 }
 
@@ -3407,7 +3242,6 @@ static uint32_t m68k_10f9_move_b_anp_al (M68000_Context *context, uint16_t instr
     context->state.a [dest_reg] += (dest_reg == 7) ? 2 : 1;
     m68k_move_b_flags (context, value);
 
-    printf ("move.b (a%d)+ ← (xxx.l)\n", dest_reg);
     return 0;
 }
 
@@ -3422,7 +3256,6 @@ static uint32_t m68k_10fa_move_b_anp_dpc (M68000_Context *context, uint16_t inst
     context->state.a [dest_reg] += (dest_reg == 7) ? 2 : 1;
     m68k_move_b_flags (context, value);
 
-    printf ("move.b (a%d)+ ← d(PC)\n", dest_reg);
     return 0;
 }
 
@@ -3437,7 +3270,6 @@ static uint32_t m68k_10fb_move_b_anp_dpcxi (M68000_Context *context, uint16_t in
     context->state.a [dest_reg] += (dest_reg == 7) ? 2 : 1;
     m68k_move_b_flags (context, value);
 
-    printf ("move.b (a%d)+ ← d(PC+Xi)\n", dest_reg);
     return 0;
 }
 
@@ -3452,7 +3284,6 @@ static uint32_t m68k_10fc_move_b_anp_imm (M68000_Context *context, uint16_t inst
     context->state.a [dest_reg] += (dest_reg == 7) ? 2 : 1;
     m68k_move_b_flags (context, value);
 
-    printf ("move.b (a%d)+ ← #%04x\n", dest_reg, value);
     return 0;
 }
 
@@ -3468,7 +3299,6 @@ static uint32_t m68k_1100_move_b_pan_dn (M68000_Context *context, uint16_t instr
     write_byte (context, context->state.a [dest_reg], value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b -(a%d) ← d%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -3484,7 +3314,6 @@ static uint32_t m68k_1110_move_b_pan_an (M68000_Context *context, uint16_t instr
     write_byte (context, context->state.a [dest_reg], value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b -(a%d) ← (a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -3501,7 +3330,6 @@ static uint32_t m68k_1118_move_b_pan_anp (M68000_Context *context, uint16_t inst
     write_byte (context, context->state.a [dest_reg], value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b -(a%d) ← (a%d)+\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -3518,7 +3346,6 @@ static uint32_t m68k_1120_move_b_pan_pan (M68000_Context *context, uint16_t inst
     write_byte (context, context->state.a [dest_reg], value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b -(a%d) ← -(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -3534,7 +3361,6 @@ static uint32_t m68k_1128_move_b_pan_dan (M68000_Context *context, uint16_t inst
     write_byte (context, context->state.a [dest_reg], value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b -(a%d) ← d(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -3550,7 +3376,6 @@ static uint32_t m68k_1130_move_b_pan_danxi (M68000_Context *context, uint16_t in
     write_byte (context, context->state.a [dest_reg], value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b -(a%d) ← d(a%d+Xi)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -3565,7 +3390,6 @@ static uint32_t m68k_1138_move_b_pan_aw (M68000_Context *context, uint16_t instr
     write_byte (context, context->state.a [dest_reg], value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b -(a%d) ← (xxx.w)\n", dest_reg);
     return 0;
 }
 
@@ -3580,7 +3404,6 @@ static uint32_t m68k_1139_move_b_pan_al (M68000_Context *context, uint16_t instr
     write_byte (context, context->state.a [dest_reg], value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b -(a%d) ← (xxx.l)\n", dest_reg);
     return 0;
 }
 
@@ -3595,7 +3418,6 @@ static uint32_t m68k_113a_move_b_pan_dpc (M68000_Context *context, uint16_t inst
     write_byte (context, context->state.a [dest_reg], value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b -(a%d) ← d(PC)\n", dest_reg);
     return 0;
 }
 
@@ -3610,7 +3432,6 @@ static uint32_t m68k_113b_move_b_pan_dpcxi (M68000_Context *context, uint16_t in
     write_byte (context, context->state.a [dest_reg], value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b -(a%d) ← d(PC+Xi)\n", dest_reg);
     return 0;
 }
 
@@ -3625,7 +3446,6 @@ static uint32_t m68k_113c_move_b_pan_imm (M68000_Context *context, uint16_t inst
     write_byte (context, context->state.a [dest_reg], value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b -(a%d) ← #%02x\n", dest_reg, value);
     return 0;
 }
 
@@ -3640,7 +3460,6 @@ static uint32_t m68k_1140_move_b_dan_dn (M68000_Context *context, uint16_t instr
     write_byte_with_displacement (context, context->state.a [dest_reg], value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b d(a%d) ← d%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -3655,7 +3474,6 @@ static uint32_t m68k_1150_move_b_dan_an (M68000_Context *context, uint16_t instr
     write_byte_with_displacement (context, context->state.a [dest_reg], value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b d(a%d) ← (a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -3671,7 +3489,6 @@ static uint32_t m68k_1158_move_b_dan_anp (M68000_Context *context, uint16_t inst
     write_byte_with_displacement (context, context->state.a [dest_reg], value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b d(a%d) ← (a%d)+\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -3687,7 +3504,6 @@ static uint32_t m68k_1160_move_b_dan_pan (M68000_Context *context, uint16_t inst
     write_byte_with_displacement (context, context->state.a [dest_reg], value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b d(a%d) ← -(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -3702,7 +3518,6 @@ static uint32_t m68k_1168_move_b_dan_dan (M68000_Context *context, uint16_t inst
     write_byte_with_displacement (context, context->state.a [dest_reg], value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b d(a%d) ← d(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -3717,7 +3532,6 @@ static uint32_t m68k_1170_move_b_dan_danxi (M68000_Context *context, uint16_t in
     write_byte_with_displacement (context, context->state.a [dest_reg], value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b d(a%d) ← d(a%d+Xi)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -3731,7 +3545,6 @@ static uint32_t m68k_1178_move_b_dan_aw (M68000_Context *context, uint16_t instr
     write_byte_with_displacement (context, context->state.a [dest_reg], value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b d(a%d) ← (xxx.w)\n", dest_reg);
     return 0;
 }
 
@@ -3745,7 +3558,6 @@ static uint32_t m68k_1179_move_b_dan_al (M68000_Context *context, uint16_t instr
     write_byte_with_displacement (context, context->state.a [dest_reg], value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b d(a%d) ← (xxx.l)\n", dest_reg);
     return 0;
 }
 
@@ -3759,7 +3571,6 @@ static uint32_t m68k_117a_move_b_dan_dpc (M68000_Context *context, uint16_t inst
     write_byte_with_displacement (context, context->state.a [dest_reg], value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b d(a%d) ← d(PC)\n", dest_reg);
     return 0;
 }
 
@@ -3773,7 +3584,6 @@ static uint32_t m68k_117b_move_b_dan_dpcxi (M68000_Context *context, uint16_t in
     write_byte_with_displacement (context, context->state.a [dest_reg], value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b d(a%d) ← d(PC+Xi)\n", dest_reg);
     return 0;
 }
 
@@ -3787,7 +3597,6 @@ static uint32_t m68k_117c_move_b_dan_imm (M68000_Context *context, uint16_t inst
     write_byte_with_displacement (context, context->state.a [dest_reg], value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b d(a%d) ← #%02x\n", dest_reg, value);
     return 0;
 }
 
@@ -3804,7 +3613,6 @@ static uint32_t m68k_1180_move_b_danxi_dn (M68000_Context *context, uint16_t ins
     write_byte_with_index (context, address, value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b d(a%d+Xi) ← d%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -3819,7 +3627,6 @@ static uint32_t m68k_1190_move_b_danxi_an (M68000_Context *context, uint16_t ins
     write_byte_with_index (context, context->state.a [dest_reg], value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b d(a%d+Xi) ← (a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -3835,7 +3642,6 @@ static uint32_t m68k_1198_move_b_danxi_anp (M68000_Context *context, uint16_t in
     write_byte_with_index (context, context->state.a [dest_reg], value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b d(a%d+Xi) ← (a%d)+\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -3851,7 +3657,6 @@ static uint32_t m68k_11a0_move_b_danxi_pan (M68000_Context *context, uint16_t in
     write_byte_with_index (context, context->state.a [dest_reg], value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b d(a%d+Xi) ← -(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -3866,7 +3671,6 @@ static uint32_t m68k_11a8_move_b_danxi_dan (M68000_Context *context, uint16_t in
     write_byte_with_index (context, context->state.a [dest_reg], value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b d(a%d+Xi) ← d(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -3881,7 +3685,6 @@ static uint32_t m68k_11b0_move_b_danxi_danxi (M68000_Context *context, uint16_t 
     write_byte_with_index (context, context->state.a [dest_reg], value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b d(a%d+Xi) ← d(a%d+Xi)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -3895,7 +3698,6 @@ static uint32_t m68k_11b8_move_b_danxi_aw (M68000_Context *context, uint16_t ins
     write_byte_with_index (context, context->state.a [dest_reg], value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b d(a%d+Xi) ← (xxx.w)\n", dest_reg);
     return 0;
 }
 
@@ -3909,7 +3711,6 @@ static uint32_t m68k_11b9_move_b_danxi_al (M68000_Context *context, uint16_t ins
     write_byte_with_index (context, context->state.a [dest_reg], value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b d(a%d+Xi) ← (xxx.l)\n", dest_reg);
     return 0;
 }
 
@@ -3923,7 +3724,6 @@ static uint32_t m68k_11ba_move_b_danxi_dpc (M68000_Context *context, uint16_t in
     write_byte_with_index (context, context->state.a [dest_reg], value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b d(a%d+Xi) ← d(PC)\n", dest_reg);
     return 0;
 }
 
@@ -3937,7 +3737,6 @@ static uint32_t m68k_11bb_move_b_danxi_dpcxi (M68000_Context *context, uint16_t 
     write_byte_with_index (context, context->state.a [dest_reg], value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b d(a%d+Xi) ← d(PC+Xi)\n", dest_reg);
     return 0;
 }
 
@@ -3951,7 +3750,6 @@ static uint32_t m68k_11bc_move_b_danxi_imm (M68000_Context *context, uint16_t in
     write_byte_with_index (context, context->state.a [dest_reg], value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b d(a%d+Xi) ← #%02x\n", dest_reg, value);
     return 0;
 }
 
@@ -3965,7 +3763,6 @@ static uint32_t m68k_11c0_move_b_aw_dn (M68000_Context *context, uint16_t instru
     write_byte_aw (context, value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b (xxx.w) ← d%d\n", source_reg);
     return 0;
 }
 
@@ -3979,7 +3776,6 @@ static uint32_t m68k_11d0_move_b_aw_an (M68000_Context *context, uint16_t instru
     write_byte_aw (context, value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b (xxx.w) ← (a%d)\n", source_reg);
     return 0;
 }
 
@@ -3994,7 +3790,6 @@ static uint32_t m68k_11d8_move_b_aw_anp (M68000_Context *context, uint16_t instr
     write_byte_aw (context, value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b (xxx.w) ← (a%d)+\n", source_reg);
     return 0;
 }
 
@@ -4009,7 +3804,6 @@ static uint32_t m68k_11e0_move_b_aw_pan (M68000_Context *context, uint16_t instr
     write_byte_aw (context, value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b (xxx.w) ← -(a%d)\n", source_reg);
     return 0;
 }
 
@@ -4023,7 +3817,6 @@ static uint32_t m68k_11e8_move_b_aw_dan (M68000_Context *context, uint16_t instr
     write_byte_aw (context, value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b (xxx.w) ← d(a%d)\n", source_reg);
     return 0;
 }
 
@@ -4037,7 +3830,6 @@ static uint32_t m68k_11f0_move_b_aw_danxi (M68000_Context *context, uint16_t ins
     write_byte_aw (context, value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b (xxx.w) ← d(a%d+Xi)\n", source_reg);
     return 0;
 }
 
@@ -4049,7 +3841,6 @@ static uint32_t m68k_11f8_move_b_aw_aw (M68000_Context *context, uint16_t instru
     write_byte_aw (context, value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b (xxx.w) ← (xxx.w)\n");
     return 0;
 }
 
@@ -4061,7 +3852,6 @@ static uint32_t m68k_11f9_move_b_aw_al (M68000_Context *context, uint16_t instru
     write_byte_aw (context, value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b (xxx.w) ← (xxx.l)\n");
     return 0;
 }
 
@@ -4073,7 +3863,6 @@ static uint32_t m68k_11fa_move_b_aw_dpc (M68000_Context *context, uint16_t instr
     write_byte_aw (context, value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b (xxx.w) ← d(PC)\n");
     return 0;
 }
 
@@ -4085,7 +3874,6 @@ static uint32_t m68k_11fb_move_b_aw_dpcxi (M68000_Context *context, uint16_t ins
     write_byte_aw (context, value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b (xxx.w) ← d(PC+Xi)\n");
     return 0;
 }
 
@@ -4098,7 +3886,6 @@ static uint32_t m68k_11fc_move_b_aw_imm (M68000_Context *context, uint16_t instr
     write_byte_aw (context, value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b (xxx.w) ← #%02x\n", value);
     return 0;
 }
 
@@ -4112,7 +3899,6 @@ static uint32_t m68k_13c0_move_b_al_dn (M68000_Context *context, uint16_t instru
     write_byte_al (context, value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b (xxx.l) ← d%d\n", source_reg);
     return 0;
 }
 
@@ -4126,7 +3912,6 @@ static uint32_t m68k_13d0_move_b_al_an (M68000_Context *context, uint16_t instru
     write_byte_al (context, value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b (xxx.l) ← (a%d)\n", source_reg);
     return 0;
 }
 
@@ -4141,7 +3926,6 @@ static uint32_t m68k_13d8_move_b_al_anp (M68000_Context *context, uint16_t instr
     write_byte_al (context, value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b (xxx.l) ← (a%d)+\n", source_reg);
     return 0;
 }
 
@@ -4156,7 +3940,6 @@ static uint32_t m68k_13e0_move_b_al_pan (M68000_Context *context, uint16_t instr
     write_byte_al (context, value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b (xxx.l) ← -(a%d)\n", source_reg);
     return 0;
 }
 
@@ -4170,7 +3953,6 @@ static uint32_t m68k_13e8_move_b_al_dan (M68000_Context *context, uint16_t instr
     write_byte_al (context, value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b (xxx.l) ← d(a%d)\n", source_reg);
     return 0;
 }
 
@@ -4184,7 +3966,6 @@ static uint32_t m68k_13f0_move_b_al_danxi (M68000_Context *context, uint16_t ins
     write_byte_al (context, value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b (xxx.l) ← d(a%d+Xi)\n", source_reg);
     return 0;
 }
 
@@ -4197,7 +3978,6 @@ static uint32_t m68k_13f8_move_b_al_aw (M68000_Context *context, uint16_t instru
     write_byte_al (context, value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b (xxx.l) ← (xxx.w)\n");
     return 0;
 }
 
@@ -4210,7 +3990,6 @@ static uint32_t m68k_13f9_move_b_al_al (M68000_Context *context, uint16_t instru
     write_byte_al (context, value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b (xxx.l) ← (xxx.l)\n");
     return 0;
 }
 
@@ -4223,7 +4002,6 @@ static uint32_t m68k_13fa_move_b_al_dpc (M68000_Context *context, uint16_t instr
     write_byte_al (context, value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b (xxx.l) ← d(PC)\n");
     return 0;
 }
 
@@ -4236,7 +4014,6 @@ static uint32_t m68k_13fb_move_b_al_dpcxi (M68000_Context *context, uint16_t ins
     write_byte_al (context, value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b (xxx.l) ← d(PC+Xi)\n");
     return 0;
 }
 
@@ -4249,7 +4026,6 @@ static uint32_t m68k_13fc_move_b_al_imm (M68000_Context *context, uint16_t instr
     write_byte_al (context, value);
     m68k_move_b_flags (context, value);
 
-    printf ("move.b (xxx.l) ← #%02x\n", value);
     return 0;
 }
 
@@ -4264,7 +4040,6 @@ static uint32_t m68k_2000_move_l_dn_dn (M68000_Context *context, uint16_t instru
     context->state.d [dest_reg].l = value;
     m68k_move_l_flags (context, value);
 
-    printf ("move.l d%d ← d%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -4279,7 +4054,6 @@ static uint32_t m68k_2008_move_l_dn_an (M68000_Context *context, uint16_t instru
     context->state.d [dest_reg].l = value;
     m68k_move_l_flags (context, value);
 
-    printf ("move.l d%d ← a%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -4294,7 +4068,6 @@ static uint32_t m68k_2010_move_l_dn_an (M68000_Context *context, uint16_t instru
     context->state.d [dest_reg].l = value;
     m68k_move_l_flags (context, value);
 
-    printf ("move.l d%d ← (a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -4310,7 +4083,6 @@ static uint32_t m68k_2018_move_l_dn_anp (M68000_Context *context, uint16_t instr
     context->state.d [dest_reg].l = value;
     m68k_move_l_flags (context, value);
 
-    printf ("move.l d%d ← (a%d)+\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -4326,7 +4098,6 @@ static uint32_t m68k_2020_move_l_dn_pan (M68000_Context *context, uint16_t instr
     context->state.d [dest_reg].l = value;
     m68k_move_l_flags (context, value);
 
-    printf ("move.l d%d ← (a%d)+\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -4341,7 +4112,6 @@ static uint32_t m68k_2028_move_l_dn_dan (M68000_Context *context, uint16_t instr
     context->state.d [dest_reg].l = value;
     m68k_move_l_flags (context, value);
 
-    printf ("move.l d%d ← d(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -4356,7 +4126,6 @@ static uint32_t m68k_2030_move_l_dn_danxi (M68000_Context *context, uint16_t ins
     context->state.d [dest_reg].l = value;
     m68k_move_l_flags (context, value);
 
-    printf ("move.l d%d ← d(a%d+Xi)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -4370,7 +4139,6 @@ static uint32_t m68k_2038_move_l_dn_aw (M68000_Context *context, uint16_t instru
     context->state.d [dest_reg].l = value;
     m68k_move_l_flags (context, value);
 
-    printf ("move.l d%d ← (xxx.w)\n", dest_reg);
     return 0;
 }
 
@@ -4384,7 +4152,6 @@ static uint32_t m68k_2039_move_l_dn_al (M68000_Context *context, uint16_t instru
     context->state.d [dest_reg].l = value;
     m68k_move_l_flags (context, value);
 
-    printf ("move.l d%d ← (xxx.l)\n", dest_reg);
     return 0;
 }
 
@@ -4398,7 +4165,6 @@ static uint32_t m68k_203a_move_l_dn_dpc (M68000_Context *context, uint16_t instr
     context->state.d [dest_reg].l = value;
     m68k_move_l_flags (context, value);
 
-    printf ("move.l d%d ← d(PC)\n", dest_reg);
     return 0;
 }
 
@@ -4412,7 +4178,6 @@ static uint32_t m68k_203b_move_l_dn_dpcxi (M68000_Context *context, uint16_t ins
     context->state.d [dest_reg].l = value;
     m68k_move_l_flags (context, value);
 
-    printf ("move.l d%d ← d(PC+Xi)\n", dest_reg);
     return 0;
 }
 
@@ -4426,7 +4191,6 @@ static uint32_t m68k_203c_move_l_dn_imm (M68000_Context *context, uint16_t instr
     context->state.d [dest_reg].l = value;
     m68k_move_l_flags (context, value);
 
-    printf ("move.l d%d ← #%08x\n", dest_reg, value);
     return 0;
 }
 
@@ -4439,7 +4203,6 @@ static uint32_t m68k_2040_movea_l_an_dn (M68000_Context *context, uint16_t instr
 
     context->state.a [dest_reg] = context->state.d [source_reg].l;
 
-    printf ("movea.l a%d ← d%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -4452,7 +4215,6 @@ static uint32_t m68k_2048_movea_l_an_an (M68000_Context *context, uint16_t instr
 
     context->state.a [dest_reg] = context->state.a [source_reg];
 
-    printf ("movea.l a%d ← a%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -4466,7 +4228,6 @@ static uint32_t m68k_2050_movea_l_an_an (M68000_Context *context, uint16_t instr
     uint32_t value = read_long (context, context->state.a [source_reg]);
     context->state.a [dest_reg] = value;
 
-    printf ("movea.l a%d ← (a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -4481,7 +4242,6 @@ static uint32_t m68k_2058_movea_l_an_anp (M68000_Context *context, uint16_t inst
     context->state.a [source_reg] += 4;
     context->state.a [dest_reg] = value;
 
-    printf ("movea.l a%d ← (a%d)+\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -4496,7 +4256,6 @@ static uint32_t m68k_2060_movea_l_an_pan (M68000_Context *context, uint16_t inst
     uint32_t value = read_long (context, context->state.a [source_reg]);
     context->state.a [dest_reg] = value;
 
-    printf ("movea.l a%d ← -(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -4509,7 +4268,6 @@ static uint32_t m68k_2068_movea_l_an_dan (M68000_Context *context, uint16_t inst
 
     context->state.a [dest_reg] = read_long_with_displacement (context, context->state.a [source_reg]);
 
-    printf ("movea.l a%d ← d(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -4522,7 +4280,6 @@ static uint32_t m68k_2070_movea_l_an_danxi (M68000_Context *context, uint16_t in
 
     context->state.a [dest_reg] = read_long_with_index (context, context->state.a [source_reg]);
 
-    printf ("movea.l a%d ← d(a%d+Xi)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -4535,7 +4292,6 @@ static uint32_t m68k_2078_movea_l_an_aw (M68000_Context *context, uint16_t instr
 
     context->state.a [dest_reg] = value;
 
-    printf ("movea.l a%d ← (xxx.w)\n", dest_reg);
     return 0;
 }
 
@@ -4548,7 +4304,6 @@ static uint32_t m68k_2079_movea_l_an_al (M68000_Context *context, uint16_t instr
 
     context->state.a [dest_reg] = value;
 
-    printf ("movea.l a%d ← (xxx.l)\n", dest_reg);
     return 0;
 }
 
@@ -4561,7 +4316,6 @@ static uint32_t m68k_207a_movea_l_an_dpc (M68000_Context *context, uint16_t inst
     uint32_t value = read_long_with_displacement (context, context->state.pc);
     context->state.a [dest_reg] = value;
 
-    printf ("movea.l a%d ← d(PC)\n", dest_reg);
     return 0;
 }
 
@@ -4573,7 +4327,6 @@ static uint32_t m68k_207b_movea_l_an_dpcxi (M68000_Context *context, uint16_t in
 
     context->state.a [dest_reg] = read_long_with_index (context, context->state.pc);
 
-    printf ("movea.l a%d ← d(PC+Xi)+\n", dest_reg);
     return 0;
 }
 
@@ -4586,7 +4339,6 @@ static uint32_t m68k_207c_movea_l_an_imm (M68000_Context *context, uint16_t inst
 
     context->state.a [dest_reg] = imm;
 
-    printf ("movea.l a%d ← #%06x\n", dest_reg, imm);
     return 0;
 }
 
@@ -4601,7 +4353,6 @@ static uint32_t m68k_2080_move_l_an_dn (M68000_Context *context, uint16_t instru
     write_long (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (a%d) ← d%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -4617,7 +4368,6 @@ static uint32_t m68k_2090_move_l_an_an (M68000_Context *context, uint16_t instru
     write_long (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (a%d) ← (a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -4634,7 +4384,6 @@ static uint32_t m68k_2098_move_l_an_anp (M68000_Context *context, uint16_t instr
     write_long (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (a%d) ← (a%d)+\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -4651,7 +4400,6 @@ static uint32_t m68k_20a0_move_l_an_pan (M68000_Context *context, uint16_t instr
     write_long (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (a%d) ← -(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -4667,7 +4415,6 @@ static uint32_t m68k_20a8_move_l_an_dan (M68000_Context *context, uint16_t instr
     write_long (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (a%d) ← d(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -4682,7 +4429,6 @@ static uint32_t m68k_20b0_move_l_an_danxi (M68000_Context *context, uint16_t ins
     write_long (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (a%d) ← d(a%d+Xi)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -4696,7 +4442,6 @@ static uint32_t m68k_20b8_move_l_an_aw (M68000_Context *context, uint16_t instru
     write_long (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (a%d) ← (xxx.w)\n", dest_reg);
     return 0;
 }
 
@@ -4710,7 +4455,6 @@ static uint32_t m68k_20b9_move_l_an_al (M68000_Context *context, uint16_t instru
     write_long (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (a%d) ← (xxx.l)\n", dest_reg);
     return 0;
 }
 
@@ -4724,7 +4468,6 @@ static uint32_t m68k_20ba_move_l_an_dpc (M68000_Context *context, uint16_t instr
     write_long (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (a%d) ← d(PC)\n", dest_reg);
     return 0;
 }
 
@@ -4738,7 +4481,6 @@ static uint32_t m68k_20bb_move_l_an_dpcxi (M68000_Context *context, uint16_t ins
     write_long (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (a%d) ← d(PC+Xi)\n", dest_reg);
     return 0;
 }
 
@@ -4752,7 +4494,6 @@ static uint32_t m68k_20bc_move_l_an_imm (M68000_Context *context, uint16_t instr
     write_long (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (a%d) ← #%08x\n", dest_reg, value);
     return 0;
 }
 
@@ -4768,7 +4509,6 @@ static uint32_t m68k_20c0_move_l_anp_dn (M68000_Context *context, uint16_t instr
     context->state.a [dest_reg] += 4;
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (a%d)+ ← d%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -4784,7 +4524,6 @@ static uint32_t m68k_20c8_move_l_anp_an (M68000_Context *context, uint16_t instr
     context->state.a [dest_reg] += 4;
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (a%d)+ ← a%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -4800,7 +4539,6 @@ static uint32_t m68k_20d0_move_l_anp_an (M68000_Context *context, uint16_t instr
     context->state.a [dest_reg] += 4;
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (a%d)+ ← (a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -4817,7 +4555,6 @@ static uint32_t m68k_20d8_move_l_anp_anp (M68000_Context *context, uint16_t inst
     context->state.a [dest_reg] += 4;
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (a%d)+ ← (a%d)+\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -4834,7 +4571,6 @@ static uint32_t m68k_20e0_move_l_anp_pan (M68000_Context *context, uint16_t inst
     context->state.a [dest_reg] += 4;
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (a%d)+ ← -(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -4850,7 +4586,6 @@ static uint32_t m68k_20e8_move_l_anp_dan (M68000_Context *context, uint16_t inst
     context->state.a [dest_reg] += 4;
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (a%d)+ ← d(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -4866,7 +4601,6 @@ static uint32_t m68k_20f0_move_l_anp_danxi (M68000_Context *context, uint16_t in
     context->state.a [dest_reg] += 4;
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (a%d)+ ← d(a%d+Xi)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -4881,7 +4615,6 @@ static uint32_t m68k_20f8_move_l_anp_aw (M68000_Context *context, uint16_t instr
     context->state.a [dest_reg] += 4;
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (a%d)+ ← (xxx.w)\n", dest_reg);
     return 0;
 }
 
@@ -4896,7 +4629,6 @@ static uint32_t m68k_20f9_move_l_anp_al (M68000_Context *context, uint16_t instr
     context->state.a [dest_reg] += 4;
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (a%d)+ ← (xxx.l)\n", dest_reg);
     return 0;
 }
 
@@ -4911,7 +4643,6 @@ static uint32_t m68k_20fa_move_l_anp_dpc (M68000_Context *context, uint16_t inst
     context->state.a [dest_reg] += 4;
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (a%d)+ ← d(PC)\n", dest_reg);
     return 0;
 }
 
@@ -4926,7 +4657,6 @@ static uint32_t m68k_20fb_move_l_anp_dpcxi (M68000_Context *context, uint16_t in
     context->state.a [dest_reg] += 4;
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (a%d)+ ← d(PC+Xi)\n", dest_reg);
     return 0;
 }
 
@@ -4941,7 +4671,6 @@ static uint32_t m68k_20fc_move_l_anp_imm (M68000_Context *context, uint16_t inst
     context->state.a [dest_reg] += 4;
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (a%d)+ ← #%08x\n", dest_reg, value);
     return 0;
 }
 
@@ -4957,7 +4686,6 @@ static uint32_t m68k_2100_move_l_pan_dn (M68000_Context *context, uint16_t instr
     write_long (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l -(a%d) ← d%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -4973,7 +4701,6 @@ static uint32_t m68k_2108_move_l_pan_an (M68000_Context *context, uint16_t instr
     write_long (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l -(a%d) ← a%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -4989,7 +4716,6 @@ static uint32_t m68k_2110_move_l_pan_an (M68000_Context *context, uint16_t instr
     write_long (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l -(a%d) ← (a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -5006,7 +4732,6 @@ static uint32_t m68k_2118_move_l_pan_anp (M68000_Context *context, uint16_t inst
     write_long (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l -(a%d) ← (a%d)+\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -5023,7 +4748,6 @@ static uint32_t m68k_2120_move_l_pan_pan (M68000_Context *context, uint16_t inst
     write_long (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l -(a%d) ← -(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -5039,7 +4763,6 @@ static uint32_t m68k_2128_move_l_pan_dan (M68000_Context *context, uint16_t inst
     write_long (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l -(a%d) ← d(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -5055,7 +4778,6 @@ static uint32_t m68k_2130_move_l_pan_danxi (M68000_Context *context, uint16_t in
     write_long (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l -(a%d) ← d(a%d+Xi)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -5071,7 +4793,6 @@ static uint32_t m68k_2138_move_l_pan_aw (M68000_Context *context, uint16_t instr
     write_long (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l -(a%d) ← (xxx.w)\n", dest_reg);
     return 0;
 }
 
@@ -5087,7 +4808,6 @@ static uint32_t m68k_2139_move_l_pan_al (M68000_Context *context, uint16_t instr
     write_long (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l -(a%d) ← (xxx.l)\n", dest_reg);
     return 0;
 }
 
@@ -5102,7 +4822,6 @@ static uint32_t m68k_213a_move_l_pan_dpc (M68000_Context *context, uint16_t inst
     write_long (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l -(a%d) ← d(PC)\n", dest_reg);
     return 0;
 }
 
@@ -5117,7 +4836,6 @@ static uint32_t m68k_213b_move_l_pan_dpcxi (M68000_Context *context, uint16_t in
     write_long (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l -(a%d) ← d(PC+Xi)\n", dest_reg);
     return 0;
 }
 
@@ -5132,7 +4850,6 @@ static uint32_t m68k_213c_move_l_pan_imm (M68000_Context *context, uint16_t inst
     write_long (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l -(a%d) ← #%08x\n", dest_reg, value);
     return 0;
 }
 
@@ -5148,7 +4865,6 @@ static uint32_t m68k_2140_move_l_dan_dn (M68000_Context *context, uint16_t instr
     write_long_with_displacement (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l d(a%d) ← d%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -5164,7 +4880,6 @@ static uint32_t m68k_2148_move_l_dan_an (M68000_Context *context, uint16_t instr
     write_long_with_displacement (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l d(a%d) ← a%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -5179,7 +4894,6 @@ static uint32_t m68k_2150_move_l_dan_an (M68000_Context *context, uint16_t instr
     write_long_with_displacement (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l d(a%d) ← (a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -5195,7 +4909,6 @@ static uint32_t m68k_2158_move_l_dan_anp (M68000_Context *context, uint16_t inst
     write_long_with_displacement (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l d(a%d) ← (a%d)+\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -5211,7 +4924,6 @@ static uint32_t m68k_2160_move_l_dan_pan (M68000_Context *context, uint16_t inst
     write_long_with_displacement (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l d(a%d) ← -(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -5226,7 +4938,6 @@ static uint32_t m68k_2168_move_l_dan_dan (M68000_Context *context, uint16_t inst
     write_long_with_displacement (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l d(a%d) ← d(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -5241,7 +4952,6 @@ static uint32_t m68k_2170_move_l_dan_danxi (M68000_Context *context, uint16_t in
     write_long_with_displacement (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l d(a%d) ← d(a%d+Xi)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -5255,7 +4965,6 @@ static uint32_t m68k_2178_move_l_dan_aw (M68000_Context *context, uint16_t instr
     write_long_with_displacement (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l d(a%d) ← (xxx.w)\n", dest_reg);
     return 0;
 }
 
@@ -5269,7 +4978,6 @@ static uint32_t m68k_2179_move_l_dan_al (M68000_Context *context, uint16_t instr
     write_long_with_displacement (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l d(a%d) ← (xxx.l)\n", dest_reg);
     return 0;
 }
 
@@ -5283,7 +4991,6 @@ static uint32_t m68k_217a_move_l_dan_dpc (M68000_Context *context, uint16_t inst
     write_long_with_displacement (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l d(a%d) ← d(PC)\n", dest_reg);
     return 0;
 }
 
@@ -5297,7 +5004,6 @@ static uint32_t m68k_217b_move_l_dan_dpcxi (M68000_Context *context, uint16_t in
     write_long_with_displacement (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l d(a%d) ← d(PC)\n", dest_reg);
     return 0;
 }
 
@@ -5311,7 +5017,6 @@ static uint32_t m68k_217c_move_l_dan_imm (M68000_Context *context, uint16_t inst
     write_long_with_displacement (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l d(a%d) ← #%08x\n", dest_reg, value);
     return 0;
 }
 
@@ -5326,7 +5031,6 @@ static uint32_t m68k_2180_move_l_danxi_dn (M68000_Context *context, uint16_t ins
     write_long_with_index (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l d(a%d+Xi) ← d%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -5341,7 +5045,6 @@ static uint32_t m68k_2188_move_l_danxi_an (M68000_Context *context, uint16_t ins
     write_long_with_index (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l d(a%d+Xi) ← a%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -5356,7 +5059,6 @@ static uint32_t m68k_2190_move_l_danxi_an (M68000_Context *context, uint16_t ins
     write_long_with_index (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l d(a%d+Xi) ← (a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -5372,7 +5074,6 @@ static uint32_t m68k_2198_move_l_danxi_anp (M68000_Context *context, uint16_t in
     write_long_with_index (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l d(a%d+Xi) ← (a%d)+\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -5388,7 +5089,6 @@ static uint32_t m68k_21a0_move_l_danxi_pan (M68000_Context *context, uint16_t in
     write_long_with_index (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l d(a%d+Xi) ← (a%d)+\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -5403,7 +5103,6 @@ static uint32_t m68k_21a8_move_l_danxi_dan (M68000_Context *context, uint16_t in
     write_long_with_index (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l d(a%d+Xi) ← d(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -5418,7 +5117,6 @@ static uint32_t m68k_21b0_move_l_danxi_danxi (M68000_Context *context, uint16_t 
     write_long_with_index (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l d(a%d+Xi) ← d(a%d+Xi)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -5432,7 +5130,6 @@ static uint32_t m68k_21b8_move_l_danxi_aw (M68000_Context *context, uint16_t ins
     write_long_with_index (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l d(a%d+Xi) ← (xxx.w)\n", dest_reg);
     return 0;
 }
 
@@ -5446,7 +5143,6 @@ static uint32_t m68k_21b9_move_l_danxi_al (M68000_Context *context, uint16_t ins
     write_long_with_index (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l d(a%d+Xi) ← (xxx.l)\n", dest_reg);
     return 0;
 }
 
@@ -5460,7 +5156,6 @@ static uint32_t m68k_21ba_move_l_danxi_dpc (M68000_Context *context, uint16_t in
     write_long_with_index (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l d(a%d+Xi) ← d(PC)\n", dest_reg);
     return 0;
 }
 
@@ -5474,7 +5169,6 @@ static uint32_t m68k_21bb_move_l_danxi_dpcxi (M68000_Context *context, uint16_t 
     write_long_with_index (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l d(a%d+Xi) ← d(PC+Xi)\n", dest_reg);
     return 0;
 }
 
@@ -5488,7 +5182,6 @@ static uint32_t m68k_21bc_move_l_danxi_imm (M68000_Context *context, uint16_t in
     write_long_with_index (context, context->state.a [dest_reg], value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l d(a%d+Xi) ← #%08x\n", dest_reg, value);
     return 0;
 }
 
@@ -5502,7 +5195,6 @@ static uint32_t m68k_21c0_move_l_aw_dn (M68000_Context *context, uint16_t instru
     write_long_aw (context, value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (xxx.w) ← d%d\n", source_reg);
     return 0;
 }
 
@@ -5516,7 +5208,6 @@ static uint32_t m68k_21c8_move_l_aw_an (M68000_Context *context, uint16_t instru
     write_long_aw (context, value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (xxx.w) ← a%d\n", source_reg);
     return 0;
 }
 
@@ -5530,7 +5221,6 @@ static uint32_t m68k_21d0_move_l_aw_an (M68000_Context *context, uint16_t instru
     write_long_aw (context, value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (xxx.w) ← (a%d)\n", source_reg);
     return 0;
 }
 
@@ -5545,7 +5235,6 @@ static uint32_t m68k_21d8_move_l_aw_anp (M68000_Context *context, uint16_t instr
     write_long_aw (context, value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (xxx.w) ← (a%d)+\n", source_reg);
     return 0;
 }
 
@@ -5560,7 +5249,6 @@ static uint32_t m68k_21e0_move_l_aw_pan (M68000_Context *context, uint16_t instr
     write_long_aw (context, value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (xxx.w) ← -(a%d)\n", source_reg);
     return 0;
 }
 
@@ -5574,7 +5262,6 @@ static uint32_t m68k_21e8_move_l_aw_dan (M68000_Context *context, uint16_t instr
     write_long_aw (context, value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (xxx.w) ← d(a%d)\n", source_reg);
     return 0;
 }
 
@@ -5588,7 +5275,6 @@ static uint32_t m68k_21f0_move_l_aw_danxi (M68000_Context *context, uint16_t ins
     write_long_aw (context, value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (xxx.w) ← d(a%d+Xi)\n", source_reg);
     return 0;
 }
 
@@ -5601,7 +5287,6 @@ static uint32_t m68k_21f8_move_l_aw_aw (M68000_Context *context, uint16_t instru
     write_long_aw (context, value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (xxx.w) ← (xxx.w)\n");
     return 0;
 }
 
@@ -5614,7 +5299,6 @@ static uint32_t m68k_21f9_move_l_aw_al (M68000_Context *context, uint16_t instru
     write_long_aw (context, value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (xxx.w) ← (xxx.l)\n");
     return 0;
 }
 
@@ -5627,7 +5311,6 @@ static uint32_t m68k_21fa_move_l_aw_dpc (M68000_Context *context, uint16_t instr
     write_long_aw (context, value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (xxx.w) ← d(PC)\n");
     return 0;
 }
 
@@ -5640,7 +5323,6 @@ static uint32_t m68k_21fb_move_l_aw_dpcxi (M68000_Context *context, uint16_t ins
     write_long_aw (context, value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (xxx.w) ← d(PC+Xi)\n");
     return 0;
 }
 
@@ -5653,7 +5335,6 @@ static uint32_t m68k_21fc_move_l_aw_imm (M68000_Context *context, uint16_t instr
     write_long_aw (context, value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (xxx.w) ← #%08x\n", value);
     return 0;
 }
 
@@ -5667,7 +5348,6 @@ static uint32_t m68k_23c0_move_l_al_dn (M68000_Context *context, uint16_t instru
     write_long_al (context, value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (xxx.l) ← d%d\n", source_reg);
     return 0;
 }
 
@@ -5681,7 +5361,6 @@ static uint32_t m68k_23c8_move_l_al_an (M68000_Context *context, uint16_t instru
     write_long_al (context, value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (xxx.l) ← a%d\n", source_reg);
     return 0;
 }
 
@@ -5695,7 +5374,6 @@ static uint32_t m68k_23d0_move_l_al_an (M68000_Context *context, uint16_t instru
     write_long_al (context, value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (xxx.l) ← (a%d)\n", source_reg);
     return 0;
 }
 
@@ -5710,7 +5388,6 @@ static uint32_t m68k_23d8_move_l_al_anp (M68000_Context *context, uint16_t instr
     write_long_al (context, value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (xxx.l) ← (a%d)+\n", source_reg);
     return 0;
 }
 
@@ -5725,7 +5402,6 @@ static uint32_t m68k_23e0_move_l_al_pan (M68000_Context *context, uint16_t instr
     write_long_al (context, value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (xxx.l) ← -(a%d)\n", source_reg);
     return 0;
 }
 
@@ -5739,7 +5415,6 @@ static uint32_t m68k_23e8_move_l_al_dan (M68000_Context *context, uint16_t instr
     write_long_al (context, value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (xxx.l) ← d(a%d)\n", source_reg);
     return 0;
 }
 
@@ -5753,7 +5428,6 @@ static uint32_t m68k_23f0_move_l_al_danxi (M68000_Context *context, uint16_t ins
     write_long_al (context, value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (xxx.l) ← d(a%d+Xi)\n", source_reg);
     return 0;
 }
 
@@ -5766,7 +5440,6 @@ static uint32_t m68k_23f8_move_l_al_aw (M68000_Context *context, uint16_t instru
     write_long_al (context, value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (xxx.l) ← (xxx.w)\n");
     return 0;
 }
 
@@ -5779,7 +5452,6 @@ static uint32_t m68k_23f9_move_l_al_al (M68000_Context *context, uint16_t instru
     write_long_al (context, value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (xxx.l) ← (xxx.l)\n");
     return 0;
 }
 
@@ -5792,7 +5464,6 @@ static uint32_t m68k_23fa_move_l_al_dpc (M68000_Context *context, uint16_t instr
     write_long_al (context, value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (xxx.l) ← d(PC)\n");
     return 0;
 }
 
@@ -5805,7 +5476,6 @@ static uint32_t m68k_23fb_move_l_al_dpcxi (M68000_Context *context, uint16_t ins
     write_long_al (context, value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (xxx.l) ← d(PC+Xi)\n");
     return 0;
 }
 
@@ -5818,7 +5488,6 @@ static uint32_t m68k_23fc_move_l_al_imm (M68000_Context *context, uint16_t instr
     write_long_al (context, value);
     m68k_move_l_flags (context, value);
 
-    printf ("move.l (xxx.l) ← #%08x\n", value);
     return 0;
 }
 
@@ -5834,7 +5503,6 @@ static uint32_t m68k_3000_move_w_dn_dn (M68000_Context *context, uint16_t instru
     context->state.d [dest_reg].w = value;
     m68k_move_w_flags (context, value);
 
-    printf ("move.w d%d ← d%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -5849,7 +5517,6 @@ static uint32_t m68k_3008_move_w_dn_an (M68000_Context *context, uint16_t instru
     context->state.d [dest_reg].w = value;
     m68k_move_w_flags (context, value);
 
-    printf ("move.w d%d ← a%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -5865,7 +5532,6 @@ static uint32_t m68k_3010_move_w_dn_an (M68000_Context *context, uint16_t instru
     context->state.d [dest_reg].w = value;
     m68k_move_w_flags (context, value);
 
-    printf ("move.w d%d ← (a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -5881,7 +5547,6 @@ static uint32_t m68k_3018_move_w_dn_anp (M68000_Context *context, uint16_t instr
     context->state.d [dest_reg].w = value;
     m68k_move_w_flags (context, value);
 
-    printf ("move.w d%d ← (a%d)+\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -5897,7 +5562,6 @@ static uint32_t m68k_3020_move_w_dn_pan (M68000_Context *context, uint16_t instr
     context->state.d [dest_reg].w = value;
     m68k_move_w_flags (context, value);
 
-    printf ("move.w d%d ← -(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -5912,7 +5576,6 @@ static uint32_t m68k_3028_move_w_dn_dan (M68000_Context *context, uint16_t instr
     context->state.d [dest_reg].w = value;
     m68k_move_w_flags (context, value);
 
-    printf ("move.w d%d ← d(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -5928,7 +5591,6 @@ static uint32_t m68k_3030_move_w_dn_danxi (M68000_Context *context, uint16_t ins
 
     m68k_move_w_flags (context, value);
 
-    printf ("move.w d%d ← d(a%d+Xi)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -5942,7 +5604,6 @@ static uint32_t m68k_3038_move_w_dn_aw (M68000_Context *context, uint16_t instru
     context->state.d [dest_reg].w = value;
     m68k_move_w_flags (context, value);
 
-    printf ("move.w d%d ← (xxx.w)\n", dest_reg);
     return 0;
 }
 
@@ -5956,7 +5617,6 @@ static uint32_t m68k_3039_move_w_dn_al (M68000_Context *context, uint16_t instru
     context->state.d [dest_reg].w = value;
     m68k_move_w_flags (context, value);
 
-    printf ("move.w d%d ← (xxx.l)\n", dest_reg);
     return 0;
 }
 
@@ -5970,7 +5630,6 @@ static uint32_t m68k_303a_move_w_dn_dpc (M68000_Context *context, uint16_t instr
     context->state.d [dest_reg].w = value;
     m68k_move_w_flags (context, value);
 
-    printf ("move.w d%d ← d(PC)\n", dest_reg);
     return 0;
 }
 
@@ -5984,7 +5643,6 @@ static uint32_t m68k_303b_move_w_dn_dpcxi (M68000_Context *context, uint16_t ins
     context->state.d [dest_reg].w = value;
     m68k_move_w_flags (context, value);
 
-    printf ("move.w d%d ← d(PC+Xi)\n", dest_reg);
     return 0;
 }
 
@@ -5998,7 +5656,6 @@ static uint32_t m68k_303c_move_w_dn_imm (M68000_Context *context, uint16_t instr
     context->state.d [dest_reg].w = value;
     m68k_move_w_flags (context, value);
 
-    printf ("move.w d%d ← #%04x\n", dest_reg, value);
     return 0;
 }
 
@@ -6011,7 +5668,6 @@ static uint32_t m68k_3040_movea_w_an_dn (M68000_Context *context, uint16_t instr
 
     context->state.a [dest_reg] = (int16_t) context->state.d [source_reg].w;
 
-    printf ("movea.w a%d ← d%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -6025,7 +5681,6 @@ static uint32_t m68k_3048_movea_w_an_an (M68000_Context *context, uint16_t instr
     uint16_t value = context->state.a [source_reg];
     context->state.a [dest_reg] = (int16_t) value;
 
-    printf ("movea.w a%d ← a%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -6039,7 +5694,6 @@ static uint32_t m68k_3050_movea_w_an_an (M68000_Context *context, uint16_t instr
     uint16_t value = read_word (context, context->state.a [source_reg]);
     context->state.a [dest_reg] = (int16_t) value;
 
-    printf ("movea.w a%d ← (a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -6054,7 +5708,6 @@ static uint32_t m68k_3058_movea_w_an_anp (M68000_Context *context, uint16_t inst
     context->state.a [source_reg] += 2;
     context->state.a [dest_reg] = (int16_t) value;
 
-    printf ("movea.w a%d ← (a%d)+\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -6069,7 +5722,6 @@ static uint32_t m68k_3060_movea_w_an_pan (M68000_Context *context, uint16_t inst
     uint16_t value = read_word (context, context->state.a [source_reg]);
     context->state.a [dest_reg] = (int16_t) value;
 
-    printf ("movea.w a%d ← -(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -6082,7 +5734,6 @@ static uint32_t m68k_3068_movea_w_an_dan (M68000_Context *context, uint16_t inst
 
     context->state.a [dest_reg] = (int16_t) read_word_with_displacement (context, context->state.a [source_reg]);
 
-    printf ("movea.w a%d ← d(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -6096,7 +5747,6 @@ static uint32_t m68k_3070_movea_w_an_danxi (M68000_Context *context, uint16_t in
     uint16_t value = read_word_with_index (context, context->state.a [source_reg]);
     context->state.a [dest_reg] = (int16_t) value;
 
-    printf ("movea.w a%d ← d(a%d+Xi)+\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -6109,7 +5759,6 @@ static uint32_t m68k_3078_movea_w_an_aw (M68000_Context *context, uint16_t instr
 
     context->state.a [dest_reg] = (int16_t) value;
 
-    printf ("movea.w a%d ← (xxx.w)\n", dest_reg);
     return 0;
 }
 
@@ -6122,7 +5771,6 @@ static uint32_t m68k_3079_movea_w_an_al (M68000_Context *context, uint16_t instr
 
     context->state.a [dest_reg] = (int16_t) value;
 
-    printf ("movea.w a%d ← (xxx.l)\n", dest_reg);
     return 0;
 }
 
@@ -6135,7 +5783,6 @@ static uint32_t m68k_307a_movea_w_an_dpc (M68000_Context *context, uint16_t inst
     uint16_t value = read_word_with_displacement (context, context->state.pc);
     context->state.a [dest_reg] = (int16_t) value;
 
-    printf ("movea.w a%d ← d(PC)\n", dest_reg);
     return 0;
 }
 
@@ -6147,7 +5794,6 @@ static uint32_t m68k_307b_movea_w_an_dpcxi (M68000_Context *context, uint16_t in
 
     context->state.a [dest_reg] = (int16_t) read_word_with_index (context, context->state.pc);
 
-    printf ("movea.w a%d ← d(PC+Xi)+\n", dest_reg);
     return 0;
 }
 
@@ -6160,7 +5806,6 @@ static uint32_t m68k_307c_movea_w_an_imm (M68000_Context *context, uint16_t inst
     uint16_t value = read_extension (context);
     context->state.a [dest_reg] = (int16_t) value;
 
-    printf ("movea.w a%d ← #%04x\n", dest_reg, value);
     return 0;
 }
 
@@ -6175,7 +5820,6 @@ static uint32_t m68k_3080_move_w_an_dn (M68000_Context *context, uint16_t instru
     write_word (context, context->state.a [dest_reg], value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (a%d) ← d%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -6190,7 +5834,6 @@ static uint32_t m68k_3088_move_w_an_an (M68000_Context *context, uint16_t instru
     write_word (context, context->state.a [dest_reg], value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (a%d) ← a%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -6206,7 +5849,6 @@ static uint32_t m68k_3090_move_w_an_an (M68000_Context *context, uint16_t instru
     write_word (context, context->state.a [dest_reg], value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (a%d) ← (a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -6222,7 +5864,6 @@ static uint32_t m68k_3098_move_w_an_anp (M68000_Context *context, uint16_t instr
     write_word (context, context->state.a [dest_reg], value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (a%d) ← (a%d)+\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -6238,7 +5879,6 @@ static uint32_t m68k_30a0_move_w_an_pan (M68000_Context *context, uint16_t instr
     write_word (context, context->state.a [dest_reg], value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (a%d) ← -(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -6253,7 +5893,6 @@ static uint32_t m68k_30a8_move_w_an_dan (M68000_Context *context, uint16_t instr
     write_word (context, context->state.a [dest_reg], value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (a%d) ← d(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -6268,7 +5907,6 @@ static uint32_t m68k_30b0_move_w_an_danxi (M68000_Context *context, uint16_t ins
     write_word (context, context->state.a [dest_reg], value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (a%d) ← d(a%d+Xi)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -6282,7 +5920,6 @@ static uint32_t m68k_30b8_move_w_an_aw (M68000_Context *context, uint16_t instru
     write_word (context, context->state.a [dest_reg], value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (a%d) ← (xxx.w)\n", dest_reg);
     return 0;
 }
 
@@ -6296,7 +5933,6 @@ static uint32_t m68k_30b9_move_w_an_al (M68000_Context *context, uint16_t instru
     write_word (context, context->state.a [dest_reg], value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (a%d) ← (xxx.l)\n", dest_reg);
     return 0;
 }
 
@@ -6310,7 +5946,6 @@ static uint32_t m68k_30ba_move_w_an_dpc (M68000_Context *context, uint16_t instr
     write_word (context, context->state.a [dest_reg], value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (a%d) ← d(PC)\n", dest_reg);
     return 0;
 }
 
@@ -6324,7 +5959,6 @@ static uint32_t m68k_30bb_move_w_an_dpcxi (M68000_Context *context, uint16_t ins
     write_word (context, context->state.a [dest_reg], value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (a%d) ← d(PC+Xi)\n", dest_reg);
     return 0;
 }
 
@@ -6338,7 +5972,6 @@ static uint32_t m68k_30bc_move_w_an_imm (M68000_Context *context, uint16_t instr
     write_word (context, context->state.a [dest_reg], value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (a%d) ← #%04x\n", dest_reg, value);
     return 0;
 }
 
@@ -6354,7 +5987,6 @@ static uint32_t m68k_30c0_move_w_anp_dn (M68000_Context *context, uint16_t instr
     context->state.a [dest_reg] += 2;
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (a%d)+ ← d%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -6370,7 +6002,6 @@ static uint32_t m68k_30c8_move_w_anp_an (M68000_Context *context, uint16_t instr
     context->state.a [dest_reg] += 2;
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (a%d)+ ← a%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -6386,7 +6017,6 @@ static uint32_t m68k_30d0_move_w_anp_an (M68000_Context *context, uint16_t instr
     context->state.a [dest_reg] += 2;
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (a%d)+ ← (a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -6403,7 +6033,6 @@ static uint32_t m68k_30d8_move_w_anp_anp (M68000_Context *context, uint16_t inst
     context->state.a [dest_reg] += 2;
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (a%d)+ ← (a%d)+\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -6420,7 +6049,6 @@ static uint32_t m68k_30e0_move_w_anp_pan (M68000_Context *context, uint16_t inst
     context->state.a [dest_reg] += 2;
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (a%d)+ ← -(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -6436,7 +6064,6 @@ static uint32_t m68k_30e8_move_w_anp_dan (M68000_Context *context, uint16_t inst
     context->state.a [dest_reg] += 2;
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (a%d)+ ← d(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -6452,7 +6079,6 @@ static uint32_t m68k_30f0_move_w_anp_danxi (M68000_Context *context, uint16_t in
     context->state.a [dest_reg] += 2;
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (a%d)+ ← d(a%d+Xi)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -6467,7 +6093,6 @@ static uint32_t m68k_30f8_move_w_anp_aw (M68000_Context *context, uint16_t instr
     context->state.a [dest_reg] += 2;
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (a%d)+ ← (xxx.w)\n", dest_reg);
     return 0;
 }
 
@@ -6482,7 +6107,6 @@ static uint32_t m68k_30f9_move_w_anp_al (M68000_Context *context, uint16_t instr
     context->state.a [dest_reg] += 2;
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (a%d)+ ← (xxx.l)\n", dest_reg);
     return 0;
 }
 
@@ -6497,7 +6121,6 @@ static uint32_t m68k_30fa_move_w_anp_dpc (M68000_Context *context, uint16_t inst
     context->state.a [dest_reg] += 2;
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (a%d)+ ← d(PC)\n", dest_reg);
     return 0;
 }
 
@@ -6512,7 +6135,6 @@ static uint32_t m68k_30fb_move_w_anp_dpcxi (M68000_Context *context, uint16_t in
     context->state.a [dest_reg] += 2;
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (a%d)+ ← d(PC+Xi)\n", dest_reg);
     return 0;
 }
 
@@ -6527,7 +6149,6 @@ static uint32_t m68k_30fc_move_w_anp_imm (M68000_Context *context, uint16_t inst
     context->state.a [dest_reg] += 2;
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (a%d)+ ← #%04x\n", dest_reg, value);
     return 0;
 }
 
@@ -6543,7 +6164,6 @@ static uint32_t m68k_3100_move_w_pan_dn (M68000_Context *context, uint16_t instr
     write_word (context, context->state.a [dest_reg], value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w -(a%d) ← d%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -6559,7 +6179,6 @@ static uint32_t m68k_3108_move_w_pan_an (M68000_Context *context, uint16_t instr
     write_word (context, context->state.a [dest_reg], value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w -(a%d) ← a%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -6575,7 +6194,6 @@ static uint32_t m68k_3110_move_w_pan_an (M68000_Context *context, uint16_t instr
     write_word (context, context->state.a [dest_reg], value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w -(a%d) ← (a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -6592,7 +6210,6 @@ static uint32_t m68k_3118_move_w_pan_anp (M68000_Context *context, uint16_t inst
     write_word (context, context->state.a [dest_reg], value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w -(a%d) ← (a%d)+\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -6609,7 +6226,6 @@ static uint32_t m68k_3120_move_w_pan_pan (M68000_Context *context, uint16_t inst
     write_word (context, context->state.a [dest_reg], value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w -(a%d) ← -(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -6625,7 +6241,6 @@ static uint32_t m68k_3128_move_w_pan_dan (M68000_Context *context, uint16_t inst
     write_word (context, context->state.a [dest_reg], value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w -(a%d) ← d(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -6641,7 +6256,6 @@ static uint32_t m68k_3130_move_w_pan_danxi (M68000_Context *context, uint16_t in
     write_word (context, context->state.a [dest_reg], value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w -(a%d) ← d(a%d+Xi)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -6656,7 +6270,6 @@ static uint32_t m68k_3138_move_w_pan_aw (M68000_Context *context, uint16_t instr
     write_word (context, context->state.a [dest_reg], value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w -(a%d) ← (xxx.w)\n", dest_reg);
     return 0;
 }
 
@@ -6671,7 +6284,6 @@ static uint32_t m68k_3139_move_w_pan_al (M68000_Context *context, uint16_t instr
     write_word (context, context->state.a [dest_reg], value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w -(a%d) ← (xxx.l)\n", dest_reg);
     return 0;
 }
 
@@ -6686,7 +6298,6 @@ static uint32_t m68k_313a_move_w_pan_dpc (M68000_Context *context, uint16_t inst
     write_word (context, context->state.a [dest_reg], value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w -(a%d) ← d(PC)\n", dest_reg);
     return 0;
 }
 
@@ -6701,7 +6312,6 @@ static uint32_t m68k_313b_move_w_pan_dpcxi (M68000_Context *context, uint16_t in
     write_word (context, context->state.a [dest_reg], value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w -(a%d) ← d(PC+Xi)\n", dest_reg);
     return 0;
 }
 
@@ -6716,7 +6326,6 @@ static uint32_t m68k_313c_move_w_pan_imm (M68000_Context *context, uint16_t inst
     write_word (context, context->state.a [dest_reg], value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w -(a%d) ← #%04x\n", dest_reg, value);
     return 0;
 }
 
@@ -6731,7 +6340,6 @@ static uint32_t m68k_3140_move_w_dan_dn (M68000_Context *context, uint16_t instr
     write_word_with_displacement (context, context->state.a [dest_reg], value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w d(a%d) ← d%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -6746,7 +6354,6 @@ static uint32_t m68k_3148_move_w_dan_an (M68000_Context *context, uint16_t instr
     write_word_with_displacement (context, context->state.a [dest_reg], value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w d(a%d) ← a%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -6761,7 +6368,6 @@ static uint32_t m68k_3150_move_w_dan_an (M68000_Context *context, uint16_t instr
     write_word_with_displacement (context, context->state.a [dest_reg], value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w d(a%d) ← (a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -6777,7 +6383,6 @@ static uint32_t m68k_3158_move_w_dan_anp (M68000_Context *context, uint16_t inst
     write_word_with_displacement (context, context->state.a [dest_reg], value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w d(a%d) ← (a%d)+\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -6793,7 +6398,6 @@ static uint32_t m68k_3160_move_w_dan_pan (M68000_Context *context, uint16_t inst
     write_word_with_displacement (context, context->state.a [dest_reg], value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w d(a%d) ← -(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -6808,7 +6412,6 @@ static uint32_t m68k_3168_move_w_dan_dan (M68000_Context *context, uint16_t inst
     write_word_with_displacement (context, context->state.a [dest_reg], value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w d(a%d) ← d(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -6823,7 +6426,6 @@ static uint32_t m68k_3170_move_w_dan_danxi (M68000_Context *context, uint16_t in
     write_word_with_displacement (context, context->state.a [dest_reg], value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w d(a%d) ← d(a%d+Xi)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -6837,7 +6439,6 @@ static uint32_t m68k_3178_move_w_dan_aw (M68000_Context *context, uint16_t instr
     write_word_with_displacement (context, context->state.a [dest_reg], value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w d(a%d) ← (xxx.w)\n", dest_reg);
     return 0;
 }
 
@@ -6851,7 +6452,6 @@ static uint32_t m68k_3179_move_w_dan_al (M68000_Context *context, uint16_t instr
     write_word_with_displacement (context, context->state.a [dest_reg], value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w d(a%d) ← (xxx.l)\n", dest_reg);
     return 0;
 }
 
@@ -6865,7 +6465,6 @@ static uint32_t m68k_317a_move_w_dan_dpc (M68000_Context *context, uint16_t inst
     write_word_with_displacement (context, context->state.a [dest_reg], value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w d(a%d) ← d(PC)\n", dest_reg);
     return 0;
 }
 
@@ -6879,7 +6478,6 @@ static uint32_t m68k_317b_move_w_dan_dpcxi (M68000_Context *context, uint16_t in
     write_word_with_displacement (context, context->state.a [dest_reg], value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w d(a%d) ← d(PC+Xi)\n", dest_reg);
     return 0;
 }
 
@@ -6893,7 +6491,6 @@ static uint32_t m68k_317c_move_w_dan_imm (M68000_Context *context, uint16_t inst
     write_word_with_displacement (context, context->state.a [dest_reg], value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w d(a%d) ← #%02x\n", dest_reg, value);
     return 0;
 }
 
@@ -6910,7 +6507,6 @@ static uint32_t m68k_3180_move_w_danxi_dn (M68000_Context *context, uint16_t ins
     write_word_with_index (context, address, value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w d(a%d+Xi) ← d%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -6927,7 +6523,6 @@ static uint32_t m68k_3188_move_w_danxi_an (M68000_Context *context, uint16_t ins
     write_word_with_index (context, address, value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w d(a%d+Xi) ← a%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -6944,7 +6539,6 @@ static uint32_t m68k_3190_move_w_danxi_an (M68000_Context *context, uint16_t ins
     write_word_with_index (context, address, value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w d(a%d+Xi) ← (a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -6962,7 +6556,6 @@ static uint32_t m68k_3198_move_w_danxi_anp (M68000_Context *context, uint16_t in
     write_word_with_index (context, address, value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w d(a%d+Xi) ← (a%d)+\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -6980,7 +6573,6 @@ static uint32_t m68k_31a0_move_w_danxi_pan (M68000_Context *context, uint16_t in
     write_word_with_index (context, address, value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w d(a%d+Xi) ← -(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -6997,7 +6589,6 @@ static uint32_t m68k_31a8_move_w_danxi_dan (M68000_Context *context, uint16_t in
     write_word_with_index (context, address, value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w d(a%d+Xi) ← d(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -7014,7 +6605,6 @@ static uint32_t m68k_31b0_move_w_danxi_danxi (M68000_Context *context, uint16_t 
     write_word_with_index (context, address, value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w d(a%d+Xi) ← d(a%d+Xi)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -7030,7 +6620,6 @@ static uint32_t m68k_31b8_move_w_danxi_aw (M68000_Context *context, uint16_t ins
     write_word_with_index (context, address, value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w d(a%d+Xi) ← (xxx.w)\n", dest_reg);
     return 0;
 }
 
@@ -7046,7 +6635,6 @@ static uint32_t m68k_31b9_move_w_danxi_al (M68000_Context *context, uint16_t ins
     write_word_with_index (context, address, value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w d(a%d+Xi) ← (xxx.l)\n", dest_reg);
     return 0;
 }
 
@@ -7062,7 +6650,6 @@ static uint32_t m68k_31ba_move_w_danxi_dpc (M68000_Context *context, uint16_t in
     write_word_with_index (context, address, value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w d(a%d+Xi) ← d(PC)\n", dest_reg);
     return 0;
 }
 
@@ -7078,7 +6665,6 @@ static uint32_t m68k_31bb_move_w_danxi_dpcxi (M68000_Context *context, uint16_t 
     write_word_with_index (context, address, value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w d(a%d+Xi) ← d(PC+Xi)\n", dest_reg);
     return 0;
 }
 
@@ -7094,7 +6680,6 @@ static uint32_t m68k_31bc_move_w_danxi_imm (M68000_Context *context, uint16_t in
     write_word_with_index (context, address, value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w d(a%d+Xi) ← #%04x\n", dest_reg, value);
     return 0;
 }
 
@@ -7108,7 +6693,6 @@ static uint32_t m68k_31c0_move_w_aw_dn (M68000_Context *context, uint16_t instru
     write_word_aw (context, value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (xxx.w) ← d%d\n", source_reg);
     return 0;
 }
 
@@ -7122,7 +6706,6 @@ static uint32_t m68k_31c8_move_w_aw_an (M68000_Context *context, uint16_t instru
     write_word_aw (context, value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (xxx.w) ← a%d\n", source_reg);
     return 0;
 }
 
@@ -7137,7 +6720,6 @@ static uint32_t m68k_31d0_move_w_aw_an (M68000_Context *context, uint16_t instru
     write_word_aw (context, value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (xxx.w) ← (a%d)\n", source_reg);
     return 0;
 }
 
@@ -7152,7 +6734,6 @@ static uint32_t m68k_31d8_move_w_aw_anp (M68000_Context *context, uint16_t instr
     write_word_aw (context, value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (xxx.w) ← (a%d)+\n", source_reg);
     return 0;
 }
 
@@ -7167,7 +6748,6 @@ static uint32_t m68k_31e0_move_w_aw_pan (M68000_Context *context, uint16_t instr
     write_word_aw (context, value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (xxx.w) ← -(a%d)\n", source_reg);
     return 0;
 }
 
@@ -7181,7 +6761,6 @@ static uint32_t m68k_31e8_move_w_aw_dan (M68000_Context *context, uint16_t instr
     write_word_aw (context, value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (xxx.w) ← d(a%d)\n", source_reg);
     return 0;
 }
 
@@ -7195,7 +6774,6 @@ static uint32_t m68k_31f0_move_w_aw_danxi (M68000_Context *context, uint16_t ins
     write_word_aw (context, value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (xxx.w) ← d(a%d+Xi)\n", source_reg);
     return 0;
 }
 
@@ -7207,7 +6785,6 @@ static uint32_t m68k_31f8_move_w_aw_aw (M68000_Context *context, uint16_t instru
     write_word_aw (context, value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (xxx.w) ← (xxx.w)\n");
     return 0;
 }
 
@@ -7219,7 +6796,6 @@ static uint32_t m68k_31f9_move_w_aw_al (M68000_Context *context, uint16_t instru
     write_word_aw (context, value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (xxx.w) ← (xxx.l)\n");
     return 0;
 }
 
@@ -7231,7 +6807,6 @@ static uint32_t m68k_31fa_move_w_aw_dpc (M68000_Context *context, uint16_t instr
     write_word_aw (context, value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (xxx.w) ← d(PC)\n");
     return 0;
 }
 
@@ -7243,7 +6818,6 @@ static uint32_t m68k_31fb_move_w_aw_dpcxi (M68000_Context *context, uint16_t ins
     write_word_aw (context, value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (xxx.w) ← d(PC+Xi)\n");
     return 0;
 }
 
@@ -7256,7 +6830,6 @@ static uint32_t m68k_31fc_move_w_aw_imm (M68000_Context *context, uint16_t instr
     write_word_aw (context, value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (xxx.w) ← #%04x\n", value);
     return 0;
 }
 
@@ -7270,7 +6843,6 @@ static uint32_t m68k_33c0_move_w_al_dn (M68000_Context *context, uint16_t instru
     write_word_al (context, value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (xxx.l) ← d%d\n", source_reg);
     return 0;
 }
 
@@ -7284,7 +6856,6 @@ static uint32_t m68k_33c8_move_w_al_an (M68000_Context *context, uint16_t instru
     write_word_al (context, value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (xxx.l) ← a%d\n", source_reg);
     return 0;
 }
 
@@ -7298,7 +6869,6 @@ static uint32_t m68k_33d0_move_w_al_an (M68000_Context *context, uint16_t instru
     write_word_al (context, value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (xxx.l) ← (a%d)\n", source_reg);
     return 0;
 }
 
@@ -7313,7 +6883,6 @@ static uint32_t m68k_33d8_move_w_al_anp (M68000_Context *context, uint16_t instr
     write_word_al (context, value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (xxx.l) ← (a%d)+\n", source_reg);
     return 0;
 }
 
@@ -7328,7 +6897,6 @@ static uint32_t m68k_33e0_move_w_al_pan (M68000_Context *context, uint16_t instr
     write_word_al (context, value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (xxx.l) ← -(a%d)\n", source_reg);
     return 0;
 }
 
@@ -7342,7 +6910,6 @@ static uint32_t m68k_33e8_move_w_al_dan (M68000_Context *context, uint16_t instr
     write_word_al (context, value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (xxx.l) ← d(a%d)\n", source_reg);
     return 0;
 }
 
@@ -7356,7 +6923,6 @@ static uint32_t m68k_33f0_move_w_al_danxi (M68000_Context *context, uint16_t ins
     write_word_al (context, value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (xxx.l) ← d(a%d+Xi)\n", source_reg);
     return 0;
 }
 
@@ -7368,7 +6934,6 @@ static uint32_t m68k_33f8_move_w_al_aw (M68000_Context *context, uint16_t instru
     write_word_al (context, value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (xxx.l) ← (xxx.w)\n");
     return 0;
 }
 
@@ -7380,7 +6945,6 @@ static uint32_t m68k_33f9_move_w_al_al (M68000_Context *context, uint16_t instru
     write_word_al (context, value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (xxx.l) ← (xxx.l)\n");
     return 0;
 }
 
@@ -7392,7 +6956,6 @@ static uint32_t m68k_33fa_move_w_al_dpc (M68000_Context *context, uint16_t instr
     write_word_al (context, value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (xxx.l) ← d(PC)\n");
     return 0;
 }
 
@@ -7404,7 +6967,6 @@ static uint32_t m68k_33fb_move_w_al_dpcxi (M68000_Context *context, uint16_t ins
     write_word_al (context, value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (xxx.l) ← d(PC)\n");
     return 0;
 }
 
@@ -7416,7 +6978,6 @@ static uint32_t m68k_33fc_move_w_al_imm (M68000_Context *context, uint16_t instr
     write_word_al (context, value);
     m68k_move_w_flags (context, value);
 
-    printf ("move.w (xxx.l) ← #%04x\n", value);
     return 0;
 }
 
@@ -7428,7 +6989,6 @@ static uint32_t m68k_40c0_move_dn_sr (M68000_Context *context, uint16_t instruct
 
     context->state.d [dest_reg].w = context->state.sr;
 
-    printf ("move d%d ← sr\n", dest_reg);
     return 0;
 }
 
@@ -7441,7 +7001,6 @@ static uint32_t m68k_41d0_lea_an (M68000_Context *context, uint16_t instruction)
 
     context->state.a [dest_reg] = context->state.a [source_reg];
 
-    printf ("lea a%d ← (a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -7454,7 +7013,6 @@ static uint32_t m68k_41e8_lea_dan (M68000_Context *context, uint16_t instruction
 
     context->state.a [dest_reg] = address_with_displacement (context, context->state.a [source_reg]);
 
-    printf ("lea a%d ← d(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -7467,7 +7025,6 @@ static uint32_t m68k_41f0_lea_danxi (M68000_Context *context, uint16_t instructi
 
     context->state.a [dest_reg] = address_with_index (context, context->state.a [source_reg]);
 
-    printf ("lea a%d ← d(a%d+Xi)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -7480,7 +7037,6 @@ static uint32_t m68k_41f8_lea_aw (M68000_Context *context, uint16_t instruction)
 
     context->state.a [dest_reg] = address;
 
-    printf ("lea a%d ← (%04x.w)\n", dest_reg, (uint16_t) address);
     return 0;
 }
 
@@ -7493,7 +7049,6 @@ static uint32_t m68k_41f9_lea_al (M68000_Context *context, uint16_t instruction)
 
     context->state.a [dest_reg] = address;
 
-    printf ("lea a%d ← (%06x.l)\n", dest_reg, address);
     return 0;
 }
 
@@ -7505,7 +7060,6 @@ static uint32_t m68k_41fa_lea_dpc (M68000_Context *context, uint16_t instruction
 
     context->state.a [dest_reg] = address_with_displacement (context, context->state.pc);
 
-    printf ("lea a%d ← d(PC)\n", dest_reg);
     return 0;
 }
 
@@ -7517,7 +7071,6 @@ static uint32_t m68k_41fb_lea_dpcxi (M68000_Context *context, uint16_t instructi
 
     context->state.a [dest_reg] = address_with_index (context, context->state.pc);
 
-    printf ("lea a%d ← d(PC+Xi)\n", dest_reg);
     return 0;
 }
 
@@ -7542,7 +7095,6 @@ static uint32_t m68k_4200_clr_d_an (M68000_Context *context, uint16_t instructio
     context->state.d [reg].b = 0x00;
     m68k_clr_flags (context);
 
-    printf ("clr.b (a%d)\n", reg);
     return 0;
 }
 
@@ -7555,7 +7107,6 @@ static uint32_t m68k_4210_clr_b_an (M68000_Context *context, uint16_t instructio
     write_byte (context, context->state.a [reg], 0x00);
     m68k_clr_flags (context);
 
-    printf ("clr.b (a%d)\n", reg);
     return 0;
 }
 
@@ -7569,7 +7120,6 @@ static uint32_t m68k_4218_clr_b_anp (M68000_Context *context, uint16_t instructi
     context->state.a [reg] += (reg == 7) ? 2 : 1;
     m68k_clr_flags (context);
 
-    printf ("clr.b (a%d)+\n", reg);
     return 0;
 }
 
@@ -7583,7 +7133,6 @@ static uint32_t m68k_4220_clr_b_pan (M68000_Context *context, uint16_t instructi
     write_byte (context, context->state.a [reg], 0x00);
     m68k_clr_flags (context);
 
-    printf ("clr.b -(a%d)\n", reg);
     return 0;
 }
 
@@ -7596,7 +7145,6 @@ static uint32_t m68k_4228_clr_b_dan (M68000_Context *context, uint16_t instructi
     write_byte_with_displacement (context, context->state.a [reg], 0x00);
     m68k_clr_flags (context);
 
-    printf ("clr.b d(a%d)\n", reg);
     return 0;
 }
 
@@ -7609,7 +7157,6 @@ static uint32_t m68k_4230_clr_b_danxi (M68000_Context *context, uint16_t instruc
     write_byte_with_index (context, context->state.a [reg], 0x00);
     m68k_clr_flags (context);
 
-    printf ("clr.b d(a%d+Xi)\n", reg);
     return 0;
 }
 
@@ -7620,7 +7167,6 @@ static uint32_t m68k_4238_clr_b_aw (M68000_Context *context, uint16_t instructio
     write_byte_aw (context, 0x00);
     m68k_clr_flags (context);
 
-    printf ("clr.b (xxx.w)\n");
     return 0;
 }
 
@@ -7631,7 +7177,6 @@ static uint32_t m68k_4239_clr_b_al (M68000_Context *context, uint16_t instructio
     write_byte_al (context, 0x00);
     m68k_clr_flags (context);
 
-    printf ("clr.b (xxx.l)\n");
     return 0;
 }
 
@@ -7644,7 +7189,6 @@ static uint32_t m68k_4268_clr_w_dan (M68000_Context *context, uint16_t instructi
     write_word_with_displacement (context, context->state.a [reg], 0x00);
     m68k_clr_flags (context);
 
-    printf ("clr.w d(a%d)\n", reg);
     return 0;
 }
 
@@ -7655,7 +7199,6 @@ static uint32_t m68k_4278_clr_w_aw (M68000_Context *context, uint16_t instructio
     write_word_aw (context, 0x0000);
     m68k_clr_flags (context);
 
-    printf ("clr.w (xxx.w)\n");
     return 0;
 }
 
@@ -7668,7 +7211,6 @@ static uint32_t m68k_4280_clr_l_dn (M68000_Context *context, uint16_t instructio
     context->state.d [reg].l = 0x00000000;
     m68k_clr_flags (context);
 
-    printf ("clr.l d%d\n", reg);
     return 0;
 }
 
@@ -7681,7 +7223,6 @@ static uint32_t m68k_4290_clr_l_an (M68000_Context *context, uint16_t instructio
     write_long (context, context->state.a [reg], 0x00000000);
     m68k_clr_flags (context);
 
-    printf ("clr.l (a%d)\n", reg);
     return 0;
 }
 
@@ -7695,7 +7236,6 @@ static uint32_t m68k_4298_clr_l_anp (M68000_Context *context, uint16_t instructi
     context->state.a [reg] += 4;
     m68k_clr_flags (context);
 
-    printf ("clr.l (a%d)+\n", reg);
     return 0;
 }
 
@@ -7709,7 +7249,6 @@ static uint32_t m68k_42a0_clr_l_pan (M68000_Context *context, uint16_t instructi
     write_long (context, context->state.a [reg], 0x00000000);
     m68k_clr_flags (context);
 
-    printf ("clr.l -(a%d)\n", reg);
     return 0;
 }
 
@@ -7722,7 +7261,6 @@ static uint32_t m68k_42a8_clr_l_dan (M68000_Context *context, uint16_t instructi
     write_long_with_displacement (context, context->state.a [reg], 0x00000000);
     m68k_clr_flags (context);
 
-    printf ("clr.l d(a%d)\n", reg);
     return 0;
 }
 
@@ -7735,7 +7273,6 @@ static uint32_t m68k_42b0_clr_l_danxi (M68000_Context *context, uint16_t instruc
     write_long_with_index (context, context->state.a [reg], 0x00000000);
     m68k_clr_flags (context);
 
-    printf ("clr.l d(a%d+Xi)\n", reg);
     return 0;
 }
 
@@ -7746,7 +7283,6 @@ static uint32_t m68k_42b8_clr_l_aw (M68000_Context *context, uint16_t instructio
     write_long_aw (context, 0x00000000);
     m68k_clr_flags (context);
 
-    printf ("clr.l (xxx.w)\n");
     return 0;
 }
 
@@ -7757,7 +7293,6 @@ static uint32_t m68k_42b9_clr_l_al (M68000_Context *context, uint16_t instructio
     write_long_al (context, 0x00000000);
     m68k_clr_flags (context);
 
-    printf ("clr.l (xxx.w)\n");
     return 0;
 }
 
@@ -7778,7 +7313,6 @@ static uint32_t m68k_4400_neg_b_dn (M68000_Context *context, uint16_t instructio
     context->state.ccr_carry = (result != 0);
     context->state.ccr_extend = (result != 0);
 
-    printf ("neg.b d%d\n", reg);
     return 0;
 }
 
@@ -7799,7 +7333,6 @@ static uint32_t m68k_4410_neg_b_an (M68000_Context *context, uint16_t instructio
     context->state.ccr_carry = (result != 0);
     context->state.ccr_extend = (result != 0);
 
-    printf ("neg.b (a%d)\n", reg);
     return 0;
 }
 
@@ -7821,7 +7354,6 @@ static uint32_t m68k_4428_neg_b_dan (M68000_Context *context, uint16_t instructi
     context->state.ccr_carry = (result != 0);
     context->state.ccr_extend = (result != 0);
 
-    printf ("neg.b d(a%d)\n", reg);
     return 0;
 }
 
@@ -7842,7 +7374,6 @@ static uint32_t m68k_4440_neg_w_dn (M68000_Context *context, uint16_t instructio
     context->state.ccr_carry = (result != 0);
     context->state.ccr_extend = (result != 0);
 
-    printf ("neg.w d%d\n", reg);
     return 0;
 }
 
@@ -7863,7 +7394,6 @@ static uint32_t m68k_4450_neg_w_an (M68000_Context *context, uint16_t instructio
     context->state.ccr_carry = (result != 0);
     context->state.ccr_extend = (result != 0);
 
-    printf ("neg.w (a%d)\n", reg);
     return 0;
 }
 
@@ -7885,7 +7415,6 @@ static uint32_t m68k_4458_neg_w_anp (M68000_Context *context, uint16_t instructi
     context->state.ccr_carry = (result != 0);
     context->state.ccr_extend = (result != 0);
 
-    printf ("neg.w (a%d)+\n", reg);
     return 0;
 }
 
@@ -7907,7 +7436,6 @@ static uint32_t m68k_4460_neg_w_pan (M68000_Context *context, uint16_t instructi
     context->state.ccr_carry = (result != 0);
     context->state.ccr_extend = (result != 0);
 
-    printf ("neg.w -(a%d)\n", reg);
     return 0;
 }
 
@@ -7929,7 +7457,6 @@ static uint32_t m68k_4468_neg_w_dan (M68000_Context *context, uint16_t instructi
     context->state.ccr_carry = (result != 0);
     context->state.ccr_extend = (result != 0);
 
-    printf ("neg.w d(a%d)\n", reg);
     return 0;
 }
 
@@ -7951,7 +7478,6 @@ static uint32_t m68k_4470_neg_w_danxi (M68000_Context *context, uint16_t instruc
     context->state.ccr_carry = (result != 0);
     context->state.ccr_extend = (result != 0);
 
-    printf ("neg.w d(a%d+Xi)\n", reg);
     return 0;
 }
 
@@ -7972,7 +7498,6 @@ static uint32_t m68k_4478_neg_w_aw (M68000_Context *context, uint16_t instructio
     context->state.ccr_carry = (result != 0);
     context->state.ccr_extend = (result != 0);
 
-    printf ("neg.w (xxx.w)\n");
     return 0;
 }
 
@@ -7993,7 +7518,6 @@ static uint32_t m68k_4479_neg_w_al (M68000_Context *context, uint16_t instructio
     context->state.ccr_carry = (result != 0);
     context->state.ccr_extend = (result != 0);
 
-    printf ("neg.w (xxx.l)\n");
     return 0;
 }
 
@@ -8006,7 +7530,6 @@ static uint32_t m68k_44c0_move_ccr_dn (M68000_Context *context, uint16_t instruc
 
     context->state.ccr = value;
 
-    printf ("move ccr ← d%d\n", reg);
     return 0;
 }
 
@@ -8021,7 +7544,6 @@ static uint32_t m68k_4600_not_b_dn (M68000_Context *context, uint16_t instructio
     context->state.d [reg].b = result;
     m68k_move_b_flags (context, result);
 
-    printf ("not.b d%d\n", reg);
     return 0;
 }
 
@@ -8036,7 +7558,6 @@ static uint32_t m68k_4640_not_w_dn (M68000_Context *context, uint16_t instructio
     context->state.d [reg].w = result;
     m68k_move_w_flags (context, result);
 
-    printf ("not.w d%d\n", reg);
     return 0;
 }
 
@@ -8051,7 +7572,6 @@ static uint32_t m68k_4680_not_l_dn (M68000_Context *context, uint16_t instructio
     context->state.d [reg].l = result;
     m68k_move_l_flags (context, result);
 
-    printf ("not.l d%d\n", reg);
     return 0;
 }
 
@@ -8065,13 +7585,11 @@ static uint32_t m68k_46fc_move_sr_imm (M68000_Context *context, uint16_t instruc
         m68k_store_stack_pointer (context);
         context->state.sr = value & SR_MASK;
         m68k_load_stack_pointer (context);
-        printf ("move sr ← #%04x\n", value);
     }
     else
     {
         context->state.pc -= 2;
         m68k_exception (context, 0x20);
-        printf ("move sr ← #---- (exception)\n");
     }
 
     return 0;
@@ -8092,7 +7610,6 @@ static uint32_t m68k_4840_swap_dn (M68000_Context *context, uint16_t instruction
     context->state.ccr_overflow = 0;
     context->state.ccr_carry = 0;
 
-    printf ("swap d%d\n", reg);
     return 0;
 }
 
@@ -8110,7 +7627,6 @@ static uint32_t m68k_4880_ext_w_dn (M68000_Context *context, uint16_t instructio
     context->state.ccr_overflow = 0;
     context->state.ccr_carry = 0;
 
-    printf ("ext.w d%d\n", reg);
     return 0;
 }
 
@@ -8143,7 +7659,6 @@ static uint32_t m68k_48a0_movem_w_pan_regs (M68000_Context *context, uint16_t in
 
     context->state.a [reg] = address;
 
-    printf ("movem.w -(a%d) ← <registers>\n", reg);
     return 0;
 }
 
@@ -8161,7 +7676,6 @@ static uint32_t m68k_48c0_ext_l_dn (M68000_Context *context, uint16_t instructio
     context->state.ccr_overflow = 0;
     context->state.ccr_carry = 0;
 
-    printf ("ext.l d%d\n", reg);
     return 0;
 }
 
@@ -8190,7 +7704,6 @@ static uint32_t m68k_48d0_movem_l_an_regs (M68000_Context *context, uint16_t ins
         }
     }
 
-    printf ("movem.l (a%d) ← <registers>\n", dest_reg);
     return 0;
 }
 
@@ -8223,7 +7736,6 @@ static uint32_t m68k_48e0_movem_l_pan_regs (M68000_Context *context, uint16_t in
 
     context->state.a [reg] = address;
 
-    printf ("movem.l -(a%d) ← <registers>\n", reg);
     return 0;
 }
 
@@ -8251,7 +7763,6 @@ static uint32_t m68k_48f8_movem_l_aw_regs (M68000_Context *context, uint16_t ins
         }
     }
 
-    printf ("movem.l (xxx.w) ← <registers>\n");
     return 0;
 }
 
@@ -8264,7 +7775,6 @@ static uint32_t m68k_4a00_tst_b_dn (M68000_Context *context, uint16_t instructio
 
     m68k_tst_b_flags (context, value);
 
-    printf ("tst.b d%d\n", reg);
     return 0;
 }
 
@@ -8277,7 +7787,6 @@ static uint32_t m68k_4a10_tst_b_an (M68000_Context *context, uint16_t instructio
 
     m68k_tst_b_flags (context, value);
 
-    printf ("tst.b (a%d)\n", reg);
     return 0;
 }
 
@@ -8290,7 +7799,6 @@ static uint32_t m68k_4a28_tst_b_dan (M68000_Context *context, uint16_t instructi
 
     m68k_tst_b_flags (context, value);
 
-    printf ("tst.b d(a%d)\n", reg);
     return 0;
 }
 
@@ -8303,7 +7811,6 @@ static uint32_t m68k_4a30_tst_b_danxi (M68000_Context *context, uint16_t instruc
 
     m68k_tst_b_flags (context, value);
 
-    printf ("tst.b d(a%d+Xi)\n", reg);
     return 0;
 }
 
@@ -8315,7 +7822,6 @@ static uint32_t m68k_4a38_tst_b_aw (M68000_Context *context, uint16_t instructio
 
     m68k_tst_b_flags (context, value);
 
-    printf ("tst.b (xxx.w)\n");
     return 0;
 }
 
@@ -8328,7 +7834,6 @@ static uint32_t m68k_4a40_tst_w_dn (M68000_Context *context, uint16_t instructio
 
     m68k_tst_w_flags (context, value);
 
-    printf ("tst.w d%d\n", reg);
     return 0;
 }
 
@@ -8341,7 +7846,6 @@ static uint32_t m68k_4a50_tst_w_an (M68000_Context *context, uint16_t instructio
 
     m68k_tst_w_flags (context, value);
 
-    printf ("tst.w (a%d)\n", reg);
     return 0;
 }
 
@@ -8354,7 +7858,6 @@ static uint32_t m68k_4a68_tst_w_dan (M68000_Context *context, uint16_t instructi
 
     m68k_tst_w_flags (context, value);
 
-    printf ("tst.w d(a%d)\n", reg);
     return 0;
 }
 
@@ -8366,7 +7869,6 @@ static uint32_t m68k_4a78_tst_w_aw (M68000_Context *context, uint16_t instructio
 
     m68k_tst_w_flags (context, value);
 
-    printf ("tst.w (xxx.w)\n");
     return 0;
 }
 
@@ -8378,7 +7880,6 @@ static uint32_t m68k_4a79_tst_w_al (M68000_Context *context, uint16_t instructio
 
     m68k_tst_w_flags (context, value);
 
-    printf ("tst.w (xxx.l)\n");
     return 0;
 }
 
@@ -8391,7 +7892,6 @@ static uint32_t m68k_4a90_tst_l_an (M68000_Context *context, uint16_t instructio
 
     m68k_tst_l_flags (context, value);
 
-    printf ("tst.l (a%d)\n", reg);
     return 0;
 }
 
@@ -8403,7 +7903,6 @@ static uint32_t m68k_4ab8_tst_l_aw (M68000_Context *context, uint16_t instructio
 
     m68k_tst_l_flags (context, value);
 
-    printf ("tst.l (xxx.w)\n");
     return 0;
 }
 
@@ -8415,7 +7914,6 @@ static uint32_t m68k_4ab9_tst_l_al (M68000_Context *context, uint16_t instructio
 
     m68k_tst_l_flags (context, value);
 
-    printf ("tst.l (xxx.l)\n");
     return 0;
 }
 
@@ -8448,7 +7946,6 @@ static uint32_t m68k_4c98_movem_w_regs_anp (M68000_Context *context, uint16_t in
 
     context->state.a [reg] = address;
 
-    printf ("movem.w (a%d)+ ← <registers>\n", reg);
     return 0;
 }
 
@@ -8477,7 +7974,6 @@ static uint32_t m68k_4cd0_movem_l_regs_an (M68000_Context *context, uint16_t ins
         }
     }
 
-    printf ("movem.l <registers> ← (a%d)\n", source_reg);
     return 0;
 }
 
@@ -8508,7 +8004,6 @@ static uint32_t m68k_4cd8_movem_l_regs_anp (M68000_Context *context, uint16_t in
 
     context->state.a [source_reg] = address;
 
-    printf ("movem.l <registers> ← (a%d)+\n", source_reg);
     return 0;
 }
 
@@ -8536,7 +8031,6 @@ static uint32_t m68k_4cf8_movem_l_regs_aw (M68000_Context *context, uint16_t ins
         }
     }
 
-    printf ("movem.l <registers> ← (xxx.w)\n");
     return 0;
 }
 
@@ -8548,7 +8042,6 @@ static uint32_t m68k_4e40_trap (M68000_Context *context, uint16_t instruction)
 
     m68k_exception (context, 0x80 + (vector << 2));
 
-    printf ("trap %d\n", vector);
     return 0;
 }
 
@@ -8568,7 +8061,6 @@ static uint32_t m68k_4e60_move_an_usp (M68000_Context *context, uint16_t instruc
         m68k_exception (context, 0x20);
     }
 
-    printf ("move usp ← A%d\n", reg);
     return 0;
 }
 
@@ -8588,7 +8080,6 @@ static uint32_t m68k_4e68_move_usp_an (M68000_Context *context, uint16_t instruc
         m68k_exception (context, 0x20);
     }
 
-    printf ("move A%d ← usp\n", reg);
     return 0;
 }
 
@@ -8596,7 +8087,6 @@ static uint32_t m68k_4e68_move_usp_an (M68000_Context *context, uint16_t instruc
 /* nop */
 static uint32_t m68k_4e71_nop (M68000_Context *context, uint16_t instruction)
 {
-    printf ("nop\n");
     return 0;
 }
 
@@ -8622,7 +8112,6 @@ static uint32_t m68k_4e73_rte (M68000_Context *context, uint16_t instruction)
         m68k_exception (context, 0x20);
     }
 
-    printf ("rte\n");
     return 0;
 }
 
@@ -8633,7 +8122,6 @@ static uint32_t m68k_4e75_rts (M68000_Context *context, uint16_t instruction)
     context->state.pc = read_long (context, context->state.a [7]);
     context->state.a[7] += 4;
 
-    printf ("rts\n");
     return 0;
 }
 
@@ -8646,7 +8134,6 @@ static uint32_t m68k_4e76_trapv (M68000_Context *context, uint16_t instruction)
         m68k_exception (context, 0x1c);
     }
 
-    printf ("trapv\n");
     return 0;
 }
 
@@ -8666,7 +8153,6 @@ static uint32_t m68k_4e90_jsr_an (M68000_Context *context, uint16_t instruction)
     /* Update the PC */
     context->state.pc = new_pc;
 
-    printf ("jsr (a%d)\n", reg);
     return 0;
 }
 
@@ -8683,7 +8169,6 @@ static uint32_t m68k_4eb9_jsr_al (M68000_Context *context, uint16_t instruction)
     /* Update the PC */
     context->state.pc = address;
 
-    printf ("jsr (xxx.l)\n");
     return 0;
 }
 
@@ -8699,7 +8184,6 @@ static uint32_t m68k_4eba_jsr_dpc (M68000_Context *context, uint16_t instruction
 
     context->state.pc = new_pc;
 
-    printf ("jsr d(pc)\n");
     return 0;
 }
 
@@ -8715,7 +8199,6 @@ static uint32_t m68k_4ebb_jsr_dpcxi (M68000_Context *context, uint16_t instructi
 
     context->state.pc = new_pc;
 
-    printf ("jsr d(PC+Xi)\n");
     return 0;
 }
 
@@ -8727,7 +8210,6 @@ static uint32_t m68k_4ed0_jmp_an (M68000_Context *context, uint16_t instruction)
 
     context->state.pc = context->state.a [reg];
 
-    printf ("jmp (a%d)\n", reg);
     return 0;
 }
 
@@ -8739,7 +8221,6 @@ static uint32_t m68k_4ef9_jmp_al (M68000_Context *context, uint16_t instruction)
 
     context->state.pc = address;
 
-    printf ("jmp (xxx.l)\n");
     return 0;
 }
 
@@ -8750,7 +8231,6 @@ static uint32_t m68k_4efb_jmp_dpcxi (M68000_Context *context, uint16_t instructi
     /* Note: The jump is from the location of the extension. */
     context->state.pc = address_with_index (context, context->state.pc);
 
-    printf ("jmp d(PC+Xi)\n");
     return 0;
 }
 
@@ -8767,7 +8247,6 @@ static uint32_t m68k_5000_addq_b_dn (M68000_Context *context, uint16_t instructi
     context->state.d [reg].b = result;
     m68k_add_b_flags (context, a, b, result);
 
-    printf ("addq.b d%d, #%x\n", reg, b);
     return 0;
 }
 
@@ -8784,7 +8263,6 @@ static uint32_t m68k_5010_addq_b_an (M68000_Context *context, uint16_t instructi
     write_byte (context, context->state.a [reg], result);
     m68k_add_b_flags (context, a, b, result);
 
-    printf ("addq.b (a%d), #%x\n", reg, b);
     return 0;
 }
 
@@ -8802,7 +8280,6 @@ static uint32_t m68k_5018_addq_b_anp (M68000_Context *context, uint16_t instruct
     context->state.a [reg] += (reg == 7) ? 2 : 1;
     m68k_add_b_flags (context, a, b, result);
 
-    printf ("addq.b (a%d)+, #%x\n", reg, b);
     return 0;
 }
 
@@ -8820,7 +8297,6 @@ static uint32_t m68k_5020_addq_b_pan (M68000_Context *context, uint16_t instruct
     write_byte (context, context->state.a [reg], result);
     m68k_add_b_flags (context, a, b, result);
 
-    printf ("addq.b -(a%d), #%x\n", reg, b);
     return 0;
 }
 
@@ -8838,7 +8314,6 @@ static uint32_t m68k_5028_addq_b_dan (M68000_Context *context, uint16_t instruct
     write_byte (context, address, result);
     m68k_add_b_flags (context, a, b, result);
 
-    printf ("addq.b d(a%d), #%x\n", reg, b);
     return 0;
 }
 
@@ -8856,7 +8331,6 @@ static uint32_t m68k_5030_addq_b_danxi (M68000_Context *context, uint16_t instru
     write_byte (context, address, result);
     m68k_add_b_flags (context, a, b, result);
 
-    printf ("addq.b d(a%d+Xi), #%x\n", reg, b);
     return 0;
 }
 
@@ -8873,7 +8347,6 @@ static uint32_t m68k_5038_addq_b_aw (M68000_Context *context, uint16_t instructi
     write_byte (context, address, result);
     m68k_add_b_flags (context, a, b, result);
 
-    printf ("addq.b (xxx.w), #%x\n", b);
     return 0;
 }
 
@@ -8890,7 +8363,6 @@ static uint32_t m68k_5039_addq_b_al (M68000_Context *context, uint16_t instructi
     write_byte (context, address, result);
     m68k_add_b_flags (context, a, b, result);
 
-    printf ("addq.b (xxx.l), #%x\n", b);
     return 0;
 }
 
@@ -8907,7 +8379,6 @@ static uint32_t m68k_5040_addq_w_dn (M68000_Context *context, uint16_t instructi
     context->state.d [reg].w = result;
     m68k_add_w_flags (context, a, b, result);
 
-    printf ("addq.w d%d, #%x\n", reg, b);
     return 0;
 }
 
@@ -8923,7 +8394,6 @@ static uint32_t m68k_5048_addq_w_an (M68000_Context *context, uint16_t instructi
     uint32_t result = a + b;
     context->state.a [reg] = result;
 
-    printf ("addq.w a%d, #%x\n", reg, b);
     return 0;
 }
 
@@ -8940,7 +8410,6 @@ static uint32_t m68k_5050_addq_w_an (M68000_Context *context, uint16_t instructi
     write_word (context, context->state.a [reg], result);
     m68k_add_w_flags (context, a, b, result);
 
-    printf ("addq.w (a%d), #%x\n", reg, b);
     return 0;
 }
 
@@ -8958,7 +8427,6 @@ static uint32_t m68k_5058_addq_w_anp (M68000_Context *context, uint16_t instruct
     context->state.a [reg] += 2;
     m68k_add_w_flags (context, a, b, result);
 
-    printf ("addq.w (a%d)+, #%x\n", reg, b);
     return 0;
 }
 
@@ -8976,7 +8444,6 @@ static uint32_t m68k_5068_addq_w_dan (M68000_Context *context, uint16_t instruct
     write_word (context, address, result);
     m68k_add_w_flags (context, a, b, result);
 
-    printf ("addq.w d(a%d), #%x\n", reg, b);
     return 0;
 }
 
@@ -8993,7 +8460,6 @@ static uint32_t m68k_5078_addq_w_aw (M68000_Context *context, uint16_t instructi
     write_word (context, address, result);
     m68k_add_w_flags (context, a, b, result);
 
-    printf ("addq.w (xxx.w), #%x\n", b);
     return 0;
 }
 
@@ -9009,7 +8475,6 @@ static uint32_t m68k_5088_addq_l_an (M68000_Context *context, uint16_t instructi
     uint32_t result = a + b;
     context->state.a [reg] = result;
 
-    printf ("addq.l a%d, #%x\n", reg, b);
     return 0;
 }
 
@@ -9026,7 +8491,6 @@ static uint32_t m68k_50b8_addq_l_aw (M68000_Context *context, uint16_t instructi
     write_long (context, address, result);
     m68k_add_l_flags (context, a, b, result);
 
-    printf ("addq.l (xxx.w), #%x\n", b);
     return 0;
 }
 
@@ -9043,7 +8507,6 @@ static uint32_t m68k_5100_subq_b_dn (M68000_Context *context, uint16_t instructi
     context->state.d [reg].b = result;
     m68k_sub_b_flags (context, a, b, result);
 
-    printf ("subq.b d%d, #%x\n", reg, b);
     return 0;
 }
 
@@ -9061,7 +8524,6 @@ static uint32_t m68k_5110_subq_b_an (M68000_Context *context, uint16_t instructi
     write_byte (context, address, result);
     m68k_sub_b_flags (context, a, b, result);
 
-    printf ("subq.b (a%d), #%x\n", reg, b);
     return 0;
 }
 
@@ -9079,7 +8541,6 @@ static uint32_t m68k_5128_subq_b_dan (M68000_Context *context, uint16_t instruct
     write_byte (context, address, result);
     m68k_sub_b_flags (context, a, b, result);
 
-    printf ("subq.b d(a%d), #%x\n", reg, b);
     return 0;
 }
 
@@ -9098,8 +8559,6 @@ static uint32_t m68k_5130_subq_b_danxi (M68000_Context *context, uint16_t instru
     write_byte (context, address, result);
     m68k_sub_b_flags (context, a, b, result);
 
-    printf ("subq.b d(a%d+Xi), #%x\n", reg, b);
-
     return 0;
 }
 
@@ -9115,7 +8574,7 @@ static uint32_t m68k_5138_subq_b_aw (M68000_Context *context, uint16_t instructi
     uint8_t result = a - b;
     write_byte (context, address, result);
     m68k_sub_b_flags (context, a, b, result);
-    printf ("subq.b (xxx.w), #%x\n", b);
+
     return 0;
 }
 
@@ -9132,7 +8591,6 @@ static uint32_t m68k_5140_subq_w_dn (M68000_Context *context, uint16_t instructi
     context->state.d [reg].w = result;
     m68k_sub_w_flags (context, a, b, result);
 
-    printf ("subq.w d%d, %d\n", reg, b);
     return 0;
 }
 
@@ -9148,7 +8606,6 @@ static uint32_t m68k_5148_subq_w_an (M68000_Context *context, uint16_t instructi
     uint32_t result = a - b;
     context->state.a [reg] = result;
 
-    printf ("subq.w a%d, %d\n", reg, b);
     return 0;
 }
 
@@ -9165,7 +8622,6 @@ static uint32_t m68k_5150_subq_w_an (M68000_Context *context, uint16_t instructi
     write_word (context, context->state.a [reg], result);
     m68k_sub_w_flags (context, a, b, result);
 
-    printf ("subq.w (a%d), %d\n", reg, b);
     return 0;
 }
 
@@ -9183,7 +8639,6 @@ static uint32_t m68k_5158_subq_w_anp (M68000_Context *context, uint16_t instruct
     context->state.a [reg] += 2;
     m68k_sub_w_flags (context, a, b, result);
 
-    printf ("subq.w (a%d)+, %d\n", reg, b);
     return 0;
 }
 
@@ -9201,7 +8656,6 @@ static uint32_t m68k_5168_subq_w_dan (M68000_Context *context, uint16_t instruct
     write_word (context, address, result);
     m68k_sub_w_flags (context, a, b, result);
 
-    printf ("subq.w d(a%d), #%x\n", reg, b);
     return 0;
 }
 
@@ -9218,7 +8672,6 @@ static uint32_t m68k_5178_subq_w_aw (M68000_Context *context, uint16_t instructi
     write_word (context, address, result);
     m68k_sub_w_flags (context, a, b, result);
 
-    printf ("subq.w (xxx.w), #%x\n", b);
     return 0;
 }
 
@@ -9235,7 +8688,6 @@ static uint32_t m68k_5180_subq_l_dn (M68000_Context *context, uint16_t instructi
     context->state.d [reg].l = result;
     m68k_sub_l_flags (context, a, b, result);
 
-    printf ("subq.l d%d, %d\n", reg, b);
     return 0;
 }
 
@@ -9251,7 +8703,6 @@ static uint32_t m68k_5188_subq_l_an (M68000_Context *context, uint16_t instructi
     uint32_t result = a - b;
     context->state.a [reg] = result;
 
-    printf ("subq.l a%d, %d\n", reg, b);
     return 0;
 }
 
@@ -9268,7 +8719,6 @@ static uint32_t m68k_5190_subq_l_an (M68000_Context *context, uint16_t instructi
     write_long (context, context->state.a [reg], result);
     m68k_sub_l_flags (context, a, b, result);
 
-    printf ("subq.l (a%d), %d\n", reg, b);
     return 0;
 }
 
@@ -9286,7 +8736,6 @@ static uint32_t m68k_5198_subq_l_anp (M68000_Context *context, uint16_t instruct
     context->state.a [reg] += 4;
     m68k_sub_l_flags (context, a, b, result);
 
-    printf ("subq.l (a%d)+, %d\n", reg, b);
     return 0;
 }
 
@@ -9304,7 +8753,6 @@ static uint32_t m68k_51a0_subq_l_pan (M68000_Context *context, uint16_t instruct
     write_long (context, context->state.a [reg], result);
     m68k_sub_l_flags (context, a, b, result);
 
-    printf ("subq.l -(a%d), %d\n", reg, b);
     return 0;
 }
 
@@ -9322,7 +8770,6 @@ static uint32_t m68k_51a8_subq_l_dan (M68000_Context *context, uint16_t instruct
     write_long (context, address, result);
     m68k_sub_l_flags (context, a, b, result);
 
-    printf ("subq.l d(a%d), %d\n", reg, b);
     return 0;
 }
 
@@ -9340,7 +8787,6 @@ static uint32_t m68k_51b0_subq_l_danxi (M68000_Context *context, uint16_t instru
     write_long (context, address, result);
     m68k_sub_l_flags (context, a, b, result);
 
-    printf ("subq.l d(a%d+Xi), %d\n", reg, b);
     return 0;
 }
 
@@ -9357,7 +8803,6 @@ static uint32_t m68k_51b8_subq_l_aw (M68000_Context *context, uint16_t instructi
     write_long (context, address, result);
     m68k_sub_l_flags (context, a, b, result);
 
-    printf ("subq.l (xxx.w), %d\n", b);
     return 0;
 }
 
@@ -9374,7 +8819,6 @@ static uint32_t m68k_51b9_subq_l_al (M68000_Context *context, uint16_t instructi
     write_long (context, address, result);
     m68k_sub_l_flags (context, a, b, result);
 
-    printf ("subq.l (xxx.l), %d\n", b);
     return 0;
 }
 
@@ -9389,11 +8833,6 @@ static uint32_t m68k_51c8_dbf (M68000_Context *context, uint16_t instruction)
     if (context->state.d [reg].w != 0xffff)
     {
         context->state.pc = address;
-        printf ("dbf d%d (jump)\n", reg);
-    }
-    else
-    {
-        printf ("dbf d%d (termination)\n", reg);
     }
 
     return 0;
@@ -9404,7 +8843,7 @@ static uint32_t m68k_51c8_dbf (M68000_Context *context, uint16_t instruction)
 static uint32_t m68k_6000_bra_w (M68000_Context *context, uint16_t instruction)
 {
     context->state.pc = address_with_displacement (context, context->state.pc);
-    printf ("bra.w\n");
+
     return 0;
 }
 
@@ -9414,7 +8853,7 @@ static uint32_t m68k_6001_bra_s (M68000_Context *context, uint16_t instruction)
 {
     int8_t displacement = instruction & 0xff;
     context->state.pc += displacement;
-    printf ("bra.s %+d\n", displacement);
+
     return 0;
 }
 
@@ -9428,7 +8867,7 @@ static uint32_t m68k_6100_bsr_w (M68000_Context *context, uint16_t instruction)
     write_long (context, context->state.a[7], context->state.pc);
 
     context->state.pc = address;
-    printf ("bsr.w\n");
+
     return 0;
 }
 
@@ -9442,7 +8881,7 @@ static uint32_t m68k_6101_bsr_s (M68000_Context *context, uint16_t instruction)
     write_long (context, context->state.a[7], context->state.pc);
 
     context->state.pc += displacement;
-    printf ("bsr.s %+d\n", displacement);
+
     return 0;
 }
 
@@ -9455,11 +8894,6 @@ static uint32_t m68k_6200_bhi_w (M68000_Context *context, uint16_t instruction)
     if (!context->state.ccr_carry && !context->state.ccr_zero)
     {
         context->state.pc = address;
-        printf ("bhi.w (taken)\n");
-    }
-    else
-    {
-        printf ("bhi.w (not taken).\n");
     }
 
     return 0;
@@ -9473,11 +8907,6 @@ static uint32_t m68k_6201_bhi_s (M68000_Context *context, uint16_t instruction)
     {
         int8_t displacement = instruction & 0xff;
         context->state.pc += displacement;
-        printf ("bhi.s %+d\n", displacement);
-    }
-    else
-    {
-        printf ("bhi.s (not taken).\n");
     }
 
     return 0;
@@ -9492,11 +8921,6 @@ static uint32_t m68k_6300_bls_w (M68000_Context *context, uint16_t instruction)
     if (context->state.ccr_carry || context->state.ccr_zero)
     {
         context->state.pc = address;
-        printf ("bls.w (taken)\n");
-    }
-    else
-    {
-        printf ("bls.w (not taken).\n");
     }
 
     return 0;
@@ -9510,11 +8934,6 @@ static uint32_t m68k_6301_bls_s (M68000_Context *context, uint16_t instruction)
     {
         int8_t displacement = instruction & 0xff;
         context->state.pc += displacement;
-        printf ("bls.s %+d\n", displacement);
-    }
-    else
-    {
-        printf ("bls.s (not taken).\n");
     }
 
     return 0;
@@ -9529,11 +8948,6 @@ static uint32_t m68k_6400_bcc_w (M68000_Context *context, uint16_t instruction)
     if (!context->state.ccr_carry)
     {
         context->state.pc = address;
-        printf ("bcc.w (taken)\n");
-    }
-    else
-    {
-        printf ("bcc.w (not taken).\n");
     }
 
     return 0;
@@ -9547,11 +8961,6 @@ static uint32_t m68k_6401_bcc_s (M68000_Context *context, uint16_t instruction)
     {
         int8_t displacement = instruction & 0xff;
         context->state.pc += displacement;
-        printf ("bcc.s %+d\n", displacement);
-    }
-    else
-    {
-        printf ("bcc.s (not taken).\n");
     }
 
     return 0;
@@ -9566,11 +8975,6 @@ static uint32_t m68k_6500_bcs_w (M68000_Context *context, uint16_t instruction)
     if (context->state.ccr_carry)
     {
         context->state.pc = address;
-        printf ("bcs.w (taken).\n");
-    }
-    else
-    {
-        printf ("bcs.w (not taken).\n");
     }
 
     return 0;
@@ -9584,11 +8988,6 @@ static uint32_t m68k_6501_bcs_s (M68000_Context *context, uint16_t instruction)
     {
         int8_t displacement = instruction & 0xff;
         context->state.pc += displacement;
-        printf ("bcs.s %+d\n", displacement);
-    }
-    else
-    {
-        printf ("bcs.s (not taken).\n");
     }
 
     return 0;
@@ -9603,11 +9002,6 @@ static uint32_t m68k_6600_bne_w (M68000_Context *context, uint16_t instruction)
     if (!context->state.ccr_zero)
     {
         context->state.pc = address;
-        printf ("bne.w (taken)\n");
-    }
-    else
-    {
-        printf ("bne.w (not taken).\n");
     }
 
     return 0;
@@ -9621,11 +9015,6 @@ static uint32_t m68k_6601_bne_s (M68000_Context *context, uint16_t instruction)
     {
         int8_t displacement = instruction & 0xff;
         context->state.pc += displacement;
-        printf ("bne.s %+d\n", displacement);
-    }
-    else
-    {
-        printf ("bne.s (not taken).\n");
     }
 
     return 0;
@@ -9640,11 +9029,6 @@ static uint32_t m68k_6700_beq_w (M68000_Context *context, uint16_t instruction)
     if (context->state.ccr_zero)
     {
         context->state.pc = address;
-        printf ("beq.w (taken)\n");
-    }
-    else
-    {
-        printf ("beq.w (not taken).\n");
     }
 
     return 0;
@@ -9658,11 +9042,6 @@ static uint32_t m68k_6701_beq_s (M68000_Context *context, uint16_t instruction)
     {
         int8_t displacement = instruction & 0xff;
         context->state.pc += displacement;
-        printf ("beq.s %+d\n", displacement);
-    }
-    else
-    {
-        printf ("beq.s (not taken).\n");
     }
 
     return 0;
@@ -9677,11 +9056,6 @@ static uint32_t m68k_6a00_bpl_w (M68000_Context *context, uint16_t instruction)
     if (!context->state.ccr_negative)
     {
         context->state.pc = address;
-        printf ("bpl.w (taken)\n");
-    }
-    else
-    {
-        printf ("bpl.w (not taken).\n");
     }
 
     return 0;
@@ -9695,11 +9069,6 @@ static uint32_t m68k_6a01_bpl_s (M68000_Context *context, uint16_t instruction)
     {
         int8_t displacement = instruction & 0xff;
         context->state.pc += displacement;
-        printf ("bpl.s %+d\n", displacement);
-    }
-    else
-    {
-        printf ("bpl.s (not taken).\n");
     }
 
     return 0;
@@ -9714,11 +9083,6 @@ static uint32_t m68k_6b00_bmi_w (M68000_Context *context, uint16_t instruction)
     if (context->state.ccr_negative)
     {
         context->state.pc = address;
-        printf ("bmi.w (taken)\n");
-    }
-    else
-    {
-        printf ("bmi.w (not taken).\n");
     }
 
     return 0;
@@ -9732,11 +9096,6 @@ static uint32_t m68k_6b01_bmi_s (M68000_Context *context, uint16_t instruction)
     {
         int8_t displacement = instruction & 0xff;
         context->state.pc += displacement;
-        printf ("bmi.s %+d\n", displacement);
-    }
-    else
-    {
-        printf ("bmi.s (not taken).\n");
     }
 
     return 0;
@@ -9752,11 +9111,6 @@ static uint32_t m68k_6c00_bge_w (M68000_Context *context, uint16_t instruction)
         (!context->state.ccr_negative && !context->state.ccr_overflow))
     {
         context->state.pc = address;
-        printf ("bge.w (taken)\n");
-    }
-    else
-    {
-        printf ("bge.w (not taken).\n");
     }
 
     return 0;
@@ -9771,11 +9125,6 @@ static uint32_t m68k_6c01_bge_s (M68000_Context *context, uint16_t instruction)
     {
         int8_t displacement = instruction & 0xff;
         context->state.pc += displacement;
-        printf ("bge.s %+d\n", displacement);
-    }
-    else
-    {
-        printf ("bge.s (not taken).\n");
     }
 
     return 0;
@@ -9791,11 +9140,6 @@ static uint32_t m68k_6d00_blt_w (M68000_Context *context, uint16_t instruction)
         (!context->state.ccr_negative && context->state.ccr_overflow))
     {
         context->state.pc = address;
-        printf ("blt.w (taken)\n");
-    }
-    else
-    {
-        printf ("blt.w (not taken).\n");
     }
 
     return 0;
@@ -9810,11 +9154,6 @@ static uint32_t m68k_6d01_blt_s (M68000_Context *context, uint16_t instruction)
     {
         int8_t displacement = instruction & 0xff;
         context->state.pc += displacement;
-        printf ("blt.s %+d\n", displacement);
-    }
-    else
-    {
-        printf ("blt.s (not taken).\n");
     }
 
     return 0;
@@ -9830,11 +9169,6 @@ static uint32_t m68k_6e00_bgt_w (M68000_Context *context, uint16_t instruction)
         (!context->state.ccr_negative && !context->state.ccr_overflow && !context->state.ccr_zero))
     {
         context->state.pc = address;
-        printf ("bgt.w (taken)\n");
-    }
-    else
-    {
-        printf ("bgt.w (not taken).\n");
     }
 
     return 0;
@@ -9849,11 +9183,6 @@ static uint32_t m68k_6e01_bgt_s (M68000_Context *context, uint16_t instruction)
     {
         int8_t displacement = instruction & 0xff;
         context->state.pc += displacement;
-        printf ("bgt.s %+d\n", displacement);
-    }
-    else
-    {
-        printf ("bgt.s (not taken).\n");
     }
 
     return 0;
@@ -9870,11 +9199,6 @@ static uint32_t m68k_6f00_ble_w (M68000_Context *context, uint16_t instruction)
         (!context->state.ccr_negative && context->state.ccr_overflow))
     {
         context->state.pc = address;
-        printf ("ble.w (taken)\n");
-    }
-    else
-    {
-        printf ("ble.w (not taken).\n");
     }
 
     return 0;
@@ -9890,11 +9214,6 @@ static uint32_t m68k_6f01_ble_s (M68000_Context *context, uint16_t instruction)
     {
         int8_t displacement = instruction & 0xff;
         context->state.pc += displacement;
-        printf ("ble.s %+d\n", displacement);
-    }
-    else
-    {
-        printf ("ble.s (not taken).\n");
     }
 
     return 0;
@@ -9914,7 +9233,6 @@ static uint32_t m68k_7000_moveq (M68000_Context *context, uint16_t instruction)
     context->state.ccr_overflow = 0;
     context->state.ccr_carry = 0;
 
-    printf ("moveq d%d ← #%08x\n", reg, (uint32_t) (int32_t) data);
     return 0;
 }
 
@@ -9932,7 +9250,6 @@ static uint32_t m68k_8000_or_b_dn_dn (M68000_Context *context, uint16_t instruct
     context->state.d [dest_reg].b = result;
     m68k_move_b_flags (context, result);
 
-    printf ("or.b d%d ← d%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -9950,7 +9267,6 @@ static uint32_t m68k_8028_or_b_dn_dan (M68000_Context *context, uint16_t instruc
     context->state.d [dest_reg].b = result;
     m68k_move_b_flags (context, result);
 
-    printf ("or.b d%d ← d(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -9968,7 +9284,6 @@ static uint32_t m68k_8040_or_w_dn_dn (M68000_Context *context, uint16_t instruct
     context->state.d [dest_reg].w = result;
     m68k_move_w_flags (context, result);
 
-    printf ("or.w d%d ← d%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -10007,7 +9322,6 @@ static uint32_t m68k_80c0_divu_w_dn_dn (M68000_Context *context, uint16_t instru
         context->state.d [dest_reg].w_high = remainder;
     }
 
-    printf ("divu.w d%d ← d%d ÷ d%d\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -10046,7 +9360,6 @@ static uint32_t m68k_80d0_divu_w_dn_an (M68000_Context *context, uint16_t instru
         context->state.d [dest_reg].w_high = remainder;
     }
 
-    printf ("divu.w d%d ← d%d ÷ (a%d)\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -10086,7 +9399,6 @@ static uint32_t m68k_80d8_divu_w_dn_anp (M68000_Context *context, uint16_t instr
         context->state.d [dest_reg].w_high = remainder;
     }
 
-    printf ("divu.w d%d ← d%d ÷ (a%d)+\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -10126,7 +9438,6 @@ static uint32_t m68k_80e0_divu_w_dn_pan (M68000_Context *context, uint16_t instr
         context->state.d [dest_reg].w_high = remainder;
     }
 
-    printf ("divu.w d%d ← d%d ÷ -(a%d)\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -10165,7 +9476,6 @@ static uint32_t m68k_80e8_divu_w_dn_dan (M68000_Context *context, uint16_t instr
         context->state.d [dest_reg].w_high = remainder;
     }
 
-    printf ("divu.w d%d ← d%d ÷ d(a%d)\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -10204,7 +9514,6 @@ static uint32_t m68k_80f0_divu_w_dn_danxi (M68000_Context *context, uint16_t ins
         context->state.d [dest_reg].w_high = remainder;
     }
 
-    printf ("divu.w d%d ← d%d ÷ d(a%d+Xi)\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -10242,7 +9551,6 @@ static uint32_t m68k_80f8_divu_w_dn_aw (M68000_Context *context, uint16_t instru
         context->state.d [dest_reg].w_high = remainder;
     }
 
-    printf ("divu.w d%d ← d%d ÷ (xxx.w)\n", dest_reg, dest_reg);
     return 0;
 }
 
@@ -10280,7 +9588,6 @@ static uint32_t m68k_80f9_divu_w_dn_al (M68000_Context *context, uint16_t instru
         context->state.d [dest_reg].w_high = remainder;
     }
 
-    printf ("divu.w d%d ← d%d ÷ (xxx.l)\n", dest_reg, dest_reg);
     return 0;
 }
 
@@ -10318,7 +9625,6 @@ static uint32_t m68k_80fa_divu_w_dn_dpc (M68000_Context *context, uint16_t instr
         context->state.d [dest_reg].w_high = remainder;
     }
 
-    printf ("divu.w d%d ← d%d ÷ d(PC)\n", dest_reg, dest_reg);
     return 0;
 }
 
@@ -10356,7 +9662,6 @@ static uint32_t m68k_80fb_divu_w_dn_dpcxi (M68000_Context *context, uint16_t ins
         context->state.d [dest_reg].w_high = remainder;
     }
 
-    printf ("divu.w d%d ← d%d ÷ d(PC+Xi)\n", dest_reg, dest_reg);
     return 0;
 }
 
@@ -10394,7 +9699,6 @@ static uint32_t m68k_80fc_divu_w_dn_imm (M68000_Context *context, uint16_t instr
         context->state.d [dest_reg].w_high = remainder;
     }
 
-    printf ("divu.w d%d ← d%d ÷ %d\n", dest_reg, dest_reg, divisor);
     return 0;
 }
 
@@ -10413,7 +9717,6 @@ static uint32_t m68k_8128_or_b_dan_dn (M68000_Context *context, uint16_t instruc
     write_byte (context, address, result);
     m68k_move_b_flags (context, result);
 
-    printf ("or.b d(a%d) ← d%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -10452,7 +9755,6 @@ static uint32_t m68k_81c0_divs_w_dn_dn (M68000_Context *context, uint16_t instru
         context->state.d [dest_reg].w_high = remainder;
     }
 
-    printf ("divs.w d%d ← d%d ÷ d%d\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -10491,7 +9793,6 @@ static uint32_t m68k_81d0_divs_w_dn_an (M68000_Context *context, uint16_t instru
         context->state.d [dest_reg].w_high = remainder;
     }
 
-    printf ("divs.w d%d ← d%d ÷ (a%d)\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -10531,7 +9832,6 @@ static uint32_t m68k_81d8_divs_w_dn_anp (M68000_Context *context, uint16_t instr
         context->state.d [dest_reg].w_high = remainder;
     }
 
-    printf ("divs.w d%d ← d%d ÷ (a%d)+\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -10571,7 +9871,6 @@ static uint32_t m68k_81e0_divs_w_dn_pan (M68000_Context *context, uint16_t instr
         context->state.d [dest_reg].w_high = remainder;
     }
 
-    printf ("divs.w d%d ← d%d ÷ -(a%d)\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -10610,7 +9909,6 @@ static uint32_t m68k_81e8_divs_w_dn_dan (M68000_Context *context, uint16_t instr
         context->state.d [dest_reg].w_high = remainder;
     }
 
-    printf ("divs.w d%d ← d%d ÷ d(a%d)\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -10649,7 +9947,6 @@ static uint32_t m68k_81f0_divs_w_dn_danxi (M68000_Context *context, uint16_t ins
         context->state.d [dest_reg].w_high = remainder;
     }
 
-    printf ("divs.w d%d ← d%d ÷ d(a%d+Xi)\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -10687,7 +9984,6 @@ static uint32_t m68k_81f8_divs_w_dn_aw (M68000_Context *context, uint16_t instru
         context->state.d [dest_reg].w_high = remainder;
     }
 
-    printf ("divs.w d%d ← d%d ÷ (xxx.w)\n", dest_reg, dest_reg);
     return 0;
 }
 
@@ -10725,7 +10021,6 @@ static uint32_t m68k_81f9_divs_w_dn_al (M68000_Context *context, uint16_t instru
         context->state.d [dest_reg].w_high = remainder;
     }
 
-    printf ("divs.w d%d ← d%d ÷ (xxx.l)\n", dest_reg, dest_reg);
     return 0;
 }
 
@@ -10763,7 +10058,6 @@ static uint32_t m68k_81fa_divs_w_dn_dpc (M68000_Context *context, uint16_t instr
         context->state.d [dest_reg].w_high = remainder;
     }
 
-    printf ("divs.w d%d ← d%d ÷ d(PC)\n", dest_reg, dest_reg);
     return 0;
 }
 
@@ -10801,7 +10095,6 @@ static uint32_t m68k_81fb_divs_w_dn_dpcxi (M68000_Context *context, uint16_t ins
         context->state.d [dest_reg].w_high = remainder;
     }
 
-    printf ("divs.w d%d ← d%d ÷ (PC+Xi)\n", dest_reg, dest_reg);
     return 0;
 }
 
@@ -10839,7 +10132,6 @@ static uint32_t m68k_81fc_divs_w_dn_imm (M68000_Context *context, uint16_t instr
         context->state.d [dest_reg].w_high = remainder;
     }
 
-    printf ("divs.w d%d ← d%d ÷ %d\n", dest_reg, dest_reg, divisor);
     return 0;
 }
 
@@ -10857,7 +10149,6 @@ static uint32_t m68k_9000_sub_b_dn_dn (M68000_Context *context, uint16_t instruc
     context->state.d [dest_reg].b = result;
     m68k_sub_b_flags (context, a, b, result);
 
-    printf ("sub.b d%d ← d%d - d%d\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -10875,7 +10166,6 @@ static uint32_t m68k_9010_sub_b_dn_an (M68000_Context *context, uint16_t instruc
     context->state.d [dest_reg].b = result;
     m68k_sub_b_flags (context, a, b, result);
 
-    printf ("sub.b d%d ← d%d - (a%d)\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -10894,7 +10184,6 @@ static uint32_t m68k_9018_sub_b_dn_anp (M68000_Context *context, uint16_t instru
     context->state.d [dest_reg].b = result;
     m68k_sub_b_flags (context, a, b, result);
 
-    printf ("sub.b d%d ← d%d - (a%d)+\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -10913,7 +10202,6 @@ static uint32_t m68k_9020_sub_b_dn_pan (M68000_Context *context, uint16_t instru
     context->state.d [dest_reg].b = result;
     m68k_sub_b_flags (context, a, b, result);
 
-    printf ("sub.b d%d ← d%d - -(a%d)\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -10931,7 +10219,6 @@ static uint32_t m68k_9028_sub_b_dn_dan (M68000_Context *context, uint16_t instru
     context->state.d [dest_reg].b = result;
     m68k_sub_b_flags (context, a, b, result);
 
-    printf ("sub.b d%d ← d%d - d(a%d)\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -10949,7 +10236,6 @@ static uint32_t m68k_9030_sub_b_dn_danxi (M68000_Context *context, uint16_t inst
     context->state.d [dest_reg].b = result;
     m68k_sub_b_flags (context, a, b, result);
 
-    printf ("sub.b d%d ← d%d - d(a%d+Xi)\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -10966,7 +10252,6 @@ static uint32_t m68k_9038_sub_b_dn_aw (M68000_Context *context, uint16_t instruc
     context->state.d [dest_reg].b = result;
     m68k_sub_b_flags (context, a, b, result);
 
-    printf ("sub.b d%d ← d%d - (xxx.w)\n", dest_reg, dest_reg);
     return 0;
 }
 
@@ -10983,7 +10268,6 @@ static uint32_t m68k_9039_sub_b_dn_al (M68000_Context *context, uint16_t instruc
     context->state.d [dest_reg].b = result;
     m68k_sub_b_flags (context, a, b, result);
 
-    printf ("sub.b d%d ← d%d - (xxx.l)\n", dest_reg, dest_reg);
     return 0;
 }
 
@@ -11000,7 +10284,6 @@ static uint32_t m68k_903a_sub_b_dn_dpc (M68000_Context *context, uint16_t instru
     context->state.d [dest_reg].b = result;
     m68k_sub_b_flags (context, a, b, result);
 
-    printf ("sub.b d%d ← d%d - d(PC)\n", dest_reg, dest_reg);
     return 0;
 }
 
@@ -11017,7 +10300,6 @@ static uint32_t m68k_903b_sub_b_dn_dpcxi (M68000_Context *context, uint16_t inst
     context->state.d [dest_reg].b = result;
     m68k_sub_b_flags (context, a, b, result);
 
-    printf ("sub.b d%d ← d%d - d(PC+Xi)\n", dest_reg, dest_reg);
     return 0;
 }
 
@@ -11034,7 +10316,6 @@ static uint32_t m68k_903c_sub_b_dn_imm (M68000_Context *context, uint16_t instru
     context->state.d [dest_reg].b = result;
     m68k_sub_b_flags (context, a, b, result);
 
-    printf ("sub.b d%d ← d%d - #%02x\n", dest_reg, dest_reg, b);
     return 0;
 }
 
@@ -11052,7 +10333,6 @@ static uint32_t m68k_9040_sub_w_dn_dn (M68000_Context *context, uint16_t instruc
     context->state.d [dest_reg].w = result;
     m68k_sub_w_flags (context, a, b, result);
 
-    printf ("sub.w d%d ← d%d - d%d\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -11070,7 +10350,6 @@ static uint32_t m68k_9048_sub_w_dn_an (M68000_Context *context, uint16_t instruc
     context->state.d [dest_reg].w = result;
     m68k_sub_w_flags (context, a, b, result);
 
-    printf ("sub.w d%d ← d%d - a%d\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -11088,7 +10367,6 @@ static uint32_t m68k_9050_sub_w_dn_an (M68000_Context *context, uint16_t instruc
     context->state.d [dest_reg].w = result;
     m68k_sub_w_flags (context, a, b, result);
 
-    printf ("sub.w d%d ← d%d - (a%d)\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -11106,7 +10384,6 @@ static uint32_t m68k_9068_sub_w_dn_dan (M68000_Context *context, uint16_t instru
     context->state.d [dest_reg].w = result;
     m68k_sub_w_flags (context, a, b, result);
 
-    printf ("sub.w d%d ← d%d - d(a%d)\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -11123,7 +10400,6 @@ static uint32_t m68k_9078_sub_w_dn_aw (M68000_Context *context, uint16_t instruc
     context->state.d [dest_reg].w = result;
     m68k_sub_w_flags (context, a, b, result);
 
-    printf ("sub.w d%d ← d%d - (xxx.w)\n", dest_reg, dest_reg);
     return 0;
 }
 
@@ -11141,7 +10417,6 @@ static uint32_t m68k_9080_sub_l_dn_dn (M68000_Context *context, uint16_t instruc
     context->state.d [dest_reg].l = result;
     m68k_sub_l_flags (context, a, b, result);
 
-    printf ("sub.l d%d ← d%d - d%d\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -11159,7 +10434,6 @@ static uint32_t m68k_9088_sub_l_dn_an (M68000_Context *context, uint16_t instruc
     context->state.d [dest_reg].l = result;
     m68k_sub_l_flags (context, a, b, result);
 
-    printf ("sub.l d%d ← d%d - a%d\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -11177,7 +10451,6 @@ static uint32_t m68k_9090_sub_l_dn_an (M68000_Context *context, uint16_t instruc
     context->state.d [dest_reg].l = result;
     m68k_sub_l_flags (context, a, b, result);
 
-    printf ("sub.l d%d ← d%d - (a%d)\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -11196,7 +10469,6 @@ static uint32_t m68k_9098_sub_l_dn_anp (M68000_Context *context, uint16_t instru
     context->state.d [dest_reg].l = result;
     m68k_sub_l_flags (context, a, b, result);
 
-    printf ("sub.l d%d ← d%d - (a%d)+\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -11215,7 +10487,6 @@ static uint32_t m68k_90a0_sub_l_dn_pan (M68000_Context *context, uint16_t instru
     context->state.d [dest_reg].l = result;
     m68k_sub_l_flags (context, a, b, result);
 
-    printf ("sub.l d%d ← d%d - -(a%d)\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -11233,7 +10504,6 @@ static uint32_t m68k_90a8_sub_l_dn_dan (M68000_Context *context, uint16_t instru
     context->state.d [dest_reg].l = result;
     m68k_sub_l_flags (context, a, b, result);
 
-    printf ("sub.l d%d ← d%d - d(a%d)\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -11252,7 +10522,6 @@ static uint32_t m68k_90b0_sub_l_dn_danxi (M68000_Context *context, uint16_t inst
     context->state.d [dest_reg].l = result;
     m68k_sub_l_flags (context, a, b, result);
 
-    printf ("sub.l d%d ← d%d - d(a%d+Xi)\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -11269,7 +10538,6 @@ static uint32_t m68k_90b8_sub_l_dn_aw (M68000_Context *context, uint16_t instruc
     context->state.d [dest_reg].l = result;
     m68k_sub_l_flags (context, a, b, result);
 
-    printf ("sub.l d%d ← d%d - (xxx.w)\n", dest_reg, dest_reg);
     return 0;
 }
 
@@ -11286,7 +10554,6 @@ static uint32_t m68k_90b9_sub_l_dn_al (M68000_Context *context, uint16_t instruc
     context->state.d [dest_reg].l = result;
     m68k_sub_l_flags (context, a, b, result);
 
-    printf ("sub.l d%d ← d%d - (xxx.l)\n", dest_reg, dest_reg);
     return 0;
 }
 
@@ -11303,7 +10570,6 @@ static uint32_t m68k_90ba_sub_l_dn_dpc (M68000_Context *context, uint16_t instru
     context->state.d [dest_reg].l = result;
     m68k_sub_l_flags (context, a, b, result);
 
-    printf ("sub.l d%d ← d%d - d(PC)\n", dest_reg, dest_reg);
     return 0;
 }
 
@@ -11321,7 +10587,6 @@ static uint32_t m68k_90bb_sub_l_dn_dpcxi (M68000_Context *context, uint16_t inst
     context->state.d [dest_reg].l = result;
     m68k_sub_l_flags (context, a, b, result);
 
-    printf ("sub.l d%d ← d%d - d(PC+Xi)\n", dest_reg, dest_reg);
     return 0;
 }
 
@@ -11338,7 +10603,6 @@ static uint32_t m68k_90bc_sub_l_dn_imm (M68000_Context *context, uint16_t instru
     context->state.d [dest_reg].l = result;
     m68k_sub_l_flags (context, a, b, result);
 
-    printf ("sub.l d%d ← d%d - #%08x\n", dest_reg, dest_reg, b);
     return 0;
 }
 
@@ -11355,7 +10619,6 @@ static uint32_t m68k_90c0_suba_w_an_dn (M68000_Context *context, uint16_t instru
 
     context->state.a [dest_reg] = result;
 
-    printf ("suba.w a%d ← a%d - d%d\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -11372,7 +10635,6 @@ static uint32_t m68k_90c8_suba_w_an_an (M68000_Context *context, uint16_t instru
 
     context->state.a [dest_reg] = result;
 
-    printf ("suba.w a%d ← a%d - a%d\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -11389,7 +10651,6 @@ static uint32_t m68k_90d0_suba_w_an_an (M68000_Context *context, uint16_t instru
 
     context->state.a [dest_reg] = result;
 
-    printf ("suba.w a%d ← a%d - (a%d)\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -11407,7 +10668,6 @@ static uint32_t m68k_90d8_suba_w_an_anp (M68000_Context *context, uint16_t instr
 
     context->state.a [dest_reg] = result;
 
-    printf ("suba.w a%d ← a%d - (a%d)+\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -11425,7 +10685,6 @@ static uint32_t m68k_90e0_suba_w_an_pan (M68000_Context *context, uint16_t instr
 
     context->state.a [dest_reg] = result;
 
-    printf ("suba.w a%d ← a%d - -(a%d)\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -11442,7 +10701,6 @@ static uint32_t m68k_90e8_suba_w_an_dan (M68000_Context *context, uint16_t instr
 
     context->state.a [dest_reg] = result;
 
-    printf ("suba.w a%d ← a%d - d(a%d)\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -11459,7 +10717,6 @@ static uint32_t m68k_90f0_suba_w_an_danxi (M68000_Context *context, uint16_t ins
 
     context->state.a [dest_reg] = result;
 
-    printf ("suba.w a%d ← a%d - d(a%d+Xi)\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -11475,7 +10732,6 @@ static uint32_t m68k_90f8_suba_w_an_aw (M68000_Context *context, uint16_t instru
 
     context->state.a [dest_reg] = result;
 
-    printf ("suba.w a%d ← a%d - (xxx.w)\n", dest_reg, dest_reg);
     return 0;
 }
 
@@ -11491,7 +10747,6 @@ static uint32_t m68k_90f9_suba_w_an_al (M68000_Context *context, uint16_t instru
 
     context->state.a [dest_reg] = result;
 
-    printf ("suba.w a%d ← a%d - (xxx.l)\n", dest_reg, dest_reg);
     return 0;
 }
 
@@ -11507,7 +10762,6 @@ static uint32_t m68k_90fa_suba_w_an_dpc (M68000_Context *context, uint16_t instr
 
     context->state.a [dest_reg] = result;
 
-    printf ("suba.w a%d ← a%d - d(PC)\n", dest_reg, dest_reg);
     return 0;
 }
 
@@ -11523,7 +10777,6 @@ static uint32_t m68k_90fb_suba_w_an_dpcxi (M68000_Context *context, uint16_t ins
 
     context->state.a [dest_reg] = result;
 
-    printf ("suba.w a%d ← a%d - d(PC+Xi)\n", dest_reg, dest_reg);
     return 0;
 }
 
@@ -11539,7 +10792,6 @@ static uint32_t m68k_90fc_suba_w_an_imm (M68000_Context *context, uint16_t instr
 
     context->state.a [dest_reg] = result;
 
-    printf ("suba.w a%d ← a%d - #%04x\n", dest_reg, dest_reg, b);
     return 0;
 }
 
@@ -11557,7 +10809,6 @@ static uint32_t m68k_9110_sub_b_an_dn (M68000_Context *context, uint16_t instruc
     write_byte (context, context->state.a [dest_reg], result);
     m68k_sub_b_flags (context, a, b, result);
 
-    printf ("sub.b (a%d) ← (a%d) - d%d\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -11576,7 +10827,6 @@ static uint32_t m68k_9118_sub_b_anp_dn (M68000_Context *context, uint16_t instru
     context->state.a [dest_reg] += (dest_reg == 7) ? 2 : 1;
     m68k_sub_b_flags (context, a, b, result);
 
-    printf ("sub.b (a%d)+ ← (a%d)+ - d%d\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -11595,7 +10845,6 @@ static uint32_t m68k_9120_sub_b_pan_dn (M68000_Context *context, uint16_t instru
     write_byte (context, context->state.a [dest_reg], result);
     m68k_sub_b_flags (context, a, b, result);
 
-    printf ("sub.b -(a%d) ← -(a%d) - d%d\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -11614,7 +10863,6 @@ static uint32_t m68k_9128_sub_b_dan_dn (M68000_Context *context, uint16_t instru
     write_byte (context, address, result);
     m68k_sub_b_flags (context, a, b, result);
 
-    printf ("sub.b d(a%d) ← d(a%d) - d%d\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -11633,7 +10881,6 @@ static uint32_t m68k_9130_sub_b_danxi_dn (M68000_Context *context, uint16_t inst
     write_byte (context, address, result);
     m68k_sub_b_flags (context, a, b, result);
 
-    printf ("sub.b d(a%d+Xi) ← d(a%d+Xi) - d%d\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -11651,7 +10898,6 @@ static uint32_t m68k_9138_sub_b_aw_dn (M68000_Context *context, uint16_t instruc
     write_byte (context, address, result);
     m68k_sub_b_flags (context, a, b, result);
 
-    printf ("sub.b (xxx.w) ← (xxx.w) - d%d\n", source_reg);
     return 0;
 }
 
@@ -11669,7 +10915,6 @@ static uint32_t m68k_9139_sub_b_al_dn (M68000_Context *context, uint16_t instruc
     write_byte (context, address, result);
     m68k_sub_b_flags (context, a, b, result);
 
-    printf ("sub.b (xxx.l) ← (xxx.l) - d%d\n", source_reg);
     return 0;
 }
 
@@ -11688,7 +10933,6 @@ static uint32_t m68k_9168_sub_w_dan_dn (M68000_Context *context, uint16_t instru
     write_word (context, address, result);
     m68k_sub_w_flags (context, a, b, result);
 
-    printf ("sub.w d(a%d) ← d(a%d) - d%d\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -11706,7 +10950,6 @@ static uint32_t m68k_9178_sub_w_aw_dn (M68000_Context *context, uint16_t instruc
     write_word (context, address, result);
     m68k_sub_w_flags (context, a, b, result);
 
-    printf ("sub.w (xxx.w) ← (xxx.w) - d%d\n", source_reg);
     return 0;
 }
 
@@ -11724,7 +10967,6 @@ static uint32_t m68k_9190_sub_l_an_dn (M68000_Context *context, uint16_t instruc
     write_long (context, context->state.a [dest_reg], result);
     m68k_sub_l_flags (context, a, b, result);
 
-    printf ("sub.l (a%d) ← (a%d) - d%d\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -11743,7 +10985,6 @@ static uint32_t m68k_9198_sub_l_anp_dn (M68000_Context *context, uint16_t instru
     context->state.a [dest_reg] += 4;
     m68k_sub_l_flags (context, a, b, result);
 
-    printf ("sub.l (a%d)+ ← (a%d)+ - d%d\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -11762,7 +11003,6 @@ static uint32_t m68k_91a0_sub_l_pan_dn (M68000_Context *context, uint16_t instru
     write_long (context, context->state.a [dest_reg], result);
     m68k_sub_l_flags (context, a, b, result);
 
-    printf ("sub.l -(a%d) ← -(a%d) - d%d\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -11781,7 +11021,6 @@ static uint32_t m68k_91a8_sub_l_dan_dn (M68000_Context *context, uint16_t instru
     write_long (context, address, result);
     m68k_sub_l_flags (context, a, b, result);
 
-    printf ("sub.l d(a%d) ← d(a%d) - d%d\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -11800,7 +11039,6 @@ static uint32_t m68k_91b0_sub_l_danxi_dn (M68000_Context *context, uint16_t inst
     write_long (context, address, result);
     m68k_sub_l_flags (context, a, b, result);
 
-    printf ("sub.l d(a%d+Xi) ← d(a%d+Xi) - d%d\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -11818,7 +11056,6 @@ static uint32_t m68k_91b8_sub_l_aw_dn (M68000_Context *context, uint16_t instruc
     write_long (context, address, result);
     m68k_sub_l_flags (context, a, b, result);
 
-    printf ("sub.l (xxx.w) ← (xxx.w) - d%d\n", source_reg);
     return 0;
 }
 
@@ -11836,7 +11073,6 @@ static uint32_t m68k_91b9_sub_l_al_dn (M68000_Context *context, uint16_t instruc
     write_long (context, address, result);
     m68k_sub_l_flags (context, a, b, result);
 
-    printf ("sub.l (xxx.l) ← (xxx.l) - d%d\n", source_reg);
     return 0;
 }
 
@@ -11853,7 +11089,6 @@ static uint32_t m68k_91c0_suba_l_an_dn (M68000_Context *context, uint16_t instru
 
     context->state.a [dest_reg] = result;
 
-    printf ("suba.l a%d ← a%d - d%d\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -11870,7 +11105,6 @@ static uint32_t m68k_91c8_suba_l_an_an (M68000_Context *context, uint16_t instru
 
     context->state.a [dest_reg] = result;
 
-    printf ("suba.l a%d ← a%d - a%d\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -11887,7 +11121,6 @@ static uint32_t m68k_91d0_suba_l_an_an (M68000_Context *context, uint16_t instru
 
     context->state.a [dest_reg] = result;
 
-    printf ("suba.l a%d ← a%d - (a%d)\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -11905,7 +11138,6 @@ static uint32_t m68k_91d8_suba_l_an_anp (M68000_Context *context, uint16_t instr
 
     context->state.a [dest_reg] = result;
 
-    printf ("suba.l a%d ← a%d - (a%d)+\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -11923,7 +11155,6 @@ static uint32_t m68k_91e0_suba_l_an_pan (M68000_Context *context, uint16_t instr
 
     context->state.a [dest_reg] = result;
 
-    printf ("suba.l a%d ← a%d - -(a%d)\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -11940,7 +11171,6 @@ static uint32_t m68k_91e8_suba_l_an_dan (M68000_Context *context, uint16_t instr
 
     context->state.a [dest_reg] = result;
 
-    printf ("suba.l a%d ← a%d - d(a%d)\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -11957,7 +11187,6 @@ static uint32_t m68k_91f0_suba_l_an_danxi (M68000_Context *context, uint16_t ins
 
     context->state.a [dest_reg] = result;
 
-    printf ("suba.l a%d ← a%d - d(a%d+Xi)\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -11973,7 +11202,6 @@ static uint32_t m68k_91f8_suba_l_an_aw (M68000_Context *context, uint16_t instru
 
     context->state.a [dest_reg] = result;
 
-    printf ("suba.l a%d ← a%d - (xxx.w)\n", dest_reg, dest_reg);
     return 0;
 }
 
@@ -11989,7 +11217,6 @@ static uint32_t m68k_91f9_suba_l_an_al (M68000_Context *context, uint16_t instru
 
     context->state.a [dest_reg] = result;
 
-    printf ("suba.l a%d ← a%d - (xxx.l)\n", dest_reg, dest_reg);
     return 0;
 }
 
@@ -12005,7 +11232,6 @@ static uint32_t m68k_91fa_suba_l_an_dpc (M68000_Context *context, uint16_t instr
 
     context->state.a [dest_reg] = result;
 
-    printf ("suba.l a%d ← a%d - d(PC)\n", dest_reg, dest_reg);
     return 0;
 }
 
@@ -12021,7 +11247,6 @@ static uint32_t m68k_91fb_suba_l_an_dpcxi (M68000_Context *context, uint16_t ins
 
     context->state.a [dest_reg] = result;
 
-    printf ("suba.l a%d ← a%d - d(PC+Xi)\n", dest_reg, dest_reg);
     return 0;
 }
 
@@ -12037,7 +11262,6 @@ static uint32_t m68k_91fc_suba_l_an_imm (M68000_Context *context, uint16_t instr
 
     context->state.a [dest_reg] = result;
 
-    printf ("suba.l a%d ← a%d - #%08x\n", dest_reg, dest_reg, b);
     return 0;
 }
 
@@ -12048,7 +11272,6 @@ static uint32_t m68k_a000_line_a (M68000_Context *context, uint16_t instruction)
     context->state.pc -= 2;
     m68k_exception (context, 0x28);
 
-    printf ("line-a exception %04x\n", instruction);
     return 0;
 }
 
@@ -12065,7 +11288,6 @@ static uint32_t m68k_b000_cmp_b_dn_dn (M68000_Context *context, uint16_t instruc
 
     m68k_cmp_b_flags (context, a, b, result);
 
-    printf ("cmp.b d%d - d%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -12082,7 +11304,6 @@ static uint32_t m68k_b010_cmp_b_dn_an (M68000_Context *context, uint16_t instruc
 
     m68k_cmp_b_flags (context, a, b, result);
 
-    printf ("cmp.b d%d - (a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -12099,7 +11320,6 @@ static uint32_t m68k_b028_cmp_b_dn_dan (M68000_Context *context, uint16_t instru
 
     m68k_cmp_b_flags (context, a, b, result);
 
-    printf ("cmp.b d%d - d(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -12115,7 +11335,6 @@ static uint32_t m68k_b038_cmp_b_dn_aw (M68000_Context *context, uint16_t instruc
 
     m68k_cmp_b_flags (context, a, b, result);
 
-    printf ("cmp.b d%d - (xxx.w)\n", dest_reg);
     return 0;
 }
 
@@ -12132,7 +11351,6 @@ static uint32_t m68k_b040_cmp_w_dn_dn (M68000_Context *context, uint16_t instruc
 
     m68k_cmp_w_flags (context, a, b, result);
 
-    printf ("cmp.w d%d - d%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -12149,7 +11367,6 @@ static uint32_t m68k_b048_cmp_w_dn_an (M68000_Context *context, uint16_t instruc
 
     m68k_cmp_w_flags (context, a, b, result);
 
-    printf ("cmp.w d%d - a%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -12166,7 +11383,6 @@ static uint32_t m68k_b050_cmp_w_dn_an (M68000_Context *context, uint16_t instruc
 
     m68k_cmp_w_flags (context, a, b, result);
 
-    printf ("cmp.w d%d - (a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -12183,7 +11399,6 @@ static uint32_t m68k_b068_cmp_w_dn_dan (M68000_Context *context, uint16_t instru
 
     m68k_cmp_w_flags (context, a, b, result);
 
-    printf ("cmp.w d%d - d(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -12199,7 +11414,6 @@ static uint32_t m68k_b078_cmp_w_dn_aw (M68000_Context *context, uint16_t instruc
 
     m68k_cmp_w_flags (context, a, b, result);
 
-    printf ("cmp.w d%d - (xxx.w)\n", dest_reg);
     return 0;
 }
 
@@ -12216,7 +11430,6 @@ static uint32_t m68k_b088_cmp_l_dn_an (M68000_Context *context, uint16_t instruc
 
     m68k_cmp_l_flags (context, a, b, result);
 
-    printf ("cmp.l d%d - a%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -12233,7 +11446,6 @@ static uint32_t m68k_b090_cmp_l_dn_an (M68000_Context *context, uint16_t instruc
 
     m68k_cmp_l_flags (context, a, b, result);
 
-    printf ("cmp.l d%d - (a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -12249,7 +11461,6 @@ static uint32_t m68k_b0b8_cmp_l_dn_aw (M68000_Context *context, uint16_t instruc
 
     m68k_cmp_l_flags (context, a, b, result);
 
-    printf ("cmp.l d%d - (xxx.w)\n", dest_reg);
     return 0;
 }
 
@@ -12266,7 +11477,6 @@ static uint32_t m68k_b0c0_cmpa_w_an_dn (M68000_Context *context, uint16_t instru
 
     m68k_cmp_l_flags (context, a, b, result);
 
-    printf ("cmpa.w a%d - d%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -12283,7 +11493,6 @@ static uint32_t m68k_b0c8_cmpa_w_an_an (M68000_Context *context, uint16_t instru
 
     m68k_cmp_l_flags (context, a, b, result);
 
-    printf ("cmpa.w a%d - a%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -12300,7 +11509,6 @@ static uint32_t m68k_b0d0_cmpa_w_an_an (M68000_Context *context, uint16_t instru
 
     m68k_cmp_l_flags (context, a, b, result);
 
-    printf ("cmpa.w a%d - (a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -12318,7 +11526,6 @@ static uint32_t m68k_b0d8_cmpa_w_an_anp (M68000_Context *context, uint16_t instr
 
     m68k_cmp_l_flags (context, a, b, result);
 
-    printf ("cmpa.w a%d - (a%d)+\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -12336,7 +11543,6 @@ static uint32_t m68k_b0e0_cmpa_w_an_pan (M68000_Context *context, uint16_t instr
 
     m68k_cmp_l_flags (context, a, b, result);
 
-    printf ("cmpa.w a%d - -(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -12353,7 +11559,6 @@ static uint32_t m68k_b0e8_cmpa_w_an_dan (M68000_Context *context, uint16_t instr
 
     m68k_cmp_l_flags (context, a, b, result);
 
-    printf ("cmpa.w a%d - d(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -12370,7 +11575,6 @@ static uint32_t m68k_b0f0_cmpa_w_an_danxi (M68000_Context *context, uint16_t ins
 
     m68k_cmp_l_flags (context, a, b, result);
 
-    printf ("cmpa.w a%d - d(a%d+Xi)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -12386,7 +11590,6 @@ static uint32_t m68k_b0f8_cmpa_w_an_aw (M68000_Context *context, uint16_t instru
 
     m68k_cmp_l_flags (context, a, b, result);
 
-    printf ("cmpa.w a%d - (xxx.w)\n", dest_reg);
     return 0;
 }
 
@@ -12402,7 +11605,6 @@ static uint32_t m68k_b0f9_cmpa_w_an_al (M68000_Context *context, uint16_t instru
 
     m68k_cmp_l_flags (context, a, b, result);
 
-    printf ("cmpa.w a%d - (xxx.l)\n", dest_reg);
     return 0;
 }
 
@@ -12418,7 +11620,6 @@ static uint32_t m68k_b0fa_cmpa_w_an_dpc (M68000_Context *context, uint16_t instr
 
     m68k_cmp_l_flags (context, a, b, result);
 
-    printf ("cmpa.w a%d - d(PC)\n", dest_reg);
     return 0;
 }
 
@@ -12434,7 +11635,6 @@ static uint32_t m68k_b0fb_cmpa_w_an_dpcxi (M68000_Context *context, uint16_t ins
 
     m68k_cmp_l_flags (context, a, b, result);
 
-    printf ("cmpa.w a%d - d(PC+Xi)\n", dest_reg);
     return 0;
 }
 
@@ -12450,7 +11650,6 @@ static uint32_t m68k_b0fc_cmpa_w_an_imm (M68000_Context *context, uint16_t instr
 
     m68k_cmp_l_flags (context, a, b, result);
 
-    printf ("cmpa.w a%d - #%08x\n", dest_reg, b);
     return 0;
 }
 
@@ -12468,7 +11667,6 @@ static uint32_t m68k_b100_eor_b_dn_dn (M68000_Context *context, uint16_t instruc
     context->state.d [dest_reg].b = result;
     m68k_move_b_flags (context, result);
 
-    printf ("eor.b d%d ← d%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -12486,7 +11684,6 @@ static uint32_t m68k_b140_eor_w_dn_dn (M68000_Context *context, uint16_t instruc
     context->state.d [dest_reg].w = result;
     m68k_move_w_flags (context, result);
 
-    printf ("eor.w d%d ← d%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -12504,7 +11701,6 @@ static uint32_t m68k_b180_eor_l_dn_dn (M68000_Context *context, uint16_t instruc
     context->state.d [dest_reg].l = result;
     m68k_move_l_flags (context, result);
 
-    printf ("eor.l d%d ← d%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -12521,7 +11717,6 @@ static uint32_t m68k_b1c0_cmpa_l_an_dn (M68000_Context *context, uint16_t instru
 
     m68k_cmp_l_flags (context, a, b, result);
 
-    printf ("cmpa.l a%d - d%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -12538,7 +11733,6 @@ static uint32_t m68k_b1c8_cmpa_l_an_an (M68000_Context *context, uint16_t instru
 
     m68k_cmp_l_flags (context, a, b, result);
 
-    printf ("cmpa.l a%d - a%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -12555,7 +11749,6 @@ static uint32_t m68k_b1d0_cmpa_l_an_an (M68000_Context *context, uint16_t instru
 
     m68k_cmp_l_flags (context, a, b, result);
 
-    printf ("cmpa.l a%d - (a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -12573,7 +11766,6 @@ static uint32_t m68k_b1d8_cmpa_l_an_anp (M68000_Context *context, uint16_t instr
 
     m68k_cmp_l_flags (context, a, b, result);
 
-    printf ("cmpa.l a%d - (a%d)+\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -12591,7 +11783,6 @@ static uint32_t m68k_b1e0_cmpa_l_an_pan (M68000_Context *context, uint16_t instr
 
     m68k_cmp_l_flags (context, a, b, result);
 
-    printf ("cmpa.l a%d - -(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -12608,7 +11799,6 @@ static uint32_t m68k_b1e8_cmpa_l_an_dan (M68000_Context *context, uint16_t instr
 
     m68k_cmp_l_flags (context, a, b, result);
 
-    printf ("cmpa.l a%d - d(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -12625,7 +11815,6 @@ static uint32_t m68k_b1f0_cmpa_l_an_danxi (M68000_Context *context, uint16_t ins
 
     m68k_cmp_l_flags (context, a, b, result);
 
-    printf ("cmpa.l a%d - d(a%d+Xi)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -12641,7 +11830,6 @@ static uint32_t m68k_b1f8_cmpa_l_an_aw (M68000_Context *context, uint16_t instru
 
     m68k_cmp_l_flags (context, a, b, result);
 
-    printf ("cmpa.l a%d - (xxx.w)\n", dest_reg);
     return 0;
 }
 
@@ -12657,7 +11845,6 @@ static uint32_t m68k_b1f9_cmpa_l_an_al (M68000_Context *context, uint16_t instru
 
     m68k_cmp_l_flags (context, a, b, result);
 
-    printf ("cmpa.l a%d - (xxx.l)\n", dest_reg);
     return 0;
 }
 
@@ -12673,7 +11860,6 @@ static uint32_t m68k_b1fa_cmpa_l_an_dpc (M68000_Context *context, uint16_t instr
 
     m68k_cmp_l_flags (context, a, b, result);
 
-    printf ("cmpa.l a%d - d(PC)\n", dest_reg);
     return 0;
 }
 
@@ -12689,7 +11875,6 @@ static uint32_t m68k_b1fb_cmpa_l_an_dpcxi (M68000_Context *context, uint16_t ins
 
     m68k_cmp_l_flags (context, a, b, result);
 
-    printf ("cmpa.l a%d - d(PC+Xi)\n", dest_reg);
     return 0;
 }
 
@@ -12705,7 +11890,6 @@ static uint32_t m68k_b1fc_cmpa_l_an_imm (M68000_Context *context, uint16_t instr
 
     m68k_cmp_l_flags (context, a, b, result);
 
-    printf ("cmpa.l a%d - #%08x\n", dest_reg, b);
     return 0;
 }
 
@@ -12723,7 +11907,6 @@ static uint32_t m68k_c000_and_b_dn_dn (M68000_Context *context, uint16_t instruc
     context->state.d [dest_reg].b = result;
     m68k_move_b_flags (context, result);
 
-    printf ("and.b d%d ← d%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -12741,7 +11924,6 @@ static uint32_t m68k_c010_and_b_dn_an (M68000_Context *context, uint16_t instruc
     context->state.d [dest_reg].b = result;
     m68k_move_b_flags (context, result);
 
-    printf ("and.b d%d ← (a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -12760,7 +11942,6 @@ static uint32_t m68k_c018_and_b_dn_anp (M68000_Context *context, uint16_t instru
     context->state.d [dest_reg].b = result;
     m68k_move_b_flags (context, result);
 
-    printf ("and.b d%d ← (a%d)+\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -12779,7 +11960,6 @@ static uint32_t m68k_c020_and_b_dn_pan (M68000_Context *context, uint16_t instru
     context->state.d [dest_reg].b = result;
     m68k_move_b_flags (context, result);
 
-    printf ("and.b d%d ← -(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -12797,7 +11977,6 @@ static uint32_t m68k_c028_and_b_dn_dan (M68000_Context *context, uint16_t instru
     context->state.d [dest_reg].b = result;
     m68k_move_b_flags (context, result);
 
-    printf ("and.b d%d ← d(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -12815,7 +11994,6 @@ static uint32_t m68k_c030_and_b_dn_danxi (M68000_Context *context, uint16_t inst
     context->state.d [dest_reg].b = result;
     m68k_move_b_flags (context, result);
 
-    printf ("and.b d%d ← d(a%d+Xi)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -12832,7 +12010,6 @@ static uint32_t m68k_c038_and_b_dn_aw (M68000_Context *context, uint16_t instruc
     context->state.d [dest_reg].b = result;
     m68k_move_b_flags (context, result);
 
-    printf ("and.b d%d ← (xxx.w)\n", dest_reg);
     return 0;
 }
 
@@ -12849,7 +12026,6 @@ static uint32_t m68k_c039_and_b_dn_al (M68000_Context *context, uint16_t instruc
     context->state.d [dest_reg].b = result;
     m68k_move_b_flags (context, result);
 
-    printf ("and.b d%d ← (xxx.l)\n", dest_reg);
     return 0;
 }
 
@@ -12866,7 +12042,6 @@ static uint32_t m68k_c03a_and_b_dn_dpc (M68000_Context *context, uint16_t instru
     context->state.d [dest_reg].b = result;
     m68k_move_b_flags (context, result);
 
-    printf ("and.b d%d ← d(PC)\n", dest_reg);
     return 0;
 }
 
@@ -12883,7 +12058,6 @@ static uint32_t m68k_c03b_and_b_dn_dpcxi (M68000_Context *context, uint16_t inst
     context->state.d [dest_reg].b = result;
     m68k_move_b_flags (context, result);
 
-    printf ("and.b d%d ← d(PC+Xi)\n", dest_reg);
     return 0;
 }
 
@@ -12900,7 +12074,6 @@ static uint32_t m68k_c03c_and_b_dn_imm (M68000_Context *context, uint16_t instru
     context->state.d [dest_reg].b = result;
     m68k_move_b_flags (context, result);
 
-    printf ("and.b d%d ← #%02x\n", dest_reg, b);
     return 0;
 }
 
@@ -12918,7 +12091,6 @@ static uint32_t m68k_c040_and_w_dn_dn (M68000_Context *context, uint16_t instruc
     context->state.d [dest_reg].w = result;
     m68k_move_w_flags (context, result);
 
-    printf ("and.w d%d ← d%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -12935,7 +12107,6 @@ static uint32_t m68k_c07b_and_w_dn_dpcxi (M68000_Context *context, uint16_t inst
     context->state.d [dest_reg].w = result;
     m68k_move_w_flags (context, result);
 
-    printf ("and.w d%d ← d(PC+Xi)\n", dest_reg);
     return 0;
 }
 
@@ -12953,7 +12124,6 @@ static uint32_t m68k_c080_and_l_dn_dn (M68000_Context *context, uint16_t instruc
     context->state.d [dest_reg].l = result;
     m68k_move_l_flags (context, result);
 
-    printf ("and.l d%d ← d%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -12975,7 +12145,6 @@ static uint32_t m68k_c0c0_mulu_w_dn_dn (M68000_Context *context, uint16_t instru
     context->state.ccr_overflow = 0;
     context->state.ccr_carry = 0;
 
-    printf ("mulu.w d%d ← d%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -12996,7 +12165,6 @@ static uint32_t m68k_c0fc_mulu_w_dn_imm (M68000_Context *context, uint16_t instr
     context->state.ccr_overflow = 0;
     context->state.ccr_carry = 0;
 
-    printf ("mulu.w d%d ← #%04x\n", dest_reg, b);
     return 0;
 }
 
@@ -13014,7 +12182,6 @@ static uint32_t m68k_c110_and_b_an_dn (M68000_Context *context, uint16_t instruc
     write_byte (context, context->state.a [dest_reg], result);
     m68k_move_b_flags (context, result);
 
-    printf ("and.b (a%d) ← d%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -13033,7 +12200,6 @@ static uint32_t m68k_c118_and_b_anp_dn (M68000_Context *context, uint16_t instru
     context->state.a [dest_reg] += (dest_reg == 7) ? 2 : 1;
     m68k_move_b_flags (context, result);
 
-    printf ("and.b (a%d)+ ← d%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -13052,7 +12218,6 @@ static uint32_t m68k_c120_and_b_pan_dn (M68000_Context *context, uint16_t instru
     write_byte (context, context->state.a [dest_reg], result);
     m68k_move_b_flags (context, result);
 
-    printf ("and.b -(a%d) ← d%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -13071,7 +12236,6 @@ static uint32_t m68k_c128_and_b_dan_dn (M68000_Context *context, uint16_t instru
     write_byte (context, address, result);
     m68k_move_b_flags (context, result);
 
-    printf ("and.b d(a%d) ← d%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -13090,7 +12254,6 @@ static uint32_t m68k_c130_and_b_danxi_dn (M68000_Context *context, uint16_t inst
     write_byte (context, address, result);
     m68k_move_b_flags (context, result);
 
-    printf ("and.b d(a%d+Xi) ← d%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -13108,7 +12271,6 @@ static uint32_t m68k_c138_and_b_aw_dn (M68000_Context *context, uint16_t instruc
     write_byte (context, address, result);
     m68k_move_b_flags (context, result);
 
-    printf ("and.b (xxx.w) ← d%d\n", source_reg);
     return 0;
 }
 
@@ -13126,7 +12288,6 @@ static uint32_t m68k_c139_and_b_al_dn (M68000_Context *context, uint16_t instruc
     write_byte (context, address, result);
     m68k_move_b_flags (context, result);
 
-    printf ("and.b (xxx.l) ← d%d\n", source_reg);
     return 0;
 }
 
@@ -13141,7 +12302,6 @@ static uint32_t m68k_c140_exg_l_dn_dn (M68000_Context *context, uint16_t instruc
     context->state.d [reg_x].l = context->state.d [reg_y].l;
     context->state.d [reg_y].l = temp;
 
-    printf ("exg.l d%d ←→ %d.\n", reg_x, reg_y);
     return 0;
 }
 
@@ -13163,7 +12323,6 @@ static uint32_t m68k_c1c0_muls_w_dn_dn (M68000_Context *context, uint16_t instru
     context->state.ccr_overflow = 0;
     context->state.ccr_carry = 0;
 
-    printf ("muls.w d%d ← d%d\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -13185,7 +12344,6 @@ static uint32_t m68k_c1e8_muls_w_dn_dan (M68000_Context *context, uint16_t instr
     context->state.ccr_overflow = 0;
     context->state.ccr_carry = 0;
 
-    printf ("muls.w d%d ← d(a%d)\n", dest_reg, source_reg);
     return 0;
 }
 
@@ -13206,7 +12364,6 @@ static uint32_t m68k_c1fc_muls_w_dn_imm (M68000_Context *context, uint16_t instr
     context->state.ccr_overflow = 0;
     context->state.ccr_carry = 0;
 
-    printf ("muls.w d%d ← #%04x\n", dest_reg, b);
     return 0;
 }
 
@@ -13224,7 +12381,6 @@ static uint32_t m68k_d000_add_b_dn_dn (M68000_Context *context, uint16_t instruc
     context->state.d [dest_reg].b = result;
     m68k_add_b_flags (context, a, b, result);
 
-    printf ("add.b d%d ← d%d + d%d\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -13242,7 +12398,6 @@ static uint32_t m68k_d028_add_b_dn_dan (M68000_Context *context, uint16_t instru
     context->state.d [dest_reg].b = result;
     m68k_add_b_flags (context, a, b, result);
 
-    printf ("add.b d%d ← d%d + d(a%d)\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -13259,7 +12414,6 @@ static uint32_t m68k_d038_add_b_dn_aw (M68000_Context *context, uint16_t instruc
     context->state.d [dest_reg].b = result;
     m68k_add_b_flags (context, a, b, result);
 
-    printf ("add.b d%d ← d%d + (xxx.w)\n", dest_reg, dest_reg);
     return 0;
 }
 
@@ -13277,7 +12431,6 @@ static uint32_t m68k_d040_add_w_dn_dn (M68000_Context *context, uint16_t instruc
     context->state.d [dest_reg].w = result;
     m68k_add_w_flags (context, a, b, result);
 
-    printf ("add.w d%d ← d%d + d%d\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -13295,7 +12448,6 @@ static uint32_t m68k_d048_add_w_dn_an (M68000_Context *context, uint16_t instruc
     context->state.d [dest_reg].w = result;
     m68k_add_w_flags (context, a, b, result);
 
-    printf ("add.w d%d ← d%d + a%d\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -13313,7 +12465,6 @@ static uint32_t m68k_d050_add_w_dn_an (M68000_Context *context, uint16_t instruc
     context->state.d [dest_reg].w = result;
     m68k_add_w_flags (context, a, b, result);
 
-    printf ("add.w d%d ← d%d + (a%d)\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -13332,7 +12483,6 @@ static uint32_t m68k_d058_add_w_dn_anp (M68000_Context *context, uint16_t instru
     context->state.d [dest_reg].w = result;
     m68k_add_w_flags (context, a, b, result);
 
-    printf ("add.w d%d ← d%d + (a%d)+\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -13351,7 +12501,6 @@ static uint32_t m68k_d060_add_w_dn_pan (M68000_Context *context, uint16_t instru
     context->state.d [dest_reg].w = result;
     m68k_add_w_flags (context, a, b, result);
 
-    printf ("add.w d%d ← d%d + -(a%d)\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -13369,7 +12518,6 @@ static uint32_t m68k_d068_add_w_dn_dan (M68000_Context *context, uint16_t instru
     context->state.d [dest_reg].w = result;
     m68k_add_w_flags (context, a, b, result);
 
-    printf ("add.w d%d ← d%d + d(a%d)\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -13387,7 +12535,6 @@ static uint32_t m68k_d070_add_w_dn_danxi (M68000_Context *context, uint16_t inst
     context->state.d [dest_reg].w = result;
     m68k_add_w_flags (context, a, b, result);
 
-    printf ("add.w d%d ← d%d + d(a%d+Xi)\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -13404,7 +12551,6 @@ static uint32_t m68k_d078_add_w_dn_aw (M68000_Context *context, uint16_t instruc
     context->state.d [dest_reg].w = result;
     m68k_add_w_flags (context, a, b, result);
 
-    printf ("add.w d%d ← d%d + (xxx.w)\n", dest_reg, dest_reg);
     return 0;
 }
 
@@ -13421,7 +12567,6 @@ static uint32_t m68k_d079_add_w_dn_al (M68000_Context *context, uint16_t instruc
     context->state.d [dest_reg].w = result;
     m68k_add_w_flags (context, a, b, result);
 
-    printf ("add.w d%d ← d%d + (xxx.l)\n", dest_reg, dest_reg);
     return 0;
 }
 
@@ -13438,7 +12583,6 @@ static uint32_t m68k_d07a_add_w_dn_dpc (M68000_Context *context, uint16_t instru
     context->state.d [dest_reg].w = result;
     m68k_add_w_flags (context, a, b, result);
 
-    printf ("add.w d%d ← d%d + d(PC)\n", dest_reg, dest_reg);
     return 0;
 }
 
@@ -13455,7 +12599,6 @@ static uint32_t m68k_d07b_add_w_dn_dpcxi (M68000_Context *context, uint16_t inst
     context->state.d [dest_reg].w = result;
     m68k_add_w_flags (context, a, b, result);
 
-    printf ("add.w d%d ← d%d + d(PC+Xi)\n", dest_reg, dest_reg);
     return 0;
 }
 
@@ -13473,7 +12616,6 @@ static uint32_t m68k_d080_add_l_dn_dn (M68000_Context *context, uint16_t instruc
     context->state.d [dest_reg].l = result;
     m68k_add_l_flags (context, a, b, result);
 
-    printf ("add.l d%d ← d%d + d%d\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -13491,7 +12633,6 @@ static uint32_t m68k_d088_add_l_dn_an (M68000_Context *context, uint16_t instruc
     context->state.d [dest_reg].l = result;
     m68k_add_l_flags (context, a, b, result);
 
-    printf ("add.l d%d ← d%d + a%d\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -13508,7 +12649,6 @@ static uint32_t m68k_d0b8_add_l_dn_aw (M68000_Context *context, uint16_t instruc
     context->state.d [dest_reg].l = result;
     m68k_add_l_flags (context, a, b, result);
 
-    printf ("add.l d%d ← d%d + (xxx.w)\n", dest_reg, dest_reg);
     return 0;
 }
 
@@ -13521,7 +12661,6 @@ static uint32_t m68k_d0c0_adda_w_an_dn (M68000_Context *context, uint16_t instru
 
     context->state.a [dest_reg] += (int16_t) context->state.d [source_reg].w;
 
-    printf ("adda.w a%d ← a%d + d%d\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -13534,7 +12673,6 @@ static uint32_t m68k_d0c8_adda_w_an_an (M68000_Context *context, uint16_t instru
 
     context->state.a [dest_reg] += (int16_t) (uint16_t) context->state.a [source_reg];
 
-    printf ("adda.w a%d ← a%d + a%d\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -13547,7 +12685,6 @@ static uint32_t m68k_d0d0_adda_w_an_an (M68000_Context *context, uint16_t instru
 
     context->state.a [dest_reg] += (int16_t) read_word (context, context->state.a [source_reg]);
 
-    printf ("adda.w a%d ← a%d + (a%d)\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -13560,7 +12697,6 @@ static uint32_t m68k_d0fc_adda_w_an_imm (M68000_Context *context, uint16_t instr
 
     context->state.a [dest_reg] += (int16_t) imm;
 
-    printf ("adda.w a%d ← a%d + #%04x\n", dest_reg, dest_reg, imm);
     return 0;
 }
 
@@ -13573,7 +12709,6 @@ static uint32_t m68k_d0f0_adda_w_an_danxi (M68000_Context *context, uint16_t ins
 
     context->state.a [dest_reg] += (int16_t) read_word_with_index (context, context->state.a [source_reg]);
 
-    printf ("adda.w a%d ← a%d + d(a%d+Xi)\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -13592,7 +12727,6 @@ static uint32_t m68k_d128_add_b_dan_dn (M68000_Context *context, uint16_t instru
     write_byte (context, address, result);
     m68k_add_b_flags (context, a, b, result);
 
-    printf ("add.b d(a%d) ← d(a%d) + d%d\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -13610,7 +12744,6 @@ static uint32_t m68k_d150_add_w_an_dn (M68000_Context *context, uint16_t instruc
     write_word (context, context->state.a [dest_reg], result);
     m68k_add_w_flags (context, a, b, result);
 
-    printf ("add.w (a%d) ← (a%d) + d%d\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -13629,7 +12762,6 @@ static uint32_t m68k_d158_add_w_anp_dn (M68000_Context *context, uint16_t instru
     context->state.a [dest_reg] += 2;
     m68k_add_w_flags (context, a, b, result);
 
-    printf ("add.w (a%d)+ ← (a%d)+ + d%d\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -13648,7 +12780,6 @@ static uint32_t m68k_d160_add_w_pan_dn (M68000_Context *context, uint16_t instru
     write_word (context, context->state.a [dest_reg], result);
     m68k_add_w_flags (context, a, b, result);
 
-    printf ("add.w -(a%d) ← -(a%d) + d%d\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -13667,7 +12798,6 @@ static uint32_t m68k_d168_add_w_dan_dn (M68000_Context *context, uint16_t instru
     write_word (context, address, result);
     m68k_add_w_flags (context, a, b, result);
 
-    printf ("add.w d(a%d) ← d(a%d) + d%d\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -13686,7 +12816,6 @@ static uint32_t m68k_d170_add_w_danxi_dn (M68000_Context *context, uint16_t inst
     write_word (context, address, result);
     m68k_add_w_flags (context, a, b, result);
 
-    printf ("add.w d(a%d+Xi) ← d(a%d) + d%d\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -13704,7 +12833,6 @@ static uint32_t m68k_d178_add_w_aw_dn (M68000_Context *context, uint16_t instruc
     write_word (context, address, result);
     m68k_add_w_flags (context, a, b, result);
 
-    printf ("add.w (xxx.w) ← (xxx.w) + d%d\n", source_reg);
     return 0;
 }
 
@@ -13722,7 +12850,6 @@ static uint32_t m68k_d179_add_w_al_dn (M68000_Context *context, uint16_t instruc
     write_word (context, address, result);
     m68k_add_w_flags (context, a, b, result);
 
-    printf ("add.w (xxx.l) ← (xxx.l) + d%d\n", source_reg);
     return 0;
 }
 
@@ -13740,7 +12867,6 @@ static uint32_t m68k_d190_add_l_an_dn (M68000_Context *context, uint16_t instruc
     write_long (context, context->state.a [dest_reg], result);
     m68k_add_l_flags (context, a, b, result);
 
-    printf ("add.l (a%d) ← (a%d) + d%d\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -13759,7 +12885,6 @@ static uint32_t m68k_d1a8_add_l_dan_dn (M68000_Context *context, uint16_t instru
     write_long (context, address, result);
     m68k_add_l_flags (context, a, b, result);
 
-    printf ("add.l d(a%d) ← d(a%d) + d%d\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -13777,7 +12902,6 @@ static uint32_t m68k_d1b8_add_l_aw_dn (M68000_Context *context, uint16_t instruc
     write_long (context, address, result);
     m68k_add_l_flags (context, a, b, result);
 
-    printf ("add.l (xxx.w) ← (xxx.w) + d%d\n", source_reg);
     return 0;
 }
 
@@ -13790,7 +12914,6 @@ static uint32_t m68k_d1c0_adda_l_an_dn (M68000_Context *context, uint16_t instru
 
     context->state.a [dest_reg] += context->state.d [source_reg].l;
 
-    printf ("adda.l a%d ← a%d + d%d\n", dest_reg, dest_reg, source_reg);
     return 0;
 }
 
@@ -13817,7 +12940,6 @@ static uint32_t m68k_e008_lsr_b_dn_imm (M68000_Context *context, uint16_t instru
 
     context->state.d [reg].b = value;
 
-    printf ("lsr.b d%d >> %d\n", reg, count);
     return 0;
 }
 
@@ -13841,7 +12963,6 @@ static uint32_t m68k_e018_ror_b_dn_imm (M68000_Context *context, uint16_t instru
 
     context->state.d [reg].b = value;
 
-    printf ("ror.b d%d >> %d\n", reg, count);
     return 0;
 }
 
@@ -13868,7 +12989,6 @@ static uint32_t m68k_e038_ror_b_dn_dn (M68000_Context *context, uint16_t instruc
 
     context->state.d [reg].b = value;
 
-    printf ("ror.b d%d >> d%d\n", reg, count_reg);
     return 0;
 }
 
@@ -13895,7 +13015,6 @@ static uint32_t m68k_e040_asr_w_dn_imm (M68000_Context *context, uint16_t instru
 
     context->state.d [reg].w = value;
 
-    printf ("asr.w d%d >> %d\n", reg, count);
     return 0;
 }
 
@@ -13922,7 +13041,6 @@ static uint32_t m68k_e048_lsr_w_dn_imm (M68000_Context *context, uint16_t instru
 
     context->state.d [reg].w = value;
 
-    printf ("lsr.w d%d >> %d\n", reg, count);
     return 0;
 }
 
@@ -13946,7 +13064,6 @@ static uint32_t m68k_e058_ror_w_dn_imm (M68000_Context *context, uint16_t instru
 
     context->state.d [reg].w = value;
 
-    printf ("ror.w d%d >> %d\n", reg, count);
     return 0;
 }
 
@@ -13974,7 +13091,6 @@ static uint32_t m68k_e068_lsr_w_dn_dn (M68000_Context *context, uint16_t instruc
 
     context->state.d [reg].w = value;
 
-    printf ("lsr.w d%d >> d%d\n", reg, count_reg);
     return 0;
 }
 
@@ -14001,7 +13117,6 @@ static uint32_t m68k_e078_ror_w_dn_dn (M68000_Context *context, uint16_t instruc
 
     context->state.d [reg].w = value;
 
-    printf ("ror.w d%d >> d%d\n", reg, count_reg);
     return 0;
 }
 
@@ -14028,7 +13143,6 @@ static uint32_t m68k_e080_asr_l_dn_imm (M68000_Context *context, uint16_t instru
 
     context->state.d [reg].l = value;
 
-    printf ("asr.l d%d >> %d\n", reg, count);
     return 0;
 }
 
@@ -14052,7 +13166,6 @@ static uint32_t m68k_e098_ror_l_dn_imm (M68000_Context *context, uint16_t instru
 
     context->state.d [reg].l = value;
 
-    printf ("ror.l d%d >> %d\n", reg, count);
     return 0;
 }
 
@@ -14079,7 +13192,6 @@ static uint32_t m68k_e0b8_ror_l_dn_dn (M68000_Context *context, uint16_t instruc
 
     context->state.d [reg].l = value;
 
-    printf ("ror.l d%d >> d%d\n", reg, count_reg);
     return 0;
 }
 
@@ -14101,7 +13213,6 @@ static uint32_t m68k_e0e8_asr_w_dan (M68000_Context *context, uint16_t instructi
 
     write_word (context, address, value);
 
-    printf ("asr.w d(a%d) >> 1\n", reg);
     return 0;
 }
 
@@ -14128,7 +13239,6 @@ static uint32_t m68k_e108_lsl_b_dn_imm (M68000_Context *context, uint16_t instru
 
     context->state.d [reg].b = value;
 
-    printf ("lsl.b d%d << %d\n", reg, count);
     return 0;
 }
 
@@ -14153,7 +13263,6 @@ static uint32_t m68k_e118_rol_b_dn_imm (M68000_Context *context, uint16_t instru
 
     context->state.d [reg].b = value;
 
-    printf ("rol.b d%d << %d\n", reg, count);
     return 0;
 }
 
@@ -14179,7 +13288,6 @@ static uint32_t m68k_e138_rol_b_dn_dn (M68000_Context *context, uint16_t instruc
 
     context->state.d [reg].b = value;
 
-    printf ("rol.b d%d << d%d\n", reg, count_reg);
     return 0;
 }
 
@@ -14210,7 +13318,6 @@ static uint32_t m68k_e140_asl_w_dn_imm (M68000_Context *context, uint16_t instru
 
     context->state.d [reg].w = value;
 
-    printf ("asl.w d%d << %d\n", reg, count);
     return 0;
 }
 
@@ -14237,7 +13344,6 @@ static uint32_t m68k_e148_lsl_w_dn_imm (M68000_Context *context, uint16_t instru
 
     context->state.d [reg].w = value;
 
-    printf ("lsl.w d%d << %d\n", reg, count);
     return 0;
 }
 
@@ -14262,7 +13368,6 @@ static uint32_t m68k_e150_roxl_w_dn_imm (M68000_Context *context, uint16_t instr
 
     context->state.d [reg].w = value;
 
-    printf ("roxl.w d%d << %d\n", reg, count);
     return 0;
 }
 
@@ -14286,7 +13391,6 @@ static uint32_t m68k_e158_rol_w_dn_imm (M68000_Context *context, uint16_t instru
 
     context->state.d [reg].w = value;
 
-    printf ("rol.w d%d << %d\n", reg, count);
     return 0;
 }
 
@@ -14319,7 +13423,6 @@ static uint32_t m68k_e160_asl_w_dn_dn (M68000_Context *context, uint16_t instruc
 
     context->state.d [reg].w = value;
 
-    printf ("asl.w d%d << d%d\n", reg, count_reg);
     return 0;
 }
 
@@ -14348,7 +13451,6 @@ static uint32_t m68k_e168_lsl_w_dn_dn (M68000_Context *context, uint16_t instruc
 
     context->state.d [reg].w = value;
 
-    printf ("lsl.w d%d << d%d\n", reg, count_reg);
     return 0;
 }
 
@@ -14375,7 +13477,6 @@ static uint32_t m68k_e178_rol_w_dn_dn (M68000_Context *context, uint16_t instruc
 
     context->state.d [reg].w = value;
 
-    printf ("rol.w d%d << d%d\n", reg, count_reg);
     return 0;
 }
 
@@ -14406,7 +13507,6 @@ static uint32_t m68k_e180_asl_l_dn_imm (M68000_Context *context, uint16_t instru
 
     context->state.d [reg].l = value;
 
-    printf ("asl.l d%d << %d\n", reg, count);
     return 0;
 }
 
@@ -14433,7 +13533,6 @@ static uint32_t m68k_e188_lsl_l_dn_imm (M68000_Context *context, uint16_t instru
 
     context->state.d [reg].l = value;
 
-    printf ("lsl.l d%d << %d\n", reg, count);
     return 0;
 }
 
@@ -14457,7 +13556,6 @@ static uint32_t m68k_e198_rol_l_dn_imm (M68000_Context *context, uint16_t instru
 
     context->state.d [reg].l = value;
 
-    printf ("rol.l d%d << %d\n", reg, count);
     return 0;
 }
 
@@ -14484,7 +13582,6 @@ static uint32_t m68k_e1b8_rol_l_dn_dn (M68000_Context *context, uint16_t instruc
 
     context->state.d [reg].l = value;
 
-    printf ("rol.l d%d << d%d\n", reg, count_reg);
     return 0;
 }
 
@@ -14506,7 +13603,6 @@ static uint32_t m68k_e1d0_asl_w_an (M68000_Context *context, uint16_t instructio
 
     write_word (context, address, value);
 
-    printf ("asl.w (a%d) << 1\n", reg);
     return 0;
 }
 
@@ -14529,7 +13625,6 @@ static uint32_t m68k_e1d8_asl_w_anp (M68000_Context *context, uint16_t instructi
 
     write_word (context, address, value);
 
-    printf ("asl.w (a%d)+ << 1\n", reg);
     return 0;
 }
 
@@ -14552,7 +13647,6 @@ static uint32_t m68k_e1e0_asl_w_pan (M68000_Context *context, uint16_t instructi
 
     write_word (context, address, value);
 
-    printf ("asl.w -(a%d) << 1\n", reg);
     return 0;
 }
 
@@ -14574,7 +13668,6 @@ static uint32_t m68k_e1e8_asl_w_dan (M68000_Context *context, uint16_t instructi
 
     write_word (context, address, value);
 
-    printf ("asl.w d(a%d+Xi) << 1\n", reg);
     return 0;
 }
 
@@ -14596,7 +13689,6 @@ static uint32_t m68k_e1f0_asl_w_danxi (M68000_Context *context, uint16_t instruc
 
     write_word (context, address, value);
 
-    printf ("asl.w d(a%d+Xi) << 1\n", reg);
     return 0;
 }
 
@@ -14617,7 +13709,6 @@ static uint32_t m68k_e1f8_asl_w_aw (M68000_Context *context, uint16_t instructio
 
     write_word (context, address, value);
 
-    printf ("asl.w (xxx.w) << 1\n");
     return 0;
 }
 
@@ -14638,7 +13729,6 @@ static uint32_t m68k_e1f9_asl_w_al (M68000_Context *context, uint16_t instructio
 
     write_word (context, address, value);
 
-    printf ("asl.w (xxx.l) << 1\n");
     return 0;
 }
 
@@ -14657,7 +13747,6 @@ static uint32_t m68k_e6d0_ror_w_an (M68000_Context *context, uint16_t instructio
 
     write_word (context, context->state.a [reg], value);
 
-    printf ("ror.w (a%d) >> 1\n", reg);
     return 0;
 }
 
@@ -14677,7 +13766,6 @@ static uint32_t m68k_e6d8_ror_w_anp (M68000_Context *context, uint16_t instructi
     write_word (context, context->state.a [reg], value);
     context->state.a [reg] += 2;
 
-    printf ("ror.w (a%d)+ >> 1\n", reg);
     return 0;
 }
 
@@ -14697,7 +13785,6 @@ static uint32_t m68k_e6e0_ror_w_pan (M68000_Context *context, uint16_t instructi
 
     write_word (context, context->state.a [reg], value);
 
-    printf ("ror.w -(a%d) >> 1\n", reg);
     return 0;
 }
 
@@ -14717,7 +13804,6 @@ static uint32_t m68k_e6e8_ror_w_dan (M68000_Context *context, uint16_t instructi
 
     write_word (context, address, value);
 
-    printf ("ror.w d(a%d) >> 1\n", reg);
     return 0;
 }
 
@@ -14737,7 +13823,6 @@ static uint32_t m68k_e6f0_ror_w_danxi (M68000_Context *context, uint16_t instruc
 
     write_word (context, address, value);
 
-    printf ("ror.w d(a%d+Xi) >> 1\n", reg);
     return 0;
 }
 
@@ -14756,7 +13841,6 @@ static uint32_t m68k_e6f8_ror_w_aw (M68000_Context *context, uint16_t instructio
 
     write_word (context, address, value);
 
-    printf ("ror.w (xxx.w) >> 1\n");
     return 0;
 }
 
@@ -14775,7 +13859,6 @@ static uint32_t m68k_e6f9_ror_w_al (M68000_Context *context, uint16_t instructio
 
     write_word (context, address, value);
 
-    printf ("ror.w (xxx.l) >> 1\n");
     return 0;
 }
 
@@ -14794,7 +13877,6 @@ static uint32_t m68k_e7d0_rol_w_an (M68000_Context *context, uint16_t instructio
 
     write_word (context, context->state.a [reg], value);
 
-    printf ("rol.w (a%d) << 1\n", reg);
     return 0;
 }
 
@@ -14814,7 +13896,6 @@ static uint32_t m68k_e7d8_rol_w_anp (M68000_Context *context, uint16_t instructi
     write_word (context, context->state.a [reg], value);
     context->state.a [reg] += 2;
 
-    printf ("rol.w (a%d)+ << 1\n", reg);
     return 0;
 }
 
@@ -14834,7 +13915,6 @@ static uint32_t m68k_e7e0_rol_w_pan (M68000_Context *context, uint16_t instructi
 
     write_word (context, context->state.a [reg], value);
 
-    printf ("rol.w -(a%d) << 1\n", reg);
     return 0;
 }
 
@@ -14854,7 +13934,6 @@ static uint32_t m68k_e7e8_rol_w_dan (M68000_Context *context, uint16_t instructi
 
     write_word (context, address, value);
 
-    printf ("rol.w d(a%d) << 1\n", reg);
     return 0;
 }
 
@@ -14874,7 +13953,6 @@ static uint32_t m68k_e7f0_rol_w_danxi (M68000_Context *context, uint16_t instruc
 
     write_word (context, address, value);
 
-    printf ("rol.w d(a%d+Xi) << 1\n", reg);
     return 0;
 }
 
@@ -14893,7 +13971,6 @@ static uint32_t m68k_e7f8_rol_w_aw (M68000_Context *context, uint16_t instructio
 
     write_word (context, address, value);
 
-    printf ("rol.w (xxx.w) << 1\n");
     return 0;
 }
 
@@ -14912,7 +13989,6 @@ static uint32_t m68k_e7f9_rol_w_al (M68000_Context *context, uint16_t instructio
 
     write_word (context, address, value);
 
-    printf ("rol.w (xxx.l) << 1\n");
     return 0;
 }
 
@@ -14923,7 +13999,6 @@ static uint32_t m68k_f000_line_f (M68000_Context *context, uint16_t instruction)
     context->state.pc -= 2;
     m68k_exception (context, 0x2c);
 
-    printf ("line-f exception %04x\n", instruction);
     return 0;
 }
 
@@ -15971,10 +15046,6 @@ static void m68k_init_instructions (void)
  */
 static uint32_t m68k_run_instruction (M68000_Context *context)
 {
-    static uint32_t count = 0;
-    count++;
-    printf ("[%06x (%.4d)]: ", context->state.pc, count);
-
     /* Fetch */
     uint16_t instruction = read_word (context, context->state.pc);
     context->state.pc += 2;
@@ -15986,7 +15057,7 @@ static uint32_t m68k_run_instruction (M68000_Context *context)
     }
     else
     {
-        snepulator_error ("M68000 Error", "Unknown %s instruction: %04x.",
+        snepulator_error ("M68000 Error", "Unknown %s instruction: %04x. (PC=%06x)",
                  (instruction & 0xf000) == 0x0000 ? "bit/movep/immediate" :
                  (instruction & 0xf000) == 0x1000 ? "move.b" :
                  (instruction & 0xf000) == 0x2000 ? "move.l" :
@@ -16002,7 +15073,7 @@ static uint32_t m68k_run_instruction (M68000_Context *context)
                  (instruction & 0xf000) == 0xc000 ? "and/mul/abcd/exg" :
                  (instruction & 0xf000) == 0xd000 ? "add/addx" :
                  (instruction & 0xf000) == 0xe000 ? "shift/rotate" : "unassigned",
-                 instruction);
+                 instruction, context->state.pc - 2);
         return 150000; /* Enough to end the frame */
     }
 
