@@ -27,10 +27,6 @@
 
 extern Snepulator_State state;
 
-/* Used to redirect instruction logging */
-int null_fd = 0;
-int stdout_backup_fd = 0;
-
 #define TEST_DIR "m68000/v1/"
 #define COLOUR_RED      "\033[0;31m"
 #define COLOUR_GREEN    "\033[0;32m"
@@ -236,18 +232,10 @@ static uint32_t run_test (const cJSON *test, bool print_details)
     }
     else
     {
-        /* TEMP: Disable stdout while running the m68k implementation as it
-         *       currently logs every instruction unconditionally */
-        fflush (stdout);
-        dup2 (null_fd, STDOUT_FILENO);
-
         /* TODO: Accurate cycle counting has not yet been implemented, instead
          *       Snepulator assumes a 10 cycles per instruction. Assume that each
          *       test runs exactly one instruction. */
         m68k_run_cycles (m68k_context, 10);
-
-        fflush (stdout);
-        dup2 (stdout_backup_fd, STDOUT_FILENO);
 
         /* Skip memory exceptions */
         if (m68k_context->state.pc & 0x000001)
@@ -511,15 +499,6 @@ int main (int argc, char **argv)
 
     /* Mark the state as running so the m68k implementation doesn't exit early. */
     state.run = RUN_STATE_RUNNING;
-
-    /* Open /dev/null, used to redirect instruction logging */
-    null_fd = open ("/dev/null", O_WRONLY);
-    if (null_fd < 0) {
-        printf ("Unable to open /dev/null.\n");
-        return EXIT_FAILURE;
-    }
-
-    stdout_backup_fd = dup (STDOUT_FILENO);
 
     DIR *dir = opendir (TEST_DIR);
     if (dir == NULL)
