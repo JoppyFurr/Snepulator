@@ -9299,7 +9299,7 @@ static uint32_t m68k_80c0_divu_w_dn_dn (M68000_Context *context, uint16_t instru
 
     if (divisor == 0)
     {
-        printf ("[%s] Division by zero - Trap not implemented.\n", __func__);
+        m68k_exception (context, 0x14);
         return 0;
     }
 
@@ -9337,7 +9337,7 @@ static uint32_t m68k_80d0_divu_w_dn_an (M68000_Context *context, uint16_t instru
 
     if (divisor == 0)
     {
-        printf ("[%s] Division by zero - Trap not implemented.\n", __func__);
+        m68k_exception (context, 0x14);
         return 0;
     }
 
@@ -9376,7 +9376,7 @@ static uint32_t m68k_80d8_divu_w_dn_anp (M68000_Context *context, uint16_t instr
 
     if (divisor == 0)
     {
-        printf ("[%s] Division by zero - Trap not implemented.\n", __func__);
+        m68k_exception (context, 0x14);
         return 0;
     }
 
@@ -9415,7 +9415,7 @@ static uint32_t m68k_80e0_divu_w_dn_pan (M68000_Context *context, uint16_t instr
 
     if (divisor == 0)
     {
-        printf ("[%s] Division by zero - Trap not implemented.\n", __func__);
+        m68k_exception (context, 0x14);
         return 0;
     }
 
@@ -9453,7 +9453,7 @@ static uint32_t m68k_80e8_divu_w_dn_dan (M68000_Context *context, uint16_t instr
 
     if (divisor == 0)
     {
-        printf ("[%s] Division by zero - Trap not implemented.\n", __func__);
+        m68k_exception (context, 0x14);
         return 0;
     }
 
@@ -9491,7 +9491,7 @@ static uint32_t m68k_80f0_divu_w_dn_danxi (M68000_Context *context, uint16_t ins
 
     if (divisor == 0)
     {
-        printf ("[%s] Division by zero - Trap not implemented.\n", __func__);
+        m68k_exception (context, 0x14);
         return 0;
     }
 
@@ -9528,7 +9528,7 @@ static uint32_t m68k_80f8_divu_w_dn_aw (M68000_Context *context, uint16_t instru
 
     if (divisor == 0)
     {
-        printf ("[%s] Division by zero - Trap not implemented.\n", __func__);
+        m68k_exception (context, 0x14);
         return 0;
     }
 
@@ -9565,7 +9565,7 @@ static uint32_t m68k_80f9_divu_w_dn_al (M68000_Context *context, uint16_t instru
 
     if (divisor == 0)
     {
-        printf ("[%s] Division by zero - Trap not implemented.\n", __func__);
+        m68k_exception (context, 0x14);
         return 0;
     }
 
@@ -9602,7 +9602,7 @@ static uint32_t m68k_80fa_divu_w_dn_dpc (M68000_Context *context, uint16_t instr
 
     if (divisor == 0)
     {
-        printf ("[%s] Division by zero - Trap not implemented.\n", __func__);
+        m68k_exception (context, 0x14);
         return 0;
     }
 
@@ -9639,7 +9639,7 @@ static uint32_t m68k_80fb_divu_w_dn_dpcxi (M68000_Context *context, uint16_t ins
 
     if (divisor == 0)
     {
-        printf ("[%s] Division by zero - Trap not implemented.\n", __func__);
+        m68k_exception (context, 0x14);
         return 0;
     }
 
@@ -9676,7 +9676,7 @@ static uint32_t m68k_80fc_divu_w_dn_imm (M68000_Context *context, uint16_t instr
 
     if (divisor == 0)
     {
-        printf ("[%s] Division by zero - Trap not implemented.\n", __func__);
+        m68k_exception (context, 0x14);
         return 0;
     }
 
@@ -9732,7 +9732,7 @@ static uint32_t m68k_81c0_divs_w_dn_dn (M68000_Context *context, uint16_t instru
 
     if (divisor == 0)
     {
-        printf ("[%s] Division by zero - Trap not implemented.\n", __func__);
+        m68k_exception (context, 0x14);
         return 0;
     }
 
@@ -9770,7 +9770,7 @@ static uint32_t m68k_81d0_divs_w_dn_an (M68000_Context *context, uint16_t instru
 
     if (divisor == 0)
     {
-        printf ("[%s] Division by zero - Trap not implemented.\n", __func__);
+        m68k_exception (context, 0x14);
         return 0;
     }
 
@@ -9809,7 +9809,7 @@ static uint32_t m68k_81d8_divs_w_dn_anp (M68000_Context *context, uint16_t instr
 
     if (divisor == 0)
     {
-        printf ("[%s] Division by zero - Trap not implemented.\n", __func__);
+        m68k_exception (context, 0x14);
         return 0;
     }
 
@@ -9848,7 +9848,7 @@ static uint32_t m68k_81e0_divs_w_dn_pan (M68000_Context *context, uint16_t instr
 
     if (divisor == 0)
     {
-        printf ("[%s] Division by zero - Trap not implemented.\n", __func__);
+        m68k_exception (context, 0x14);
         return 0;
     }
 
@@ -9886,7 +9886,7 @@ static uint32_t m68k_81e8_divs_w_dn_dan (M68000_Context *context, uint16_t instr
 
     if (divisor == 0)
     {
-        printf ("[%s] Division by zero - Trap not implemented.\n", __func__);
+        m68k_exception (context, 0x14);
         return 0;
     }
 
@@ -9924,7 +9924,7 @@ static uint32_t m68k_81f0_divs_w_dn_danxi (M68000_Context *context, uint16_t ins
 
     if (divisor == 0)
     {
-        printf ("[%s] Division by zero - Trap not implemented.\n", __func__);
+        m68k_exception (context, 0x14);
         return 0;
     }
 
@@ -9961,7 +9961,7 @@ static uint32_t m68k_81f8_divs_w_dn_aw (M68000_Context *context, uint16_t instru
 
     if (divisor == 0)
     {
-        printf ("[%s] Division by zero - Trap not implemented.\n", __func__);
+        m68k_exception (context, 0x14);
         return 0;
     }
 
@@ -9998,7 +9998,7 @@ static uint32_t m68k_81f9_divs_w_dn_al (M68000_Context *context, uint16_t instru
 
     if (divisor == 0)
     {
-        printf ("[%s] Division by zero - Trap not implemented.\n", __func__);
+        m68k_exception (context, 0x14);
         return 0;
     }
 
@@ -10035,7 +10035,7 @@ static uint32_t m68k_81fa_divs_w_dn_dpc (M68000_Context *context, uint16_t instr
 
     if (divisor == 0)
     {
-        printf ("[%s] Division by zero - Trap not implemented.\n", __func__);
+        m68k_exception (context, 0x14);
         return 0;
     }
 
@@ -10072,7 +10072,7 @@ static uint32_t m68k_81fb_divs_w_dn_dpcxi (M68000_Context *context, uint16_t ins
 
     if (divisor == 0)
     {
-        printf ("[%s] Division by zero - Trap not implemented.\n", __func__);
+        m68k_exception (context, 0x14);
         return 0;
     }
 
@@ -10109,7 +10109,7 @@ static uint32_t m68k_81fc_divs_w_dn_imm (M68000_Context *context, uint16_t instr
 
     if (divisor == 0)
     {
-        printf ("[%s] Division by zero - Trap not implemented.\n", __func__);
+        m68k_exception (context, 0x14);
         return 0;
     }
 
