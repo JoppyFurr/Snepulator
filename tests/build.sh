@@ -43,6 +43,7 @@ $CC $CFLAGS work/m68k-sst.o \
             work/snepulator_compat.o \
             work/m68k.o \
             work/cJSON.o \
+            -lpthread \
             -Werror \
             -o m68k-sst
 
