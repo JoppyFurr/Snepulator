@@ -7651,6 +7651,220 @@ static uint32_t m68k_4680_not_l_dn (M68000_Context *context, uint16_t instructio
 }
 
 
+/* move sr ← Dn */
+static uint32_t m68k_46c0_move_sr_dn (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    if (context->state.sr_supervisor)
+    {
+        uint16_t value = context->state.d [reg].w;
+        m68k_store_stack_pointer (context);
+        context->state.sr = value & SR_MASK;
+        m68k_load_stack_pointer (context);
+    }
+    else
+    {
+        context->state.pc -= 2;
+        m68k_exception (context, 0x20);
+    }
+
+    return 0;
+}
+
+
+/* move sr ← (An) */
+static uint32_t m68k_46d0_move_sr_an (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    if (context->state.sr_supervisor)
+    {
+        uint16_t value = read_word (context, context->state.a [reg]);
+        m68k_store_stack_pointer (context);
+        context->state.sr = value & SR_MASK;
+        m68k_load_stack_pointer (context);
+    }
+    else
+    {
+        context->state.pc -= 2;
+        m68k_exception (context, 0x20);
+    }
+
+    return 0;
+}
+
+
+/* move sr ← (An)+ */
+static uint32_t m68k_46d8_move_sr_anp (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    if (context->state.sr_supervisor)
+    {
+        uint16_t value = read_word (context, context->state.a [reg]);
+        context->state.a [reg] += 2;
+        m68k_store_stack_pointer (context);
+        context->state.sr = value & SR_MASK;
+        m68k_load_stack_pointer (context);
+    }
+    else
+    {
+        context->state.pc -= 2;
+        m68k_exception (context, 0x20);
+    }
+
+    return 0;
+}
+
+
+/* move sr ← -(An) */
+static uint32_t m68k_46e0_move_sr_pan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    if (context->state.sr_supervisor)
+    {
+        context->state.a [reg] -= 2;
+        uint16_t value = read_word (context, context->state.a [reg]);
+        m68k_store_stack_pointer (context);
+        context->state.sr = value & SR_MASK;
+        m68k_load_stack_pointer (context);
+    }
+    else
+    {
+        context->state.pc -= 2;
+        m68k_exception (context, 0x20);
+    }
+
+    return 0;
+}
+
+
+/* move sr ← d(An) */
+static uint32_t m68k_46e8_move_sr_dan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    if (context->state.sr_supervisor)
+    {
+        uint16_t value = read_word_with_displacement (context, context->state.a [reg]);
+        m68k_store_stack_pointer (context);
+        context->state.sr = value & SR_MASK;
+        m68k_load_stack_pointer (context);
+    }
+    else
+    {
+        context->state.pc -= 2;
+        m68k_exception (context, 0x20);
+    }
+
+    return 0;
+}
+
+
+/* move sr ← d(An+Xi) */
+static uint32_t m68k_46f0_move_sr_danxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    if (context->state.sr_supervisor)
+    {
+        uint16_t value = read_word_with_index (context, context->state.a [reg]);
+        m68k_store_stack_pointer (context);
+        context->state.sr = value & SR_MASK;
+        m68k_load_stack_pointer (context);
+    }
+    else
+    {
+        context->state.pc -= 2;
+        m68k_exception (context, 0x20);
+    }
+
+    return 0;
+}
+
+
+/* move sr ← (xxx.w) */
+static uint32_t m68k_46f8_move_sr_aw (M68000_Context *context, uint16_t instruction)
+{
+    if (context->state.sr_supervisor)
+    {
+        uint16_t value = read_word_aw (context);
+        m68k_store_stack_pointer (context);
+        context->state.sr = value & SR_MASK;
+        m68k_load_stack_pointer (context);
+    }
+    else
+    {
+        context->state.pc -= 2;
+        m68k_exception (context, 0x20);
+    }
+
+    return 0;
+}
+
+
+/* move sr ← (xxx.l) */
+static uint32_t m68k_46f9_move_sr_al (M68000_Context *context, uint16_t instruction)
+{
+    if (context->state.sr_supervisor)
+    {
+        uint16_t value = read_word_al (context);
+        m68k_store_stack_pointer (context);
+        context->state.sr = value & SR_MASK;
+        m68k_load_stack_pointer (context);
+    }
+    else
+    {
+        context->state.pc -= 2;
+        m68k_exception (context, 0x20);
+    }
+
+    return 0;
+}
+
+
+/* move sr ← d(PC) */
+static uint32_t m68k_46fa_move_sr_dpc (M68000_Context *context, uint16_t instruction)
+{
+    if (context->state.sr_supervisor)
+    {
+        uint16_t value = read_word_with_displacement (context, context->state.pc);
+        m68k_store_stack_pointer (context);
+        context->state.sr = value & SR_MASK;
+        m68k_load_stack_pointer (context);
+    }
+    else
+    {
+        context->state.pc -= 2;
+        m68k_exception (context, 0x20);
+    }
+
+    return 0;
+}
+
+
+/* move sr ← d(PC+Xi) */
+static uint32_t m68k_46fb_move_sr_dpcxi (M68000_Context *context, uint16_t instruction)
+{
+    if (context->state.sr_supervisor)
+    {
+        uint16_t value = read_word_with_index (context, context->state.pc);
+        m68k_store_stack_pointer (context);
+        context->state.sr = value & SR_MASK;
+        m68k_load_stack_pointer (context);
+    }
+    else
+    {
+        context->state.pc -= 2;
+        m68k_exception (context, 0x20);
+    }
+
+    return 0;
+}
+
+
 /* move sr ← #xxxx */
 static uint32_t m68k_46fc_move_sr_imm (M68000_Context *context, uint16_t instruction)
 {
@@ -14793,6 +15007,12 @@ static void m68k_init_instructions (void)
         m68k_instruction [0x40e8 | reg_a       ] = m68k_40e8_move_dan_sr;
         m68k_instruction [0x40f0 | reg_a       ] = m68k_40f0_move_danxi_sr;
         m68k_instruction [0x44c0 | reg_a       ] = m68k_44c0_move_ccr_dn;
+        m68k_instruction [0x46c0 | reg_a       ] = m68k_46c0_move_sr_dn;
+        m68k_instruction [0x46d0 | reg_a       ] = m68k_46d0_move_sr_an;
+        m68k_instruction [0x46d8 | reg_a       ] = m68k_46d8_move_sr_anp;
+        m68k_instruction [0x46e0 | reg_a       ] = m68k_46e0_move_sr_pan;
+        m68k_instruction [0x46e8 | reg_a       ] = m68k_46e8_move_sr_dan;
+        m68k_instruction [0x46f0 | reg_a       ] = m68k_46f0_move_sr_danxi;
         m68k_instruction [0x4e60 | reg_a       ] = m68k_4e60_move_an_usp;
         m68k_instruction [0x4e68 | reg_a       ] = m68k_4e68_move_usp_an;
     }
@@ -14828,6 +15048,11 @@ static void m68k_init_instructions (void)
     m68k_instruction [0x33fc] = m68k_33fc_move_w_al_imm;
     m68k_instruction [0x40f8] = m68k_40f8_move_aw_sr;
     m68k_instruction [0x40f9] = m68k_40f9_move_al_sr;
+    m68k_instruction [0x46f8] = m68k_46f8_move_sr_aw;
+    m68k_instruction [0x46f9] = m68k_46f9_move_sr_al;
+    m68k_instruction [0x46fa] = m68k_46fa_move_sr_dpc;
+    m68k_instruction [0x46fb] = m68k_46fb_move_sr_dpcxi;
+    m68k_instruction [0x46fc] = m68k_46fc_move_sr_imm;
 
     /* not */
     for (uint16_t reg = 0; reg < 8; reg++)
@@ -14836,9 +15061,6 @@ static void m68k_init_instructions (void)
         m68k_instruction [0x4640 | reg] = m68k_4640_not_w_dn;
         m68k_instruction [0x4680 | reg] = m68k_4680_not_l_dn;
     }
-
-    /* misc */
-    m68k_instruction [0x46fc] = m68k_46fc_move_sr_imm;
 
     /* tst */
     for (uint16_t reg = 0; reg < 8; reg++)
