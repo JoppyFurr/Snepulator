@@ -8914,6 +8914,25 @@ static uint32_t m68k_51c8_dbf (M68000_Context *context, uint16_t instruction)
 }
 
 
+/* dbeq Dn, #xxxx */
+static uint32_t m68k_57c8_dbeq (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint32_t address = address_with_displacement (context, context->state.pc);
+
+    if (!context->state.ccr_zero)
+    {
+        context->state.d [reg].w--;
+        if (context->state.d [reg].w != 0xffff)
+        {
+            context->state.pc = address;
+        }
+    }
+
+    return 0;
+}
+
+
 /* bra.w */
 static uint32_t m68k_6000_bra_w (M68000_Context *context, uint16_t instruction)
 {
@@ -14839,6 +14858,7 @@ static void m68k_init_instructions (void)
     for (uint16_t dn = 0; dn < 8; dn++)
     {
         m68k_instruction [0x51c8 | dn] = m68k_51c8_dbf;
+        m68k_instruction [0x57c8 | dn] = m68k_57c8_dbeq;
     }
 
     /* Bcc/BSR/BRA with 16-bit displacement */
