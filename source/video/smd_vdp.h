@@ -53,6 +53,7 @@ typedef struct SMD_VDP_State_s {
     uint8_t code;
     bool second_half_pending;
     bool fill_pending;
+    uint8_t line_interrupt_counter;
     uint8_t interrupt;          /* Contains the highest priority pending interrupt */
 
     /* TODO: A method of listing configured features that are not yet implemented */
@@ -61,7 +62,12 @@ typedef struct SMD_VDP_State_s {
 #pragma pack (1)
         struct {
             /* Mode 1 */
-            uint8_t mode_1;
+            uint8_t mode_1_display_disable:1;
+            uint8_t mode_1_counter_latch_en:1;
+            uint8_t mode_1_cram_mask:1;
+            uint8_t mode_1_unused_3:1;
+            uint8_t mode_1_horizontal_int_en:1;
+            uint8_t mode_1_unused_7_5:3;
 
             /* Mode 2 */
             uint8_t mode_2_unused_2_0:3;

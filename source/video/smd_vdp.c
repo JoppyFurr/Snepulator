@@ -565,6 +565,25 @@ void smd_vdp_run_one_scanline (SMD_VDP_Context *context)
         snepulator_frame_done (&context->frame_buffer);
     }
 
+    /* Line Interrupt */
+    if (context->state.line == 0 || context->state.line > 224)
+    {
+        context->state.line_interrupt_counter = context->state.regs [10];
+    }
+    else
+    {
+        context->state.line_interrupt_counter -= 1;
+    }
+
+    if (context->state.line_interrupt_counter == 0xff && context->state.mode_1_horizontal_int_en)
+    {
+        context->state.interrupt = 4;
+        context->state.line_interrupt_counter = context->state.regs [10];
+    }
+
+    /* TODO: Confirm, but it may be that a line-interrupt happening at the
+     *       same time as a vblank interrupt can mask the vblank interrupt */
+
     /* VBlank Interrupt */
     if (context->state.line == 224 && context->state.mode_2_vertical_int_en)
     {
