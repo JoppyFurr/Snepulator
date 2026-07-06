@@ -8914,6 +8914,148 @@ static uint32_t m68k_51c8_dbf (M68000_Context *context, uint16_t instruction)
 }
 
 
+/* sne.b Dn */
+static uint32_t m68k_56c0_sne_b_dn (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    if (!context->state.ccr_zero)
+    {
+        context->state.d [reg].b = 0xff;
+    }
+    else
+    {
+        context->state.d [reg].b = 0x00;
+    }
+
+    return 0;
+}
+
+
+/* sne.b (An) */
+static uint32_t m68k_56d0_sne_b_an (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    if (!context->state.ccr_zero)
+    {
+        write_byte (context, context->state.a [reg], 0xff);
+    }
+    else
+    {
+        write_byte (context, context->state.a [reg], 0x00);
+    }
+
+    return 0;
+}
+
+
+/* sne.b (An)+ */
+static uint32_t m68k_56d8_sne_b_anp (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    if (!context->state.ccr_zero)
+    {
+        write_byte (context, context->state.a [reg], 0xff);
+    }
+    else
+    {
+        write_byte (context, context->state.a [reg], 0x00);
+    }
+    context->state.a [reg] += (reg == 7) ? 2 : 1;
+
+    return 0;
+}
+
+
+/* sne.b -(An) */
+static uint32_t m68k_56e0_sne_b_pan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    context->state.a [reg] -= (reg == 7) ? 2 : 1;
+    if (!context->state.ccr_zero)
+    {
+        write_byte (context, context->state.a [reg], 0xff);
+    }
+    else
+    {
+        write_byte (context, context->state.a [reg], 0x00);
+    }
+
+    return 0;
+}
+
+
+/* sne.b d(An) */
+static uint32_t m68k_56e8_sne_b_dan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    if (!context->state.ccr_zero)
+    {
+        write_byte_with_displacement (context, context->state.a [reg], 0xff);
+    }
+    else
+    {
+        write_byte_with_displacement (context, context->state.a [reg], 0x00);
+    }
+
+    return 0;
+}
+
+
+/* sne.b d(An+Xi) */
+static uint32_t m68k_56f0_sne_b_danxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    if (!context->state.ccr_zero)
+    {
+        write_byte_with_index (context, context->state.a [reg], 0xff);
+    }
+    else
+    {
+        write_byte_with_index (context, context->state.a [reg], 0x00);
+    }
+
+    return 0;
+}
+
+
+/* sne.b (xxx.w) */
+static uint32_t m68k_56f8_sne_b_aw (M68000_Context *context, uint16_t instruction)
+{
+    if (!context->state.ccr_zero)
+    {
+        write_byte_aw (context, 0xff);
+    }
+    else
+    {
+        write_byte_aw (context, 0x00);
+    }
+
+    return 0;
+}
+
+
+/* sne.b (xxx.l) */
+static uint32_t m68k_56f9_sne_b_al (M68000_Context *context, uint16_t instruction)
+{
+    if (!context->state.ccr_zero)
+    {
+        write_byte_al (context, 0xff);
+    }
+    else
+    {
+        write_byte_al (context, 0x00);
+    }
+
+    return 0;
+}
+
+
 /* dbeq Dn, #xxxx */
 static uint32_t m68k_57c8_dbeq (M68000_Context *context, uint16_t instruction)
 {
@@ -14853,6 +14995,19 @@ static void m68k_init_instructions (void)
         m68k_instruction [0x51b8 | (data << 9)] = m68k_51b8_subq_l_aw;
         m68k_instruction [0x51b9 | (data << 9)] = m68k_51b9_subq_l_al;
     }
+
+    /* Scc */
+    for (uint16_t dn = 0; dn < 8; dn++)
+    {
+        m68k_instruction [0x56c0 | dn] = m68k_56c0_sne_b_dn;
+        m68k_instruction [0x56d0 | dn] = m68k_56d0_sne_b_an;
+        m68k_instruction [0x56d8 | dn] = m68k_56d8_sne_b_anp;
+        m68k_instruction [0x56e0 | dn] = m68k_56e0_sne_b_pan;
+        m68k_instruction [0x56e8 | dn] = m68k_56e8_sne_b_dan;
+        m68k_instruction [0x56f0 | dn] = m68k_56f0_sne_b_danxi;
+    }
+    m68k_instruction [0x56f8] = m68k_56f8_sne_b_aw;
+    m68k_instruction [0x56f9] = m68k_56f9_sne_b_al;
 
     /* dbcc */
     for (uint16_t dn = 0; dn < 8; dn++)
