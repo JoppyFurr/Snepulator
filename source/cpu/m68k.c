@@ -8173,11 +8173,73 @@ static uint32_t m68k_4a79_tst_w_al (M68000_Context *context, uint16_t instructio
 }
 
 
+/* tst.l Dn */
+static uint32_t m68k_4a80_tst_l_dn (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint32_t value = context->state.d [reg].l;
+
+    m68k_tst_l_flags (context, value);
+
+    return 0;
+}
+
+
 /* tst.l (An) */
 static uint32_t m68k_4a90_tst_l_an (M68000_Context *context, uint16_t instruction)
 {
     uint16_t reg = instruction & 0x07;
     uint32_t value = read_long (context, context->state.a [reg]);
+
+    m68k_tst_l_flags (context, value);
+
+    return 0;
+}
+
+
+/* tst.l (An)+ */
+static uint32_t m68k_4a98_tst_l_anp (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint32_t value = read_long (context, context->state.a [reg]);
+    context->state.a [reg] += 4;
+
+    m68k_tst_l_flags (context, value);
+
+    return 0;
+}
+
+
+/* tst.l -(An) */
+static uint32_t m68k_4aa0_tst_l_pan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    context->state.a [reg] -= 4;
+    uint32_t value = read_long (context, context->state.a [reg]);
+
+    m68k_tst_l_flags (context, value);
+
+    return 0;
+}
+
+
+/* tst.l d(An) */
+static uint32_t m68k_4aa8_tst_l_dan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint32_t value = read_long_with_displacement (context, context->state.a [reg]);
+
+    m68k_tst_l_flags (context, value);
+
+    return 0;
+}
+
+
+/* tst.l d(An+Xi) */
+static uint32_t m68k_4ab0_tst_l_danxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint32_t value = read_long_with_index (context, context->state.a [reg]);
 
     m68k_tst_l_flags (context, value);
 
@@ -15072,7 +15134,12 @@ static void m68k_init_instructions (void)
         m68k_instruction [0x4a40 | reg] = m68k_4a40_tst_w_dn;
         m68k_instruction [0x4a50 | reg] = m68k_4a50_tst_w_an;
         m68k_instruction [0x4a68 | reg] = m68k_4a68_tst_w_dan;
+        m68k_instruction [0x4a80 | reg] = m68k_4a80_tst_l_dn;
         m68k_instruction [0x4a90 | reg] = m68k_4a90_tst_l_an;
+        m68k_instruction [0x4a98 | reg] = m68k_4a98_tst_l_anp;
+        m68k_instruction [0x4aa0 | reg] = m68k_4aa0_tst_l_pan;
+        m68k_instruction [0x4aa8 | reg] = m68k_4aa8_tst_l_dan;
+        m68k_instruction [0x4ab0 | reg] = m68k_4ab0_tst_l_danxi;
     }
     m68k_instruction [0x4a38] = m68k_4a38_tst_b_aw;
     m68k_instruction [0x4a78] = m68k_4a78_tst_w_aw;
