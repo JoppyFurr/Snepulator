@@ -518,6 +518,11 @@ static void smd_z80_memory_write (void *context_ptr, uint16_t addr, uint8_t data
             context->state.z80_bank |= 0x800000;
         }
     }
+    /* PSG */
+    else if (addr == 0x7f11 || addr == 0x7f13)
+    {
+        sn76489_data_write (context->psg_context, data);
+    }
     else
     {
         snepulator_error (__func__, "Unmapped Z80 address %04x.", addr);
