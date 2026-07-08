@@ -184,8 +184,16 @@ static uint8_t smd_memory_read_8 (void *context_ptr, uint32_t addr)
     /* VDP: 0xc00000 -- 0xdfffff*/
     else if (addr <= 0xdfffff)
     {
-        snepulator_error (__func__, "VDP address %06x not implemented.", addr);
-        return 0xff;
+        switch (addr)
+        {
+            case 0xc00005:
+            case 0xc00007:
+                return smd_vdp_status_read (context->vdp_context);
+
+            default:
+                snepulator_error (__func__, "VDP address %06x not implemented.", addr);
+                return 0xff;
+        }
     }
 
     /* RAM: 0xff0000 -- 0xffffff */
