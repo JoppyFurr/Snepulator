@@ -29,6 +29,7 @@
  */
 uint16_t smd_vdp_status_read (SMD_VDP_Context *context)
 {
+    uint16_t status_register = 0x3400;
     context->state.second_half_pending = false;
 
     /* TODO: VBlank / HBlank bits */
@@ -37,10 +38,13 @@ uint16_t smd_vdp_status_read (SMD_VDP_Context *context)
     /* TODO: Bit  [ 6 ] - Sprite Overflow */
     /* TODO: Bit  [ 5 ] - Sprite Collision */
     /* TODO: Bit  [ 4 ] - Odd vs Even frame (interlace mode) */
-    /* TODO: Bits [3:2] - Blanking */
+    /* TODO: Bits [ 2 ] - Horizontal Blanking */
     /* TODO: Bit  [ 1 ] - DMA in progress */
     /* TODO: Bit  [ 0 ] - PAL */
-    return 0x3400;
+
+    status_register |= (context->state.line >= context->lines_active) ? BIT_3 : 0;
+
+    return status_register;
 }
 
 
