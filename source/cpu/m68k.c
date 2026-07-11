@@ -7239,7 +7239,7 @@ static inline void m68k_clr_flags (M68000_Context *context)
 
 
 /* clr.b Dn */
-static uint32_t m68k_4200_clr_d_an (M68000_Context *context, uint16_t instruction)
+static uint32_t m68k_4200_clr_b_dn (M68000_Context *context, uint16_t instruction)
 {
     uint16_t reg = instruction & 0x07;
 
@@ -7332,6 +7332,56 @@ static uint32_t m68k_4239_clr_b_al (M68000_Context *context, uint16_t instructio
 }
 
 
+/* clr.w Dn */
+static uint32_t m68k_4240_clr_w_dn (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    context->state.d [reg].w = 0x0000;
+    m68k_clr_flags (context);
+
+    return 0;
+}
+
+
+/* clr.w (An) */
+static uint32_t m68k_4250_clr_w_an (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    write_word (context, context->state.a [reg], 0x0000);
+    m68k_clr_flags (context);
+
+    return 0;
+}
+
+
+/* clr.w (An+) */
+static uint32_t m68k_4258_clr_w_anp (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    write_word (context, context->state.a [reg], 0x0000);
+    context->state.a [reg] += 2;
+    m68k_clr_flags (context);
+
+    return 0;
+}
+
+
+/* clr.w (-An) */
+static uint32_t m68k_4260_clr_w_pan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    context->state.a [reg] -= 2;
+    write_word (context, context->state.a [reg], 0x0000);
+    m68k_clr_flags (context);
+
+    return 0;
+}
+
+
 /* clr.w d(An) */
 static uint32_t m68k_4268_clr_w_dan (M68000_Context *context, uint16_t instruction)
 {
@@ -7344,10 +7394,32 @@ static uint32_t m68k_4268_clr_w_dan (M68000_Context *context, uint16_t instructi
 }
 
 
+/* clr.w d(An+Xi) */
+static uint32_t m68k_4270_clr_w_danxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    write_word_with_index (context, context->state.a [reg], 0x00);
+    m68k_clr_flags (context);
+
+    return 0;
+}
+
+
 /* clr.w (xxx.w) */
 static uint32_t m68k_4278_clr_w_aw (M68000_Context *context, uint16_t instruction)
 {
     write_word_aw (context, 0x0000);
+    m68k_clr_flags (context);
+
+    return 0;
+}
+
+
+/* clr.w (xxx.l) */
+static uint32_t m68k_4279_clr_w_al (M68000_Context *context, uint16_t instruction)
+{
+    write_word_al (context, 0x0000);
     m68k_clr_flags (context);
 
     return 0;
@@ -15775,13 +15847,18 @@ static void m68k_init_instructions (void)
     /* clr */
     for (uint16_t reg = 0; reg < 8; reg++)
     {
-        m68k_instruction [0x4200 | reg] = m68k_4200_clr_d_an;
+        m68k_instruction [0x4200 | reg] = m68k_4200_clr_b_dn;
         m68k_instruction [0x4210 | reg] = m68k_4210_clr_b_an;
         m68k_instruction [0x4218 | reg] = m68k_4218_clr_b_anp;
         m68k_instruction [0x4220 | reg] = m68k_4220_clr_b_pan;
         m68k_instruction [0x4228 | reg] = m68k_4228_clr_b_dan;
         m68k_instruction [0x4230 | reg] = m68k_4230_clr_b_danxi;
+        m68k_instruction [0x4240 | reg] = m68k_4240_clr_w_dn;
+        m68k_instruction [0x4250 | reg] = m68k_4250_clr_w_an;
+        m68k_instruction [0x4258 | reg] = m68k_4258_clr_w_anp;
+        m68k_instruction [0x4260 | reg] = m68k_4260_clr_w_pan;
         m68k_instruction [0x4268 | reg] = m68k_4268_clr_w_dan;
+        m68k_instruction [0x4270 | reg] = m68k_4270_clr_w_danxi;
         m68k_instruction [0x4280 | reg] = m68k_4280_clr_l_dn;
         m68k_instruction [0x4290 | reg] = m68k_4290_clr_l_an;
         m68k_instruction [0x4298 | reg] = m68k_4298_clr_l_anp;
@@ -15792,6 +15869,7 @@ static void m68k_init_instructions (void)
     m68k_instruction [0x4238] = m68k_4238_clr_b_aw;
     m68k_instruction [0x4239] = m68k_4239_clr_b_al;
     m68k_instruction [0x4278] = m68k_4278_clr_w_aw;
+    m68k_instruction [0x4279] = m68k_4279_clr_w_al;
     m68k_instruction [0x42b8] = m68k_42b8_clr_l_aw;
     m68k_instruction [0x42b9] = m68k_42b9_clr_l_al;
 
