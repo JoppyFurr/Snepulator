@@ -9617,6 +9617,17 @@ static uint32_t m68k_56f9_sne_b_al (M68000_Context *context, uint16_t instructio
 }
 
 
+/* seq.b Dn */
+static uint32_t m68k_57c0_seq_b_dn (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint8_t value = (context->state.ccr_zero) ? 0xff : 0x00;
+    context->state.d [reg].b = value;
+
+    return 0;
+}
+
+
 /* dbeq Dn, #xxxx */
 static uint32_t m68k_57c8_dbeq (M68000_Context *context, uint16_t instruction)
 {
@@ -9631,6 +9642,83 @@ static uint32_t m68k_57c8_dbeq (M68000_Context *context, uint16_t instruction)
             context->state.pc = address;
         }
     }
+
+    return 0;
+}
+
+
+/* seq.b (An) */
+static uint32_t m68k_57d0_seq_b_an (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint8_t value = (context->state.ccr_zero) ? 0xff : 0x00;
+    write_byte (context, context->state.a [reg], value);
+
+    return 0;
+}
+
+
+/* seq.b (An+) */
+static uint32_t m68k_57d8_seq_b_anp (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint8_t value = (context->state.ccr_zero) ? 0xff : 0x00;
+    write_byte (context, context->state.a [reg], value);
+    context->state.a [reg] += (reg == 7) ? 2 : 1;
+
+    return 0;
+}
+
+
+/* seq.b (-An) */
+static uint32_t m68k_57e0_seq_b_pan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint8_t value = (context->state.ccr_zero) ? 0xff : 0x00;
+    context->state.a [reg] -= (reg == 7) ? 2 : 1;
+    write_byte (context, context->state.a [reg], value);
+
+    return 0;
+}
+
+
+/* seq.b d(An) */
+static uint32_t m68k_57e8_seq_b_dan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint8_t value = (context->state.ccr_zero) ? 0xff : 0x00;
+    write_byte_with_displacement (context, context->state.a [reg], value);
+
+    return 0;
+}
+
+
+/* seq.b d(An+Xi) */
+static uint32_t m68k_57f0_seq_b_danxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint8_t value = (context->state.ccr_zero) ? 0xff : 0x00;
+    write_byte_with_index (context, context->state.a [reg], value);
+
+    return 0;
+}
+
+
+/* seq.b (xxx.w) */
+static uint32_t m68k_57f8_seq_b_aw (M68000_Context *context, uint16_t instruction)
+{
+    uint8_t value = (context->state.ccr_zero) ? 0xff : 0x00;
+    write_byte_aw (context, value);
+
+    return 0;
+}
+
+
+/* seq.b (xxx.l) */
+static uint32_t m68k_57f9_seq_b_al (M68000_Context *context, uint16_t instruction)
+{
+    uint8_t value = (context->state.ccr_zero) ? 0xff : 0x00;
+    write_byte_al (context, value);
 
     return 0;
 }
@@ -16069,11 +16157,19 @@ static void m68k_init_instructions (void)
         m68k_instruction [0x56e0 | dn] = m68k_56e0_sne_b_pan;
         m68k_instruction [0x56e8 | dn] = m68k_56e8_sne_b_dan;
         m68k_instruction [0x56f0 | dn] = m68k_56f0_sne_b_danxi;
+        m68k_instruction [0x57c0 | dn] = m68k_57c0_seq_b_dn;
+        m68k_instruction [0x57d0 | dn] = m68k_57d0_seq_b_an;
+        m68k_instruction [0x57d8 | dn] = m68k_57d8_seq_b_anp;
+        m68k_instruction [0x57e0 | dn] = m68k_57e0_seq_b_pan;
+        m68k_instruction [0x57e8 | dn] = m68k_57e8_seq_b_dan;
+        m68k_instruction [0x57f0 | dn] = m68k_57f0_seq_b_danxi;
     }
     m68k_instruction [0x50f8] = m68k_50f8_st_b_aw;
     m68k_instruction [0x50f9] = m68k_50f9_st_b_al;
     m68k_instruction [0x56f8] = m68k_56f8_sne_b_aw;
     m68k_instruction [0x56f9] = m68k_56f9_sne_b_al;
+    m68k_instruction [0x57f8] = m68k_57f8_seq_b_aw;
+    m68k_instruction [0x57f9] = m68k_57f9_seq_b_al;
 
     /* dbcc */
     for (uint16_t dn = 0; dn < 8; dn++)
