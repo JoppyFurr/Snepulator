@@ -14434,7 +14434,6 @@ static uint32_t m68k_e038_ror_b_dn_dn (M68000_Context *context, uint16_t instruc
     uint16_t count_reg = (instruction >> 9) & 0x07;
     uint16_t reg = instruction & 0x07;
     uint8_t value = context->state.d [reg].b;
-
     uint16_t count = context->state.d [count_reg].b & 0x3f;
 
     context->state.ccr_carry = 0;
@@ -14535,7 +14534,6 @@ static uint32_t m68k_e068_lsr_w_dn_dn (M68000_Context *context, uint16_t instruc
     uint16_t count_reg = (instruction >> 9) & 0x07;
     uint16_t reg = instruction & 0x07;
     uint16_t value = context->state.d [reg].w;
-
     uint8_t count = context->state.d [count_reg].b & 0x3f;
 
     context->state.ccr_carry = 0;
@@ -14562,7 +14560,6 @@ static uint32_t m68k_e078_ror_w_dn_dn (M68000_Context *context, uint16_t instruc
     uint16_t count_reg = (instruction >> 9) & 0x07;
     uint16_t reg = instruction & 0x07;
     uint16_t value = context->state.d [reg].w;
-
     uint8_t count = context->state.d [count_reg].b & 0x3f;
 
     context->state.ccr_carry = 0;
@@ -14589,13 +14586,35 @@ static uint32_t m68k_e080_asr_l_dn_imm (M68000_Context *context, uint16_t instru
     uint16_t reg = instruction & 0x07;
     uint32_t value = context->state.d [reg].l;
 
-    context->state.ccr_carry = 0;
-
     for (uint32_t i = 0; i < count; i++)
     {
         context->state.ccr_carry = value & 0x00000001;
         context->state.ccr_extend = value & 0x00000001;
         value = (value >> 1) | (value & 0x80000000);
+    }
+
+    context->state.ccr_negative = ((int32_t) value < 0);
+    context->state.ccr_zero = (value == 0);
+    context->state.ccr_overflow = 0;
+
+    context->state.d [reg].l = value;
+
+    return 0;
+}
+
+
+/* lsr.l Dn ← Dn >> #xx */
+static uint32_t m68k_e088_lsr_l_dn_imm (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t count = (instruction & 0x0e00) ? ((instruction >> 9) & 0x07) : 8;
+    uint16_t reg = instruction & 0x07;
+    uint32_t value = context->state.d [reg].l;
+
+    for (uint32_t i = 0; i < count; i++)
+    {
+        context->state.ccr_carry = value & 0x00000001;
+        context->state.ccr_extend = value & 0x00000001;
+        value = value >> 1;
     }
 
     context->state.ccr_negative = ((int32_t) value < 0);
@@ -14631,13 +14650,38 @@ static uint32_t m68k_e098_ror_l_dn_imm (M68000_Context *context, uint16_t instru
 }
 
 
+/* lsr.l Dn ← Dn >> Dn */
+static uint32_t m68k_e0a8_lsr_l_dn_dn (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t count_reg = (instruction >> 9) & 0x07;
+    uint16_t reg = instruction & 0x07;
+    uint32_t value = context->state.d [reg].l;
+    uint8_t count = context->state.d [count_reg].b & 0x3f;
+
+    context->state.ccr_carry = 0;
+    for (uint32_t i = 0; i < count; i++)
+    {
+        context->state.ccr_carry = value & 0x00000001;
+        context->state.ccr_extend = value & 0x00000001;
+        value = value >> 1;
+    }
+
+    context->state.ccr_negative = ((int32_t) value < 0);
+    context->state.ccr_zero = (value == 0);
+    context->state.ccr_overflow = 0;
+
+    context->state.d [reg].l = value;
+
+    return 0;
+}
+
+
 /* ror.l Dn ← Dn >> Dn */
 static uint32_t m68k_e0b8_ror_l_dn_dn (M68000_Context *context, uint16_t instruction)
 {
     uint16_t count_reg = (instruction >> 9) & 0x07;
     uint16_t reg = instruction & 0x07;
     uint32_t value = context->state.d [reg].l;
-
     uint8_t count = context->state.d [count_reg].b & 0x3f;
 
     context->state.ccr_carry = 0;
@@ -14862,7 +14906,6 @@ static uint32_t m68k_e160_asl_w_dn_dn (M68000_Context *context, uint16_t instruc
     uint16_t count_reg = (instruction >> 9) & 0x07;
     uint16_t reg = instruction & 0x07;
     uint16_t value = context->state.d [reg].w;
-
     uint8_t count = context->state.d [count_reg].b & 0x3f;
 
     uint16_t initial_value = value;
@@ -14894,7 +14937,6 @@ static uint32_t m68k_e168_lsl_w_dn_dn (M68000_Context *context, uint16_t instruc
     uint16_t count_reg = (instruction >> 9) & 0x07;
     uint16_t reg = instruction & 0x07;
     uint16_t value = context->state.d [reg].w;
-
     uint8_t count = context->state.d [count_reg].b & 0x3f;
 
     context->state.ccr_carry = 0;
@@ -14922,7 +14964,6 @@ static uint32_t m68k_e178_rol_w_dn_dn (M68000_Context *context, uint16_t instruc
     uint16_t count_reg = (instruction >> 9) & 0x07;
     uint16_t reg = instruction & 0x07;
     uint16_t value = context->state.d [reg].w;
-
     uint16_t count = context->state.d [count_reg].b & 0x3f;
 
     context->state.ccr_carry = 0;
@@ -14979,8 +15020,6 @@ static uint32_t m68k_e188_lsl_l_dn_imm (M68000_Context *context, uint16_t instru
     uint16_t reg = instruction & 0x07;
     uint32_t value = context->state.d [reg].l;
 
-    context->state.ccr_carry = 0;
-
     for (uint32_t i = 0; i < count; i++)
     {
         context->state.ccr_carry = value >> 31;
@@ -15021,13 +15060,38 @@ static uint32_t m68k_e198_rol_l_dn_imm (M68000_Context *context, uint16_t instru
 }
 
 
+/* lsl.l Dn ← Dn << Dn */
+static uint32_t m68k_e1a8_lsl_l_dn_dn (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t count_reg = (instruction >> 9) & 0x07;
+    uint16_t reg = instruction & 0x07;
+    uint32_t value = context->state.d [reg].l;
+    uint16_t count = context->state.d [count_reg].b & 0x3f;
+
+    context->state.ccr_carry = 0;
+    for (uint32_t i = 0; i < count; i++)
+    {
+        context->state.ccr_carry = value >> 31;
+        context->state.ccr_extend = value >> 31;
+        value = value << 1;
+    }
+
+    context->state.ccr_negative = ((int32_t) value < 0);
+    context->state.ccr_zero = (value == 0);
+    context->state.ccr_overflow = 0;
+
+    context->state.d [reg].l = value;
+
+    return 0;
+}
+
+
 /* rol.l Dn ← Dn << Dn */
 static uint32_t m68k_e1b8_rol_l_dn_dn (M68000_Context *context, uint16_t instruction)
 {
     uint16_t count_reg = (instruction >> 9) & 0x07;
     uint16_t reg = instruction & 0x07;
     uint32_t value = context->state.d [reg].l;
-
     uint16_t count = context->state.d [count_reg].b & 0x3f;
 
     context->state.ccr_carry = 0;
@@ -16542,7 +16606,9 @@ static void m68k_init_instructions (void)
             m68k_instruction [0xe068 | (count << 9) | reg] = m68k_e068_lsr_w_dn_dn;
             m68k_instruction [0xe078 | (count << 9) | reg] = m68k_e078_ror_w_dn_dn;
             m68k_instruction [0xe080 | (count << 9) | reg] = m68k_e080_asr_l_dn_imm;
+            m68k_instruction [0xe088 | (count << 9) | reg] = m68k_e088_lsr_l_dn_imm;
             m68k_instruction [0xe098 | (count << 9) | reg] = m68k_e098_ror_l_dn_imm;
+            m68k_instruction [0xe0a8 | (count << 9) | reg] = m68k_e0a8_lsr_l_dn_dn;
             m68k_instruction [0xe0b8 | (count << 9) | reg] = m68k_e0b8_ror_l_dn_dn;
             m68k_instruction [0xe108 | (count << 9) | reg] = m68k_e108_lsl_b_dn_imm;
             m68k_instruction [0xe118 | (count << 9) | reg] = m68k_e118_rol_b_dn_imm;
@@ -16557,6 +16623,7 @@ static void m68k_init_instructions (void)
             m68k_instruction [0xe180 | (count << 9) | reg] = m68k_e180_asl_l_dn_imm;
             m68k_instruction [0xe188 | (count << 9) | reg] = m68k_e188_lsl_l_dn_imm;
             m68k_instruction [0xe198 | (count << 9) | reg] = m68k_e198_rol_l_dn_imm;
+            m68k_instruction [0xe1a8 | (count << 9) | reg] = m68k_e1a8_lsl_l_dn_dn;
             m68k_instruction [0xe1b8 | (count << 9) | reg] = m68k_e1b8_rol_l_dn_dn;
         }
         m68k_instruction [0xe0e8 | reg] = m68k_e0e8_asr_w_dan;
