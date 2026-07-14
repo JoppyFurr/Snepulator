@@ -14269,13 +14269,39 @@ static uint32_t m68k_d0d0_adda_w_an_an (M68000_Context *context, uint16_t instru
 }
 
 
-/* adda.w An ← An + #xxxx */
-static uint32_t m68k_d0fc_adda_w_an_imm (M68000_Context *context, uint16_t instruction)
+/* adda.w An ← An + (An+) */
+static uint32_t m68k_d0d8_adda_w_an_anp (M68000_Context *context, uint16_t instruction)
 {
+    uint16_t source_reg = instruction & 0x07;
     uint16_t dest_reg = (instruction >> 9) & 0x07;
-    uint16_t imm = read_extension (context);
 
-    context->state.a [dest_reg] += (int16_t) imm;
+    context->state.a [dest_reg] += (int16_t) read_word (context, context->state.a [source_reg]);
+    context->state.a [source_reg] += 2;
+
+    return 0;
+}
+
+
+/* adda.w An ← An + (-An) */
+static uint32_t m68k_d0e0_adda_w_an_pan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    context->state.a [source_reg] -= 2;
+    context->state.a [dest_reg] += (int16_t) read_word (context, context->state.a [source_reg]);
+
+    return 0;
+}
+
+
+/* adda.w An ← An + d(An) */
+static uint32_t m68k_d0e8_adda_w_an_dan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    context->state.a [dest_reg] += (int16_t) read_word_with_displacement (context, context->state.a [source_reg]);
 
     return 0;
 }
@@ -14288,6 +14314,62 @@ static uint32_t m68k_d0f0_adda_w_an_danxi (M68000_Context *context, uint16_t ins
     uint16_t dest_reg = (instruction >> 9) & 0x07;
 
     context->state.a [dest_reg] += (int16_t) read_word_with_index (context, context->state.a [source_reg]);
+
+    return 0;
+}
+
+
+/* adda.w An ← An + (xxx.w) */
+static uint32_t m68k_d0f8_adda_w_an_aw (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    context->state.a [dest_reg] += (int16_t) read_word_aw (context);
+
+    return 0;
+}
+
+
+/* adda.w An ← An + (xxx.l) */
+static uint32_t m68k_d0f9_adda_w_an_al (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    context->state.a [dest_reg] += (int16_t) read_word_al (context);
+
+    return 0;
+}
+
+
+/* adda.w An ← An + d(PC) */
+static uint32_t m68k_d0fa_adda_w_an_dpc (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    context->state.a [dest_reg] += (int16_t) read_word_with_displacement (context, context->state.pc);
+
+    return 0;
+}
+
+
+/* adda.w An ← An + d(PC+Xi) */
+static uint32_t m68k_d0fb_adda_w_an_dpcxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    context->state.a [dest_reg] += (int16_t) read_word_with_index (context, context->state.pc);
+
+    return 0;
+}
+
+
+/* adda.w An ← An + #xxxx */
+static uint32_t m68k_d0fc_adda_w_an_imm (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+    uint16_t imm = read_extension (context);
+
+    context->state.a [dest_reg] += (int16_t) imm;
 
     return 0;
 }
@@ -14493,6 +14575,136 @@ static uint32_t m68k_d1c0_adda_l_an_dn (M68000_Context *context, uint16_t instru
     uint16_t dest_reg = (instruction >> 9) & 0x07;
 
     context->state.a [dest_reg] += context->state.d [source_reg].l;
+
+    return 0;
+}
+
+
+/* adda.l An ← An + An */
+static uint32_t m68k_d1c8_adda_l_an_an (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    context->state.a [dest_reg] += context->state.a [source_reg];
+
+    return 0;
+}
+
+
+/* adda.l An ← An + (An) */
+static uint32_t m68k_d1d0_adda_l_an_an (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    context->state.a [dest_reg] += read_long (context, context->state.a [source_reg]);
+
+    return 0;
+}
+
+
+/* adda.l An ← An + (An+) */
+static uint32_t m68k_d1d8_adda_l_an_anp (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    context->state.a [dest_reg] += read_long (context, context->state.a [source_reg]);
+    context->state.a [source_reg] += 4;
+
+    return 0;
+}
+
+
+/* adda.l An ← An + (-An) */
+static uint32_t m68k_d1e0_adda_l_an_pan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    context->state.a [source_reg] -= 4;
+    context->state.a [dest_reg] += read_long (context, context->state.a [source_reg]);
+
+    return 0;
+}
+
+
+/* adda.l An ← An + d(An) */
+static uint32_t m68k_d1e8_adda_l_an_dan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    context->state.a [dest_reg] += read_long_with_displacement (context, context->state.a [source_reg]);
+
+    return 0;
+}
+
+
+/* adda.l An ← An + d(An+Xi) */
+static uint32_t m68k_d1f0_adda_l_an_danxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    context->state.a [dest_reg] += read_long_with_index (context, context->state.a [source_reg]);
+
+    return 0;
+}
+
+
+/* adda.l An ← An + (xxx.w) */
+static uint32_t m68k_d1f8_adda_l_an_aw (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    context->state.a [dest_reg] += read_long_aw (context);
+
+    return 0;
+}
+
+
+/* adda.l An ← An + (xxx.l) */
+static uint32_t m68k_d1f9_adda_l_an_al (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    context->state.a [dest_reg] += read_long_al (context);
+
+    return 0;
+}
+
+
+/* adda.l An ← An + d(PC) */
+static uint32_t m68k_d1fa_adda_l_an_dpc (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    context->state.a [dest_reg] += read_long_with_displacement (context, context->state.pc);
+
+    return 0;
+}
+
+
+/* adda.l An ← An + d(PC+Xi) */
+static uint32_t m68k_d1fb_adda_l_an_dpcxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    context->state.a [dest_reg] += read_long_with_index (context, context->state.pc);
+
+    return 0;
+}
+
+
+/* adda.l An ← An + #xxxx */
+static uint32_t m68k_d1fc_adda_l_an_imm (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+    uint32_t imm = read_extension_long (context);
+
+    context->state.a [dest_reg] += imm;
 
     return 0;
 }
@@ -16696,6 +16908,9 @@ static void m68k_init_instructions (void)
             m68k_instruction [0xd0c0 | (reg << 9) | ea] = m68k_d0c0_adda_w_an_dn;
             m68k_instruction [0xd0c8 | (reg << 9) | ea] = m68k_d0c8_adda_w_an_an;
             m68k_instruction [0xd0d0 | (reg << 9) | ea] = m68k_d0d0_adda_w_an_an;
+            m68k_instruction [0xd0d8 | (reg << 9) | ea] = m68k_d0d8_adda_w_an_anp;
+            m68k_instruction [0xd0e0 | (reg << 9) | ea] = m68k_d0e0_adda_w_an_pan;
+            m68k_instruction [0xd0e8 | (reg << 9) | ea] = m68k_d0e8_adda_w_an_dan;
             m68k_instruction [0xd0f0 | (reg << 9) | ea] = m68k_d0f0_adda_w_an_danxi;
             m68k_instruction [0xd128 | (reg << 9) | ea] = m68k_d128_add_b_dan_dn;
             m68k_instruction [0xd150 | (reg << 9) | ea] = m68k_d150_add_w_an_dn;
@@ -16706,6 +16921,12 @@ static void m68k_init_instructions (void)
             m68k_instruction [0xd190 | (reg << 9) | ea] = m68k_d190_add_l_an_dn;
             m68k_instruction [0xd1a8 | (reg << 9) | ea] = m68k_d1a8_add_l_dan_dn;
             m68k_instruction [0xd1c0 | (reg << 9) | ea] = m68k_d1c0_adda_l_an_dn;
+            m68k_instruction [0xd1c8 | (reg << 9) | ea] = m68k_d1c8_adda_l_an_an;
+            m68k_instruction [0xd1d0 | (reg << 9) | ea] = m68k_d1d0_adda_l_an_an;
+            m68k_instruction [0xd1d8 | (reg << 9) | ea] = m68k_d1d8_adda_l_an_anp;
+            m68k_instruction [0xd1e0 | (reg << 9) | ea] = m68k_d1e0_adda_l_an_pan;
+            m68k_instruction [0xd1e8 | (reg << 9) | ea] = m68k_d1e8_adda_l_an_dan;
+            m68k_instruction [0xd1f0 | (reg << 9) | ea] = m68k_d1f0_adda_l_an_danxi;
         }
         m68k_instruction [0xd038 | (reg << 9)] = m68k_d038_add_b_dn_aw;
         m68k_instruction [0xd078 | (reg << 9)] = m68k_d078_add_w_dn_aw;
@@ -16713,10 +16934,19 @@ static void m68k_init_instructions (void)
         m68k_instruction [0xd07a | (reg << 9)] = m68k_d07a_add_w_dn_dpc;
         m68k_instruction [0xd07b | (reg << 9)] = m68k_d07b_add_w_dn_dpcxi;
         m68k_instruction [0xd0b8 | (reg << 9)] = m68k_d0b8_add_l_dn_aw;
+        m68k_instruction [0xd0f8 | (reg << 9)] = m68k_d0f8_adda_w_an_aw;
+        m68k_instruction [0xd0f9 | (reg << 9)] = m68k_d0f9_adda_w_an_al;
+        m68k_instruction [0xd0fa | (reg << 9)] = m68k_d0fa_adda_w_an_dpc;
+        m68k_instruction [0xd0fb | (reg << 9)] = m68k_d0fb_adda_w_an_dpcxi;
         m68k_instruction [0xd0fc | (reg << 9)] = m68k_d0fc_adda_w_an_imm;
         m68k_instruction [0xd178 | (reg << 9)] = m68k_d178_add_w_aw_dn;
         m68k_instruction [0xd179 | (reg << 9)] = m68k_d179_add_w_al_dn;
         m68k_instruction [0xd1b8 | (reg << 9)] = m68k_d1b8_add_l_aw_dn;
+        m68k_instruction [0xd1f8 | (reg << 9)] = m68k_d1f8_adda_l_an_aw;
+        m68k_instruction [0xd1f9 | (reg << 9)] = m68k_d1f9_adda_l_an_al;
+        m68k_instruction [0xd1fa | (reg << 9)] = m68k_d1fa_adda_l_an_dpc;
+        m68k_instruction [0xd1fb | (reg << 9)] = m68k_d1fb_adda_l_an_dpcxi;
+        m68k_instruction [0xd1fc | (reg << 9)] = m68k_d1fc_adda_l_an_imm;
     }
 
     /* shift / rotate */
