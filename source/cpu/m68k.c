@@ -8452,6 +8452,32 @@ static uint32_t m68k_4a10_tst_b_an (M68000_Context *context, uint16_t instructio
 }
 
 
+/* tst.b (An+) */
+static uint32_t m68k_4a18_tst_b_anp (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint8_t value = read_byte (context, context->state.a [reg]);
+    context->state.a [reg] += (reg == 7) ? 2 : 1;
+
+    m68k_tst_b_flags (context, value);
+
+    return 0;
+}
+
+
+/* tst.b (-An) */
+static uint32_t m68k_4a20_tst_b_pan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    context->state.a [reg] -= (reg == 7) ? 2 : 1;
+    uint8_t value = read_byte (context, context->state.a [reg]);
+
+    m68k_tst_b_flags (context, value);
+
+    return 0;
+}
+
+
 /* tst.b d(An) */
 static uint32_t m68k_4a28_tst_b_dan (M68000_Context *context, uint16_t instruction)
 {
@@ -8487,6 +8513,17 @@ static uint32_t m68k_4a38_tst_b_aw (M68000_Context *context, uint16_t instructio
 }
 
 
+/* tst.b (xxx.l) */
+static uint32_t m68k_4a39_tst_b_al (M68000_Context *context, uint16_t instruction)
+{
+    uint8_t value = read_byte_al (context);
+
+    m68k_tst_b_flags (context, value);
+
+    return 0;
+}
+
+
 /* tst.w Dn */
 static uint32_t m68k_4a40_tst_w_dn (M68000_Context *context, uint16_t instruction)
 {
@@ -8511,11 +8548,49 @@ static uint32_t m68k_4a50_tst_w_an (M68000_Context *context, uint16_t instructio
 }
 
 
+/* tst.w (An+) */
+static uint32_t m68k_4a58_tst_w_anp (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint16_t value = read_word (context, context->state.a [reg]);
+    context->state.a [reg] += 2;
+
+    m68k_tst_w_flags (context, value);
+
+    return 0;
+}
+
+
+/* tst.w (-An) */
+static uint32_t m68k_4a60_tst_w_pan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    context->state.a [reg] -= 2;
+    uint16_t value = read_word (context, context->state.a [reg]);
+
+    m68k_tst_w_flags (context, value);
+
+    return 0;
+}
+
+
 /* tst.w d(An) */
 static uint32_t m68k_4a68_tst_w_dan (M68000_Context *context, uint16_t instruction)
 {
     uint16_t reg = instruction & 0x07;
     uint16_t value = read_word_with_displacement (context, context->state.a [reg]);
+
+    m68k_tst_w_flags (context, value);
+
+    return 0;
+}
+
+
+/* tst.w d(An+Xi) */
+static uint32_t m68k_4a70_tst_w_danxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint16_t value = read_word_with_index (context, context->state.a [reg]);
 
     m68k_tst_w_flags (context, value);
 
@@ -16607,11 +16682,16 @@ static void m68k_init_instructions (void)
     {
         m68k_instruction [0x4a00 | reg] = m68k_4a00_tst_b_dn;
         m68k_instruction [0x4a10 | reg] = m68k_4a10_tst_b_an;
+        m68k_instruction [0x4a18 | reg] = m68k_4a18_tst_b_anp;
+        m68k_instruction [0x4a20 | reg] = m68k_4a20_tst_b_pan;
         m68k_instruction [0x4a28 | reg] = m68k_4a28_tst_b_dan;
         m68k_instruction [0x4a30 | reg] = m68k_4a30_tst_b_danxi;
         m68k_instruction [0x4a40 | reg] = m68k_4a40_tst_w_dn;
         m68k_instruction [0x4a50 | reg] = m68k_4a50_tst_w_an;
+        m68k_instruction [0x4a58 | reg] = m68k_4a58_tst_w_anp;
+        m68k_instruction [0x4a60 | reg] = m68k_4a60_tst_w_pan;
         m68k_instruction [0x4a68 | reg] = m68k_4a68_tst_w_dan;
+        m68k_instruction [0x4a70 | reg] = m68k_4a70_tst_w_danxi;
         m68k_instruction [0x4a80 | reg] = m68k_4a80_tst_l_dn;
         m68k_instruction [0x4a90 | reg] = m68k_4a90_tst_l_an;
         m68k_instruction [0x4a98 | reg] = m68k_4a98_tst_l_anp;
@@ -16620,6 +16700,7 @@ static void m68k_init_instructions (void)
         m68k_instruction [0x4ab0 | reg] = m68k_4ab0_tst_l_danxi;
     }
     m68k_instruction [0x4a38] = m68k_4a38_tst_b_aw;
+    m68k_instruction [0x4a39] = m68k_4a39_tst_b_al;
     m68k_instruction [0x4a78] = m68k_4a78_tst_w_aw;
     m68k_instruction [0x4a79] = m68k_4a79_tst_w_al;
     m68k_instruction [0x4ab8] = m68k_4ab8_tst_l_aw;
