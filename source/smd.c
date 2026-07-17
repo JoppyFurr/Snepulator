@@ -562,8 +562,9 @@ static uint8_t smd_z80_io_read (void *context_ptr, uint8_t addr)
  */
 static bool smd_z80_get_int (void *context_ptr)
 {
-    /* TODO: Interrupt from VDP */
-    return false;
+    SMD_Context *context = (SMD_Context *) context_ptr;
+
+    return smd_vdp_get_z80_interrupt (context->vdp_context);
 }
 
 
@@ -641,7 +642,7 @@ static uint8_t *smd_get_rom_hash (void *context_ptr)
 
 
 /*
- * Returns the current interrupt priortiy.
+ * Returns the current interrupt priority.
  */
 static uint8_t smd_get_int (void *context_ptr)
 {

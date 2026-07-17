@@ -258,6 +258,19 @@ uint8_t smd_vdp_get_interrupt (SMD_VDP_Context *context)
 
 
 /*
+ * Check if the VDP is currently requesting an interrupt (z80).
+ */
+bool smd_vdp_get_z80_interrupt (SMD_VDP_Context *context)
+{
+    bool interrupt = context->state.z80_interrupt;
+
+    context->state.z80_interrupt = 0;
+
+    return interrupt;
+}
+
+
+/*
  * Render one line of an 8×8 pattern.
  * Supports vertical and horizontal mirroring.
  * Note: This assumes that the pattern requested is on the line.
@@ -588,12 +601,19 @@ void smd_vdp_run_one_scanline (SMD_VDP_Context *context)
     /* TODO: Confirm, but it may be that a line-interrupt happening at the
      *       same time as a vblank interrupt can mask the vblank interrupt */
 
-    /* VBlank Interrupt */
+    /* VBlank Interrupt (m68k) */
     if (context->state.line == 224 && context->state.mode_2_vertical_int_en)
     {
         /* VBlank has interrupt priority 6 (highest from the VDP) */
         context->state.interrupt = 6;
     }
+
+    /* VBlank Interrupt (z80). Not affected by the interrupt enable bit. */
+    if (context->state.line == 224)
+    {
+        context->state.z80_interrupt = true;
+    }
+
 
     return;
 }
