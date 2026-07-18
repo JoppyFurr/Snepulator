@@ -304,8 +304,15 @@ static void smd_memory_write_8 (void *context_ptr, uint32_t addr, uint8_t data)
 {
     SMD_Context *context = (SMD_Context *) context_ptr;
 
+    /* Cartridge ROM: 0x000000 -- 0x3fffff */
+    if (addr <= 0x3fffff)
+    {
+        printf ("[%s]: Attempt to write value %02x to cartridge address %06x.\n", __func__, data, addr);
+        printf ("[%s]:   -> PC=%06x.\n", __func__, context->m68k_context->state.pc);
+    }
+
     /* Z80 Address Space access */
-    if (addr >= 0xa00000 && addr <= 0xa0ffff)
+    else if (addr >= 0xa00000 && addr <= 0xa0ffff)
     {
         smd_z80_memory_write (context, addr, data);
     }
@@ -376,8 +383,15 @@ static void smd_memory_write_16 (void *context_ptr, uint32_t addr, uint16_t data
 {
     SMD_Context *context = (SMD_Context *) context_ptr;
 
+    /* Cartridge ROM: 0x000000 -- 0x3fffff */
+    if (addr <= 0x3fffff)
+    {
+        printf ("[%s]: Attempt to write value %04x to cartridge address %06x.\n", __func__, data, addr);
+        printf ("[%s]: -> PC=%06x.\n", __func__, context->m68k_context->state.pc);
+    }
+
     /* Z80 Address Space access */
-    if (addr >= 0xa00000 && addr <= 0xa0ffff)
+    else if (addr >= 0xa00000 && addr <= 0xa0ffff)
     {
         snepulator_error (__func__, "Z80 address-space access %06x not implemented.", addr);
     }
