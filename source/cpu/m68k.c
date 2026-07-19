@@ -623,6 +623,45 @@ static inline void m68k_cmp_l_flags (M68000_Context *context, uint32_t a, uint32
 }
 
 
+/*
+ * Update flags for neg.b instructions.
+ */
+static inline void m68k_neg_b_flags (M68000_Context *context, uint8_t value, uint8_t result)
+{
+    context->state.ccr_negative = ((int8_t) result < 0);
+    context->state.ccr_zero = (result == 0);
+    context->state.ccr_overflow = ((int8_t) value == -128);
+    context->state.ccr_carry = (result != 0);
+    context->state.ccr_extend = (result != 0);
+}
+
+
+/*
+ * Update flags for neg.b instructions.
+ */
+static inline void m68k_neg_w_flags (M68000_Context *context, uint16_t value, uint16_t result)
+{
+    context->state.ccr_negative = ((int16_t) result < 0);
+    context->state.ccr_zero = (result == 0);
+    context->state.ccr_overflow = ((int16_t) value == -32768);
+    context->state.ccr_carry = (result != 0);
+    context->state.ccr_extend = (result != 0);
+}
+
+
+/*
+ * Update flags for neg.b instructions.
+ */
+static inline void m68k_neg_l_flags (M68000_Context *context, uint32_t value, uint32_t result)
+{
+    context->state.ccr_negative = ((int32_t) result < 0);
+    context->state.ccr_zero = (result == 0);
+    context->state.ccr_overflow = ((int32_t) value == -2147483648);
+    context->state.ccr_carry = (result != 0);
+    context->state.ccr_extend = (result != 0);
+}
+
+
 /* ori.b Dn ← Dn | #xx */
 static uint32_t m68k_0000_ori_b_dn (M68000_Context *context, uint16_t instruction)
 {
@@ -8099,12 +8138,7 @@ static uint32_t m68k_4400_neg_b_dn (M68000_Context *context, uint16_t instructio
     uint8_t result = 0 - value;
 
     context->state.d [reg].b = result;
-
-    context->state.ccr_negative = ((int8_t) result < 0);
-    context->state.ccr_zero = (result == 0);
-    context->state.ccr_overflow = ((int8_t) value == -128);
-    context->state.ccr_carry = (result != 0);
-    context->state.ccr_extend = (result != 0);
+    m68k_neg_b_flags (context, value, result);
 
     return 0;
 }
@@ -8114,17 +8148,47 @@ static uint32_t m68k_4400_neg_b_dn (M68000_Context *context, uint16_t instructio
 static uint32_t m68k_4410_neg_b_an (M68000_Context *context, uint16_t instruction)
 {
     uint16_t reg = instruction & 0x07;
+    uint32_t address = context->state.a [reg];
 
-    uint8_t value = read_byte (context, context->state.a [reg]);
+    uint8_t value = read_byte (context, address);
     uint8_t result = 0 - value;
 
-    write_byte (context, context->state.a [reg], result);
+    write_byte (context, address, result);
+    m68k_neg_b_flags (context, value, result);
 
-    context->state.ccr_negative = ((int8_t) result < 0);
-    context->state.ccr_zero = (result == 0);
-    context->state.ccr_overflow = ((int8_t) value == -128);
-    context->state.ccr_carry = (result != 0);
-    context->state.ccr_extend = (result != 0);
+    return 0;
+}
+
+
+/* neg.b (An+) */
+static uint32_t m68k_4418_neg_b_anp (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint32_t address = context->state.a [reg];
+    context->state.a [reg] += (reg == 7) ? 2 : 1;
+
+    uint8_t value = read_byte (context, address);
+    uint8_t result = 0 - value;
+
+    write_byte (context, address, result);
+    m68k_neg_b_flags (context, value, result);
+
+    return 0;
+}
+
+
+/* neg.b (-An) */
+static uint32_t m68k_4420_neg_b_pan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    context->state.a [reg] -= (reg == 7) ? 2 : 1;
+    uint32_t address = context->state.a [reg];
+
+    uint8_t value = read_byte (context, address);
+    uint8_t result = 0 - value;
+
+    write_byte (context, address, result);
+    m68k_neg_b_flags (context, value, result);
 
     return 0;
 }
@@ -8140,12 +8204,53 @@ static uint32_t m68k_4428_neg_b_dan (M68000_Context *context, uint16_t instructi
     uint8_t result = 0 - value;
 
     write_byte (context, address, result);
+    m68k_neg_b_flags (context, value, result);
 
-    context->state.ccr_negative = ((int8_t) result < 0);
-    context->state.ccr_zero = (result == 0);
-    context->state.ccr_overflow = ((int8_t) value == -128);
-    context->state.ccr_carry = (result != 0);
-    context->state.ccr_extend = (result != 0);
+    return 0;
+}
+
+
+/* neg.b d(An+Xi) */
+static uint32_t m68k_4430_neg_b_danxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint32_t address = address_with_index (context, context->state.a [reg]);
+
+    uint8_t value = read_byte (context, address);
+    uint8_t result = 0 - value;
+
+    write_byte (context, address, result);
+    m68k_neg_b_flags (context, value, result);
+
+    return 0;
+}
+
+
+/* neg.b (xxx.w) */
+static uint32_t m68k_4438_neg_b_aw (M68000_Context *context, uint16_t instruction)
+{
+    uint32_t address = (int16_t) read_extension (context);
+
+    uint8_t value = read_byte (context, address);
+    uint8_t result = 0 - value;
+
+    write_byte (context, address, result);
+    m68k_neg_b_flags (context, value, result);
+
+    return 0;
+}
+
+
+/* neg.b (xxx.l) */
+static uint32_t m68k_4439_neg_b_al (M68000_Context *context, uint16_t instruction)
+{
+    uint32_t address = read_extension_long (context);
+
+    uint8_t value = read_byte (context, address);
+    uint8_t result = 0 - value;
+
+    write_byte (context, address, result);
+    m68k_neg_b_flags (context, value, result);
 
     return 0;
 }
@@ -8160,12 +8265,7 @@ static uint32_t m68k_4440_neg_w_dn (M68000_Context *context, uint16_t instructio
     uint16_t result = 0 - value;
 
     context->state.d [reg].w = result;
-
-    context->state.ccr_negative = ((int16_t) result < 0);
-    context->state.ccr_zero = (result == 0);
-    context->state.ccr_overflow = ((int16_t) value == -32768);
-    context->state.ccr_carry = (result != 0);
-    context->state.ccr_extend = (result != 0);
+    m68k_neg_w_flags (context, value, result);
 
     return 0;
 }
@@ -8175,17 +8275,13 @@ static uint32_t m68k_4440_neg_w_dn (M68000_Context *context, uint16_t instructio
 static uint32_t m68k_4450_neg_w_an (M68000_Context *context, uint16_t instruction)
 {
     uint16_t reg = instruction & 0x07;
+    uint32_t address = context->state.a [reg];
 
-    uint16_t value = read_word (context, context->state.a [reg]);
+    uint16_t value = read_word (context, address);
     uint16_t result = 0 - value;
 
-    write_word (context, context->state.a [reg], result);
-
-    context->state.ccr_negative = ((int16_t) result < 0);
-    context->state.ccr_zero = (result == 0);
-    context->state.ccr_overflow = ((int16_t) value == -32768);
-    context->state.ccr_carry = (result != 0);
-    context->state.ccr_extend = (result != 0);
+    write_word (context, address, result);
+    m68k_neg_w_flags (context, value, result);
 
     return 0;
 }
@@ -8195,18 +8291,14 @@ static uint32_t m68k_4450_neg_w_an (M68000_Context *context, uint16_t instructio
 static uint32_t m68k_4458_neg_w_anp (M68000_Context *context, uint16_t instruction)
 {
     uint16_t reg = instruction & 0x07;
-
-    uint16_t value = read_word (context, context->state.a [reg]);
-    uint16_t result = 0 - value;
-
-    write_word (context, context->state.a [reg], result);
+    uint32_t address = context->state.a [reg];
     context->state.a [reg] += 2;
 
-    context->state.ccr_negative = ((int16_t) result < 0);
-    context->state.ccr_zero = (result == 0);
-    context->state.ccr_overflow = ((int16_t) value == -32768);
-    context->state.ccr_carry = (result != 0);
-    context->state.ccr_extend = (result != 0);
+    uint16_t value = read_word (context, address);
+    uint16_t result = 0 - value;
+
+    write_word (context, address, result);
+    m68k_neg_w_flags (context, value, result);
 
     return 0;
 }
@@ -8217,17 +8309,13 @@ static uint32_t m68k_4460_neg_w_pan (M68000_Context *context, uint16_t instructi
 {
     uint16_t reg = instruction & 0x07;
     context->state.a [reg] -= 2;
+    uint32_t address = context->state.a [reg];
 
-    uint16_t value = read_word (context, context->state.a [reg]);
+    uint16_t value = read_word (context, address);
     uint16_t result = 0 - value;
 
-    write_word (context, context->state.a [reg], result);
-
-    context->state.ccr_negative = ((int16_t) result < 0);
-    context->state.ccr_zero = (result == 0);
-    context->state.ccr_overflow = ((int16_t) value == -32768);
-    context->state.ccr_carry = (result != 0);
-    context->state.ccr_extend = (result != 0);
+    write_word (context, address, result);
+    m68k_neg_w_flags (context, value, result);
 
     return 0;
 }
@@ -8243,12 +8331,7 @@ static uint32_t m68k_4468_neg_w_dan (M68000_Context *context, uint16_t instructi
     uint16_t result = 0 - value;
 
     write_word (context, address, result);
-
-    context->state.ccr_negative = ((int16_t) result < 0);
-    context->state.ccr_zero = (result == 0);
-    context->state.ccr_overflow = ((int16_t) value == -32768);
-    context->state.ccr_carry = (result != 0);
-    context->state.ccr_extend = (result != 0);
+    m68k_neg_w_flags (context, value, result);
 
     return 0;
 }
@@ -8264,12 +8347,7 @@ static uint32_t m68k_4470_neg_w_danxi (M68000_Context *context, uint16_t instruc
     uint16_t result = 0 - value;
 
     write_word (context, address, result);
-
-    context->state.ccr_negative = ((int16_t) result < 0);
-    context->state.ccr_zero = (result == 0);
-    context->state.ccr_overflow = ((int16_t) value == -32768);
-    context->state.ccr_carry = (result != 0);
-    context->state.ccr_extend = (result != 0);
+    m68k_neg_w_flags (context, value, result);
 
     return 0;
 }
@@ -8284,12 +8362,7 @@ static uint32_t m68k_4478_neg_w_aw (M68000_Context *context, uint16_t instructio
     uint16_t result = 0 - value;
 
     write_word (context, address, result);
-
-    context->state.ccr_negative = ((int16_t) result < 0);
-    context->state.ccr_zero = (result == 0);
-    context->state.ccr_overflow = ((int16_t) value == -32768);
-    context->state.ccr_carry = (result != 0);
-    context->state.ccr_extend = (result != 0);
+    m68k_neg_w_flags (context, value, result);
 
     return 0;
 }
@@ -8304,12 +8377,134 @@ static uint32_t m68k_4479_neg_w_al (M68000_Context *context, uint16_t instructio
     uint16_t result = 0 - value;
 
     write_word (context, address, result);
+    m68k_neg_w_flags (context, value, result);
 
-    context->state.ccr_negative = ((int16_t) result < 0);
-    context->state.ccr_zero = (result == 0);
-    context->state.ccr_overflow = ((int16_t) value == -32768);
-    context->state.ccr_carry = (result != 0);
-    context->state.ccr_extend = (result != 0);
+    return 0;
+}
+
+
+/* neg.l Dn */
+static uint32_t m68k_4480_neg_l_dn (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    uint32_t value = context->state.d [reg].l;
+    uint32_t result = 0 - value;
+
+    context->state.d [reg].l = result;
+    m68k_neg_l_flags (context, value, result);
+
+    return 0;
+}
+
+
+/* neg.l (An) */
+static uint32_t m68k_4490_neg_l_an (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint32_t address = context->state.a [reg];
+
+    uint32_t value = read_long (context, address);
+    uint32_t result = 0 - value;
+
+    write_long (context, address, result);
+    m68k_neg_l_flags (context, value, result);
+
+    return 0;
+}
+
+
+/* neg.l (An+) */
+static uint32_t m68k_4498_neg_l_anp (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint32_t address = context->state.a [reg];
+    context->state.a [reg] += 4;
+
+    uint32_t value = read_long (context, address);
+    uint32_t result = 0 - value;
+
+    write_long (context, address, result);
+    m68k_neg_l_flags (context, value, result);
+
+    return 0;
+}
+
+
+/* neg.l (-An) */
+static uint32_t m68k_44a0_neg_l_pan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    context->state.a [reg] -= 4;
+    uint32_t address = context->state.a [reg];
+
+    uint32_t value = read_long (context, address);
+    uint32_t result = 0 - value;
+
+    write_long (context, address, result);
+    m68k_neg_l_flags (context, value, result);
+
+    return 0;
+}
+
+
+/* neg.l d(An) */
+static uint32_t m68k_44a8_neg_l_dan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint32_t address = address_with_displacement (context, context->state.a [reg]);
+
+    uint32_t value = read_long (context, address);
+    uint32_t result = 0 - value;
+
+    write_long (context, address, result);
+    m68k_neg_l_flags (context, value, result);
+
+    return 0;
+}
+
+
+/* neg.l d(An+Xi) */
+static uint32_t m68k_44b0_neg_l_danxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint32_t address = address_with_index (context, context->state.a [reg]);
+
+    uint32_t value = read_long (context, address);
+    uint32_t result = 0 - value;
+
+    write_long (context, address, result);
+    m68k_neg_l_flags (context, value, result);
+
+    return 0;
+}
+
+
+/* neg.l (xxx.w) */
+static uint32_t m68k_44b8_neg_l_aw (M68000_Context *context, uint16_t instruction)
+{
+    uint32_t address = (int16_t) read_extension (context);
+
+    uint32_t value = read_long (context, address);
+    uint32_t result = 0 - value;
+
+    write_long (context, address, result);
+    m68k_neg_l_flags (context, value, result);
+
+    return 0;
+}
+
+
+/* neg.l (xxx.l) */
+static uint32_t m68k_44b9_neg_l_al (M68000_Context *context, uint16_t instruction)
+{
+    uint32_t address = read_extension_long (context);
+
+    uint32_t value = read_long (context, address);
+    uint32_t result = 0 - value;
+
+    write_long (context, address, result);
+    m68k_neg_l_flags (context, value, result);
 
     return 0;
 }
@@ -17598,19 +17793,32 @@ static void m68k_init_instructions (void)
     {
         m68k_instruction [0x4400 | reg] = m68k_4400_neg_b_dn;
         m68k_instruction [0x4410 | reg] = m68k_4410_neg_b_an;
+        m68k_instruction [0x4418 | reg] = m68k_4418_neg_b_anp;
+        m68k_instruction [0x4420 | reg] = m68k_4420_neg_b_pan;
         m68k_instruction [0x4428 | reg] = m68k_4428_neg_b_dan;
+        m68k_instruction [0x4430 | reg] = m68k_4430_neg_b_danxi;
         m68k_instruction [0x4440 | reg] = m68k_4440_neg_w_dn;
         m68k_instruction [0x4450 | reg] = m68k_4450_neg_w_an;
         m68k_instruction [0x4458 | reg] = m68k_4458_neg_w_anp;
         m68k_instruction [0x4460 | reg] = m68k_4460_neg_w_pan;
         m68k_instruction [0x4468 | reg] = m68k_4468_neg_w_dan;
         m68k_instruction [0x4470 | reg] = m68k_4470_neg_w_danxi;
+        m68k_instruction [0x4480 | reg] = m68k_4480_neg_l_dn;
+        m68k_instruction [0x4490 | reg] = m68k_4490_neg_l_an;
+        m68k_instruction [0x4498 | reg] = m68k_4498_neg_l_anp;
+        m68k_instruction [0x44a0 | reg] = m68k_44a0_neg_l_pan;
+        m68k_instruction [0x44a8 | reg] = m68k_44a8_neg_l_dan;
+        m68k_instruction [0x44b0 | reg] = m68k_44b0_neg_l_danxi;
         m68k_instruction [0x4840 | reg] = m68k_4840_swap_dn;
         m68k_instruction [0x4880 | reg] = m68k_4880_ext_w_dn;
         m68k_instruction [0x48c0 | reg] = m68k_48c0_ext_l_dn;
     }
+    m68k_instruction [0x4438] = m68k_4438_neg_b_aw;
+    m68k_instruction [0x4439] = m68k_4439_neg_b_al;
     m68k_instruction [0x4478] = m68k_4478_neg_w_aw;
     m68k_instruction [0x4479] = m68k_4479_neg_w_al;
+    m68k_instruction [0x44b8] = m68k_44b8_neg_l_aw;
+    m68k_instruction [0x44b9] = m68k_44b9_neg_l_al;
 
     /* trap */
     for (uint32_t vector = 0; vector < 16; vector++)
