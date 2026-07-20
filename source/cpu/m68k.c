@@ -14005,6 +14005,40 @@ static uint32_t m68k_b050_cmp_w_dn_an (M68000_Context *context, uint16_t instruc
 }
 
 
+/* cmp.w Dn - (An+) */
+static uint32_t m68k_b058_cmp_w_dn_anp (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint16_t b = read_word (context, context->state.a [source_reg]);
+    context->state.a [source_reg] += 2;
+    uint16_t a = context->state.d [dest_reg].w;
+    uint16_t result = a - b;
+
+    m68k_cmp_w_flags (context, a, b, result);
+
+    return 0;
+}
+
+
+/* cmp.w Dn - (-An) */
+static uint32_t m68k_b060_cmp_w_dn_pan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    context->state.a [source_reg] -= 2;
+    uint16_t b = read_word (context, context->state.a [source_reg]);
+    uint16_t a = context->state.d [dest_reg].w;
+    uint16_t result = a - b;
+
+    m68k_cmp_w_flags (context, a, b, result);
+
+    return 0;
+}
+
+
 /* cmp.w Dn - d(An) */
 static uint32_t m68k_b068_cmp_w_dn_dan (M68000_Context *context, uint16_t instruction)
 {
@@ -14012,6 +14046,22 @@ static uint32_t m68k_b068_cmp_w_dn_dan (M68000_Context *context, uint16_t instru
     uint16_t dest_reg = (instruction >> 9) & 0x07;
 
     uint16_t b = read_word_with_displacement (context, context->state.a [source_reg]);
+    uint16_t a = context->state.d [dest_reg].w;
+    uint16_t result = a - b;
+
+    m68k_cmp_w_flags (context, a, b, result);
+
+    return 0;
+}
+
+
+/* cmp.w Dn - d(An+Xi) */
+static uint32_t m68k_b070_cmp_w_dn_danxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint16_t b = read_word_with_index (context, context->state.a [source_reg]);
     uint16_t a = context->state.d [dest_reg].w;
     uint16_t result = a - b;
 
@@ -14031,6 +14081,82 @@ static uint32_t m68k_b078_cmp_w_dn_aw (M68000_Context *context, uint16_t instruc
     uint16_t result = a - b;
 
     m68k_cmp_w_flags (context, a, b, result);
+
+    return 0;
+}
+
+
+/* cmp.w Dn - (xxx.l) */
+static uint32_t m68k_b079_cmp_w_dn_al (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint16_t b = read_word_al (context);
+    uint16_t a = context->state.d [dest_reg].w;
+    uint16_t result = a - b;
+
+    m68k_cmp_w_flags (context, a, b, result);
+
+    return 0;
+}
+
+
+/* cmp.w Dn - d(PC) */
+static uint32_t m68k_b07a_cmp_w_dn_dpc (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint16_t b = read_word_with_displacement (context, context->state.pc);
+    uint16_t a = context->state.d [dest_reg].w;
+    uint16_t result = a - b;
+
+    m68k_cmp_w_flags (context, a, b, result);
+
+    return 0;
+}
+
+
+/* cmp.w Dn - d(PC+Xi) */
+static uint32_t m68k_b07b_cmp_w_dn_dpcxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint16_t b = read_word_with_index (context, context->state.pc);
+    uint16_t a = context->state.d [dest_reg].w;
+    uint16_t result = a - b;
+
+    m68k_cmp_w_flags (context, a, b, result);
+
+    return 0;
+}
+
+
+/* cmp.w Dn - #xxxx */
+static uint32_t m68k_b07c_cmp_w_dn_imm (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint16_t b = read_extension (context);
+    uint16_t a = context->state.d [dest_reg].w;
+    uint16_t result = a - b;
+
+    m68k_cmp_w_flags (context, a, b, result);
+
+    return 0;
+}
+
+
+/* cmp.l Dn - Dn */
+static uint32_t m68k_b080_cmp_l_dn_dn (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint32_t b = context->state.d [source_reg].l;
+    uint32_t a = context->state.d [dest_reg].l;
+    uint32_t result = a - b;
+
+    m68k_cmp_l_flags (context, a, b, result);
 
     return 0;
 }
@@ -14068,12 +14194,138 @@ static uint32_t m68k_b090_cmp_l_dn_an (M68000_Context *context, uint16_t instruc
 }
 
 
-/* cmp.l Dn - (An) */
+/* cmp.l Dn - (An+) */
+static uint32_t m68k_b098_cmp_l_dn_anp (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint32_t b = read_long (context, context->state.a [source_reg]);
+    context->state.a [source_reg] += 4;
+    uint32_t a = context->state.d [dest_reg].l;
+    uint32_t result = a - b;
+
+    m68k_cmp_l_flags (context, a, b, result);
+
+    return 0;
+}
+
+
+/* cmp.l Dn - (-An) */
+static uint32_t m68k_b0a0_cmp_l_dn_pan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    context->state.a [source_reg] -= 4;
+    uint32_t b = read_long (context, context->state.a [source_reg]);
+    uint32_t a = context->state.d [dest_reg].l;
+    uint32_t result = a - b;
+
+    m68k_cmp_l_flags (context, a, b, result);
+
+    return 0;
+}
+
+
+/* cmp.l Dn - d(An) */
+static uint32_t m68k_b0a8_cmp_l_dn_dan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint32_t b = read_long_with_displacement (context, context->state.a [source_reg]);
+    uint32_t a = context->state.d [dest_reg].l;
+    uint32_t result = a - b;
+
+    m68k_cmp_l_flags (context, a, b, result);
+
+    return 0;
+}
+
+
+/* cmp.l Dn - d(An+Xi) */
+static uint32_t m68k_b0b0_cmp_l_dn_danxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint32_t b = read_long_with_index (context, context->state.a [source_reg]);
+    uint32_t a = context->state.d [dest_reg].l;
+    uint32_t result = a - b;
+
+    m68k_cmp_l_flags (context, a, b, result);
+
+    return 0;
+}
+
+
+/* cmp.l Dn - (xxx.w) */
 static uint32_t m68k_b0b8_cmp_l_dn_aw (M68000_Context *context, uint16_t instruction)
 {
     uint16_t dest_reg = (instruction >> 9) & 0x07;
 
     uint32_t b = read_long_aw (context);
+    uint32_t a = context->state.d [dest_reg].l;
+    uint32_t result = a - b;
+
+    m68k_cmp_l_flags (context, a, b, result);
+
+    return 0;
+}
+
+
+/* cmp.l Dn - (xxx.l) */
+static uint32_t m68k_b0b9_cmp_l_dn_al (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint32_t b = read_long_al (context);
+    uint32_t a = context->state.d [dest_reg].l;
+    uint32_t result = a - b;
+
+    m68k_cmp_l_flags (context, a, b, result);
+
+    return 0;
+}
+
+
+/* cmp.l Dn - d(PC) */
+static uint32_t m68k_b0ba_cmp_l_dn_dpc (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint32_t b = read_long_with_displacement (context, context->state.pc);
+    uint32_t a = context->state.d [dest_reg].l;
+    uint32_t result = a - b;
+
+    m68k_cmp_l_flags (context, a, b, result);
+
+    return 0;
+}
+
+
+/* cmp.l Dn - d(PC+Xi) */
+static uint32_t m68k_b0bb_cmp_l_dn_dpcxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint32_t b = read_long_with_index (context, context->state.pc);
+    uint32_t a = context->state.d [dest_reg].l;
+    uint32_t result = a - b;
+
+    m68k_cmp_l_flags (context, a, b, result);
+
+    return 0;
+}
+
+
+/* cmp.l Dn - #xxxxxxxx */
+static uint32_t m68k_b0bc_cmp_l_dn_imm (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint32_t b = read_extension_long (context);
     uint32_t a = context->state.d [dest_reg].l;
     uint32_t result = a - b;
 
@@ -18353,9 +18605,17 @@ static void m68k_init_instructions (void)
             m68k_instruction [0xb040 | (reg << 9) | ea] = m68k_b040_cmp_w_dn_dn;
             m68k_instruction [0xb048 | (reg << 9) | ea] = m68k_b048_cmp_w_dn_an;
             m68k_instruction [0xb050 | (reg << 9) | ea] = m68k_b050_cmp_w_dn_an;
+            m68k_instruction [0xb058 | (reg << 9) | ea] = m68k_b058_cmp_w_dn_anp;
+            m68k_instruction [0xb060 | (reg << 9) | ea] = m68k_b060_cmp_w_dn_pan;
             m68k_instruction [0xb068 | (reg << 9) | ea] = m68k_b068_cmp_w_dn_dan;
+            m68k_instruction [0xb070 | (reg << 9) | ea] = m68k_b070_cmp_w_dn_danxi;
+            m68k_instruction [0xb080 | (reg << 9) | ea] = m68k_b080_cmp_l_dn_dn;
             m68k_instruction [0xb088 | (reg << 9) | ea] = m68k_b088_cmp_l_dn_an;
             m68k_instruction [0xb090 | (reg << 9) | ea] = m68k_b090_cmp_l_dn_an;
+            m68k_instruction [0xb098 | (reg << 9) | ea] = m68k_b098_cmp_l_dn_anp;
+            m68k_instruction [0xb0a0 | (reg << 9) | ea] = m68k_b0a0_cmp_l_dn_pan;
+            m68k_instruction [0xb0a8 | (reg << 9) | ea] = m68k_b0a8_cmp_l_dn_dan;
+            m68k_instruction [0xb0b0 | (reg << 9) | ea] = m68k_b0b0_cmp_l_dn_danxi;
             m68k_instruction [0xb0c0 | (reg << 9) | ea] = m68k_b0c0_cmpa_w_an_dn;
             m68k_instruction [0xb0c8 | (reg << 9) | ea] = m68k_b0c8_cmpa_w_an_an;
             m68k_instruction [0xb0d0 | (reg << 9) | ea] = m68k_b0d0_cmpa_w_an_an;
@@ -18377,7 +18637,15 @@ static void m68k_init_instructions (void)
         m68k_instruction [0xb03b | (reg << 9)] = m68k_b03b_cmp_b_dn_dpcxi;
         m68k_instruction [0xb03c | (reg << 9)] = m68k_b03c_cmp_b_dn_imm;
         m68k_instruction [0xb078 | (reg << 9)] = m68k_b078_cmp_w_dn_aw;
+        m68k_instruction [0xb079 | (reg << 9)] = m68k_b079_cmp_w_dn_al;
+        m68k_instruction [0xb07a | (reg << 9)] = m68k_b07a_cmp_w_dn_dpc;
+        m68k_instruction [0xb07b | (reg << 9)] = m68k_b07b_cmp_w_dn_dpcxi;
+        m68k_instruction [0xb07c | (reg << 9)] = m68k_b07c_cmp_w_dn_imm;
         m68k_instruction [0xb0b8 | (reg << 9)] = m68k_b0b8_cmp_l_dn_aw;
+        m68k_instruction [0xb0b9 | (reg << 9)] = m68k_b0b9_cmp_l_dn_al;
+        m68k_instruction [0xb0ba | (reg << 9)] = m68k_b0ba_cmp_l_dn_dpc;
+        m68k_instruction [0xb0bb | (reg << 9)] = m68k_b0bb_cmp_l_dn_dpcxi;
+        m68k_instruction [0xb0bc | (reg << 9)] = m68k_b0bc_cmp_l_dn_imm;
         m68k_instruction [0xb0f8 | (reg << 9)] = m68k_b0f8_cmpa_w_an_aw;
         m68k_instruction [0xb0f9 | (reg << 9)] = m68k_b0f9_cmpa_w_an_al;
         m68k_instruction [0xb0fa | (reg << 9)] = m68k_b0fa_cmpa_w_an_dpc;
