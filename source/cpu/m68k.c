@@ -8522,6 +8522,123 @@ static uint32_t m68k_44c0_move_ccr_dn (M68000_Context *context, uint16_t instruc
 }
 
 
+/* move ccr ← (An) */
+static uint32_t m68k_44d0_move_ccr_an (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint16_t value = read_word (context, context->state.a [reg]);
+
+    context->state.ccr = value;
+
+    return 0;
+}
+
+
+/* move ccr ← (An+) */
+static uint32_t m68k_44d8_move_ccr_anp (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint16_t value = read_word (context, context->state.a [reg]);
+    context->state.a [reg] += 2;
+
+    context->state.ccr = value;
+
+    return 0;
+}
+
+
+/* move ccr ← (-An) */
+static uint32_t m68k_44e0_move_ccr_pan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    context->state.a [reg] -= 2;
+    uint16_t value = read_word (context, context->state.a [reg]);
+
+    context->state.ccr = value;
+
+    return 0;
+}
+
+
+/* move ccr ← d(An) */
+static uint32_t m68k_44e8_move_ccr_dan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint16_t value = read_word_with_displacement (context, context->state.a [reg]);
+
+    context->state.ccr = value;
+
+    return 0;
+}
+
+
+/* move ccr ← d(An+Xi) */
+static uint32_t m68k_44f0_move_ccr_danxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint16_t value = read_word_with_index (context, context->state.a [reg]);
+
+    context->state.ccr = value;
+
+    return 0;
+}
+
+
+/* move ccr ← (xxx.w) */
+static uint32_t m68k_44f8_move_ccr_aw (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t value = read_word_aw (context);
+
+    context->state.ccr = value;
+
+    return 0;
+}
+
+
+/* move ccr ← (xxx.l) */
+static uint32_t m68k_44f9_move_ccr_al (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t value = read_word_al (context);
+
+    context->state.ccr = value;
+
+    return 0;
+}
+
+
+/* move ccr ← d(PC) */
+static uint32_t m68k_44fa_move_ccr_dpc (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t value = read_word_with_displacement (context, context->state.pc);
+
+    context->state.ccr = value;
+
+    return 0;
+}
+
+
+/* move ccr ← d(PC+Xi) */
+static uint32_t m68k_44fb_move_ccr_dpcxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t value = read_word_with_index (context, context->state.pc);
+
+    context->state.ccr = value;
+
+    return 0;
+}
+
+
+/* move ccr ← #xxxx */
+static uint32_t m68k_44fc_move_ccr_imm (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t value = read_extension (context);
+
+    context->state.ccr = value;
+
+    return 0;
+}
+
+
 /* not.b Dn */
 static uint32_t m68k_4600_not_b_dn (M68000_Context *context, uint16_t instruction)
 {
@@ -18090,6 +18207,11 @@ static void m68k_init_instructions (void)
         m68k_instruction [0x40e8 | reg_a       ] = m68k_40e8_move_dan_sr;
         m68k_instruction [0x40f0 | reg_a       ] = m68k_40f0_move_danxi_sr;
         m68k_instruction [0x44c0 | reg_a       ] = m68k_44c0_move_ccr_dn;
+        m68k_instruction [0x44d0 | reg_a       ] = m68k_44d0_move_ccr_an;
+        m68k_instruction [0x44d8 | reg_a       ] = m68k_44d8_move_ccr_anp;
+        m68k_instruction [0x44e0 | reg_a       ] = m68k_44e0_move_ccr_pan;
+        m68k_instruction [0x44e8 | reg_a       ] = m68k_44e8_move_ccr_dan;
+        m68k_instruction [0x44f0 | reg_a       ] = m68k_44f0_move_ccr_danxi;
         m68k_instruction [0x46c0 | reg_a       ] = m68k_46c0_move_sr_dn;
         m68k_instruction [0x46d0 | reg_a       ] = m68k_46d0_move_sr_an;
         m68k_instruction [0x46d8 | reg_a       ] = m68k_46d8_move_sr_anp;
@@ -18131,6 +18253,11 @@ static void m68k_init_instructions (void)
     m68k_instruction [0x33fc] = m68k_33fc_move_w_al_imm;
     m68k_instruction [0x40f8] = m68k_40f8_move_aw_sr;
     m68k_instruction [0x40f9] = m68k_40f9_move_al_sr;
+    m68k_instruction [0x44f8] = m68k_44f8_move_ccr_aw;
+    m68k_instruction [0x44f9] = m68k_44f9_move_ccr_al;
+    m68k_instruction [0x44fa] = m68k_44fa_move_ccr_dpc;
+    m68k_instruction [0x44fb] = m68k_44fb_move_ccr_dpcxi;
+    m68k_instruction [0x44fc] = m68k_44fc_move_ccr_imm;
     m68k_instruction [0x46f8] = m68k_46f8_move_sr_aw;
     m68k_instruction [0x46f9] = m68k_46f9_move_sr_al;
     m68k_instruction [0x46fa] = m68k_46fa_move_sr_dpc;
