@@ -332,11 +332,19 @@ static void smd_vdp_draw_sprites (SMD_VDP_Context *context, uint16_t line, bool 
         SMD_VDP_Sprite_Table_Entry sprite;
         sprite.data [0] = util_ntoh16 (sprite_table [sprite_index * 4]);
         sprite.data [1] = util_ntoh16 (sprite_table [sprite_index * 4 + 1]);
+        sprite.data [3] = util_ntoh16 (sprite_table [sprite_index * 4 + 3]);
         int_point_t position = { .y = sprite.y - 128};
 
-        /* If the sprite is on this line, add it to the buffer */
+        /* Check if the sprite is on the current line */
         if (line >= position.y && line < position.y + 8 + sprite.height * 8)
         {
+            /* If the sprite has X=0, it masks the remaining sprites */
+            if (sprite.x == 0)
+            {
+                break;
+            }
+
+            /* Otherwise, add the sprite to the buffer */
             line_sprite_buffer [line_sprite_count++] = sprite_index;
             pixel_count += 8 * (sprite.width + 1);
         }
