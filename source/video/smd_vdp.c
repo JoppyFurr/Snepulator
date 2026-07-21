@@ -10,7 +10,7 @@
  *  - Line interrupts
  *  - Hacks (eg, removing sprite limit, disable blanking)
  *  - Hilight & Shadow
- *  - Width=256 mode, consider adjustment of aspect ratio to keep the image size the same?
+ *  - H32 mode, consider adjustment of aspect ratio to keep the image size the same?
  *  - PAL mode
  *  - Interlace mode
  *  - Sprite masking (X=0, X=1)
@@ -294,7 +294,7 @@ static void smd_vdp_draw_pattern_line (SMD_VDP_Context *context, uint16_t line, 
         {
             continue;
         }
-        else if (x + position.x >= context->frame_buffer.width)
+        else if (x + position.x >= context->screen_width)
         {
             return;
         }
@@ -316,7 +316,7 @@ static void smd_vdp_draw_pattern_line (SMD_VDP_Context *context, uint16_t line, 
 static void smd_vdp_draw_sprites (SMD_VDP_Context *context, uint16_t line, bool priority)
 {
     /* TODO: In Width=320 mode, the base-address register only provides 6 bits
-     *       of the address. In Width=256 mode, it provides 7 bits. */
+     *       of the address. In H32 mode, it provides 7 bits. */
     uint16_t *sprite_table = (uint16_t *) &context->state.vram [(context->state.sprite_table_base << 9) & 0xfc00];
 
     uint32_t line_sprite_buffer [20];
@@ -324,10 +324,9 @@ static void smd_vdp_draw_sprites (SMD_VDP_Context *context, uint16_t line, bool 
     uint32_t sprite_index = 0;
 
     /* Traverse the sprite list, filling the line sprite buffer */
-    /* TODO: When implementing Width=256 mode, the maximum is 64 sprites */
     /* TODO: Only do this once - It doesn't need to happen for both low & high priority passes */
     uint32_t pixel_count = 0;
-    for (int count = 0; count < 80; count++)
+    for (int count = 0; count < context->sprites_max; count++)
     {
         SMD_VDP_Sprite_Table_Entry sprite;
         sprite.data [0] = util_ntoh16 (sprite_table [sprite_index * 4]);
@@ -349,9 +348,7 @@ static void smd_vdp_draw_sprites (SMD_VDP_Context *context, uint16_t line, bool 
             pixel_count += 8 * (sprite.width + 1);
         }
 
-        /* TODO: When implementing Width=256 mode, there are only 16 sprites per line */
-        /* TODO: When implementing Width=256 mode, only 256 pixels worth of spite-data */
-        if (sprite.link == 0 || line_sprite_count == 20 || pixel_count >= 320)
+        if (sprite.link == 0 || line_sprite_count == context->sprites_per_line || pixel_count >= context->screen_width)
         {
             break;
         }
@@ -462,8 +459,7 @@ static void smd_vdp_draw_background (SMD_VDP_Context *context, uint16_t line, ui
     int_point_t position; /* Position of the pattern on the display */
     position.y = 8 * screen_tile_y - v_scroll_fine;
 
-    /* TODO: Stop when screen_tile_x reaches 32 for Width=256 mode */
-    for (int32_t screen_tile_x = -1; screen_tile_x < 40; screen_tile_x++)
+    for (int32_t screen_tile_x = -1; screen_tile_x < (int32_t) context->screen_width_tiles; screen_tile_x++)
     {
         /* Note: Starting at -1, subtracting a maximum coarse-scroll of 127 gives
          *       a minimum value of -128. Add +128 to keep the result positive. */
@@ -564,6 +560,36 @@ void smd_vdp_render_line (SMD_VDP_Context *context, uint16_t line)
 
 
 /*
+ * Called once per frame to update parameters based on the mode.
+ */
+void smd_vdp_update_mode (SMD_VDP_Context *context)
+{
+    if ((context->state.mode_4 & 0x81) == 00)
+    {
+        /* H32 Mode */
+        context->screen_width = 256;
+        context->screen_width_tiles = 32;
+        context->sprites_per_line = 16;
+        context->sprites_max = 64;
+    }
+    else
+    {
+        /* H40 Mode */
+        context->screen_width = 320;
+        context->screen_width_tiles = 40;
+        context->sprites_per_line = 20;
+        context->sprites_max = 80;
+    }
+
+    context->frame_buffer.width = context->screen_width;
+    /* TODO: For now, assuming 224 active lines. */
+    context->frame_buffer.height = 224;
+    context->lines_active = 224;
+
+}
+
+
+/*
  * Run one scanline on the VDP.
  */
 void smd_vdp_run_one_scanline (SMD_VDP_Context *context)
@@ -572,11 +598,11 @@ void smd_vdp_run_one_scanline (SMD_VDP_Context *context)
     /* TODO: For now, hard-coded for NTSC mode. PAL is 313 lines. */
     context->state.line = (context->state.line + 1) % 262;
 
-    /* TODO: If this is the first line, update the mode.
-     *       For now, the typical NTSC resolution is hard-coded. */
-    context->frame_buffer.width = 320;
-    context->frame_buffer.height = 224;
-    context->lines_active = 224;
+    /* If this is the first line, update the mode */
+    if (context->state.line == 0)
+    {
+        smd_vdp_update_mode (context);
+    }
 
     /* If this is an active line, render it */
     if (context->state.line < context->lines_active)
@@ -646,6 +672,8 @@ SMD_VDP_Context *smd_vdp_init (void *parent,
     context->parent = parent;
     context->memory_read_16  = memory_read_16;
     context->frame_done = frame_done;
+
+    smd_vdp_update_mode (context);
 
     return context;
 }
