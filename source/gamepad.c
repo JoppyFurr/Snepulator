@@ -19,6 +19,28 @@ extern Snepulator_State state;
 
 #define MAX_STRING_SIZE 1024
 
+static const bool valid_buttons_sms [GAMEPAD_BUTTON_COUNT] = {
+    [GAMEPAD_DIRECTION_UP] = true,
+    [GAMEPAD_DIRECTION_DOWN] = true,
+    [GAMEPAD_DIRECTION_LEFT] = true,
+    [GAMEPAD_DIRECTION_RIGHT] = true,
+    [GAMEPAD_BUTTON_1] = true,
+    [GAMEPAD_BUTTON_2] = true,
+    [GAMEPAD_BUTTON_START] = true
+};
+
+static const bool valid_buttons_smd [GAMEPAD_BUTTON_COUNT] = {
+    [GAMEPAD_DIRECTION_UP] = true,
+    [GAMEPAD_DIRECTION_DOWN] = true,
+    [GAMEPAD_DIRECTION_LEFT] = true,
+    [GAMEPAD_DIRECTION_RIGHT] = true,
+    [GAMEPAD_BUTTON_1] = true,
+    [GAMEPAD_BUTTON_2] = true,
+    [GAMEPAD_BUTTON_3] = true,
+    [GAMEPAD_BUTTON_START] = true
+};
+
+
 /* SMS Player 1 TL / TR bits */
 #define BIT_TL BIT_4
 #define BIT_TR BIT_5
@@ -50,6 +72,42 @@ Snepulator_Gamepad gamepad [3];
 
 
 /*
+ * Move on to the next remap step.
+ */
+static void gamepad_remap_next_step (void)
+{
+    const bool *valid_buttons = NULL;
+
+    if (gamepad [0].type == GAMEPAD_TYPE_SMS)
+    {
+        valid_buttons = valid_buttons_sms;
+    }
+    else if (gamepad [0].type == GAMEPAD_TYPE_SMD_3_BUTTON)
+    {
+        valid_buttons = valid_buttons_smd;
+    }
+
+    /* For gamepad types that don't have their own remapping list,
+     * jump straight to the done state. */
+    if (!valid_buttons)
+    {
+        gamepad_remap_step = GAMEPAD_BUTTON_COUNT;
+    }
+
+    while (gamepad_remap_step != GAMEPAD_BUTTON_COUNT)
+    {
+        gamepad_remap_step++;
+
+        /* Break the loop once we reach the next valid button. */
+        if (valid_buttons [gamepad_remap_step])
+        {
+            break;
+        }
+    }
+}
+
+
+/*
  * Use an axis-input to set a gamepad mapping.
  */
 static void gamepad_process_axis_event_remap (int32_t axis, int32_t value)
@@ -75,7 +133,7 @@ static void gamepad_process_axis_event_remap (int32_t axis, int32_t value)
         remap_config.mapping [gamepad_remap_step].type = GAMEPAD_MAPPING_TYPE_AXIS;
         remap_config.mapping [gamepad_remap_step].axis = axis;
         remap_config.mapping [gamepad_remap_step].sign = sign;
-        gamepad_remap_step++;
+        gamepad_remap_next_step ();
     }
 
     /* If this was the last button, commit the remap */
@@ -127,7 +185,7 @@ static void gamepad_process_button_event_remap (int32_t device_button)
 {
     remap_config.mapping [gamepad_remap_step].type = GAMEPAD_MAPPING_TYPE_BUTTON;
     remap_config.mapping [gamepad_remap_step].button = device_button;
-    gamepad_remap_step++;
+    gamepad_remap_next_step ();
 
     /* If this was the last button, commit the remap */
     if (gamepad_remap_step == GAMEPAD_BUTTON_COUNT)
@@ -194,7 +252,7 @@ static void gamepad_process_hat_event_remap (int32_t hat, int32_t direction)
         remap_config.mapping [gamepad_remap_step].type = GAMEPAD_MAPPING_TYPE_HAT;
         remap_config.mapping [gamepad_remap_step].hat = hat;
         remap_config.mapping [gamepad_remap_step].direction = direction;
-        gamepad_remap_step++;
+        gamepad_remap_next_step ();
     }
 
     /* If this was the last button, commit the remap */
@@ -244,7 +302,7 @@ static void gamepad_process_key_event_remap (int32_t key)
 {
     remap_config.mapping [gamepad_remap_step].type = GAMEPAD_MAPPING_TYPE_KEY;
     remap_config.mapping [gamepad_remap_step].key = key;
-    gamepad_remap_step++;
+    gamepad_remap_next_step ();
 
     /* If this was the last button, commit the remap */
     if (gamepad_remap_step == GAMEPAD_BUTTON_COUNT)

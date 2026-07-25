@@ -322,6 +322,14 @@ void snepulator_input_modal_render (void)
         {
             if (ImGui::BeginTabItem ("SMS Pad"))
             {
+                if (gamepad [0].type != GAMEPAD_TYPE_SMS)
+                {
+                    gamepad [0].type = GAMEPAD_TYPE_SMS;
+                    /* TODO: Load type-specific config */
+                    /* TODO: Set type when initialising console */
+                    /* TODO: Consider putting this into a wrapper */
+                }
+
                 ImGui::PushItemWidth (width - 16);
                 if (ImGui::BeginCombo ("##Device", gamepad_get_name (input_combo_index)))
                 {
@@ -404,6 +412,14 @@ void snepulator_input_modal_render (void)
             }
             if (ImGui::BeginTabItem ("MD Pad"))
             {
+                if (gamepad [0].type != GAMEPAD_TYPE_SMD_3_BUTTON)
+                {
+                    gamepad [0].type = GAMEPAD_TYPE_SMD_3_BUTTON;
+                    /* TODO: Load type-specific config */
+                    /* TODO: Set type when initialising console */
+                    /* TODO: Consider putting this into a wrapper */
+                }
+
                 ImGui::PushItemWidth (width - 16);
                 if (ImGui::BeginCombo ("##Device", gamepad_get_name (input_combo_index)))
                 {
