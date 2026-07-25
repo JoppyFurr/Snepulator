@@ -19,6 +19,22 @@
 
 #include "imgui.h"
 
+static const ImVec4 colour_white_v   = ImVec4 (1.00f, 1.00f, 1.00f, 1.0f);
+static const ImVec4 colour_grey_10_v = ImVec4 (0.10f, 0.10f, 0.10f, 1.0f);
+static const ImVec4 colour_grey_15_v = ImVec4 (0.15f, 0.15f, 0.15f, 1.0f);
+static const ImVec4 colour_grey_20_v = ImVec4 (0.20f, 0.20f, 0.20f, 1.0f);
+static const ImVec4 colour_grey_50_v = ImVec4 (0.50f, 0.50f, 0.50f, 0.5f);
+static const ImVec4 colour_waiting_v = ImVec4 (0.80f, 0.50f, 0.10f, 1.0f);
+static const ImVec4 colour_pressed_v = ImVec4 (0.40f, 0.80f, 0.60f, 1.0f);
+
+static const ImU32 colour_white          = ImColor (colour_white_v);
+static const ImU32 colour_grey_10        = ImColor (colour_grey_10_v);
+static const ImU32 colour_grey_15        = ImColor (colour_grey_15_v);
+static const ImU32 colour_grey_50        = ImColor (colour_grey_50_v);
+static const ImU32 colour_button_default = ImColor (colour_grey_20_v);
+static const ImU32 colour_button_waiting = ImColor (colour_waiting_v);
+static const ImU32 colour_button_pressed = ImColor (colour_pressed_v);
+
 extern "C" {
 #include "../snepulator.h"
 #include "../gamepad.h"
@@ -105,6 +121,166 @@ const char *button_mapping_to_string (Gamepad_Mapping b)
 
 
 /*
+ * Draw the D-Pad diagram.
+ */
+static void draw_dpad (ImVec2 centre, float scale)
+{
+    ImDrawList* draw_list  = ImGui::GetWindowDrawList ();
+
+    float dpad_width_r       = 0.11 * scale; /* Distance from centre of dpad to edge */
+    float dpad_rounding      = 0.06 * scale; /* Radius of the dpad corner-rounding */
+    float dpad_circle_r      = 0.044 * scale; /* Radius of flat circle in centre of dpad */
+    float dpad_bump_r        = (dpad_width_r + dpad_circle_r) * 0.5; /* Radius of the ring which passes through the centre of the bumps */
+    float dpad_bump_width_r  = 0.006 * scale;
+    float dpad_bump_length_r = 0.015 * scale;
+    float dpad_bump_rounding = dpad_bump_width_r;
+
+    ImU32 colour_up = 0;
+    ImU32 colour_down = 0;
+    ImU32 colour_left = 0;
+    ImU32 colour_right = 0;
+
+    /* Background */
+    draw_list->AddRectFilled   (ImVec2 (centre.x - dpad_width_r, centre.y - dpad_width_r),
+                                ImVec2 (centre.x + dpad_width_r, centre.y + dpad_width_r), colour_button_default, dpad_rounding);
+    draw_list->AddCircleFilled (ImVec2 (centre.x, centre.y), dpad_circle_r, colour_grey_15, 32);
+
+    /* Highlight if remapping remap */
+    if (gamepad_remap_step == GAMEPAD_DIRECTION_UP)
+    {
+        colour_up = colour_button_waiting;
+    }
+    else if (gamepad_remap_step == GAMEPAD_DIRECTION_DOWN)
+    {
+        colour_down = colour_button_waiting;
+    }
+    else if (gamepad_remap_step == GAMEPAD_DIRECTION_LEFT)
+    {
+        colour_left = colour_button_waiting;
+    }
+    else if (gamepad_remap_step == GAMEPAD_DIRECTION_RIGHT)
+    {
+        colour_right = colour_button_waiting;
+    }
+
+    /* If not remapping, hilight the currently pressed direction */
+    else if (gamepad_remap_step == GAMEPAD_BUTTON_COUNT)
+    {
+        if (gamepad [0].state[GAMEPAD_DIRECTION_UP])
+        {
+            colour_up = colour_button_pressed;
+        }
+        if (gamepad [0].state[GAMEPAD_DIRECTION_DOWN])
+        {
+            colour_down = colour_button_pressed;
+        }
+        if (gamepad [0].state[GAMEPAD_DIRECTION_LEFT])
+        {
+            colour_left = colour_button_pressed;
+        }
+        if (gamepad [0].state[GAMEPAD_DIRECTION_RIGHT])
+        {
+            colour_right = colour_button_pressed;
+        }
+    }
+
+    if (colour_up)
+    {
+        draw_list->AddRectFilled (ImVec2 (centre.x - dpad_width_r, centre.y - dpad_width_r),
+                                  ImVec2 (centre.x + dpad_width_r, centre.y               ), colour_up, dpad_rounding);
+    }
+    if (colour_down)
+    {
+        draw_list->AddRectFilled (ImVec2 (centre.x - dpad_width_r, centre.y         ),
+                                  ImVec2 (centre.x + dpad_width_r, centre.y + dpad_width_r), colour_down, dpad_rounding);
+    }
+    if (colour_left)
+    {
+        draw_list->AddRectFilled (ImVec2 (centre.x - dpad_width_r, centre.y - dpad_width_r),
+                                  ImVec2 (centre.x               , centre.y + dpad_width_r), colour_left, dpad_rounding);
+    }
+    if (colour_right)
+    {
+        draw_list->AddRectFilled (ImVec2 (centre.x               , centre.y - dpad_width_r),
+                                  ImVec2 (centre.x + dpad_width_r, centre.y + dpad_width_r), colour_right, dpad_rounding);
+    }
+
+    /* Dpad outline */
+    draw_list->AddRect (ImVec2 (centre.x - dpad_width_r, centre.y - dpad_width_r),
+                        ImVec2 (centre.x + dpad_width_r, centre.y + dpad_width_r), colour_white, dpad_rounding);
+
+    /* Dpad detail */
+    draw_list->AddRect (ImVec2 (centre.x - dpad_bump_width_r, centre.y - dpad_bump_r - dpad_bump_length_r),
+                        ImVec2 (centre.x + dpad_bump_width_r, centre.y - dpad_bump_r + dpad_bump_length_r), colour_grey_50, dpad_bump_rounding);
+    draw_list->AddRect (ImVec2 (centre.x - dpad_bump_width_r, centre.y + dpad_bump_r - dpad_bump_length_r),
+                        ImVec2 (centre.x + dpad_bump_width_r, centre.y + dpad_bump_r + dpad_bump_length_r), colour_grey_50, dpad_bump_rounding);
+    draw_list->AddRect (ImVec2 (centre.x - dpad_bump_r - dpad_bump_length_r, centre.y - dpad_bump_width_r),
+                        ImVec2 (centre.x - dpad_bump_r + dpad_bump_length_r, centre.y + dpad_bump_width_r), colour_grey_50, dpad_bump_rounding);
+    draw_list->AddRect (ImVec2 (centre.x + dpad_bump_r - dpad_bump_length_r, centre.y - dpad_bump_width_r),
+                        ImVec2 (centre.x + dpad_bump_r + dpad_bump_length_r, centre.y + dpad_bump_width_r), colour_grey_50, dpad_bump_rounding);
+    draw_list->AddCircle (ImVec2 (centre.x, centre.y), dpad_circle_r, colour_grey_50, 32);
+}
+
+
+/*
+ * Draw a button for the gamepad diagram.
+ */
+static void draw_button (ImVec2 centre, float radius, Gamepad_Button button, const char *label)
+{
+    ImDrawList* draw_list  = ImGui::GetWindowDrawList ();
+
+    /* Default button background */
+    draw_list->AddCircleFilled (centre, radius, colour_button_default, 32);
+
+    /* Highlight the button to remap */
+    if (gamepad_remap_step == button)
+    {
+        draw_list->AddCircleFilled (centre, radius, colour_button_waiting, 32);
+    }
+
+    /* If we're not currently remapping, show the current button state */
+    else if (gamepad_remap_step == GAMEPAD_BUTTON_COUNT)
+    {
+        if (gamepad [0].state[button])
+        {
+            draw_list->AddCircleFilled (centre, radius, colour_button_pressed, 32);
+        }
+    }
+
+    /* Button outlines & labels */
+    ImVec2 text_size;
+    draw_list->AddCircle (centre, radius, colour_white, 32);
+    text_size = ImGui::CalcTextSize (label);
+    draw_list->AddText (ImVec2 (centre.x - text_size.x / 2, centre.y - text_size.y / 2), colour_grey_50, label);
+}
+
+
+/*
+ * Draw the mapping table, shown below the controller diagram.
+ */
+static void button_mapping_table (uint32_t button_count, const Gamepad_Button *buttons, const char **names)
+{
+    if (ImGui::BeginTable("MappingDisplay", 2))
+    {
+        ImGui::TableNextColumn ();
+        for (uint32_t i = 0; i < button_count; i++)
+        {
+            /* For now, assume the column-split is after the D-Pad directions */
+            if (i == 4)
+            {
+                ImGui::TableNextColumn ();
+            }
+            ImGui::TextColored ((buttons [i] == gamepad_remap_step) ? colour_waiting_v : colour_white_v, "  %-11s%s",
+                                names [i],
+                                button_mapping_to_string (remap_config.mapping [buttons [i]]));
+        }
+
+        ImGui::EndTable ();
+    }
+}
+
+
+/*
  * Render the input configuration modal.
  */
 void snepulator_input_modal_render (void)
@@ -144,7 +320,7 @@ void snepulator_input_modal_render (void)
 
         if (ImGui::BeginTabBar ("##InputModalTabs"))
         {
-            if (ImGui::BeginTabItem ("Control Pad"))
+            if (ImGui::BeginTabItem ("SMS Pad"))
             {
                 ImGui::PushItemWidth (width - 16);
                 if (ImGui::BeginCombo ("##Device", gamepad_get_name (input_combo_index)))
@@ -167,10 +343,10 @@ void snepulator_input_modal_render (void)
                 }
                 ImGui::PopItemWidth ();
 
-                /* Master System gamepad and configuration labels */
+                /* Master System diagram and labels */
                 int config_box_width = width - 16;
                 int config_box_height = height - titlebar_height - tab_bar_height - above_box - below_box;
-                ImGui::BeginChild ("SMS Gamepad", ImVec2 (config_box_width, config_box_height), true);
+                ImGui::BeginChild ("MS Gamepad", ImVec2 (config_box_width, config_box_height), true);
                 {
                     ImVec2 origin = ImGui::GetCursorScreenPos ();
                     float scale = (width - 64);
@@ -185,173 +361,124 @@ void snepulator_input_modal_render (void)
                     origin.y += 10;
 
                     ImDrawList* draw_list  = ImGui::GetWindowDrawList ();
-                    ImVec4 White_V         = ImVec4 (1.00f, 1.00f, 1.00f, 1.0f);
-                    ImVec4 Grey_10_V       = ImVec4 (0.10f, 0.10f, 0.10f, 1.0f);
-                    ImVec4 Grey_15_V       = ImVec4 (0.15f, 0.15f, 0.15f, 1.0f);
-                    ImVec4 Grey_20_V       = ImVec4 (0.20f, 0.20f, 0.20f, 1.0f);
-                    ImVec4 Grey_50_V       = ImVec4 (0.50f, 0.50f, 0.50f, 0.5f);
-                    ImVec4 ButtonWaiting_V = ImVec4 (0.80f, 0.50f, 0.10f, 1.0f);
-                    ImVec4 ButtonPressed_V = ImVec4 (0.40f, 0.80f, 0.60f, 1.0f);
-
-                    const ImU32 White         = ImColor (White_V);
-                    const ImU32 Grey_10       = ImColor (Grey_10_V);
-                    const ImU32 Grey_15       = ImColor (Grey_15_V);
-                    const ImU32 Grey_50       = ImColor (Grey_50_V);
-                    const ImU32 ButtonDefault = ImColor (Grey_20_V);
-                    const ImU32 ButtonWaiting = ImColor (ButtonWaiting_V);
-                    const ImU32 ButtonPressed = ImColor (ButtonPressed_V);
 
                     /* Shape values */
                     ImVec2 button_1_centre   = ImVec2 (origin.x + 0.70 * scale, origin.y + 0.25 * scale);
                     ImVec2 button_2_centre   = ImVec2 (origin.x + 0.87 * scale, origin.y + 0.25 * scale);
                     float button_radius      = 0.06 * scale;
                     ImVec2 dpad_centre       = ImVec2 (origin.x + 0.27 * scale, origin.y + 0.20 * scale);
-                    float dpad_width_r       = 0.11 * scale; /* Distance from centre of dpad to edge */
-                    float dpad_rounding      = 0.06 * scale; /* Radius of the dpad corner-rounding */
-                    float dpad_circle_r      = 0.044 * scale; /* Radius of flat circle in centre of dpad */
-                    float dpad_bump_r        = (dpad_width_r + dpad_circle_r) * 0.5; /* Radius of the ring which passes through the centre of the bumps */
-                    float dpad_bump_width_r  = 0.006 * scale;
-                    float dpad_bump_length_r = 0.015 * scale;
-                    float dpad_bump_rounding = dpad_bump_width_r;
 
                     /* Controller outline */
                     draw_list->AddRectFilled (
                         ImVec2 (origin.x + scale * 0.0,  origin.y + scale * 0.0 ),
-                        ImVec2 (origin.x + scale * 1.0,  origin.y + scale * 0.4 ), Grey_10);
+                        ImVec2 (origin.x + scale * 1.0,  origin.y + scale * 0.4 ), colour_grey_10);
                     draw_list->AddRect (
                         ImVec2 (origin.x + scale * 0.0,  origin.y + scale * 0.0 ),
-                        ImVec2 (origin.x + scale * 1.0,  origin.y + scale * 0.4 ), White);
+                        ImVec2 (origin.x + scale * 1.0,  origin.y + scale * 0.4 ), colour_white);
                     draw_list->AddRect (
                         ImVec2 (origin.x + scale * 0.0,  origin.y + scale * 0.0 ),
-                        ImVec2 (origin.x + scale * 0.08, origin.y + scale * 0.4 ), White);
+                        ImVec2 (origin.x + scale * 0.08, origin.y + scale * 0.4 ), colour_white);
                     draw_list->AddRect (
                         ImVec2 (origin.x + scale * 0.48, origin.y + scale * 0.0 ),
-                        ImVec2 (origin.x + scale * 1.0,  origin.y + scale * 0.12), White);
+                        ImVec2 (origin.x + scale * 1.0,  origin.y + scale * 0.12), colour_white);
                     draw_list->AddRect (
                         ImVec2 (origin.x + scale * 0.48, origin.y + scale * 0.36),
-                        ImVec2 (origin.x + scale * 1.0,  origin.y + scale * 0.4 ), White);
+                        ImVec2 (origin.x + scale * 1.0,  origin.y + scale * 0.4 ), colour_white);
 
-                    /* Default button and dpad backgrounds */
-                    draw_list->AddCircleFilled (button_1_centre, button_radius, ButtonDefault, 32);
-                    draw_list->AddCircleFilled (button_2_centre, button_radius, ButtonDefault, 32);
-                    draw_list->AddRectFilled   (ImVec2 (dpad_centre.x - dpad_width_r, dpad_centre.y - dpad_width_r),
-                                                ImVec2 (dpad_centre.x + dpad_width_r, dpad_centre.y + dpad_width_r), ButtonDefault, dpad_rounding);
-                    draw_list->AddCircleFilled (ImVec2 (dpad_centre.x, dpad_centre.y), dpad_circle_r, Grey_15, 32);
-
-                    /* Highlight the button to remap */
-                    if (gamepad_remap_step != GAMEPAD_BUTTON_COUNT)
-                    {
-                        switch (gamepad_remap_step)
-                        {
-                            case GAMEPAD_DIRECTION_UP:
-                                draw_list->AddRectFilled (ImVec2 (dpad_centre.x - dpad_width_r, dpad_centre.y - dpad_width_r),
-                                                          ImVec2 (dpad_centre.x + dpad_width_r, dpad_centre.y               ), ButtonWaiting, dpad_rounding);
-                                break;
-                            case GAMEPAD_DIRECTION_DOWN:
-                                draw_list->AddRectFilled (ImVec2 (dpad_centre.x - dpad_width_r, dpad_centre.y         ),
-                                                          ImVec2 (dpad_centre.x + dpad_width_r, dpad_centre.y + dpad_width_r), ButtonWaiting, dpad_rounding);
-                                break;
-                            case GAMEPAD_DIRECTION_LEFT:
-                                draw_list->AddRectFilled (ImVec2 (dpad_centre.x - dpad_width_r, dpad_centre.y - dpad_width_r),
-                                                          ImVec2 (dpad_centre.x               , dpad_centre.y + dpad_width_r), ButtonWaiting, dpad_rounding);
-                                break;
-                            case GAMEPAD_DIRECTION_RIGHT:
-                                draw_list->AddRectFilled (ImVec2 (dpad_centre.x               , dpad_centre.y - dpad_width_r),
-                                                          ImVec2 (dpad_centre.x + dpad_width_r, dpad_centre.y + dpad_width_r), ButtonWaiting, dpad_rounding);
-                                break;
-                            case GAMEPAD_BUTTON_1:
-                                draw_list->AddCircleFilled (button_1_centre, button_radius, ButtonWaiting, 32);
-                                break;
-                            case GAMEPAD_BUTTON_2:
-                                draw_list->AddCircleFilled (button_2_centre, button_radius, ButtonWaiting, 32);
-                                break;
-                            default:
-                                /* Nothing to highlight for the pause button yet */
-                                break;
-                        }
-
-                    }
-                    /* If we're not currently remapping, show the current gamepad state */
-                    else
-                    {
-                        if (gamepad [0].state[GAMEPAD_DIRECTION_UP])
-                        {
-                            draw_list->AddRectFilled (ImVec2 (dpad_centre.x - dpad_width_r, dpad_centre.y - dpad_width_r),
-                                                      ImVec2 (dpad_centre.x + dpad_width_r, dpad_centre.y               ), ButtonPressed, dpad_rounding);
-                        }
-                        if (gamepad [0].state[GAMEPAD_DIRECTION_DOWN])
-                        {
-                            draw_list->AddRectFilled (ImVec2 (dpad_centre.x - dpad_width_r, dpad_centre.y               ),
-                                                      ImVec2 (dpad_centre.x + dpad_width_r, dpad_centre.y + dpad_width_r), ButtonPressed, dpad_rounding);
-                        }
-                        if (gamepad [0].state[GAMEPAD_DIRECTION_LEFT])
-                        {
-                            draw_list->AddRectFilled (ImVec2 (dpad_centre.x - dpad_width_r, dpad_centre.y - dpad_width_r),
-                                                      ImVec2 (dpad_centre.x               , dpad_centre.y + dpad_width_r), ButtonPressed, dpad_rounding);
-                        }
-                        if (gamepad [0].state[GAMEPAD_DIRECTION_RIGHT])
-                        {
-                            draw_list->AddRectFilled (ImVec2 (dpad_centre.x               , dpad_centre.y - dpad_width_r),
-                                                      ImVec2 (dpad_centre.x + dpad_width_r, dpad_centre.y + dpad_width_r), ButtonPressed, dpad_rounding);
-                        }
-                        if (gamepad [0].state[GAMEPAD_BUTTON_1])
-                        {
-                            draw_list->AddCircleFilled (button_1_centre, button_radius, ButtonPressed, 32);
-                        }
-                        if (gamepad [0].state[GAMEPAD_BUTTON_2])
-                        {
-                            draw_list->AddCircleFilled (button_2_centre, button_radius, ButtonPressed, 32);
-                        }
-                        if (gamepad [0].state[GAMEPAD_BUTTON_START])
-                        {
-                            /* Nothing to highlight for the pause button yet */
-                        }
-                    }
-
-                    /* Button outlines & labels */
-                    ImVec2 text_size;
-                    draw_list->AddCircle (button_1_centre, button_radius, White, 32);
-                    text_size = ImGui::CalcTextSize ("1");
-                    draw_list->AddText (ImVec2 (button_1_centre.x - text_size.x / 2, button_1_centre.y - text_size.y / 2), Grey_50, "1");
-                    draw_list->AddCircle (button_2_centre, button_radius, White, 32);
-                    text_size = ImGui::CalcTextSize ("2");
-                    draw_list->AddText (ImVec2 (button_2_centre.x - text_size.x / 2, button_2_centre.y - text_size.y / 2), Grey_50, "2");
-
-                    /* Dpad outline */
-                    draw_list->AddRect (ImVec2 (dpad_centre.x - dpad_width_r, dpad_centre.y - dpad_width_r),
-                                        ImVec2 (dpad_centre.x + dpad_width_r, dpad_centre.y + dpad_width_r), White, dpad_rounding);
-
-                    /* Dpad detail */
-                    draw_list->AddRect (ImVec2 (dpad_centre.x - dpad_bump_width_r, dpad_centre.y - dpad_bump_r - dpad_bump_length_r),
-                                        ImVec2 (dpad_centre.x + dpad_bump_width_r, dpad_centre.y - dpad_bump_r + dpad_bump_length_r), Grey_50, dpad_bump_rounding);
-                    draw_list->AddRect (ImVec2 (dpad_centre.x - dpad_bump_width_r, dpad_centre.y + dpad_bump_r - dpad_bump_length_r),
-                                        ImVec2 (dpad_centre.x + dpad_bump_width_r, dpad_centre.y + dpad_bump_r + dpad_bump_length_r), Grey_50, dpad_bump_rounding);
-                    draw_list->AddRect (ImVec2 (dpad_centre.x - dpad_bump_r - dpad_bump_length_r, dpad_centre.y - dpad_bump_width_r),
-                                        ImVec2 (dpad_centre.x - dpad_bump_r + dpad_bump_length_r, dpad_centre.y + dpad_bump_width_r), Grey_50, dpad_bump_rounding);
-                    draw_list->AddRect (ImVec2 (dpad_centre.x + dpad_bump_r - dpad_bump_length_r, dpad_centre.y - dpad_bump_width_r),
-                                        ImVec2 (dpad_centre.x + dpad_bump_r + dpad_bump_length_r, dpad_centre.y + dpad_bump_width_r), Grey_50, dpad_bump_rounding);
-                    draw_list->AddCircle (ImVec2 (dpad_centre.x, dpad_centre.y), dpad_circle_r, Grey_50, 32);
+                    draw_dpad (dpad_centre, scale);
+                    draw_button (button_1_centre, button_radius, GAMEPAD_BUTTON_1, "1");
+                    draw_button (button_2_centre, button_radius, GAMEPAD_BUTTON_2, "2");
 
                     /* Move cursor to below gamepad diagram */
                     ImGui::SetCursorScreenPos (ImVec2 (origin.x - 10, origin.y + scale * 0.4 + 16));
-                    ImGui::TextColored ((gamepad_remap_step == GAMEPAD_DIRECTION_UP )     ? ButtonWaiting_V : White_V,
-                                        "  Up:        %s", button_mapping_to_string (remap_config.mapping [GAMEPAD_DIRECTION_UP]));
-                    ImGui::TextColored ((gamepad_remap_step == GAMEPAD_DIRECTION_DOWN )   ? ButtonWaiting_V : White_V,
-                                        "  Down:      %s", button_mapping_to_string (remap_config.mapping [GAMEPAD_DIRECTION_DOWN]));
-                    ImGui::TextColored ((gamepad_remap_step == GAMEPAD_DIRECTION_LEFT )   ? ButtonWaiting_V : White_V,
-                                        "  Left:      %s", button_mapping_to_string (remap_config.mapping [GAMEPAD_DIRECTION_LEFT]));
-                    ImGui::TextColored ((gamepad_remap_step == GAMEPAD_DIRECTION_RIGHT )  ? ButtonWaiting_V : White_V,
-                                        "  Right:     %s", button_mapping_to_string (remap_config.mapping [GAMEPAD_DIRECTION_RIGHT]));
+                    const Gamepad_Button buttons [7] = { GAMEPAD_DIRECTION_UP, GAMEPAD_DIRECTION_DOWN, GAMEPAD_DIRECTION_LEFT, GAMEPAD_DIRECTION_RIGHT,
+                                                         GAMEPAD_BUTTON_1, GAMEPAD_BUTTON_2, GAMEPAD_BUTTON_START };
+                    const char *names [7] = { "Up:", "Down:", "Left:", "Right:", "Button 1:", "Button 2:", "Pause:" };
+                    button_mapping_table (7, buttons, names);
+                }
 
-                    ImGui::SetCursorScreenPos (ImVec2 (origin.x + scale * 0.5, origin.y + scale * 0.4 + 16));
-                    ImGui::TextColored ((gamepad_remap_step == GAMEPAD_BUTTON_1 )         ? ButtonWaiting_V : White_V,
-                                        "  Button 1:  %s", button_mapping_to_string (remap_config.mapping [GAMEPAD_BUTTON_1]));
-                    ImGui::SetCursorScreenPos (ImVec2 (origin.x + scale * 0.5, origin.y + scale * 0.4 + 42));
-                    ImGui::TextColored ((gamepad_remap_step == GAMEPAD_BUTTON_2 )         ? ButtonWaiting_V : White_V,
-                                        "  Button 2:  %s", button_mapping_to_string (remap_config.mapping [GAMEPAD_BUTTON_2]));
-                    ImGui::SetCursorScreenPos (ImVec2 (origin.x + scale * 0.5, origin.y + scale * 0.4 + 68));
-                    ImGui::TextColored ((gamepad_remap_step == GAMEPAD_BUTTON_START )     ? ButtonWaiting_V : White_V,
-                                        "  Pause:     %s", button_mapping_to_string (remap_config.mapping [GAMEPAD_BUTTON_START]));
+                ImGui::EndChild ();
+                ImGui::EndTabItem ();
+
+                show_remap_button = true;
+            }
+            if (ImGui::BeginTabItem ("MD Pad"))
+            {
+                ImGui::PushItemWidth (width - 16);
+                if (ImGui::BeginCombo ("##Device", gamepad_get_name (input_combo_index)))
+                {
+                    for (uint32_t i = GAMEPAD_INDEX_KEYBOARD; i < gamepad_list_count; i++)
+                    {
+                        if (ImGui::Selectable (gamepad_get_name (i), i == input_combo_index))
+                        {
+                            gamepad_change_device (0, i);
+                            remap_config = *gamepad [0].config;
+                            gamepad_remap_step = GAMEPAD_BUTTON_COUNT;
+                            input_combo_index = i;
+                        }
+                        if (i == 1)
+                        {
+                            ImGui::SetItemDefaultFocus ();
+                        }
+                    }
+                    ImGui::EndCombo ();
+                }
+                ImGui::PopItemWidth ();
+
+                /* Mega Drive diagram and labels */
+                int config_box_width = width - 16;
+                int config_box_height = height - titlebar_height - tab_bar_height - above_box - below_box;
+                ImGui::BeginChild ("SMD Gamepad", ImVec2 (config_box_width, config_box_height), true);
+                {
+                    ImVec2 origin = ImGui::GetCursorScreenPos ();
+                    float scale = (width - 64);
+
+                    /* For wide screens, limit the controller diagram to 2/3 the box height */
+                    if (scale > config_box_height * 5 / 3)
+                    {
+                        scale = config_box_height * 5 / 3;
+                    }
+
+                    origin.x += 16;
+                    origin.y += 10;
+
+                    ImDrawList* draw_list  = ImGui::GetWindowDrawList ();
+
+                    /* Shape values */
+                    ImVec2 button_a_centre   = ImVec2 (origin.x + 0.60 * scale, origin.y + 0.25 * scale);
+                    ImVec2 button_b_centre   = ImVec2 (origin.x + 0.75 * scale, origin.y + 0.25 * scale);
+                    ImVec2 button_c_centre   = ImVec2 (origin.x + 0.90 * scale, origin.y + 0.25 * scale);
+                    float button_radius      = 0.06 * scale;
+                    ImVec2 dpad_centre       = ImVec2 (origin.x + 0.27 * scale, origin.y + 0.20 * scale);
+
+                    /* Controller outline */
+                    draw_list->AddRectFilled (
+                        ImVec2 (origin.x + scale * 0.0,  origin.y + scale * 0.0 ),
+                        ImVec2 (origin.x + scale * 1.0,  origin.y + scale * 0.4 ), colour_grey_10);
+                    draw_list->AddRect (
+                        ImVec2 (origin.x + scale * 0.0,  origin.y + scale * 0.0 ),
+                        ImVec2 (origin.x + scale * 1.0,  origin.y + scale * 0.4 ), colour_white);
+                    draw_list->AddRect (
+                        ImVec2 (origin.x + scale * 0.0,  origin.y + scale * 0.0 ),
+                        ImVec2 (origin.x + scale * 0.08, origin.y + scale * 0.4 ), colour_white);
+                    draw_list->AddRect (
+                        ImVec2 (origin.x + scale * 0.48, origin.y + scale * 0.0 ),
+                        ImVec2 (origin.x + scale * 1.0,  origin.y + scale * 0.12), colour_white);
+                    draw_list->AddRect (
+                        ImVec2 (origin.x + scale * 0.48, origin.y + scale * 0.36),
+                        ImVec2 (origin.x + scale * 1.0,  origin.y + scale * 0.4 ), colour_white);
+
+                    draw_dpad (dpad_centre, scale);
+                    draw_button (button_a_centre, button_radius, GAMEPAD_BUTTON_1, "A");
+                    draw_button (button_b_centre, button_radius, GAMEPAD_BUTTON_2, "B");
+                    draw_button (button_c_centre, button_radius, GAMEPAD_BUTTON_3, "C");
+
+                    /* Move cursor to below gamepad diagram */
+                    ImGui::SetCursorScreenPos (ImVec2 (origin.x - 10, origin.y + scale * 0.4 + 16));
+                    const Gamepad_Button buttons [8] = { GAMEPAD_DIRECTION_UP, GAMEPAD_DIRECTION_DOWN, GAMEPAD_DIRECTION_LEFT, GAMEPAD_DIRECTION_RIGHT,
+                                                         GAMEPAD_BUTTON_1, GAMEPAD_BUTTON_2, GAMEPAD_BUTTON_3, GAMEPAD_BUTTON_START };
+                    const char *names [8] = { "Up:", "Down:", "Left:", "Right:", "Button A:", "Button B:", "Button C:", "Start:" };
+                    button_mapping_table (8, buttons, names);
                 }
 
                 ImGui::EndChild ();

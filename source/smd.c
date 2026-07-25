@@ -110,7 +110,7 @@ static uint8_t smd_memory_read_8 (void *context_ptr, uint32_t addr)
                 {
                     return (gamepad [1].state [GAMEPAD_DIRECTION_UP]    ? 0 : BIT_0) |
                            (gamepad [1].state [GAMEPAD_DIRECTION_DOWN]  ? 0 : BIT_1) |
-                           /* Button 'A' not implemented yet */
+                           (gamepad [1].state [GAMEPAD_BUTTON_1]        ? 0 : BIT_4) |
                            (gamepad [1].state [GAMEPAD_BUTTON_START]    ? 0 : BIT_5);
                 }
                 else
@@ -119,9 +119,8 @@ static uint8_t smd_memory_read_8 (void *context_ptr, uint32_t addr)
                            (gamepad [1].state [GAMEPAD_DIRECTION_DOWN]  ? 0 : BIT_1) |
                            (gamepad [1].state [GAMEPAD_DIRECTION_LEFT]  ? 0 : BIT_2) |
                            (gamepad [1].state [GAMEPAD_DIRECTION_RIGHT] ? 0 : BIT_3) |
-                           /* Use SMS buttons for 'B' and 'C' */
-                           (gamepad [1].state [GAMEPAD_BUTTON_1]        ? 0 : BIT_4) |
-                           (gamepad [1].state [GAMEPAD_BUTTON_2]        ? 0 : BIT_5) | BIT_6;
+                           (gamepad [1].state [GAMEPAD_BUTTON_2]        ? 0 : BIT_4) |
+                           (gamepad [1].state [GAMEPAD_BUTTON_3]        ? 0 : BIT_5) | BIT_6;
                 }
 
             case 0xa10004: /* Player 2 - Data Register */
@@ -132,7 +131,7 @@ static uint8_t smd_memory_read_8 (void *context_ptr, uint32_t addr)
                 {
                     return (gamepad [2].state [GAMEPAD_DIRECTION_UP]    ? 0 : BIT_0) |
                            (gamepad [2].state [GAMEPAD_DIRECTION_DOWN]  ? 0 : BIT_1) |
-                           /* Button 'A' not implemented yet */
+                           (gamepad [2].state [GAMEPAD_BUTTON_1]        ? 0 : BIT_4) |
                            (gamepad [2].state [GAMEPAD_BUTTON_START]    ? 0 : BIT_5);
                 }
                 else
@@ -141,9 +140,8 @@ static uint8_t smd_memory_read_8 (void *context_ptr, uint32_t addr)
                            (gamepad [2].state [GAMEPAD_DIRECTION_DOWN]  ? 0 : BIT_1) |
                            (gamepad [2].state [GAMEPAD_DIRECTION_LEFT]  ? 0 : BIT_2) |
                            (gamepad [2].state [GAMEPAD_DIRECTION_RIGHT] ? 0 : BIT_3) |
-                           /* Use SMS buttons for 'B' and 'C' */
-                           (gamepad [2].state [GAMEPAD_BUTTON_1]        ? 0 : BIT_4) |
-                           (gamepad [2].state [GAMEPAD_BUTTON_2]        ? 0 : BIT_5) | BIT_6;
+                           (gamepad [2].state [GAMEPAD_BUTTON_2]        ? 0 : BIT_4) |
+                           (gamepad [2].state [GAMEPAD_BUTTON_3]        ? 0 : BIT_5) | BIT_6;
                 }
 
             case 0xa10006: /* Player 3 - Data Register */

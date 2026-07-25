@@ -23,7 +23,8 @@ extern Snepulator_State state;
 #define BIT_TL BIT_4
 #define BIT_TR BIT_5
 
-const char *button_names [] = { "up", "down", "left", "right", "button-1", "button-2", "start" };
+/* TODO: Separate config sections for SMS and SMD with correct names */
+const char *button_names [] = { "up", "down", "left", "right", "button-1", "button-2", "button-3", "start" };
 
 
 /* Stored gamepad configuration */

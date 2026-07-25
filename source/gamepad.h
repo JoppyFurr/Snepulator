@@ -45,6 +45,7 @@ typedef enum Gamepad_Button_e {
     GAMEPAD_DIRECTION_RIGHT,
     GAMEPAD_BUTTON_1,
     GAMEPAD_BUTTON_2,
+    GAMEPAD_BUTTON_3,
     GAMEPAD_BUTTON_START,
     GAMEPAD_BUTTON_COUNT
 } Gamepad_Button;
