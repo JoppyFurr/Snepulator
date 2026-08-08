@@ -22,13 +22,16 @@ typedef enum Gamepad_Index_e {
 } Gamepad_Index;
 
 
+/* The particular type of controller connected to the emulated console. */
 typedef enum Gamepad_Type_e {
     GAMEPAD_TYPE_SMS = 0,
     GAMEPAD_TYPE_SMS_PHASER,
     GAMEPAD_TYPE_SMS_PADDLE,
     GAMEPAD_TYPE_SMS_SPORTS_PAD,
-    GAMEPAD_TYPE_SMS_SPORTS_PAD_CONTROL
+    GAMEPAD_TYPE_SMS_SPORTS_PAD_CONTROL,
+    GAMEPAD_TYPE_SMD
 } Gamepad_Type;
+
 
 typedef enum Trackball_State_e {
     TRACKBALL_STATE_X_MSB = 0,
@@ -38,6 +41,7 @@ typedef enum Trackball_State_e {
 } Trackball_State;
 
 
+/* All possible gamepad buttons across all consoles. */
 typedef enum Gamepad_Button_e {
     GAMEPAD_DIRECTION_UP = 0,
     GAMEPAD_DIRECTION_DOWN,
@@ -51,6 +55,16 @@ typedef enum Gamepad_Button_e {
 } Gamepad_Button;
 
 
+/* For a physical host gamepad, a different mapping can be defined
+ * each for SMS-style controllers and SMD-style controllers. */
+typedef enum Gamepad_Mapping_Group_e {
+    GAMEPAD_MAPPING_GROUP_SMS = 0,
+    GAMEPAD_MAPPING_GROUP_SMD,
+    GAMEPAD_MAPPING_GROUP_COUNT
+} Gamepad_Mapping_Group;
+
+
+/* Input type for the mapping of a single button */
 typedef enum Gamepad_Mapping_Type_e {
     GAMEPAD_MAPPING_TYPE_AXIS = 0,
     GAMEPAD_MAPPING_TYPE_BUTTON,
@@ -79,7 +93,7 @@ typedef struct Gamepad_Mapping_s {
  */
 typedef struct Gamepad_Config_s {
     uint8_t uuid [UUID_SIZE];
-    Gamepad_Mapping mapping [GAMEPAD_BUTTON_COUNT];
+    Gamepad_Mapping mapping [GAMEPAD_MAPPING_GROUP_COUNT] [GAMEPAD_BUTTON_COUNT];
 } Gamepad_Config;
 
 
@@ -96,10 +110,11 @@ typedef struct Gamepad_Instance_s {
  * Current state of simulated gamepad.
  */
 typedef struct Snepulator_Gamepad_t {
-    Gamepad_Type    type;       /* Emulated gamepad type. */
-    bool            type_auto;  /* Auto-select emulated gamepad type based on game. */
-    int32_t         id;         /* ID associated with events for this gamepad. */
-    Gamepad_Config *config;     /* Button mapping configuration */
+    Gamepad_Type    type;           /* Emulated gamepad type. */
+    bool            type_auto;      /* Auto-select emulated gamepad type based on game. */
+    Gamepad_Mapping_Group group;    /* Which configured input mapping to use */
+    int32_t         id;             /* ID associated with events for this gamepad. */
+    Gamepad_Config *config;         /* Button mapping configuration */
     bool            state [GAMEPAD_BUTTON_COUNT];
 
     /* SMS Paddle Controller */
@@ -156,7 +171,7 @@ void gamepad_process_hat_event (int32_t id, int32_t hat, int32_t direction);
 void gamepad_process_key_event (int32_t key, bool key_down);
 
 /* Update the mapping for a known gamepad. */
-void gamepad_update_mapping (Gamepad_Config device);
+void gamepad_update_mapping (Gamepad_Config device, Gamepad_Mapping_Group group);
 
 /* Initialise gamepad support. */
 void gamepad_init (void);

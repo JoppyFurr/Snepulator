@@ -71,46 +71,79 @@ static int32_t gamepad_sdl_os_gamepad_get_id (uint32_t device_index)
 static uint32_t gamepad_sdl_os_gamepad_create_default_config (int32_t device_index)
 {
     Gamepad_Config new_config = { };
+    Gamepad_Mapping *sms_mapping = new_config.mapping [GAMEPAD_MAPPING_GROUP_SMS];
+    Gamepad_Mapping *smd_mapping = new_config.mapping [GAMEPAD_MAPPING_GROUP_SMD];
+
+    /* TODO: Mapping for both SMS and SMD groups */
 
     if (device_index == GAMEPAD_ID_KEYBOARD)
     {
         memcpy (new_config.uuid, "KEYBOARD", 8);
 
         /* Different default keyboard mappings for different layouts */
+        /* TODO: Instead of manually specifying three mappings, can all key's scancodes be automatically be converted
+         *       based on the user's keyboard layout? */
         switch (SDL_GetKeyFromScancode (SDL_SCANCODE_S))
         {
             /* Dvorak */
             case SDLK_o:
-                new_config.mapping [GAMEPAD_DIRECTION_UP]     = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_COMMA };
-                new_config.mapping [GAMEPAD_DIRECTION_DOWN]   = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_o };
-                new_config.mapping [GAMEPAD_DIRECTION_LEFT]   = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_a };
-                new_config.mapping [GAMEPAD_DIRECTION_RIGHT]  = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_e };
-                new_config.mapping [GAMEPAD_BUTTON_1]         = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_v };
-                new_config.mapping [GAMEPAD_BUTTON_2]         = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_z };
-                new_config.mapping [GAMEPAD_BUTTON_START]     = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_RETURN };
+                sms_mapping [GAMEPAD_DIRECTION_UP]     = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_COMMA };
+                sms_mapping [GAMEPAD_DIRECTION_DOWN]   = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_o };
+                sms_mapping [GAMEPAD_DIRECTION_LEFT]   = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_a };
+                sms_mapping [GAMEPAD_DIRECTION_RIGHT]  = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_e };
+                sms_mapping [GAMEPAD_BUTTON_1]         = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_v };
+                sms_mapping [GAMEPAD_BUTTON_2]         = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_z };
+                sms_mapping [GAMEPAD_BUTTON_START]     = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_RETURN };
+
+                smd_mapping [GAMEPAD_DIRECTION_UP]     = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_COMMA };
+                smd_mapping [GAMEPAD_DIRECTION_DOWN]   = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_o };
+                smd_mapping [GAMEPAD_DIRECTION_LEFT]   = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_a };
+                smd_mapping [GAMEPAD_DIRECTION_RIGHT]  = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_e };
+                smd_mapping [GAMEPAD_BUTTON_1]         = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_w };
+                smd_mapping [GAMEPAD_BUTTON_2]         = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_v };
+                smd_mapping [GAMEPAD_BUTTON_3]         = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_z };
+                smd_mapping [GAMEPAD_BUTTON_START]     = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_RETURN };
                 break;
 
             /* Colemak */
             case SDLK_r:
-                new_config.mapping [GAMEPAD_DIRECTION_UP]     = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_w };
-                new_config.mapping [GAMEPAD_DIRECTION_DOWN]   = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_r };
-                new_config.mapping [GAMEPAD_DIRECTION_LEFT]   = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_a };
-                new_config.mapping [GAMEPAD_DIRECTION_RIGHT]  = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_s };
-                new_config.mapping [GAMEPAD_BUTTON_1]         = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_PERIOD };
-                new_config.mapping [GAMEPAD_BUTTON_2]         = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_SLASH };
-                new_config.mapping [GAMEPAD_BUTTON_START]     = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_RETURN };
+                sms_mapping [GAMEPAD_DIRECTION_UP]     = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_w };
+                sms_mapping [GAMEPAD_DIRECTION_DOWN]   = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_r };
+                sms_mapping [GAMEPAD_DIRECTION_LEFT]   = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_a };
+                sms_mapping [GAMEPAD_DIRECTION_RIGHT]  = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_s };
+                sms_mapping [GAMEPAD_BUTTON_1]         = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_PERIOD };
+                sms_mapping [GAMEPAD_BUTTON_2]         = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_SLASH };
+                sms_mapping [GAMEPAD_BUTTON_START]     = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_RETURN };
+
+                sms_mapping [GAMEPAD_DIRECTION_UP]     = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_w };
+                sms_mapping [GAMEPAD_DIRECTION_DOWN]   = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_r };
+                sms_mapping [GAMEPAD_DIRECTION_LEFT]   = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_a };
+                sms_mapping [GAMEPAD_DIRECTION_RIGHT]  = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_s };
+                sms_mapping [GAMEPAD_BUTTON_1]         = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_COMMA };
+                sms_mapping [GAMEPAD_BUTTON_2]         = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_PERIOD };
+                sms_mapping [GAMEPAD_BUTTON_3]         = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_SLASH };
+                sms_mapping [GAMEPAD_BUTTON_START]     = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_RETURN };
                 break;
 
             /* Qwerty */
             case SDLK_s:
             default:
-                new_config.mapping [GAMEPAD_DIRECTION_UP]     = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_w };
-                new_config.mapping [GAMEPAD_DIRECTION_DOWN]   = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_s };
-                new_config.mapping [GAMEPAD_DIRECTION_LEFT]   = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_a };
-                new_config.mapping [GAMEPAD_DIRECTION_RIGHT]  = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_d };
-                new_config.mapping [GAMEPAD_BUTTON_1]         = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_PERIOD };
-                new_config.mapping [GAMEPAD_BUTTON_2]         = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_SLASH };
-                new_config.mapping [GAMEPAD_BUTTON_START]     = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_RETURN };
+                sms_mapping [GAMEPAD_DIRECTION_UP]     = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_w };
+                sms_mapping [GAMEPAD_DIRECTION_DOWN]   = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_s };
+                sms_mapping [GAMEPAD_DIRECTION_LEFT]   = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_a };
+                sms_mapping [GAMEPAD_DIRECTION_RIGHT]  = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_d };
+                sms_mapping [GAMEPAD_BUTTON_1]         = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_PERIOD };
+                sms_mapping [GAMEPAD_BUTTON_2]         = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_SLASH };
+                sms_mapping [GAMEPAD_BUTTON_START]     = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_RETURN };
+
+                sms_mapping [GAMEPAD_DIRECTION_UP]     = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_w };
+                sms_mapping [GAMEPAD_DIRECTION_DOWN]   = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_s };
+                sms_mapping [GAMEPAD_DIRECTION_LEFT]   = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_a };
+                sms_mapping [GAMEPAD_DIRECTION_RIGHT]  = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_d };
+                sms_mapping [GAMEPAD_BUTTON_1]         = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_COMMA };
+                sms_mapping [GAMEPAD_BUTTON_2]         = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_PERIOD };
+                sms_mapping [GAMEPAD_BUTTON_2]         = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_SLASH };
+                sms_mapping [GAMEPAD_BUTTON_START]     = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_KEY, .key = SDLK_RETURN };
                 break;
         }
     }
@@ -128,7 +161,7 @@ static uint32_t gamepad_sdl_os_gamepad_create_default_config (int32_t device_ind
             uint32_t sdl_button_name [GAMEPAD_BUTTON_COUNT] = { SDL_CONTROLLER_BUTTON_DPAD_UP,      SDL_CONTROLLER_BUTTON_DPAD_DOWN,
                                                                 SDL_CONTROLLER_BUTTON_DPAD_LEFT,    SDL_CONTROLLER_BUTTON_DPAD_RIGHT,
                                                                 SDL_CONTROLLER_BUTTON_A,            SDL_CONTROLLER_BUTTON_B,
-                                                                SDL_CONTROLLER_BUTTON_START };
+                                                                SDL_CONTROLLER_BUTTON_X,            SDL_CONTROLLER_BUTTON_START };
             uint32_t axis_sign [GAMEPAD_BUTTON_COUNT] = { -1, 1, -1, 1 };
 
             for (int i = 0; i < GAMEPAD_BUTTON_COUNT; i++)
@@ -138,13 +171,16 @@ static uint32_t gamepad_sdl_os_gamepad_create_default_config (int32_t device_ind
                 switch (bind.bindType)
                 {
                     case SDL_CONTROLLER_BINDTYPE_BUTTON:
-                        new_config.mapping [i] = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_BUTTON, .button = bind.value.button };
+                        sms_mapping [i] = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_BUTTON, .button = bind.value.button };
+                        smd_mapping [i] = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_BUTTON, .button = bind.value.button };
                         break;
                     case SDL_CONTROLLER_BINDTYPE_AXIS:
-                        new_config.mapping [i] = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_AXIS, .axis = bind.value.axis, .sign = axis_sign [i] };
+                        sms_mapping [i] = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_AXIS, .axis = bind.value.axis, .sign = axis_sign [i] };
+                        smd_mapping [i] = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_AXIS, .axis = bind.value.axis, .sign = axis_sign [i] };
                         break;
                     case SDL_CONTROLLER_BINDTYPE_HAT:
-                        new_config.mapping [i] = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_HAT, .hat = bind.value.hat.hat, .direction = bind.value.hat.hat_mask };
+                        sms_mapping [i] = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_HAT, .hat = bind.value.hat.hat, .direction = bind.value.hat.hat_mask };
+                        smd_mapping [i] = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_HAT, .hat = bind.value.hat.hat, .direction = bind.value.hat.hat_mask };
                         break;
                     default:
                         /* Do nothing */
@@ -157,13 +193,22 @@ static uint32_t gamepad_sdl_os_gamepad_create_default_config (int32_t device_ind
         else
         {
             /* Default config if this is not an identified game controller */
-            new_config.mapping [GAMEPAD_DIRECTION_UP]       = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_AXIS, .axis = 1, .sign = -1 };
-            new_config.mapping [GAMEPAD_DIRECTION_DOWN]     = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_AXIS, .axis = 1, .sign =  1 };
-            new_config.mapping [GAMEPAD_DIRECTION_LEFT]     = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_AXIS, .axis = 0, .sign = -1 };
-            new_config.mapping [GAMEPAD_DIRECTION_RIGHT]    = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_AXIS, .axis = 0, .sign =  1 };
-            new_config.mapping [GAMEPAD_BUTTON_1]           = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_BUTTON, .button = 2 };
-            new_config.mapping [GAMEPAD_BUTTON_2]           = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_BUTTON, .button = 1 };
-            new_config.mapping [GAMEPAD_BUTTON_START]       = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_BUTTON, .button = 9 };
+            sms_mapping [GAMEPAD_DIRECTION_UP]       = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_AXIS, .axis = 1, .sign = -1 };
+            sms_mapping [GAMEPAD_DIRECTION_DOWN]     = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_AXIS, .axis = 1, .sign =  1 };
+            sms_mapping [GAMEPAD_DIRECTION_LEFT]     = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_AXIS, .axis = 0, .sign = -1 };
+            sms_mapping [GAMEPAD_DIRECTION_RIGHT]    = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_AXIS, .axis = 0, .sign =  1 };
+            sms_mapping [GAMEPAD_BUTTON_1]           = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_BUTTON, .button = 2 };
+            sms_mapping [GAMEPAD_BUTTON_2]           = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_BUTTON, .button = 1 };
+            sms_mapping [GAMEPAD_BUTTON_START]       = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_BUTTON, .button = 9 };
+
+            smd_mapping [GAMEPAD_DIRECTION_UP]       = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_AXIS, .axis = 1, .sign = -1 };
+            smd_mapping [GAMEPAD_DIRECTION_DOWN]     = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_AXIS, .axis = 1, .sign =  1 };
+            smd_mapping [GAMEPAD_DIRECTION_LEFT]     = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_AXIS, .axis = 0, .sign = -1 };
+            smd_mapping [GAMEPAD_DIRECTION_RIGHT]    = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_AXIS, .axis = 0, .sign =  1 };
+            smd_mapping [GAMEPAD_BUTTON_1]           = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_BUTTON, .button = 0 };
+            smd_mapping [GAMEPAD_BUTTON_2]           = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_BUTTON, .button = 1 };
+            smd_mapping [GAMEPAD_BUTTON_3]           = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_BUTTON, .button = 7 };
+            smd_mapping [GAMEPAD_BUTTON_START]       = (Gamepad_Mapping) { .type = GAMEPAD_MAPPING_TYPE_BUTTON, .button = 9 };
         }
     }
 

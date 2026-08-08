@@ -219,6 +219,10 @@ ColecoVision_Context *colecovision_init (void)
 #endif
     state.update_settings = colecovision_update_settings;
 
+    /* Set controller mapping */
+    gamepad [1].group = GAMEPAD_MAPPING_GROUP_SMS;
+    gamepad [2].group = GAMEPAD_MAPPING_GROUP_SMS;
+
     /* Begin emulation */
     state.run = RUN_STATE_RUNNING;
 

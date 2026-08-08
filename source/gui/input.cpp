@@ -260,6 +260,7 @@ static void draw_button (ImVec2 centre, float radius, Gamepad_Button button, con
  */
 static void button_mapping_table (uint32_t button_count, const Gamepad_Button *buttons, const char **names)
 {
+    /* TODO: Buttons with two digits only show the first digit unless window is resized */
     if (ImGui::BeginTable("MappingDisplay", 2))
     {
         ImGui::TableNextColumn ();
@@ -272,7 +273,7 @@ static void button_mapping_table (uint32_t button_count, const Gamepad_Button *b
             }
             ImGui::TextColored ((buttons [i] == gamepad_remap_step) ? colour_waiting_v : colour_white_v, "  %-11s%s",
                                 names [i],
-                                button_mapping_to_string (remap_config.mapping [buttons [i]]));
+                                button_mapping_to_string (remap_config.mapping [gamepad [0].group] [buttons [i]]));
         }
 
         ImGui::EndTable ();
@@ -325,9 +326,7 @@ void snepulator_input_modal_render (void)
                 if (gamepad [0].type != GAMEPAD_TYPE_SMS)
                 {
                     gamepad [0].type = GAMEPAD_TYPE_SMS;
-                    /* TODO: Load type-specific config */
-                    /* TODO: Set type when initialising console */
-                    /* TODO: Consider putting this into a wrapper */
+                    gamepad [0].group = GAMEPAD_MAPPING_GROUP_SMS;
                 }
 
                 ImGui::PushItemWidth (width - 16);
@@ -410,14 +409,13 @@ void snepulator_input_modal_render (void)
 
                 show_remap_button = true;
             }
+#ifdef DEVELOPER_BUILD
             if (ImGui::BeginTabItem ("MD Pad"))
             {
-                if (gamepad [0].type != GAMEPAD_TYPE_SMD_3_BUTTON)
+                if (gamepad [0].type != GAMEPAD_TYPE_SMD)
                 {
-                    gamepad [0].type = GAMEPAD_TYPE_SMD_3_BUTTON;
-                    /* TODO: Load type-specific config */
-                    /* TODO: Set type when initialising console */
-                    /* TODO: Consider putting this into a wrapper */
+                    gamepad [0].type = GAMEPAD_TYPE_SMD;
+                    gamepad [0].group = GAMEPAD_MAPPING_GROUP_SMD;
                 }
 
                 ImGui::PushItemWidth (width - 16);
@@ -502,6 +500,7 @@ void snepulator_input_modal_render (void)
 
                 show_remap_button = true;
             }
+#endif
             if (ImGui::BeginTabItem ("Sports Pad"))
             {
                 uint32_t available_width = ImGui::GetContentRegionAvail().x;
@@ -546,13 +545,14 @@ void snepulator_input_modal_render (void)
         {
             ImGui::SameLine (ImGui::GetContentRegionAvail().x + 16 - 128 * 3);
             if (ImGui::Button ("Remap", ImVec2 (120,0))) {
-                remap_config.mapping [GAMEPAD_DIRECTION_UP].button       = SDLK_UNKNOWN;
-                remap_config.mapping [GAMEPAD_DIRECTION_DOWN].button     = SDLK_UNKNOWN;
-                remap_config.mapping [GAMEPAD_DIRECTION_LEFT].button     = SDLK_UNKNOWN;
-                remap_config.mapping [GAMEPAD_DIRECTION_RIGHT].button    = SDLK_UNKNOWN;
-                remap_config.mapping [GAMEPAD_BUTTON_1].button           = SDLK_UNKNOWN;
-                remap_config.mapping [GAMEPAD_BUTTON_2].button           = SDLK_UNKNOWN;
-                remap_config.mapping [GAMEPAD_BUTTON_START].button       = SDLK_UNKNOWN;
+                remap_config.mapping [gamepad [0].group] [GAMEPAD_DIRECTION_UP].button      = SDLK_UNKNOWN;
+                remap_config.mapping [gamepad [0].group] [GAMEPAD_DIRECTION_DOWN].button    = SDLK_UNKNOWN;
+                remap_config.mapping [gamepad [0].group] [GAMEPAD_DIRECTION_LEFT].button    = SDLK_UNKNOWN;
+                remap_config.mapping [gamepad [0].group] [GAMEPAD_DIRECTION_RIGHT].button   = SDLK_UNKNOWN;
+                remap_config.mapping [gamepad [0].group] [GAMEPAD_BUTTON_1].button          = SDLK_UNKNOWN;
+                remap_config.mapping [gamepad [0].group] [GAMEPAD_BUTTON_2].button          = SDLK_UNKNOWN;
+                remap_config.mapping [gamepad [0].group] [GAMEPAD_BUTTON_3].button          = SDLK_UNKNOWN;
+                remap_config.mapping [gamepad [0].group] [GAMEPAD_BUTTON_START].button      = SDLK_UNKNOWN;
                 gamepad_remap_step = GAMEPAD_DIRECTION_UP;
             }
             ImGui::SameLine ();

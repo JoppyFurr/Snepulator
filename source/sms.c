@@ -482,6 +482,10 @@ SMS_Context *sms_init (void)
         sms_vdp_control_write (vdp_context, TMS9928A_CODE_REG_WRITE | 0x0a);
     }
 
+    /* Set controller mapping */
+    gamepad [1].group = GAMEPAD_MAPPING_GROUP_SMS;
+    gamepad [2].group = GAMEPAD_MAPPING_GROUP_SMS;
+
     /* Begin emulation */
     state.run = RUN_STATE_RUNNING;
 

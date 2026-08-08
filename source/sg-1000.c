@@ -261,6 +261,10 @@ SG_1000_Context *sg_1000_init (void)
      * tested on a Master System, which has a BIOS that sets IM 1. */
     z80_context->state.im = 1;
 
+    /* Set controller mapping */
+    gamepad [1].group = GAMEPAD_MAPPING_GROUP_SMS;
+    gamepad [2].group = GAMEPAD_MAPPING_GROUP_SMS;
+
     /* Begin emulation */
     state.run = RUN_STATE_RUNNING;
 

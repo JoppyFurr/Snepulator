@@ -19,25 +19,36 @@ extern Snepulator_State state;
 
 #define MAX_STRING_SIZE 1024
 
-static const bool valid_buttons_sms [GAMEPAD_BUTTON_COUNT] = {
-    [GAMEPAD_DIRECTION_UP] = true,
-    [GAMEPAD_DIRECTION_DOWN] = true,
-    [GAMEPAD_DIRECTION_LEFT] = true,
-    [GAMEPAD_DIRECTION_RIGHT] = true,
-    [GAMEPAD_BUTTON_1] = true,
-    [GAMEPAD_BUTTON_2] = true,
-    [GAMEPAD_BUTTON_START] = true
+static const char *legacy_buttons [GAMEPAD_BUTTON_COUNT] = {
+    [GAMEPAD_DIRECTION_UP]    = "up",
+    [GAMEPAD_DIRECTION_DOWN]  = "down",
+    [GAMEPAD_DIRECTION_LEFT]  = "left",
+    [GAMEPAD_DIRECTION_RIGHT] = "right",
+    [GAMEPAD_BUTTON_1]        = "button-1",
+    [GAMEPAD_BUTTON_2]        = "button-2",
+    [GAMEPAD_BUTTON_START]    = "start"
 };
 
-static const bool valid_buttons_smd [GAMEPAD_BUTTON_COUNT] = {
-    [GAMEPAD_DIRECTION_UP] = true,
-    [GAMEPAD_DIRECTION_DOWN] = true,
-    [GAMEPAD_DIRECTION_LEFT] = true,
-    [GAMEPAD_DIRECTION_RIGHT] = true,
-    [GAMEPAD_BUTTON_1] = true,
-    [GAMEPAD_BUTTON_2] = true,
-    [GAMEPAD_BUTTON_3] = true,
-    [GAMEPAD_BUTTON_START] = true
+static const char *valid_buttons [GAMEPAD_MAPPING_GROUP_COUNT] [GAMEPAD_BUTTON_COUNT] = {
+    [GAMEPAD_MAPPING_GROUP_SMS] = {
+        [GAMEPAD_DIRECTION_UP]    = "sms-up",
+        [GAMEPAD_DIRECTION_DOWN]  = "sms-down",
+        [GAMEPAD_DIRECTION_LEFT]  = "sms-left",
+        [GAMEPAD_DIRECTION_RIGHT] = "sms-right",
+        [GAMEPAD_BUTTON_1]        = "sms-button-1",
+        [GAMEPAD_BUTTON_2]        = "sms-button-2",
+        [GAMEPAD_BUTTON_START]    = "sms-start"
+    },
+    [GAMEPAD_MAPPING_GROUP_SMD] = {
+        [GAMEPAD_DIRECTION_UP]    = "smd-up",
+        [GAMEPAD_DIRECTION_DOWN]  = "smd-down",
+        [GAMEPAD_DIRECTION_LEFT]  = "smd-left",
+        [GAMEPAD_DIRECTION_RIGHT] = "smd-right",
+        [GAMEPAD_BUTTON_1]        = "smd-button-a",
+        [GAMEPAD_BUTTON_2]        = "smd-button-b",
+        [GAMEPAD_BUTTON_3]        = "smd-button-c",
+        [GAMEPAD_BUTTON_START]    = "smd-start"
+    }
 };
 
 
@@ -45,12 +56,10 @@ static const bool valid_buttons_smd [GAMEPAD_BUTTON_COUNT] = {
 #define BIT_TL BIT_4
 #define BIT_TR BIT_5
 
-/* TODO: Separate config sections for SMS and SMD with correct names */
-const char *button_names [] = { "up", "down", "left", "right", "button-1", "button-2", "button-3", "start" };
-
 
 /* Stored gamepad configuration */
-Gamepad_Config gamepad_config [128];
+#define GAMEPAD_CONFIGS_MAX 256
+Gamepad_Config gamepad_config [GAMEPAD_CONFIGS_MAX];
 uint32_t gamepad_config_count = 0;
 
 Gamepad_Config remap_config;
@@ -76,30 +85,16 @@ Snepulator_Gamepad gamepad [3];
  */
 static void gamepad_remap_next_step (void)
 {
-    const bool *valid_buttons = NULL;
-
-    if (gamepad [0].type == GAMEPAD_TYPE_SMS)
-    {
-        valid_buttons = valid_buttons_sms;
-    }
-    else if (gamepad [0].type == GAMEPAD_TYPE_SMD_3_BUTTON)
-    {
-        valid_buttons = valid_buttons_smd;
-    }
-
-    /* For gamepad types that don't have their own remapping list,
-     * jump straight to the done state. */
-    if (!valid_buttons)
-    {
-        gamepad_remap_step = GAMEPAD_BUTTON_COUNT;
-    }
+    /* TODO: - Changing tab part way through a remap should abandon it.
+     *       - Remap inputs shouldn't be passed through to the console. Right
+     *         now it seems possible for the remap process to un-pause the game */
 
     while (gamepad_remap_step != GAMEPAD_BUTTON_COUNT)
     {
         gamepad_remap_step++;
 
         /* Break the loop once we reach the next valid button. */
-        if (valid_buttons [gamepad_remap_step])
+        if (valid_buttons [gamepad [0].group] [gamepad_remap_step] != NULL)
         {
             break;
         }
@@ -130,16 +125,16 @@ static void gamepad_process_axis_event_remap (int32_t axis, int32_t value)
         waiting = true;
         waiting_axis = axis;
 
-        remap_config.mapping [gamepad_remap_step].type = GAMEPAD_MAPPING_TYPE_AXIS;
-        remap_config.mapping [gamepad_remap_step].axis = axis;
-        remap_config.mapping [gamepad_remap_step].sign = sign;
+        remap_config.mapping [gamepad [0].group] [gamepad_remap_step].type = GAMEPAD_MAPPING_TYPE_AXIS;
+        remap_config.mapping [gamepad [0].group] [gamepad_remap_step].axis = axis;
+        remap_config.mapping [gamepad [0].group] [gamepad_remap_step].sign = sign;
         gamepad_remap_next_step ();
     }
 
     /* If this was the last button, commit the remap */
     if (gamepad_remap_step == GAMEPAD_BUTTON_COUNT)
     {
-        gamepad_update_mapping (remap_config);
+        gamepad_update_mapping (remap_config, gamepad [0].group);
     }
 }
 
@@ -164,14 +159,14 @@ void gamepad_process_axis_event (int32_t id, int32_t axis, int32_t value)
             continue;
         }
 
+        Gamepad_Mapping_Group group = gamepad [player].group;
+        Gamepad_Mapping *mapping = gamepad [player].config->mapping [group];
+
         for (uint32_t button = 0; button < GAMEPAD_BUTTON_COUNT; button++)
         {
-            if (gamepad [player].config->mapping [button].type == GAMEPAD_MAPPING_TYPE_AXIS)
+            if (mapping [button].type == GAMEPAD_MAPPING_TYPE_AXIS && mapping [button].axis == axis)
             {
-                if (gamepad [player].config->mapping [button].axis == axis)
-                {
-                    gamepad [player].state [button] = (value * gamepad [player].config->mapping [button].sign) > 16000 ? 1 : 0;
-                }
+                gamepad [player].state [button] = (value * mapping [button].sign) > 16000 ? 1 : 0;
             }
         }
     }
@@ -183,14 +178,14 @@ void gamepad_process_axis_event (int32_t id, int32_t axis, int32_t value)
  */
 static void gamepad_process_button_event_remap (int32_t device_button)
 {
-    remap_config.mapping [gamepad_remap_step].type = GAMEPAD_MAPPING_TYPE_BUTTON;
-    remap_config.mapping [gamepad_remap_step].button = device_button;
+    remap_config.mapping [gamepad [0].group] [gamepad_remap_step].type = GAMEPAD_MAPPING_TYPE_BUTTON;
+    remap_config.mapping [gamepad [0].group] [gamepad_remap_step].button = device_button;
     gamepad_remap_next_step ();
 
     /* If this was the last button, commit the remap */
     if (gamepad_remap_step == GAMEPAD_BUTTON_COUNT)
     {
-        gamepad_update_mapping (remap_config);
+        gamepad_update_mapping (remap_config, gamepad [0].group);
     }
 }
 
@@ -213,14 +208,14 @@ void gamepad_process_button_event (int32_t id, int32_t device_button, bool butto
             continue;
         }
 
+        Gamepad_Mapping_Group group = gamepad [player].group;
+        Gamepad_Mapping *mapping = gamepad [player].config->mapping [group];
+
         for (uint32_t button = 0; button < GAMEPAD_BUTTON_COUNT; button++)
         {
-            if (gamepad [player].config->mapping [button].type == GAMEPAD_MAPPING_TYPE_BUTTON)
+            if (mapping [button].type == GAMEPAD_MAPPING_TYPE_BUTTON && mapping [button].button == device_button)
             {
-                if (gamepad [player].config->mapping [button].button == device_button)
-                {
-                    gamepad [player].state [button] = button_down;
-                }
+                gamepad [player].state [button] = button_down;
             }
         }
     }
@@ -249,16 +244,16 @@ static void gamepad_process_hat_event_remap (int32_t hat, int32_t direction)
         waiting = true;
         waiting_hat = hat;
 
-        remap_config.mapping [gamepad_remap_step].type = GAMEPAD_MAPPING_TYPE_HAT;
-        remap_config.mapping [gamepad_remap_step].hat = hat;
-        remap_config.mapping [gamepad_remap_step].direction = direction;
+        remap_config.mapping [gamepad [0].group] [gamepad_remap_step].type = GAMEPAD_MAPPING_TYPE_HAT;
+        remap_config.mapping [gamepad [0].group] [gamepad_remap_step].hat = hat;
+        remap_config.mapping [gamepad [0].group] [gamepad_remap_step].direction = direction;
         gamepad_remap_next_step ();
     }
 
     /* If this was the last button, commit the remap */
     if (gamepad_remap_step == GAMEPAD_BUTTON_COUNT)
     {
-        gamepad_update_mapping (remap_config);
+        gamepad_update_mapping (remap_config, gamepad [0].group);
     }
 }
 
@@ -281,14 +276,14 @@ void gamepad_process_hat_event (int32_t id, int32_t hat, int32_t direction)
             continue;
         }
 
+        Gamepad_Mapping_Group group = gamepad [player].group;
+        Gamepad_Mapping *mapping = gamepad [player].config->mapping [group];
+
         for (uint32_t button = 0; button < GAMEPAD_BUTTON_COUNT; button++)
         {
-            if (gamepad [player].config->mapping [button].type == GAMEPAD_MAPPING_TYPE_HAT)
+            if (mapping [button].type == GAMEPAD_MAPPING_TYPE_HAT && mapping [button].hat == hat)
             {
-                if (gamepad [player].config->mapping [button].hat == hat)
-                {
-                    gamepad [player].state [button] = (gamepad [player].config->mapping [button].direction & direction) ? 1 : 0;
-                }
+                gamepad [player].state [button] = (mapping [button].direction & direction) ? 1 : 0;
             }
         }
     }
@@ -300,14 +295,14 @@ void gamepad_process_hat_event (int32_t id, int32_t hat, int32_t direction)
  */
 static void gamepad_process_key_event_remap (int32_t key)
 {
-    remap_config.mapping [gamepad_remap_step].type = GAMEPAD_MAPPING_TYPE_KEY;
-    remap_config.mapping [gamepad_remap_step].key = key;
+    remap_config.mapping [gamepad [0].group] [gamepad_remap_step].type = GAMEPAD_MAPPING_TYPE_KEY;
+    remap_config.mapping [gamepad [0].group] [gamepad_remap_step].key = key;
     gamepad_remap_next_step ();
 
     /* If this was the last button, commit the remap */
     if (gamepad_remap_step == GAMEPAD_BUTTON_COUNT)
     {
-        gamepad_update_mapping (remap_config);
+        gamepad_update_mapping (remap_config, gamepad [0].group);
     }
 }
 
@@ -325,14 +320,14 @@ void gamepad_process_key_event (int32_t key, bool key_down)
 
     for (uint32_t player = 0; player < 3; player++)
     {
+        Gamepad_Mapping_Group group = gamepad [player].group;
+        Gamepad_Mapping *mapping = gamepad [player].config->mapping [group];
+
         for (uint32_t button = 0; button < GAMEPAD_BUTTON_COUNT; button++)
         {
-            if (gamepad [player].config->mapping [button].type == GAMEPAD_MAPPING_TYPE_KEY)
+            if (mapping [button].type == GAMEPAD_MAPPING_TYPE_KEY && mapping [button].key == key)
             {
-                if (gamepad [player].config->mapping [button].key == key)
-                {
-                    gamepad [player].state [button] = key_down;
-                }
+                gamepad [player].state [button] = key_down;
             }
         }
     }
@@ -669,7 +664,7 @@ void gamepad_list_update (void)
             }
         }
 
-        /* If no config was found, generate a new config */
+        /* If no config was found, generate new configs */
         if (config_index == GAMEPAD_INDEX_NONE)
         {
             config_index = state.os_gamepad_create_default_config (device_index);
@@ -728,14 +723,15 @@ void gamepad_init (void)
 /*
  * Update the mapping for a known gamepad.
  */
-void gamepad_update_mapping (Gamepad_Config new_config)
+void gamepad_update_mapping (Gamepad_Config new_config, Gamepad_Mapping_Group group)
 {
     for (uint32_t i = 0; i < gamepad_config_count; i++)
     {
         if (memcmp (&gamepad_config [i].uuid, &new_config.uuid, UUID_SIZE) == 0)
         {
-            /* Replace the old entry with the new one */
-            gamepad_config [i] = new_config;
+            /* Replace the old config, for this group, with the new one */
+            memcpy (gamepad_config [i].mapping [group], new_config.mapping [group],
+                    sizeof (gamepad_config [i].mapping [group]));
             return;
         }
     }
@@ -860,13 +856,21 @@ void gamepad_config_export (void)
                 gamepad_config [i].uuid [12], gamepad_config [i].uuid [13], gamepad_config [i].uuid [14],
                 gamepad_config [i].uuid [15]);
 
-        for (uint32_t button = 0; button < GAMEPAD_BUTTON_COUNT; button++)
+        for (uint32_t group = 0; group < GAMEPAD_MAPPING_GROUP_COUNT; group++)
         {
-            snprintf (mapping_data, 1023, "%x-%x-%x",
-                      gamepad_config [i].mapping [button].type,
-                      gamepad_config [i].mapping [button].key,
-                      gamepad_config [i].mapping [button].direction);
-            config_string_set (section_name, button_names [button], mapping_data);
+            for (uint32_t button = 0; button < GAMEPAD_BUTTON_COUNT; button++)
+            {
+                if (!valid_buttons [group] [button])
+                {
+                    continue;
+                }
+
+                snprintf (mapping_data, 1023, "%x-%x-%x",
+                          gamepad_config [i].mapping [group] [button].type,
+                          gamepad_config [i].mapping [group] [button].key,
+                          gamepad_config [i].mapping [group] [button].direction);
+                config_string_set (section_name, valid_buttons [group] [button], mapping_data);
+            }
         }
     }
 
@@ -875,20 +879,50 @@ void gamepad_config_export (void)
 
 
 /*
+ * Convert legacy format (pre-Megadrive) gamepad config.
+ */
+void gamepad_config_convert_legacy (const char *section_name)
+{
+    /* Convert legacy config */
+    for (uint32_t button = 0; button < GAMEPAD_BUTTON_COUNT; button++)
+    {
+        if (!legacy_buttons [button])
+        {
+            continue;
+        }
+
+        char *mapping_string = NULL;
+
+        if (config_string_get (section_name, legacy_buttons [button], &mapping_string) == 0)
+        {
+            /* Duplicate the legacy mapping for each group */
+            for (uint32_t group = 0; group < GAMEPAD_MAPPING_GROUP_COUNT; group++)
+            {
+                if (valid_buttons [group] [button])
+                {
+                    config_string_set (section_name, valid_buttons [group] [button], mapping_string);
+                }
+            }
+
+            config_entry_remove (section_name, legacy_buttons [button]);
+        }
+    }
+}
+
+
+/*
  * Retrieve the gamepad configuration from the configuration file.
  */
 void gamepad_config_import (void)
 {
-    unsigned int uuid_buffer [16] = { 0x00 };
-    Gamepad_Config new_config = { };
-
     for (uint32_t i = 0; config_get_section_name (i) != NULL; i++)
     {
         const char *section_name = config_get_section_name (i);
 
         if (strncmp (section_name, "gamepad-", 8) == 0)
         {
-            uint8_t uuid [UUID_SIZE] = { };
+            unsigned int uuid_buffer [16] = { 0x00 };
+            Gamepad_Config new_config = { };
 
             sscanf (section_name, "gamepad-%02x%02x.%02x%02x.%02x%02x.%02x%02x.%02x%02x.%02x%02x.%02x%02x.%02x%02x",
                     &uuid_buffer [ 0], &uuid_buffer [ 1], &uuid_buffer [ 2], &uuid_buffer [ 3], &uuid_buffer [ 4],
@@ -898,35 +932,43 @@ void gamepad_config_import (void)
 
             for (uint32_t j = 0; j < 16; j++)
             {
-                uuid [j] = uuid_buffer [j];
+                new_config.uuid [j] = uuid_buffer [j];
             }
 
             /* Skip the 'None' device */
-            if (memcmp (uuid, &gamepad_config [GAMEPAD_INDEX_NONE].uuid, UUID_SIZE) == 0)
+            if (memcmp (new_config.uuid, &gamepad_config [GAMEPAD_INDEX_NONE].uuid, UUID_SIZE) == 0)
             {
                 continue;
             }
 
-            /* Read in the stored mappings */
-            for (uint32_t button = 0; button < GAMEPAD_BUTTON_COUNT; button++)
+            gamepad_config_convert_legacy (section_name);
+
+            for (uint32_t group = 0; group < GAMEPAD_MAPPING_GROUP_COUNT; group++)
             {
-                unsigned int type, key, direction;
-                char *mapping_string = NULL;
-
-                if (config_string_get (section_name, button_names [button], &mapping_string) == 0)
+                /* Read in the stored mappings */
+                for (uint32_t button = 0; button < GAMEPAD_BUTTON_COUNT; button++)
                 {
-                    sscanf (mapping_string, "%x-%x-%x", &type, &key, &direction);
+                    if (!valid_buttons [group] [button])
+                    {
+                        continue;
+                    }
 
-                    new_config.mapping [button].type = type;
-                    new_config.mapping [button].key = key;
-                    new_config.mapping [button].direction = direction;
+                    unsigned int type, key, direction;
+                    char *mapping_string = NULL;
+
+                    if (config_string_get (section_name, valid_buttons [group] [button], &mapping_string) == 0)
+                    {
+                        sscanf (mapping_string, "%x-%x-%x", &type, &key, &direction);
+
+                        new_config.mapping [group] [button].type = type;
+                        new_config.mapping [group] [button].key = key;
+                        new_config.mapping [group] [button].direction = direction;
+                    }
                 }
-
-                memcpy (new_config.uuid, uuid, sizeof (new_config.uuid));
             }
 
             /* Keyboard has fixed index */
-            if (memcmp (&uuid, &gamepad_config [GAMEPAD_INDEX_KEYBOARD].uuid, UUID_SIZE) == 0)
+            if (memcmp (new_config.uuid, &gamepad_config [GAMEPAD_INDEX_KEYBOARD].uuid, UUID_SIZE) == 0)
             {
                 gamepad_config [GAMEPAD_INDEX_KEYBOARD] = new_config;
             }

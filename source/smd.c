@@ -798,6 +798,10 @@ SMD_Context *smd_init (void)
     /* For now, assume NTSC */
     state.clock_rate = SMD_NTSC_MASTER_CLOCK;
 
+    /* Set controller mapping */
+    gamepad [1].group = GAMEPAD_MAPPING_GROUP_SMD;
+    gamepad [2].group = GAMEPAD_MAPPING_GROUP_SMD;
+
     /* Begin emulation */
     m68k_reset (m68k_context);
     state.run = RUN_STATE_RUNNING;
