@@ -10025,6 +10025,60 @@ static uint32_t m68k_4e90_jsr_an (M68000_Context *context, uint16_t instruction)
 }
 
 
+/* jsr d(An) */
+static uint32_t m68k_4ea8_jsr_dan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    /* Note: Take the new PC early in case it is affected by the stack push. */
+    uint32_t new_pc = address_with_displacement (context, context->state.a [reg]);
+
+    /* Push the current PC to the stack */
+    context->state.a [7] -= 4;
+    write_long (context, context->state.a [7], context->state.pc);
+
+    /* Update the PC */
+    context->state.pc = new_pc;
+
+    return 0;
+}
+
+
+/* jsr d(An+Xi) */
+static uint32_t m68k_4eb0_jsr_danxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    /* Note: Take the new PC early in case it is affected by the stack push. */
+    uint32_t new_pc = address_with_index (context, context->state.a [reg]);
+
+    /* Push the current PC to the stack */
+    context->state.a [7] -= 4;
+    write_long (context, context->state.a [7], context->state.pc);
+
+    /* Update the PC */
+    context->state.pc = new_pc;
+
+    return 0;
+}
+
+
+/* jsr (xxx.w) */
+static uint32_t m68k_4eb8_jsr_aw (M68000_Context *context, uint16_t instruction)
+{
+    uint32_t address = (int16_t) read_extension (context);
+
+    /* Push the current PC to the stack */
+    context->state.a [7] -= 4;
+    write_long (context, context->state.a [7], context->state.pc);
+
+    /* Update the PC */
+    context->state.pc = address;
+
+    return 0;
+}
+
+
 /* jsr (xxx.l) */
 static uint32_t m68k_4eb9_jsr_al (M68000_Context *context, uint16_t instruction)
 {
@@ -10082,12 +10136,55 @@ static uint32_t m68k_4ed0_jmp_an (M68000_Context *context, uint16_t instruction)
 }
 
 
+/* jmp d(An) */
+static uint32_t m68k_4ee8_jmp_dan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    context->state.pc = address_with_displacement (context, context->state.a [reg]);
+
+    return 0;
+}
+
+
+/* jmp d(An+Xi) */
+static uint32_t m68k_4ef0_jmp_danxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    context->state.pc = address_with_index (context, context->state.a [reg]);
+
+    return 0;
+}
+
+
+/* jmp (xxx.w) */
+static uint32_t m68k_4ef8_jmp_aw (M68000_Context *context, uint16_t instruction)
+{
+    uint32_t address = (int16_t) read_extension (context);
+
+    context->state.pc = address;
+
+    return 0;
+}
+
+
 /* jmp (xxx.l) */
 static uint32_t m68k_4ef9_jmp_al (M68000_Context *context, uint16_t instruction)
 {
     uint32_t address = read_extension_long (context);
 
     context->state.pc = address;
+
+    return 0;
+}
+
+
+/* jmp d(PC) */
+static uint32_t m68k_4efa_jmp_dpc (M68000_Context *context, uint16_t instruction)
+{
+    /* Note: The jump is from the location of the extension. */
+    context->state.pc = address_with_displacement (context, context->state.pc);
 
     return 0;
 }
@@ -20218,12 +20315,19 @@ static void m68k_init_instructions (void)
     for (uint16_t reg = 0; reg < 8; reg++)
     {
         m68k_instruction [0x4e90 | reg] = m68k_4e90_jsr_an;
+        m68k_instruction [0x4ea8 | reg] = m68k_4ea8_jsr_dan;
+        m68k_instruction [0x4eb0 | reg] = m68k_4eb0_jsr_danxi;
         m68k_instruction [0x4ed0 | reg] = m68k_4ed0_jmp_an;
+        m68k_instruction [0x4ee8 | reg] = m68k_4ee8_jmp_dan;
+        m68k_instruction [0x4ef0 | reg] = m68k_4ef0_jmp_danxi;
     }
+    m68k_instruction [0x4eb8] = m68k_4eb8_jsr_aw;
     m68k_instruction [0x4eb9] = m68k_4eb9_jsr_al;
     m68k_instruction [0x4eba] = m68k_4eba_jsr_dpc;
     m68k_instruction [0x4ebb] = m68k_4ebb_jsr_dpcxi;
+    m68k_instruction [0x4ef8] = m68k_4ef8_jmp_aw;
     m68k_instruction [0x4ef9] = m68k_4ef9_jmp_al;
+    m68k_instruction [0x4efa] = m68k_4efa_jmp_dpc;
     m68k_instruction [0x4efb] = m68k_4efb_jmp_dpcxi;
 
     /* movem */
