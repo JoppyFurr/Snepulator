@@ -1034,6 +1034,22 @@ static uint32_t m68k_0100_btst_l_dn_dn (M68000_Context *context, uint16_t instru
 }
 
 
+/* movep.w Dn ← d(An) */
+static uint32_t m68k_0108_movep_w_dn_dan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t data_reg = (instruction >> 9) & 0x07;
+    uint16_t address_reg = instruction & 0x07;
+    uint32_t address = address_with_displacement (context, context->state.a [address_reg]);
+
+    uint16_t value = (read_byte (context, address) << 8) |
+                      read_byte (context, address + 2);
+
+    context->state.d [data_reg].w = value;
+
+    return 0;
+}
+
+
 /* btst.b (An) [Dn] */
 static uint32_t m68k_0110_btst_b_an_dn (M68000_Context *context, uint16_t instruction)
 {
@@ -1199,6 +1215,24 @@ static uint32_t m68k_0140_bchg_l_dn_dn (M68000_Context *context, uint16_t instru
 }
 
 
+/* movep.l Dn ← d(An) */
+static uint32_t m68k_0148_movep_l_dn_dan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t data_reg = (instruction >> 9) & 0x07;
+    uint16_t address_reg = instruction & 0x07;
+    uint32_t address = address_with_displacement (context, context->state.a [address_reg]);
+
+    uint32_t value = (read_byte (context, address)     << 24) |
+                     (read_byte (context, address + 2) << 16) |
+                     (read_byte (context, address + 4) << 8) |
+                      read_byte (context, address + 6);
+
+    context->state.d [data_reg].l = value;
+
+    return 0;
+}
+
+
 /* bchg.b (An) [Dn] */
 static uint32_t m68k_0150_bchg_b_an_dn (M68000_Context *context, uint16_t instruction)
 {
@@ -1350,6 +1384,21 @@ static uint32_t m68k_0180_bclr_l_dn_dn (M68000_Context *context, uint16_t instru
 }
 
 
+/* movep.w d(An) ← Dn */
+static uint32_t m68k_0188_movep_w_dan_dn (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t data_reg = (instruction >> 9) & 0x07;
+    uint16_t address_reg = instruction & 0x07;
+    uint32_t address = address_with_displacement (context, context->state.a [address_reg]);
+
+    uint16_t value = context->state.d [data_reg].w;
+    write_byte (context, address,     value >> 8);
+    write_byte (context, address + 2, value);
+
+    return 0;
+}
+
+
 /* bclr.b (An) [Dn] */
 static uint32_t m68k_0190_bclr_b_an_dn (M68000_Context *context, uint16_t instruction)
 {
@@ -1493,6 +1542,23 @@ static uint32_t m68k_01c0_bset_l_dn_dn (M68000_Context *context, uint16_t instru
 
     value |= 1 << bit;
     context->state.d [data_reg].l = value;
+
+    return 0;
+}
+
+
+/* movep.l d(An) ← Dn */
+static uint32_t m68k_01c8_movep_l_dan_dn (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t data_reg = (instruction >> 9) & 0x07;
+    uint16_t address_reg = instruction & 0x07;
+    uint32_t address = address_with_displacement (context, context->state.a [address_reg]);
+
+    uint32_t value = context->state.d [data_reg].l;
+    write_byte (context, address,     value >> 24);
+    write_byte (context, address + 2, value >> 16);
+    write_byte (context, address + 4, value >>  8);
+    write_byte (context, address + 6, value);
 
     return 0;
 }
@@ -20035,6 +20101,18 @@ static void m68k_init_instructions (void)
     m68k_instruction [0x08b9] = m68k_08b9_bclr_b_al_imm;
     m68k_instruction [0x08f8] = m68k_08f8_bset_b_aw_imm;
     m68k_instruction [0x08f9] = m68k_08f9_bset_b_al_imm;
+
+    /* movep */
+    for (uint16_t data_reg = 0; data_reg < 8; data_reg++)
+    {
+        for (uint16_t address_reg = 0; address_reg < 8; address_reg++)
+        {
+            m68k_instruction [0x0108 | (data_reg << 9) | address_reg ] = m68k_0108_movep_w_dn_dan;
+            m68k_instruction [0x0148 | (data_reg << 9) | address_reg ] = m68k_0148_movep_l_dn_dan;
+            m68k_instruction [0x0188 | (data_reg << 9) | address_reg ] = m68k_0188_movep_w_dan_dn;
+            m68k_instruction [0x01c8 | (data_reg << 9) | address_reg ] = m68k_01c8_movep_l_dan_dn;
+        }
+    }
 
     /* immediate */
     for (uint16_t reg = 0; reg < 8; reg++)
