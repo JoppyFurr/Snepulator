@@ -535,7 +535,8 @@ void smd_vdp_render_line (SMD_VDP_Context *context, uint16_t line)
             break;
 
         case 2: /* Scrolling per strip of 8 lines */
-            printf ("[%s] Scroll per 8-lines not implemented.\n", __func__);
+            h_scroll_a = util_ntoh16 (h_scroll_table [(line & 0xf8)* 2 + 0]) & 0x03ff;
+            h_scroll_b = util_ntoh16 (h_scroll_table [(line & 0xf8)* 2 + 1]) & 0x03ff;
             break;
 
         case 3: /* Scrolling per line */
