@@ -179,10 +179,34 @@ void smd_vdp_control_write (SMD_VDP_Context *context, uint16_t data)
  */
 uint16_t smd_vdp_data_read (SMD_VDP_Context *context)
 {
+    uint16_t data = 0xffff;
     context->state.second_half_pending = false;
 
-    printf ("[%s] VDP data port read not implemented.\n", __func__);
-    return 0xffff;
+    /* VRAM Read */
+    if (context->state.code == 0x00)
+    {
+        data = util_hton16 (*(uint16_t *) &context->state.vram [context->state.address]);
+        context->state.address += context->state.auto_increment;
+    }
+
+    /* VSRAM Read */
+    else if (context->state.code == 0x04)
+    {
+        printf ("[%s] VDP data port VSRAM Read not implemented.\n", __func__);
+    }
+
+    /* CRAM Read */
+    else if (context->state.code == 0x08)
+    {
+        printf ("[%s] VDP data port CRAM Read not implemented.\n", __func__);
+    }
+
+    else
+    {
+        printf ("[%s] VDP data port read for code %02x not implemented.\n", __func__, context->state.code);
+    }
+
+    return data;
 }
 
 
@@ -226,7 +250,7 @@ void smd_vdp_data_write (SMD_VDP_Context *context, uint16_t data)
         context->state.address += context->state.auto_increment;
     }
 
-    /* VSRAM write */
+    /* VSRAM Write */
     else if (context->state.code == 0x05)
     {
         uint32_t index = (context->state.address >> 1) & 0x3f;
