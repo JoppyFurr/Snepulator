@@ -569,17 +569,43 @@ void smd_vdp_render_line (SMD_VDP_Context *context, uint16_t line)
             break;
     }
 
+    /* Check if this line contains the Window Plane instead of Plane A.
+     * TODO: - Confirm the border line is correct when positioned at the top.
+     *       - Support for horizontal window position */
+    bool line_is_window = false;
+    uint32_t window_v_position = context->state.window_v_pos * 8;
+    if ((context->state.window_v_down == 0 && line <  window_v_position) ||
+        (context->state.window_v_down == 1 && line >= window_v_position))
+    {
+        line_is_window = true;
+    }
+
     uint16_t *name_table_b = (uint16_t *) &context->state.vram [(context->state.plane_b_name_table_base & 0x07) << 13];
     uint16_t *name_table_a = (uint16_t *) &context->state.vram [(context->state.plane_a_name_table_base & 0x38) << 10];
+    uint16_t *name_table_w = (uint16_t *) &context->state.vram [(context->state.window_name_table_base  & 0x3e) << 10];
 
     /* First pass - Low priority */
     smd_vdp_draw_background (context, line, name_table_b, h_scroll_b, v_scroll_b, false);
-    smd_vdp_draw_background (context, line, name_table_a, h_scroll_a, v_scroll_a, false);
+    if (line_is_window)
+    {
+        smd_vdp_draw_background (context, line, name_table_w, 0, 0, false);
+    }
+    else
+    {
+        smd_vdp_draw_background (context, line, name_table_a, h_scroll_a, v_scroll_a, false);
+    }
     smd_vdp_draw_sprites (context, line, false);
 
     /* Second pass - High priority */
     smd_vdp_draw_background (context, line, name_table_b, h_scroll_b, v_scroll_b, true);
-    smd_vdp_draw_background (context, line, name_table_a, h_scroll_a, v_scroll_a, true);
+    if (line_is_window)
+    {
+        smd_vdp_draw_background (context, line, name_table_w, 0, 0, true);
+    }
+    else
+    {
+        smd_vdp_draw_background (context, line, name_table_a, h_scroll_a, v_scroll_a, true);
+    }
     smd_vdp_draw_sprites (context, line, true);
 }
 

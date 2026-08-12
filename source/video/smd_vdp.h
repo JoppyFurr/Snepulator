@@ -94,7 +94,9 @@ typedef struct SMD_VDP_State_s {
             uint8_t auto_increment;
             uint8_t plane_size;
             uint8_t window_h_pos;
-            uint8_t window_v_pos;
+            uint8_t window_v_pos:5;
+            uint8_t window_v_unused_5_6:2;
+            uint8_t window_v_down:1;
             uint16_t dma_length;
             union {
                 struct {
