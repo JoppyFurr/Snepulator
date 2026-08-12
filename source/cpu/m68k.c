@@ -10965,6 +10965,17 @@ static uint32_t m68k_50c0_st_b_dn (M68000_Context *context, uint16_t instruction
 }
 
 
+/* dbt Dn, #xxxx */
+static uint32_t m68k_50c8_dbt (M68000_Context *context, uint16_t instruction)
+{
+    address_with_displacement (context, context->state.pc);
+
+    /* Nothing to do */
+
+    return 0;
+}
+
+
 /* st.b (An) */
 static uint32_t m68k_50d0_st_b_an (M68000_Context *context, uint16_t instruction)
 {
@@ -11580,12 +11591,107 @@ static uint32_t m68k_51f9_sf_b_al (M68000_Context *context, uint16_t instruction
 }
 
 
+/* dbhi Dn, #xxxx */
+static uint32_t m68k_52c8_dbhi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint32_t address = address_with_displacement (context, context->state.pc);
+
+    if ((!context->state.ccr_carry && !context->state.ccr_zero) == false)
+    {
+        context->state.d [reg].w--;
+        if (context->state.d [reg].w != 0xffff)
+        {
+            context->state.pc = address;
+        }
+    }
+
+    return 0;
+}
+
+
+/* dbls Dn, #xxxx */
+static uint32_t m68k_53c8_dbls (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint32_t address = address_with_displacement (context, context->state.pc);
+
+    if ((context->state.ccr_carry || context->state.ccr_zero) == false)
+    {
+        context->state.d [reg].w--;
+        if (context->state.d [reg].w != 0xffff)
+        {
+            context->state.pc = address;
+        }
+    }
+
+    return 0;
+}
+
+
+/* dbcc Dn, #xxxx */
+static uint32_t m68k_54c8_dbcc (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint32_t address = address_with_displacement (context, context->state.pc);
+
+    if ((!context->state.ccr_carry) == false)
+    {
+        context->state.d [reg].w--;
+        if (context->state.d [reg].w != 0xffff)
+        {
+            context->state.pc = address;
+        }
+    }
+
+    return 0;
+}
+
+
+/* dbcs Dn, #xxxx */
+static uint32_t m68k_55c8_dbcs (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint32_t address = address_with_displacement (context, context->state.pc);
+
+    if ((context->state.ccr_carry) == false)
+    {
+        context->state.d [reg].w--;
+        if (context->state.d [reg].w != 0xffff)
+        {
+            context->state.pc = address;
+        }
+    }
+
+    return 0;
+}
+
+
 /* sne.b Dn */
 static uint32_t m68k_56c0_sne_b_dn (M68000_Context *context, uint16_t instruction)
 {
     uint16_t reg = instruction & 0x07;
     uint8_t value = (!context->state.ccr_zero) ? 0xff : 0x00;
     context->state.d [reg].b = value;
+
+    return 0;
+}
+
+
+/* dbne Dn, #xxxx */
+static uint32_t m68k_56c8_dbne (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint32_t address = address_with_displacement (context, context->state.pc);
+
+    if ((!context->state.ccr_zero) == false)
+    {
+        context->state.d [reg].w--;
+        if (context->state.d [reg].w != 0xffff)
+        {
+            context->state.pc = address;
+        }
+    }
 
     return 0;
 }
@@ -11685,7 +11791,7 @@ static uint32_t m68k_57c8_dbeq (M68000_Context *context, uint16_t instruction)
     uint16_t reg = instruction & 0x07;
     uint32_t address = address_with_displacement (context, context->state.pc);
 
-    if (!context->state.ccr_zero)
+    if ((context->state.ccr_zero) == false)
     {
         context->state.d [reg].w--;
         if (context->state.d [reg].w != 0xffff)
@@ -11775,12 +11881,69 @@ static uint32_t m68k_57f9_seq_b_al (M68000_Context *context, uint16_t instructio
 }
 
 
+/* dbvc Dn, #xxxx */
+static uint32_t m68k_58c8_dbvc (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint32_t address = address_with_displacement (context, context->state.pc);
+
+    if ((!context->state.ccr_overflow) == false)
+    {
+        context->state.d [reg].w--;
+        if (context->state.d [reg].w != 0xffff)
+        {
+            context->state.pc = address;
+        }
+    }
+
+    return 0;
+}
+
+
+/* dbvs Dn, #xxxx */
+static uint32_t m68k_59c8_dbvs (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint32_t address = address_with_displacement (context, context->state.pc);
+
+    if ((context->state.ccr_overflow) == false)
+    {
+        context->state.d [reg].w--;
+        if (context->state.d [reg].w != 0xffff)
+        {
+            context->state.pc = address;
+        }
+    }
+
+    return 0;
+}
+
+
 /* spl.b Dn */
 static uint32_t m68k_5ac0_spl_b_dn (M68000_Context *context, uint16_t instruction)
 {
     uint16_t reg = instruction & 0x07;
     uint8_t value = (!context->state.ccr_negative) ? 0xff : 0x00;
     context->state.d [reg].b = value;
+
+    return 0;
+}
+
+
+/* dbpl Dn, #xxxx */
+static uint32_t m68k_5ac8_dbpl (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint32_t address = address_with_displacement (context, context->state.pc);
+
+    if ((!context->state.ccr_negative) == false)
+    {
+        context->state.d [reg].w--;
+        if (context->state.d [reg].w != 0xffff)
+        {
+            context->state.pc = address;
+        }
+    }
 
     return 0;
 }
@@ -11858,6 +12021,106 @@ static uint32_t m68k_5af9_spl_b_al (M68000_Context *context, uint16_t instructio
 {
     uint8_t value = (!context->state.ccr_negative) ? 0xff : 0x00;
     write_byte_al (context, value);
+
+    return 0;
+}
+
+
+/* dbmi Dn, #xxxx */
+static uint32_t m68k_5bc8_dbmi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint32_t address = address_with_displacement (context, context->state.pc);
+
+    if ((context->state.ccr_negative) == false)
+    {
+        context->state.d [reg].w--;
+        if (context->state.d [reg].w != 0xffff)
+        {
+            context->state.pc = address;
+        }
+    }
+
+    return 0;
+}
+
+
+/* dbge Dn, #xxxx */
+static uint32_t m68k_5cc8_dbge (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint32_t address = address_with_displacement (context, context->state.pc);
+
+    if (((context->state.ccr_negative && context->state.ccr_overflow) ||
+         (!context->state.ccr_negative && !context->state.ccr_overflow)) == false)
+    {
+        context->state.d [reg].w--;
+        if (context->state.d [reg].w != 0xffff)
+        {
+            context->state.pc = address;
+        }
+    }
+
+    return 0;
+}
+
+
+/* dblt Dn, #xxxx */
+static uint32_t m68k_5dc8_dblt (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint32_t address = address_with_displacement (context, context->state.pc);
+
+    if (((context->state.ccr_negative && !context->state.ccr_overflow) ||
+        (!context->state.ccr_negative && context->state.ccr_overflow)) == false)
+    {
+        context->state.d [reg].w--;
+        if (context->state.d [reg].w != 0xffff)
+        {
+            context->state.pc = address;
+        }
+    }
+
+    return 0;
+}
+
+
+/* dbgt Dn, #xxxx */
+static uint32_t m68k_5ec8_dbgt (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint32_t address = address_with_displacement (context, context->state.pc);
+
+    if (((context->state.ccr_negative && context->state.ccr_overflow && !context->state.ccr_zero) ||
+        (!context->state.ccr_negative && !context->state.ccr_overflow && !context->state.ccr_zero)) == false)
+    {
+        context->state.d [reg].w--;
+        if (context->state.d [reg].w != 0xffff)
+        {
+            context->state.pc = address;
+        }
+    }
+
+    return 0;
+}
+
+
+/* dble Dn, #xxxx */
+static uint32_t m68k_5fc8_dble (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint32_t address = address_with_displacement (context, context->state.pc);
+
+    if ((context->state.ccr_zero ||
+        (context->state.ccr_negative && !context->state.ccr_overflow) ||
+        (!context->state.ccr_negative && context->state.ccr_overflow)) == false)
+    {
+        context->state.d [reg].w--;
+        if (context->state.d [reg].w != 0xffff)
+        {
+            context->state.pc = address;
+        }
+    }
 
     return 0;
 }
@@ -20880,8 +21143,22 @@ static void m68k_init_instructions (void)
     /* dbcc */
     for (uint16_t dn = 0; dn < 8; dn++)
     {
+        m68k_instruction [0x50c8 | dn] = m68k_50c8_dbt;
         m68k_instruction [0x51c8 | dn] = m68k_51c8_dbf;
+        m68k_instruction [0x52c8 | dn] = m68k_52c8_dbhi;
+        m68k_instruction [0x53c8 | dn] = m68k_53c8_dbls;
+        m68k_instruction [0x54c8 | dn] = m68k_54c8_dbcc;
+        m68k_instruction [0x55c8 | dn] = m68k_55c8_dbcs;
+        m68k_instruction [0x56c8 | dn] = m68k_56c8_dbne;
         m68k_instruction [0x57c8 | dn] = m68k_57c8_dbeq;
+        m68k_instruction [0x58c8 | dn] = m68k_58c8_dbvc;
+        m68k_instruction [0x59c8 | dn] = m68k_59c8_dbvs;
+        m68k_instruction [0x5ac8 | dn] = m68k_5ac8_dbpl;
+        m68k_instruction [0x5bc8 | dn] = m68k_5bc8_dbmi;
+        m68k_instruction [0x5cc8 | dn] = m68k_5cc8_dbge;
+        m68k_instruction [0x5dc8 | dn] = m68k_5dc8_dblt;
+        m68k_instruction [0x5ec8 | dn] = m68k_5ec8_dbgt;
+        m68k_instruction [0x5fc8 | dn] = m68k_5fc8_dble;
     }
 
     /* Bcc/BSR/BRA with 16-bit displacement */
