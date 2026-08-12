@@ -10954,6 +10954,94 @@ static uint32_t m68k_50b9_addq_l_al (M68000_Context *context, uint16_t instructi
 }
 
 
+/* st.b Dn */
+static uint32_t m68k_50c0_st_b_dn (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    context->state.d [reg].b = 0xff;
+
+    return 0;
+}
+
+
+/* st.b (An) */
+static uint32_t m68k_50d0_st_b_an (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    write_byte (context, context->state.a [reg], 0xff);
+
+    return 0;
+}
+
+
+/* st.b (An+) */
+static uint32_t m68k_50d8_st_b_anp (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    write_byte (context, context->state.a [reg], 0xff);
+    context->state.a [reg] += (reg == 7) ? 2 : 1;
+
+    return 0;
+}
+
+
+/* st.b (-An) */
+static uint32_t m68k_50e0_st_b_pan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    context->state.a [reg] -= (reg == 7) ? 2 : 1;
+    write_byte (context, context->state.a [reg], 0xff);
+
+    return 0;
+}
+
+
+/* st.b d(An) */
+static uint32_t m68k_50e8_st_b_dan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    write_byte_with_displacement (context, context->state.a [reg], 0xff);
+
+    return 0;
+}
+
+
+/* st.b d(An+Xi) */
+static uint32_t m68k_50f0_st_b_danxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    write_byte_with_index (context, context->state.a [reg], 0xff);
+
+    return 0;
+}
+
+
+/* st.b (xxx.w) */
+static uint32_t m68k_50f8_st_b_aw (M68000_Context *context, uint16_t instruction)
+{
+    write_byte_aw (context, 0xff);
+
+    return 0;
+}
+
+
+/* st.b (xxx.l) */
+static uint32_t m68k_50f9_st_b_al (M68000_Context *context, uint16_t instruction)
+{
+    write_byte_al (context, 0xff);
+
+    return 0;
+}
+
+
+
+
 /* subq.b Dn, #xx */
 static uint32_t m68k_5100_subq_b_dn (M68000_Context *context, uint16_t instruction)
 {
@@ -11401,92 +11489,6 @@ static uint32_t m68k_51c8_dbf (M68000_Context *context, uint16_t instruction)
     {
         context->state.pc = address;
     }
-
-    return 0;
-}
-
-
-/* st.b Dn */
-static uint32_t m68k_50c0_st_b_dn (M68000_Context *context, uint16_t instruction)
-{
-    uint16_t reg = instruction & 0x07;
-
-    context->state.d [reg].b = 0xff;
-
-    return 0;
-}
-
-
-/* st.b (An) */
-static uint32_t m68k_50d0_st_b_an (M68000_Context *context, uint16_t instruction)
-{
-    uint16_t reg = instruction & 0x07;
-
-    write_byte (context, context->state.a [reg], 0xff);
-
-    return 0;
-}
-
-
-/* st.b (An+) */
-static uint32_t m68k_50d8_st_b_anp (M68000_Context *context, uint16_t instruction)
-{
-    uint16_t reg = instruction & 0x07;
-
-    write_byte (context, context->state.a [reg], 0xff);
-    context->state.a [reg] += (reg == 7) ? 2 : 1;
-
-    return 0;
-}
-
-
-/* st.b (-An) */
-static uint32_t m68k_50e0_st_b_pan (M68000_Context *context, uint16_t instruction)
-{
-    uint16_t reg = instruction & 0x07;
-
-    context->state.a [reg] -= (reg == 7) ? 2 : 1;
-    write_byte (context, context->state.a [reg], 0xff);
-
-    return 0;
-}
-
-
-/* st.b d(An) */
-static uint32_t m68k_50e8_st_b_dan (M68000_Context *context, uint16_t instruction)
-{
-    uint16_t reg = instruction & 0x07;
-
-    write_byte_with_displacement (context, context->state.a [reg], 0xff);
-
-    return 0;
-}
-
-
-/* st.b d(An+Xi) */
-static uint32_t m68k_50f0_st_b_danxi (M68000_Context *context, uint16_t instruction)
-{
-    uint16_t reg = instruction & 0x07;
-
-    write_byte_with_index (context, context->state.a [reg], 0xff);
-
-    return 0;
-}
-
-
-/* st.b (xxx.w) */
-static uint32_t m68k_50f8_st_b_aw (M68000_Context *context, uint16_t instruction)
-{
-    write_byte_aw (context, 0xff);
-
-    return 0;
-}
-
-
-/* st.b (xxx.l) */
-static uint32_t m68k_50f9_st_b_al (M68000_Context *context, uint16_t instruction)
-{
-    write_byte_al (context, 0xff);
 
     return 0;
 }
