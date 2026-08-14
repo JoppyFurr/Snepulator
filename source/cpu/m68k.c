@@ -9681,12 +9681,39 @@ static uint32_t m68k_4880_ext_w_dn (M68000_Context *context, uint16_t instructio
 }
 
 
+/* movem.w (An) ← <registers> */
+static uint32_t m68k_4890_movem_w_an_regs (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = instruction & 0x07;
+    uint16_t mask = read_extension (context);
+    uint32_t address = context->state.a [dest_reg];
+
+    for (uint32_t i = 0; i < 16; i++)
+    {
+        if (mask & (1 << i))
+        {
+            if (i < 8)
+            {
+                write_word (context, address, context->state.d [i].w);
+                address += 2;
+            }
+            else
+            {
+                write_word (context, address, context->state.a [i - 8]);
+                address += 2;
+            }
+        }
+    }
+
+    return 0;
+}
+
+
 /* movem.w (-An) ← <registers> */
 static uint32_t m68k_48a0_movem_w_pan_regs (M68000_Context *context, uint16_t instruction)
 {
     uint16_t reg = instruction & 0x07;
     uint16_t mask = read_extension (context);
-
     uint32_t address = context->state.a [reg];
 
     /* For (-An), the bit-mask and order is reversed */
@@ -9708,6 +9735,116 @@ static uint32_t m68k_48a0_movem_w_pan_regs (M68000_Context *context, uint16_t in
     }
 
     context->state.a [reg] = address;
+
+    return 0;
+}
+
+
+/* movem.w d(An) ← <registers> */
+static uint32_t m68k_48a8_movem_w_dan_regs (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = instruction & 0x07;
+    uint16_t mask = read_extension (context);
+    uint32_t address = address_with_displacement (context, context->state.a [dest_reg]);
+
+    for (uint32_t i = 0; i < 16; i++)
+    {
+        if (mask & (1 << i))
+        {
+            if (i < 8)
+            {
+                write_word (context, address, context->state.d [i].w);
+                address += 2;
+            }
+            else
+            {
+                write_word (context, address, context->state.a [i - 8]);
+                address += 2;
+            }
+        }
+    }
+
+    return 0;
+}
+
+
+/* movem.w d(An+Xi) ← <registers> */
+static uint32_t m68k_48b0_movem_w_danxi_regs (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = instruction & 0x07;
+    uint16_t mask = read_extension (context);
+    uint32_t address = address_with_index (context, context->state.a [dest_reg]);
+
+    for (uint32_t i = 0; i < 16; i++)
+    {
+        if (mask & (1 << i))
+        {
+            if (i < 8)
+            {
+                write_word (context, address, context->state.d [i].w);
+                address += 2;
+            }
+            else
+            {
+                write_word (context, address, context->state.a [i - 8]);
+                address += 2;
+            }
+        }
+    }
+
+    return 0;
+}
+
+
+/* movem.w (xxx.w) ← <registers> */
+static uint32_t m68k_48b8_movem_w_aw_regs (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t mask = read_extension (context);
+    uint32_t address = (int16_t) read_extension (context);
+
+    for (uint32_t i = 0; i < 16; i++)
+    {
+        if (mask & (1 << i))
+        {
+            if (i < 8)
+            {
+                write_word (context, address, context->state.d [i].w);
+                address += 2;
+            }
+            else
+            {
+                write_word (context, address, context->state.a [i - 8]);
+                address += 2;
+            }
+        }
+    }
+
+    return 0;
+}
+
+
+/* movem.w (xxx.l) ← <registers> */
+static uint32_t m68k_48b9_movem_w_al_regs (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t mask = read_extension (context);
+    uint32_t address = read_extension_long (context);
+
+    for (uint32_t i = 0; i < 16; i++)
+    {
+        if (mask & (1 << i))
+        {
+            if (i < 8)
+            {
+                write_word (context, address, context->state.d [i].w);
+                address += 2;
+            }
+            else
+            {
+                write_word (context, address, context->state.a [i - 8]);
+                address += 2;
+            }
+        }
+    }
 
     return 0;
 }
@@ -9790,11 +9927,94 @@ static uint32_t m68k_48e0_movem_l_pan_regs (M68000_Context *context, uint16_t in
 }
 
 
+/* movem.l d(An) ← <registers> */
+static uint32_t m68k_48e8_movem_l_dan_regs (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = instruction & 0x07;
+    uint16_t mask = read_extension (context);
+    uint32_t address = address_with_displacement (context, context->state.a [dest_reg]);
+
+    for (uint32_t i = 0; i < 16; i++)
+    {
+        if (mask & (1 << i))
+        {
+            if (i < 8)
+            {
+                write_long (context, address, context->state.d [i].l);
+                address += 4;
+            }
+            else
+            {
+                write_long (context, address, context->state.a [i - 8]);
+                address += 4;
+            }
+        }
+    }
+
+    return 0;
+}
+
+
+/* movem.l d(An+Xi) ← <registers> */
+static uint32_t m68k_48f0_movem_l_danxi_regs (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = instruction & 0x07;
+    uint16_t mask = read_extension (context);
+    uint32_t address = address_with_index (context, context->state.a [dest_reg]);
+
+    for (uint32_t i = 0; i < 16; i++)
+    {
+        if (mask & (1 << i))
+        {
+            if (i < 8)
+            {
+                write_long (context, address, context->state.d [i].l);
+                address += 4;
+            }
+            else
+            {
+                write_long (context, address, context->state.a [i - 8]);
+                address += 4;
+            }
+        }
+    }
+
+    return 0;
+}
+
+
 /* movem.l (xxx.w) ← <registers> */
 static uint32_t m68k_48f8_movem_l_aw_regs (M68000_Context *context, uint16_t instruction)
 {
     uint16_t mask = read_extension (context);
     uint32_t address = (int16_t) read_extension (context);
+
+    for (uint32_t i = 0; i < 16; i++)
+    {
+        if (mask & (1 << i))
+        {
+            if (i < 8)
+            {
+                write_long (context, address, context->state.d [i].l);
+                address += 4;
+            }
+            else
+            {
+                write_long (context, address, context->state.a [i - 8]);
+                address += 4;
+            }
+        }
+    }
+
+    return 0;
+}
+
+
+/* movem.l (xxx.l) ← <registers> */
+static uint32_t m68k_48f9_movem_l_al_regs (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t mask = read_extension (context);
+    uint32_t address = read_extension_long (context);
 
     for (uint32_t i = 0; i < 16; i++)
     {
@@ -10105,12 +10325,40 @@ static uint32_t m68k_4ab9_tst_l_al (M68000_Context *context, uint16_t instructio
 }
 
 
+/* movem.w <registers> ← (An) */
+static uint32_t m68k_4c90_movem_w_regs_an (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint16_t mask = read_extension (context);
+    uint32_t address = context->state.a [reg];
+
+    /* Data registers first */
+    for (uint32_t i = 0; i < 16; i++)
+    {
+        if (mask & (1 << i))
+        {
+            if (i < 8)
+            {
+                context->state.d [i].l = (int16_t) read_word (context, address);
+                address += 2;
+            }
+            else
+            {
+                context->state.a [i - 8] = (int16_t) read_word (context, address);
+                address += 2;
+            }
+        }
+    }
+
+    return 0;
+}
+
+
 /* movem.w <registers> ← (An+) */
 static uint32_t m68k_4c98_movem_w_regs_anp (M68000_Context *context, uint16_t instruction)
 {
     uint16_t reg = instruction & 0x07;
     uint16_t mask = read_extension (context);
-
     uint32_t address = context->state.a [reg];
 
     /* Data registers first */
@@ -10132,6 +10380,176 @@ static uint32_t m68k_4c98_movem_w_regs_anp (M68000_Context *context, uint16_t in
     }
 
     context->state.a [reg] = address;
+
+    return 0;
+}
+
+
+/* movem.w <registers> ← d(An) */
+static uint32_t m68k_4ca8_movem_w_regs_dan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint16_t mask = read_extension (context);
+    uint32_t address = address_with_displacement (context, context->state.a [reg]);
+
+    /* Data registers first */
+    for (uint32_t i = 0; i < 16; i++)
+    {
+        if (mask & (1 << i))
+        {
+            if (i < 8)
+            {
+                context->state.d [i].l = (int16_t) read_word (context, address);
+                address += 2;
+            }
+            else
+            {
+                context->state.a [i - 8] = (int16_t) read_word (context, address);
+                address += 2;
+            }
+        }
+    }
+
+    return 0;
+}
+
+
+/* movem.w <registers> ← d(An+Xi) */
+static uint32_t m68k_4cb0_movem_w_regs_danxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint16_t mask = read_extension (context);
+    uint32_t address = address_with_index (context, context->state.a [reg]);
+
+    /* Data registers first */
+    for (uint32_t i = 0; i < 16; i++)
+    {
+        if (mask & (1 << i))
+        {
+            if (i < 8)
+            {
+                context->state.d [i].l = (int16_t) read_word (context, address);
+                address += 2;
+            }
+            else
+            {
+                context->state.a [i - 8] = (int16_t) read_word (context, address);
+                address += 2;
+            }
+        }
+    }
+
+    return 0;
+}
+
+
+/* movem.w <registers> ← (xxx.w) */
+static uint32_t m68k_4cb8_movem_w_regs_aw (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t mask = read_extension (context);
+    uint32_t address = (int16_t) read_extension (context);
+
+    /* Data registers first */
+    for (uint32_t i = 0; i < 16; i++)
+    {
+        if (mask & (1 << i))
+        {
+            if (i < 8)
+            {
+                context->state.d [i].l = (int16_t) read_word (context, address);
+                address += 2;
+            }
+            else
+            {
+                context->state.a [i - 8] = (int16_t) read_word (context, address);
+                address += 2;
+            }
+        }
+    }
+
+    return 0;
+}
+
+
+/* movem.w <registers> ← (xxx.l) */
+static uint32_t m68k_4cb9_movem_w_regs_al (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t mask = read_extension (context);
+    uint32_t address = read_extension_long (context);
+
+    /* Data registers first */
+    for (uint32_t i = 0; i < 16; i++)
+    {
+        if (mask & (1 << i))
+        {
+            if (i < 8)
+            {
+                context->state.d [i].l = (int16_t) read_word (context, address);
+                address += 2;
+            }
+            else
+            {
+                context->state.a [i - 8] = (int16_t) read_word (context, address);
+                address += 2;
+            }
+        }
+    }
+
+    return 0;
+}
+
+
+/* movem.w <registers> ← d(PC) */
+static uint32_t m68k_4cba_movem_w_regs_dpc (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t mask = read_extension (context);
+    uint32_t address = address_with_displacement (context, context->state.pc);
+
+    /* Data registers first */
+    for (uint32_t i = 0; i < 16; i++)
+    {
+        if (mask & (1 << i))
+        {
+            if (i < 8)
+            {
+                context->state.d [i].l = (int16_t) read_word (context, address);
+                address += 2;
+            }
+            else
+            {
+                context->state.a [i - 8] = (int16_t) read_word (context, address);
+                address += 2;
+            }
+        }
+    }
+
+    return 0;
+}
+
+
+/* movem.w <registers> ← d(PC+Xi) */
+static uint32_t m68k_4cbb_movem_w_regs_dpcxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t mask = read_extension (context);
+    uint32_t address = address_with_index (context, context->state.pc);
+
+    /* Data registers first */
+    for (uint32_t i = 0; i < 16; i++)
+    {
+        if (mask & (1 << i))
+        {
+            if (i < 8)
+            {
+                context->state.d [i].l = (int16_t) read_word (context, address);
+                address += 2;
+            }
+            else
+            {
+                context->state.a [i - 8] = (int16_t) read_word (context, address);
+                address += 2;
+            }
+        }
+    }
 
     return 0;
 }
@@ -10195,11 +10613,148 @@ static uint32_t m68k_4cd8_movem_l_regs_anp (M68000_Context *context, uint16_t in
 }
 
 
+/* movem.l <registers> ← d(An) */
+static uint32_t m68k_4ce8_movem_l_regs_dan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t mask = read_extension (context);
+    uint32_t address = address_with_displacement (context, context->state.a [source_reg]);
+
+    for (uint32_t i = 0; i < 16; i++)
+    {
+        if (mask & (1 << i))
+        {
+            if (i < 8)
+            {
+                context->state.d [i].l = read_long (context, address);
+                address += 4;
+            }
+            else
+            {
+                context->state.a [i - 8] = read_long (context, address);
+                address += 4;
+            }
+        }
+    }
+
+    return 0;
+}
+
+
+/* movem.l <registers> ← d(An+Xi) */
+static uint32_t m68k_4cf0_movem_l_regs_danxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t mask = read_extension (context);
+    uint32_t address = address_with_index (context, context->state.a [source_reg]);
+
+    for (uint32_t i = 0; i < 16; i++)
+    {
+        if (mask & (1 << i))
+        {
+            if (i < 8)
+            {
+                context->state.d [i].l = read_long (context, address);
+                address += 4;
+            }
+            else
+            {
+                context->state.a [i - 8] = read_long (context, address);
+                address += 4;
+            }
+        }
+    }
+
+    return 0;
+}
+
+
 /* movem.l <registers> ← (xxx.w) */
 static uint32_t m68k_4cf8_movem_l_regs_aw (M68000_Context *context, uint16_t instruction)
 {
     uint16_t mask = read_extension (context);
     uint32_t address = (int16_t) read_extension (context);
+
+    for (uint32_t i = 0; i < 16; i++)
+    {
+        if (mask & (1 << i))
+        {
+            if (i < 8)
+            {
+                context->state.d [i].l = read_long (context, address);
+                address += 4;
+            }
+            else
+            {
+                context->state.a [i - 8] = read_long (context, address);
+                address += 4;
+            }
+        }
+    }
+
+    return 0;
+}
+
+
+/* movem.l <registers> ← (xxx.l) */
+static uint32_t m68k_4cf9_movem_l_regs_al (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t mask = read_extension (context);
+    uint32_t address = read_extension_long (context);
+
+    for (uint32_t i = 0; i < 16; i++)
+    {
+        if (mask & (1 << i))
+        {
+            if (i < 8)
+            {
+                context->state.d [i].l = read_long (context, address);
+                address += 4;
+            }
+            else
+            {
+                context->state.a [i - 8] = read_long (context, address);
+                address += 4;
+            }
+        }
+    }
+
+    return 0;
+}
+
+
+/* movem.l <registers> ← d(PC) */
+static uint32_t m68k_4cfa_movem_l_regs_dpc (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t mask = read_extension (context);
+    uint32_t address = address_with_displacement (context, context->state.pc);
+
+    for (uint32_t i = 0; i < 16; i++)
+    {
+        if (mask & (1 << i))
+        {
+            if (i < 8)
+            {
+                context->state.d [i].l = read_long (context, address);
+                address += 4;
+            }
+            else
+            {
+                context->state.a [i - 8] = read_long (context, address);
+                address += 4;
+            }
+        }
+    }
+
+    return 0;
+}
+
+
+/* movem.l <registers> ← d(PC+Xi) */
+static uint32_t m68k_4cfb_movem_l_regs_dpcxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t mask = read_extension (context);
+    uint32_t address = address_with_index (context, context->state.pc);
 
     for (uint32_t i = 0; i < 16; i++)
     {
@@ -20943,15 +21498,35 @@ static void m68k_init_instructions (void)
     /* movem */
     for (uint16_t an = 0; an < 8; an++)
     {
+        m68k_instruction [0x4890 | an] = m68k_4890_movem_w_an_regs;
         m68k_instruction [0x48a0 | an] = m68k_48a0_movem_w_pan_regs;
+        m68k_instruction [0x48a8 | an] = m68k_48a8_movem_w_dan_regs;
+        m68k_instruction [0x48b0 | an] = m68k_48b0_movem_w_danxi_regs;
         m68k_instruction [0x48d0 | an] = m68k_48d0_movem_l_an_regs;
         m68k_instruction [0x48e0 | an] = m68k_48e0_movem_l_pan_regs;
+        m68k_instruction [0x48e8 | an] = m68k_48e8_movem_l_dan_regs;
+        m68k_instruction [0x48f0 | an] = m68k_48f0_movem_l_danxi_regs;
+        m68k_instruction [0x4c90 | an] = m68k_4c90_movem_w_regs_an;
         m68k_instruction [0x4c98 | an] = m68k_4c98_movem_w_regs_anp;
+        m68k_instruction [0x4ca8 | an] = m68k_4ca8_movem_w_regs_dan;
+        m68k_instruction [0x4cb0 | an] = m68k_4cb0_movem_w_regs_danxi;
         m68k_instruction [0x4cd0 | an] = m68k_4cd0_movem_l_regs_an;
         m68k_instruction [0x4cd8 | an] = m68k_4cd8_movem_l_regs_anp;
+        m68k_instruction [0x4ce8 | an] = m68k_4ce8_movem_l_regs_dan;
+        m68k_instruction [0x4cf0 | an] = m68k_4cf0_movem_l_regs_danxi;
     }
+    m68k_instruction [0x48b8] = m68k_48b8_movem_w_aw_regs;
+    m68k_instruction [0x48b9] = m68k_48b9_movem_w_al_regs;
     m68k_instruction [0x48f8] = m68k_48f8_movem_l_aw_regs;
+    m68k_instruction [0x48f9] = m68k_48f9_movem_l_al_regs;
+    m68k_instruction [0x4cb8] = m68k_4cb8_movem_w_regs_aw;
+    m68k_instruction [0x4cb9] = m68k_4cb9_movem_w_regs_al;
+    m68k_instruction [0x4cba] = m68k_4cba_movem_w_regs_dpc;
+    m68k_instruction [0x4cbb] = m68k_4cbb_movem_w_regs_dpcxi;
     m68k_instruction [0x4cf8] = m68k_4cf8_movem_l_regs_aw;
+    m68k_instruction [0x4cf9] = m68k_4cf9_movem_l_regs_al;
+    m68k_instruction [0x4cfa] = m68k_4cfa_movem_l_regs_dpc;
+    m68k_instruction [0x4cfb] = m68k_4cfb_movem_l_regs_dpcxi;
 
     /* lea */
     for (uint16_t an = 0; an < 8; an++)
