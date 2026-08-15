@@ -355,6 +355,33 @@ static void smd_memory_write_8 (void *context_ptr, uint32_t addr, uint8_t data)
         }
     }
 
+    /* Internal Registers and Expansion */
+    else if (addr >= 0xa10020 && addr <= 0xbfffff)
+    {
+        /* Z80 Bus Request */
+        if (addr == 0xa11100)
+        {
+            context->state.z80_busreq = data & 0x01;
+        }
+
+        /* Z80 and YM2612 Reset */
+        /* TODO: YM2612 reset */
+        else if (addr == 0xa11200)
+        {
+            context->state.z80_reset_n = data & 0x01;
+
+            if (!context->state.z80_reset_n)
+            {
+                z80_reset (context->z80_context);
+            }
+        }
+
+        else
+        {
+            snepulator_error (__func__, "Internal register / expansion access %06x not implemented.", addr);
+        }
+    }
+
     /* PSG */
     else if (addr == 0xc00011 || addr == 0xc00013)
     {
