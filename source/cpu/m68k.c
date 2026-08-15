@@ -9664,6 +9664,93 @@ static uint32_t m68k_4840_swap_dn (M68000_Context *context, uint16_t instruction
 }
 
 
+/* pea (An) */
+static uint32_t m68k_4850_pea_an (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint32_t address = context->state.a [source_reg];
+
+    context->state.a [7] -= 4;
+    write_long (context, context->state.a [7], address);
+
+    return 0;
+}
+
+
+/* pea d(An) */
+static uint32_t m68k_4868_pea_dan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint32_t address = address_with_displacement (context, context->state.a [source_reg]);
+
+    context->state.a [7] -= 4;
+    write_long (context, context->state.a [7], address);
+
+    return 0;
+}
+
+
+/* pea d(An+Xi) */
+static uint32_t m68k_4870_pea_danxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint32_t address = address_with_index (context, context->state.a [source_reg]);
+
+    context->state.a [7] -= 4;
+    write_long (context, context->state.a [7], address);
+
+    return 0;
+}
+
+
+/* pea (xxx.w) */
+static uint32_t m68k_4878_pea_aw (M68000_Context *context, uint16_t instruction)
+{
+    uint32_t address = (int16_t) read_extension (context);
+
+    context->state.a [7] -= 4;
+    write_long (context, context->state.a [7], address);
+
+    return 0;
+}
+
+
+/* pea (xxx.l) */
+static uint32_t m68k_4879_pea_al (M68000_Context *context, uint16_t instruction)
+{
+    uint32_t address = read_extension_long (context);
+
+    context->state.a [7] -= 4;
+    write_long (context, context->state.a [7], address);
+
+    return 0;
+}
+
+
+/* pea d(PC) */
+static uint32_t m68k_487a_pea_dpc (M68000_Context *context, uint16_t instruction)
+{
+    uint32_t address = address_with_displacement (context, context->state.pc);
+
+    context->state.a [7] -= 4;
+    write_long (context, context->state.a [7], address);
+
+    return 0;
+}
+
+
+/* pea d(PC+Xi) */
+static uint32_t m68k_487b_pea_dpcxi (M68000_Context *context, uint16_t instruction)
+{
+    uint32_t address = address_with_index (context, context->state.pc);
+
+    context->state.a [7] -= 4;
+    write_long (context, context->state.a [7], address);
+
+    return 0;
+}
+
+
 /* ext.w Dn */
 static uint32_t m68k_4880_ext_w_dn (M68000_Context *context, uint16_t instruction)
 {
@@ -22412,6 +22499,18 @@ static void m68k_init_instructions (void)
     m68k_instruction [0x4479] = m68k_4479_neg_w_al;
     m68k_instruction [0x44b8] = m68k_44b8_neg_l_aw;
     m68k_instruction [0x44b9] = m68k_44b9_neg_l_al;
+
+    /* pea */
+    for (uint16_t an = 0; an < 8; an++)
+    {
+        m68k_instruction [0x4850 | an] = m68k_4850_pea_an;
+        m68k_instruction [0x4868 | an] = m68k_4868_pea_dan;
+        m68k_instruction [0x4870 | an] = m68k_4870_pea_danxi;
+    }
+    m68k_instruction [0x4878] = m68k_4878_pea_aw;
+    m68k_instruction [0x4879] = m68k_4879_pea_al;
+    m68k_instruction [0x487a] = m68k_487a_pea_dpc;
+    m68k_instruction [0x487b] = m68k_487b_pea_dpcxi;
 
     /* trap */
     for (uint32_t vector = 0; vector < 16; vector++)
