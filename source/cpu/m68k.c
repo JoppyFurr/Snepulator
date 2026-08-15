@@ -17740,6 +17740,202 @@ static uint32_t m68k_c0c0_mulu_w_dn_dn (M68000_Context *context, uint16_t instru
 }
 
 
+/* mulu.w Dn ← Dn × (An) */
+static uint32_t m68k_c0d0_mulu_w_dn_an (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+    uint32_t address = context->state.a [source_reg];
+
+    uint16_t b = read_word (context, address);
+    uint16_t a = context->state.d [dest_reg].w;
+    uint32_t result = (uint32_t) a * (uint32_t) b;
+
+    context->state.d [dest_reg].l = result;
+
+    context->state.ccr_negative = ((int32_t) result < 0);
+    context->state.ccr_zero = (result == 0);
+    context->state.ccr_overflow = 0;
+    context->state.ccr_carry = 0;
+
+    return 0;
+}
+
+
+/* mulu.w Dn ← Dn × (An+) */
+static uint32_t m68k_c0d8_mulu_w_dn_anp (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+    uint32_t address = context->state.a [source_reg];
+    context->state.a [source_reg] += 2;
+
+    uint16_t b = read_word (context, address);
+    uint16_t a = context->state.d [dest_reg].w;
+    uint32_t result = (uint32_t) a * (uint32_t) b;
+
+    context->state.d [dest_reg].l = result;
+
+    context->state.ccr_negative = ((int32_t) result < 0);
+    context->state.ccr_zero = (result == 0);
+    context->state.ccr_overflow = 0;
+    context->state.ccr_carry = 0;
+
+    return 0;
+}
+
+
+/* mulu.w Dn ← Dn × (-An) */
+static uint32_t m68k_c0e0_mulu_w_dn_pan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+    context->state.a [source_reg] -= 2;
+    uint32_t address = context->state.a [source_reg];
+
+    uint16_t b = read_word (context, address);
+    uint16_t a = context->state.d [dest_reg].w;
+    uint32_t result = (uint32_t) a * (uint32_t) b;
+
+    context->state.d [dest_reg].l = result;
+
+    context->state.ccr_negative = ((int32_t) result < 0);
+    context->state.ccr_zero = (result == 0);
+    context->state.ccr_overflow = 0;
+    context->state.ccr_carry = 0;
+
+    return 0;
+}
+
+
+/* mulu.w Dn ← Dn × d(An) */
+static uint32_t m68k_c0e8_mulu_w_dn_dan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+    uint32_t address = address_with_displacement (context, context->state.a [source_reg]);
+
+    uint16_t b = read_word (context, address);
+    uint16_t a = context->state.d [dest_reg].w;
+    uint32_t result = (uint32_t) a * (uint32_t) b;
+
+    context->state.d [dest_reg].l = result;
+
+    context->state.ccr_negative = ((int32_t) result < 0);
+    context->state.ccr_zero = (result == 0);
+    context->state.ccr_overflow = 0;
+    context->state.ccr_carry = 0;
+
+    return 0;
+}
+
+
+/* mulu.w Dn ← Dn × d(An+Xi) */
+static uint32_t m68k_c0f0_mulu_w_dn_danxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+    uint32_t address = address_with_index (context, context->state.a [source_reg]);
+
+    uint16_t b = read_word (context, address);
+    uint16_t a = context->state.d [dest_reg].w;
+    uint32_t result = (uint32_t) a * (uint32_t) b;
+
+    context->state.d [dest_reg].l = result;
+
+    context->state.ccr_negative = ((int32_t) result < 0);
+    context->state.ccr_zero = (result == 0);
+    context->state.ccr_overflow = 0;
+    context->state.ccr_carry = 0;
+
+    return 0;
+}
+
+
+/* mulu.w Dn ← Dn × (xxx.w) */
+static uint32_t m68k_c0f8_mulu_w_dn_aw (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+    uint32_t address = (int16_t) read_extension (context);
+
+    uint16_t b = read_word (context, address);
+    uint16_t a = context->state.d [dest_reg].w;
+    uint32_t result = (uint32_t) a * (uint32_t) b;
+
+    context->state.d [dest_reg].l = result;
+
+    context->state.ccr_negative = ((int32_t) result < 0);
+    context->state.ccr_zero = (result == 0);
+    context->state.ccr_overflow = 0;
+    context->state.ccr_carry = 0;
+
+    return 0;
+}
+
+
+/* mulu.w Dn ← Dn × (xxx.l) */
+static uint32_t m68k_c0f9_mulu_w_dn_al (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+    uint32_t address = read_extension_long (context);
+
+    uint16_t b = read_word (context, address);
+    uint16_t a = context->state.d [dest_reg].w;
+    uint32_t result = (uint32_t) a * (uint32_t) b;
+
+    context->state.d [dest_reg].l = result;
+
+    context->state.ccr_negative = ((int32_t) result < 0);
+    context->state.ccr_zero = (result == 0);
+    context->state.ccr_overflow = 0;
+    context->state.ccr_carry = 0;
+
+    return 0;
+}
+
+
+/* mulu.w Dn ← Dn × d(PC) */
+static uint32_t m68k_c0fa_mulu_w_dn_dpc (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+    uint32_t address = address_with_displacement (context, context->state.pc);
+
+    uint16_t b = read_word (context, address);
+    uint16_t a = context->state.d [dest_reg].w;
+    uint32_t result = (uint32_t) a * (uint32_t) b;
+
+    context->state.d [dest_reg].l = result;
+
+    context->state.ccr_negative = ((int32_t) result < 0);
+    context->state.ccr_zero = (result == 0);
+    context->state.ccr_overflow = 0;
+    context->state.ccr_carry = 0;
+
+    return 0;
+}
+
+
+/* mulu.w Dn ← Dn × d(PC+Xi) */
+static uint32_t m68k_c0fb_mulu_w_dn_dpcxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+    uint32_t address = address_with_index (context, context->state.pc);
+
+    uint16_t b = read_word (context, address);
+    uint16_t a = context->state.d [dest_reg].w;
+    uint32_t result = (uint32_t) a * (uint32_t) b;
+
+    context->state.d [dest_reg].l = result;
+
+    context->state.ccr_negative = ((int32_t) result < 0);
+    context->state.ccr_zero = (result == 0);
+    context->state.ccr_overflow = 0;
+    context->state.ccr_carry = 0;
+
+    return 0;
+}
+
+
 /* mulu.w Dn ← Dn × #xxxx */
 static uint32_t m68k_c0fc_mulu_w_dn_imm (M68000_Context *context, uint16_t instruction)
 {
@@ -18173,13 +18369,188 @@ static uint32_t m68k_c1c0_muls_w_dn_dn (M68000_Context *context, uint16_t instru
 }
 
 
+/* muls.w Dn ← Dn × (An) */
+static uint32_t m68k_c1d0_muls_w_dn_an (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+    uint32_t address = context->state.a [source_reg];
+
+    int16_t b = read_word (context, address);
+    int16_t a = context->state.d [dest_reg].w;
+    int32_t result = a * b;
+
+    context->state.d [dest_reg].l = result;
+
+    context->state.ccr_negative = (result < 0);
+    context->state.ccr_zero = (result == 0);
+    context->state.ccr_overflow = 0;
+    context->state.ccr_carry = 0;
+
+    return 0;
+}
+
+
+/* muls.w Dn ← Dn × (An+) */
+static uint32_t m68k_c1d8_muls_w_dn_anp (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+    uint32_t address = context->state.a [source_reg];
+    context->state.a [source_reg] += 2;
+
+    int16_t b = read_word (context, address);
+    int16_t a = context->state.d [dest_reg].w;
+    int32_t result = a * b;
+
+    context->state.d [dest_reg].l = result;
+
+    context->state.ccr_negative = (result < 0);
+    context->state.ccr_zero = (result == 0);
+    context->state.ccr_overflow = 0;
+    context->state.ccr_carry = 0;
+
+    return 0;
+}
+
+
+/* muls.w Dn ← Dn × (-An) */
+static uint32_t m68k_c1e0_muls_w_dn_pan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+    context->state.a [source_reg] -= 2;
+    uint32_t address = context->state.a [source_reg];
+
+    int16_t b = read_word (context, address);
+    int16_t a = context->state.d [dest_reg].w;
+    int32_t result = a * b;
+
+    context->state.d [dest_reg].l = result;
+
+    context->state.ccr_negative = (result < 0);
+    context->state.ccr_zero = (result == 0);
+    context->state.ccr_overflow = 0;
+    context->state.ccr_carry = 0;
+
+    return 0;
+}
+
+
 /* muls.w Dn ← Dn × d(An) */
 static uint32_t m68k_c1e8_muls_w_dn_dan (M68000_Context *context, uint16_t instruction)
 {
     uint16_t source_reg = instruction & 0x07;
     uint16_t dest_reg = (instruction >> 9) & 0x07;
+    uint32_t address = context->state.a [source_reg];
 
-    int16_t b = read_word_with_displacement (context, context->state.a [source_reg]);
+    int16_t b = read_word_with_displacement (context, address);
+    int16_t a = context->state.d [dest_reg].w;
+    int32_t result = a * b;
+
+    context->state.d [dest_reg].l = result;
+
+    context->state.ccr_negative = (result < 0);
+    context->state.ccr_zero = (result == 0);
+    context->state.ccr_overflow = 0;
+    context->state.ccr_carry = 0;
+
+    return 0;
+}
+
+
+/* muls.w Dn ← Dn × d(An+Xi) */
+static uint32_t m68k_c1f0_muls_w_dn_danxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+    uint32_t address = context->state.a [source_reg];
+
+    int16_t b = read_word_with_index (context, address);
+    int16_t a = context->state.d [dest_reg].w;
+    int32_t result = a * b;
+
+    context->state.d [dest_reg].l = result;
+
+    context->state.ccr_negative = (result < 0);
+    context->state.ccr_zero = (result == 0);
+    context->state.ccr_overflow = 0;
+    context->state.ccr_carry = 0;
+
+    return 0;
+}
+
+
+/* muls.w Dn ← Dn × (xxx.w) */
+static uint32_t m68k_c1f8_muls_w_dn_aw (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+    uint32_t address = (int16_t) read_extension (context);
+
+    int16_t b = read_word (context, address);
+    int16_t a = context->state.d [dest_reg].w;
+    int32_t result = a * b;
+
+    context->state.d [dest_reg].l = result;
+
+    context->state.ccr_negative = (result < 0);
+    context->state.ccr_zero = (result == 0);
+    context->state.ccr_overflow = 0;
+    context->state.ccr_carry = 0;
+
+    return 0;
+}
+
+
+/* muls.w Dn ← Dn × (xxx.l) */
+static uint32_t m68k_c1f9_muls_w_dn_al (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+    uint32_t address = read_extension_long (context);
+
+    int16_t b = read_word (context, address);
+    int16_t a = context->state.d [dest_reg].w;
+    int32_t result = a * b;
+
+    context->state.d [dest_reg].l = result;
+
+    context->state.ccr_negative = (result < 0);
+    context->state.ccr_zero = (result == 0);
+    context->state.ccr_overflow = 0;
+    context->state.ccr_carry = 0;
+
+    return 0;
+}
+
+
+/* muls.w Dn ← Dn × d(PC) */
+static uint32_t m68k_c1fa_muls_w_dn_dpc (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+    uint32_t address = address_with_displacement (context, context->state.pc);
+
+    int16_t b = read_word (context, address);
+    int16_t a = context->state.d [dest_reg].w;
+    int32_t result = a * b;
+
+    context->state.d [dest_reg].l = result;
+
+    context->state.ccr_negative = (result < 0);
+    context->state.ccr_zero = (result == 0);
+    context->state.ccr_overflow = 0;
+    context->state.ccr_carry = 0;
+
+    return 0;
+}
+
+
+/* muls.w Dn ← Dn × d(PC+Xi) */
+static uint32_t m68k_c1fb_muls_w_dn_dpcxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+    uint32_t address = address_with_index (context, context->state.pc);
+
+    int16_t b = read_word (context, address);
     int16_t a = context->state.d [dest_reg].w;
     int32_t result = a * b;
 
@@ -22559,10 +22930,27 @@ static void m68k_init_instructions (void)
         for (uint16_t ea = 0; ea < 8; ea++)
         {
             m68k_instruction [0xc0c0 | (reg << 9) | ea] = m68k_c0c0_mulu_w_dn_dn;
+            m68k_instruction [0xc0d0 | (reg << 9) | ea] = m68k_c0d0_mulu_w_dn_an;
+            m68k_instruction [0xc0d8 | (reg << 9) | ea] = m68k_c0d8_mulu_w_dn_anp;
+            m68k_instruction [0xc0e0 | (reg << 9) | ea] = m68k_c0e0_mulu_w_dn_pan;
+            m68k_instruction [0xc0e8 | (reg << 9) | ea] = m68k_c0e8_mulu_w_dn_dan;
+            m68k_instruction [0xc0f0 | (reg << 9) | ea] = m68k_c0f0_mulu_w_dn_danxi;
             m68k_instruction [0xc1c0 | (reg << 9) | ea] = m68k_c1c0_muls_w_dn_dn;
+            m68k_instruction [0xc1d0 | (reg << 9) | ea] = m68k_c1d0_muls_w_dn_an;
+            m68k_instruction [0xc1d8 | (reg << 9) | ea] = m68k_c1d8_muls_w_dn_anp;
+            m68k_instruction [0xc1e0 | (reg << 9) | ea] = m68k_c1e0_muls_w_dn_pan;
             m68k_instruction [0xc1e8 | (reg << 9) | ea] = m68k_c1e8_muls_w_dn_dan;
+            m68k_instruction [0xc1f0 | (reg << 9) | ea] = m68k_c1f0_muls_w_dn_danxi;
         }
+        m68k_instruction [0xc0f8 | (reg << 9)] = m68k_c0f8_mulu_w_dn_aw;
+        m68k_instruction [0xc0f9 | (reg << 9)] = m68k_c0f9_mulu_w_dn_al;
+        m68k_instruction [0xc0fa | (reg << 9)] = m68k_c0fa_mulu_w_dn_dpc;
+        m68k_instruction [0xc0fb | (reg << 9)] = m68k_c0fb_mulu_w_dn_dpcxi;
         m68k_instruction [0xc0fc | (reg << 9)] = m68k_c0fc_mulu_w_dn_imm;
+        m68k_instruction [0xc1f8 | (reg << 9)] = m68k_c1f8_muls_w_dn_aw;
+        m68k_instruction [0xc1f9 | (reg << 9)] = m68k_c1f9_muls_w_dn_al;
+        m68k_instruction [0xc1fa | (reg << 9)] = m68k_c1fa_muls_w_dn_dpc;
+        m68k_instruction [0xc1fb | (reg << 9)] = m68k_c1fb_muls_w_dn_dpcxi;
         m68k_instruction [0xc1fc | (reg << 9)] = m68k_c1fc_muls_w_dn_imm;
     }
 
