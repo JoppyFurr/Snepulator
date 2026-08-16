@@ -350,6 +350,30 @@ static void smd_memory_write_8 (void *context_ptr, uint32_t addr, uint8_t data)
                 context->state.ext_ctrl = data;
                 break;
 
+            case 0xa10012:
+            case 0xa10013:
+                if (data & 0x30)
+                {
+                    snepulator_error (__func__, "Controller 1 serial mode not implemented.", addr);
+                }
+                break;
+
+            case 0xa10018:
+            case 0xa10019:
+                if (data & 0x30)
+                {
+                    snepulator_error (__func__, "Controller 2 serial mode not implemented.", addr);
+                }
+                break;
+
+            case 0xa1001e:
+            case 0xa1001f:
+                if (data & 0x30)
+                {
+                    snepulator_error (__func__, "Ext port serial mode not implemented.", addr);
+                }
+                break;
+
             default:
                 snepulator_error (__func__, "Unmapped Controller register %06x.", addr);
         }
