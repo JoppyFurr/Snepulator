@@ -406,7 +406,7 @@ static void smd_memory_write_8 (void *context_ptr, uint32_t addr, uint8_t data)
         }
     }
 
-    /* VDP */
+    /* VDP & PSG */
     else if (addr >= 0xc00000 && addr <= 0xdfffff)
     {
         switch (addr)
@@ -418,15 +418,13 @@ static void smd_memory_write_8 (void *context_ptr, uint32_t addr, uint8_t data)
             case 0xc00006:
                 smd_vdp_control_write (context->vdp_context, (data << 8) | data);
                 return;
+            case 0xc00011:
+            case 0xc00013:
+                sn76489_data_write (context->psg_context, data);
+                return;
             default:
                 snepulator_error (__func__, "VDP access %06x not implemented.", addr);
         }
-    }
-
-    /* PSG */
-    else if (addr == 0xc00011 || addr == 0xc00013)
-    {
-        sn76489_data_write (context->psg_context, data);
     }
 
     /* RAM */
