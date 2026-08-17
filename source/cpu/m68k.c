@@ -5533,6 +5533,20 @@ static uint32_t m68k_2080_move_l_an_dn (M68000_Context *context, uint16_t instru
 }
 
 
+/* move.l (An) ← An */
+static uint32_t m68k_2088_move_l_an_an (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t source_reg = instruction & 0x07;
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+
+    uint32_t value = context->state.a [source_reg];
+    write_long (context, context->state.a [dest_reg], value);
+    m68k_move_l_flags (context, value);
+
+    return 0;
+}
+
+
 /* move.l (An) ← (An) */
 static uint32_t m68k_2090_move_l_an_an (M68000_Context *context, uint16_t instruction)
 {
@@ -22307,6 +22321,7 @@ static void m68k_init_instructions (void)
             m68k_instruction [0x2068 | (reg_a << 9) | reg_b] = m68k_2068_movea_l_an_dan;
             m68k_instruction [0x2070 | (reg_a << 9) | reg_b] = m68k_2070_movea_l_an_danxi;
             m68k_instruction [0x2080 | (reg_a << 9) | reg_b] = m68k_2080_move_l_an_dn;
+            m68k_instruction [0x2088 | (reg_a << 9) | reg_b] = m68k_2088_move_l_an_an;
             m68k_instruction [0x2090 | (reg_a << 9) | reg_b] = m68k_2090_move_l_an_an;
             m68k_instruction [0x2098 | (reg_a << 9) | reg_b] = m68k_2098_move_l_an_anp;
             m68k_instruction [0x20a0 | (reg_a << 9) | reg_b] = m68k_20a0_move_l_an_pan;
