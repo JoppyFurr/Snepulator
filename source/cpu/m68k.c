@@ -10985,6 +10985,49 @@ static uint32_t m68k_4e40_trap (M68000_Context *context, uint16_t instruction)
 }
 
 
+/* link */
+static uint32_t m68k_4e50_link (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    int16_t displacement = read_extension (context);
+
+    uint32_t value = context->state.a [reg];
+
+    /* Push the current register value to the stack */
+    context->state.a [7] -= 4;
+    write_long (context, context->state.a [7], value);
+
+    /* Store the new stack pointer into the register */
+    context->state.a [reg] = context->state.a [7];
+    context->state.a [7] += displacement;
+
+    return 0;
+}
+
+
+/* unlink */
+static uint32_t m68k_4e58_unlink (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    /* Restore the stack pointer */
+    context->state.a [7] = context->state.a [reg];
+
+    /* Pop the register value from the stack */
+    context->state.a [reg] = read_long (context, context->state.a [7]);
+    context->state.a [7] += 4;
+
+    /* Special case - According to SST tests, if the specified register was a7,
+     *                then the stack pointer increment doesn't work properly. */
+    if (reg == 7)
+    {
+        context->state.a [7] -= 4;
+    }
+
+    return 0;
+}
+
+
 /* move usp ← An */
 static uint32_t m68k_4e60_move_an_usp (M68000_Context *context, uint16_t instruction)
 {
@@ -22817,6 +22860,13 @@ static void m68k_init_instructions (void)
     for (uint32_t vector = 0; vector < 16; vector++)
     {
         m68k_instruction [0x4e40 | vector] = m68k_4e40_trap;
+    }
+
+    /* link / unlink */
+    for (uint32_t reg = 0; reg < 8; reg++)
+    {
+        m68k_instruction [0x4e50 | reg] = m68k_4e50_link;
+        m68k_instruction [0x4e58 | reg] = m68k_4e58_unlink;
     }
 
     /* addq / subq */
