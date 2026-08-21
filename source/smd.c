@@ -188,6 +188,12 @@ static uint8_t smd_memory_read_8 (void *context_ptr, uint32_t addr)
             case 0xc00007:
                 return smd_vdp_status_read (context->vdp_context);
 
+            case 0xc00008: /* V Counter */
+                return smd_vdp_hv_counter_read (context->vdp_context) >> 8;;
+
+            case 0xc00009: /* H Counter */
+                return smd_vdp_hv_counter_read (context->vdp_context);
+
             default:
                 snepulator_error (__func__, "VDP address %06x not implemented.", addr);
                 return 0xff;

@@ -24,6 +24,31 @@
 #include "../util.h"
 #include "smd_vdp.h"
 
+static uint8_t v_counter_table [313] = { };
+
+
+/*
+ * Initialise the v_counter table.
+ *
+ * TODO: May only be valid for NTSC.
+ * TODO: Consider a pre-calculated table like this for SMS.
+ */
+static void smd_vdp_init_v_counter (void)
+{
+    uint32_t table_index = 0;
+
+    for (uint32_t value = 0x00; value <= 0xea; value++)
+    {
+        v_counter_table [table_index++] = value;
+    }
+
+    for (uint32_t value = 0xe5; value <= 0xff; value++)
+    {
+        v_counter_table [table_index++] = value;
+    }
+}
+
+
 /*
  * Read the VDP status register.
  */
@@ -45,6 +70,20 @@ uint16_t smd_vdp_status_read (SMD_VDP_Context *context)
     status_register |= (context->state.line >= context->lines_active) ? BIT_3 : 0;
 
     return status_register;
+}
+
+
+/*
+ * Read the VDP HV counter register.
+ */
+uint16_t smd_vdp_hv_counter_read (SMD_VDP_Context *context)
+{
+    /* TODO: Different behaviour is needed for interlaced mode. */
+    /* TODO: Horizontal counter always returns zero for now. */
+
+    uint8_t v_counter = v_counter_table [context->state.line];;
+
+    return v_counter << 8;
 }
 
 
@@ -712,6 +751,14 @@ SMD_VDP_Context *smd_vdp_init (void *parent,
                                void (* frame_done) (void *))
 {
     SMD_VDP_Context *context;
+
+    static bool first = true;
+    if (first)
+    {
+        /* Once-off initialisations */
+        first = false;
+        smd_vdp_init_v_counter ();
+    }
 
     context = calloc (1, sizeof (SMD_VDP_Context));
     if (context == NULL)
