@@ -184,6 +184,10 @@ static uint8_t smd_memory_read_8 (void *context_ptr, uint32_t addr)
     {
         switch (addr)
         {
+            case 0xc00004:
+            case 0xc00006:
+                return smd_vdp_status_read (context->vdp_context) >> 8;
+
             case 0xc00005:
             case 0xc00007:
                 return smd_vdp_status_read (context->vdp_context);
