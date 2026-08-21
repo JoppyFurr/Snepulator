@@ -479,8 +479,9 @@ static void smd_memory_write_16 (void *context_ptr, uint32_t addr, uint16_t data
     /* Internal Registers and Expansion */
     else if (addr >= 0xa10020 && addr <= 0xbfffff)
     {
-        /* TMSS register */
-        if (addr == 0xa14000 || addr == 0xa14002)
+
+        /* Memory Mode - Ignored */
+        if (addr == 0xa11000)
         {
             return;
         }
@@ -502,6 +503,13 @@ static void smd_memory_write_16 (void *context_ptr, uint32_t addr, uint16_t data
                 z80_reset (context->z80_context);
             }
         }
+
+        /* TMSS register */
+        else if (addr == 0xa14000 || addr == 0xa14002)
+        {
+            return;
+        }
+
 
         else
         {
