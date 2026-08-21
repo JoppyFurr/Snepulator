@@ -609,6 +609,11 @@ static void smd_z80_memory_write (void *context_ptr, uint16_t addr, uint8_t data
     {
         sn76489_data_write (context->psg_context, data);
     }
+    /* M68k address space (banked) */
+    else if (addr >= 0x8000 && addr <= 0xffff)
+    {
+        smd_memory_write_8 (context, context->state.z80_bank | (addr & 0x7fff), data);
+    }
     else
     {
         snepulator_error (__func__, "Unmapped Z80 address %04x.", addr);
