@@ -18569,6 +18569,20 @@ static uint32_t m68k_c140_exg_l_dn_dn (M68000_Context *context, uint16_t instruc
 }
 
 
+/* exg.l An ←→ An */
+static uint32_t m68k_c148_exg_l_an_an (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg_x = (instruction >> 9) & 0x07;
+    uint16_t reg_y = instruction & 0x07;
+
+    uint32_t temp = context->state.a [reg_x];
+    context->state.a [reg_x] = context->state.a [reg_y];
+    context->state.a [reg_y] = temp;
+
+    return 0;
+}
+
+
 /* and.w (An) ← (An) & Dn */
 static uint32_t m68k_c150_and_w_an_dn (M68000_Context *context, uint16_t instruction)
 {
@@ -18690,6 +18704,20 @@ static uint32_t m68k_c179_and_w_al_dn (M68000_Context *context, uint16_t instruc
 
     write_word (context, address, result);
     m68k_move_w_flags (context, result);
+
+    return 0;
+}
+
+
+/* exg.l Dn ←→ An */
+static uint32_t m68k_c188_exg_l_dn_an (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg_x = (instruction >> 9) & 0x07;
+    uint16_t reg_y = instruction & 0x07;
+
+    uint32_t temp = context->state.d [reg_x].l;
+    context->state.d [reg_x].l = context->state.a [reg_y];
+    context->state.a [reg_y] = temp;
 
     return 0;
 }
@@ -23550,6 +23578,8 @@ static void m68k_init_instructions (void)
         for (uint16_t reg_y = 0; reg_y < 8; reg_y++)
         {
             m68k_instruction [0xc140 | (reg_x << 9) | reg_y] = m68k_c140_exg_l_dn_dn;
+            m68k_instruction [0xc148 | (reg_x << 9) | reg_y] = m68k_c148_exg_l_an_an;
+            m68k_instruction [0xc188 | (reg_x << 9) | reg_y] = m68k_c188_exg_l_dn_an;
         }
     }
 
