@@ -12333,6 +12333,17 @@ static uint32_t m68k_51b9_subq_l_al (M68000_Context *context, uint16_t instructi
 }
 
 
+/* sf.b Dn */
+static uint32_t m68k_51c0_sf_b_dn (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    context->state.d [reg].b = 0x00;
+
+    return 0;
+}
+
+
 /* dbf Dn, #xxxx */
 static uint32_t m68k_51c8_dbf (M68000_Context *context, uint16_t instruction)
 {
@@ -12344,17 +12355,6 @@ static uint32_t m68k_51c8_dbf (M68000_Context *context, uint16_t instruction)
     {
         context->state.pc = address;
     }
-
-    return 0;
-}
-
-
-/* sf.b Dn */
-static uint32_t m68k_51c0_sf_b_dn (M68000_Context *context, uint16_t instruction)
-{
-    uint16_t reg = instruction & 0x07;
-
-    context->state.d [reg].b = 0x00;
 
     return 0;
 }
@@ -12435,6 +12435,17 @@ static uint32_t m68k_51f9_sf_b_al (M68000_Context *context, uint16_t instruction
 }
 
 
+/* shi.b Dn */
+static uint32_t m68k_52c0_shi_b_dn (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint8_t value = (!context->state.ccr_carry && !context->state.ccr_zero) ? 0xff : 0x00;
+    context->state.d [reg].b = value;
+
+    return 0;
+}
+
+
 /* dbhi Dn, #xxxx */
 static uint32_t m68k_52c8_dbhi (M68000_Context *context, uint16_t instruction)
 {
@@ -12449,6 +12460,83 @@ static uint32_t m68k_52c8_dbhi (M68000_Context *context, uint16_t instruction)
             context->state.pc = address;
         }
     }
+
+    return 0;
+}
+
+
+/* shi.b (An) */
+static uint32_t m68k_52d0_shi_b_an (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint8_t value = (!context->state.ccr_carry && !context->state.ccr_zero) ? 0xff : 0x00;
+    write_byte (context, context->state.a [reg], value);
+
+    return 0;
+}
+
+
+/* shi.b (An+) */
+static uint32_t m68k_52d8_shi_b_anp (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint8_t value = (!context->state.ccr_carry && !context->state.ccr_zero) ? 0xff : 0x00;
+    write_byte (context, context->state.a [reg], value);
+    context->state.a [reg] += (reg == 7) ? 2 : 1;
+
+    return 0;
+}
+
+
+/* shi.b (-An) */
+static uint32_t m68k_52e0_shi_b_pan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint8_t value = (!context->state.ccr_carry && !context->state.ccr_zero) ? 0xff : 0x00;
+    context->state.a [reg] -= (reg == 7) ? 2 : 1;
+    write_byte (context, context->state.a [reg], value);
+
+    return 0;
+}
+
+
+/* shi.b d(An) */
+static uint32_t m68k_52e8_shi_b_dan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint8_t value = (!context->state.ccr_carry && !context->state.ccr_zero) ? 0xff : 0x00;
+    write_byte_with_displacement (context, context->state.a [reg], value);
+
+    return 0;
+}
+
+
+/* shi.b d(An+Xi) */
+static uint32_t m68k_52f0_shi_b_danxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint8_t value = (!context->state.ccr_carry && !context->state.ccr_zero) ? 0xff : 0x00;
+    write_byte_with_index (context, context->state.a [reg], value);
+
+    return 0;
+}
+
+
+/* shi.b (xxx.w) */
+static uint32_t m68k_52f8_shi_b_aw (M68000_Context *context, uint16_t instruction)
+{
+    uint8_t value = (!context->state.ccr_carry && !context->state.ccr_zero) ? 0xff : 0x00;
+    write_byte_aw (context, value);
+
+    return 0;
+}
+
+
+/* shi.b (xxx.l) */
+static uint32_t m68k_52f9_shi_b_al (M68000_Context *context, uint16_t instruction)
+{
+    uint8_t value = (!context->state.ccr_carry && !context->state.ccr_zero) ? 0xff : 0x00;
+    write_byte_al (context, value);
 
     return 0;
 }
@@ -23135,6 +23223,12 @@ static void m68k_init_instructions (void)
         m68k_instruction [0x51e0 | dn] = m68k_51e0_sf_b_pan;
         m68k_instruction [0x51e8 | dn] = m68k_51e8_sf_b_dan;
         m68k_instruction [0x51f0 | dn] = m68k_51f0_sf_b_danxi;
+        m68k_instruction [0x52c0 | dn] = m68k_52c0_shi_b_dn;
+        m68k_instruction [0x52d0 | dn] = m68k_52d0_shi_b_an;
+        m68k_instruction [0x52d8 | dn] = m68k_52d8_shi_b_anp;
+        m68k_instruction [0x52e0 | dn] = m68k_52e0_shi_b_pan;
+        m68k_instruction [0x52e8 | dn] = m68k_52e8_shi_b_dan;
+        m68k_instruction [0x52f0 | dn] = m68k_52f0_shi_b_danxi;
         m68k_instruction [0x54c0 | dn] = m68k_54c0_scc_b_dn;
         m68k_instruction [0x54d0 | dn] = m68k_54d0_scc_b_an;
         m68k_instruction [0x54d8 | dn] = m68k_54d8_scc_b_anp;
@@ -23170,6 +23264,8 @@ static void m68k_init_instructions (void)
     m68k_instruction [0x50f9] = m68k_50f9_st_b_al;
     m68k_instruction [0x51f8] = m68k_51f8_sf_b_aw;
     m68k_instruction [0x51f9] = m68k_51f9_sf_b_al;
+    m68k_instruction [0x52f8] = m68k_52f8_shi_b_aw;
+    m68k_instruction [0x52f9] = m68k_52f9_shi_b_al;
     m68k_instruction [0x54f8] = m68k_54f8_scc_b_aw;
     m68k_instruction [0x54f9] = m68k_54f9_scc_b_al;
     m68k_instruction [0x56f8] = m68k_56f8_sne_b_aw;
