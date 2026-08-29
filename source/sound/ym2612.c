@@ -6,10 +6,25 @@
  *
  * TODO:
  *  - Operators
+ *    - Four per channel
+ *    - Algorithms
+ *    - Detune
+ *    - Special mode for channel 3
+ *    - Multiply
+ *    - Key per-operator
  *  - Algorithms & Modulation
- *  - Feedback
+ *  - Modulation
+ *    - Total level
+ *    - Feedback
  *  - Envelopes
- *  - LFO
+ *    - State machine
+ *    - Attack
+ *    - Decay
+ *    - Sustain level & rate
+ *    - Release
+ *    - SSG-EG
+ *    - CSM
+ *  - LFO / AMS / PMS
  *  - Stereo
  */
 
@@ -26,6 +41,14 @@ extern Snepulator_State state;
 /* Represents the level of a single melody channel at maximum volume */
 #define BASE_VOLUME 4096
 
+/* Use a special type definition to mark sign-magnitude numbers.
+ * The most significant bit is used to indicate if the number is negative. */
+#define SIGN_BIT 0x8000
+#define MAG_BITS 0x7fff
+
+typedef uint16_t signmag16_t;
+static uint32_t exp_table [256] = { };
+static uint32_t log_sin_table [256] = { };
 
 /*
  * Retrieves a block of samples from the sample-ring.
@@ -60,6 +83,7 @@ void ym2612_get_samples (YM2612_Context *context, int32_t *stream, uint32_t coun
  */
 void ym2612_addr1_write (YM2612_Context *context, uint8_t addr)
 {
+    context->state.group_latch = YM2612_GROUP_1;
     context->state.addr_latch = addr;
 }
 
@@ -69,6 +93,7 @@ void ym2612_addr1_write (YM2612_Context *context, uint8_t addr)
  */
 void ym2612_addr2_write (YM2612_Context *context, uint8_t addr)
 {
+    context->state.group_latch = YM2612_GROUP_2;
     context->state.addr_latch = addr;
 }
 
@@ -79,22 +104,211 @@ void ym2612_addr2_write (YM2612_Context *context, uint8_t addr)
 void ym2612_data_write (YM2612_Context *context, uint8_t data)
 {
     uint8_t addr = context->state.addr_latch;
+    /* TODO: If switching to C23, then these can live inside the switch statement */
+    uint32_t fnum;
+    uint32_t block;
+    uint32_t channel;
+    /* TODO: What happens when the write is for an invalid channel? */
+    const uint32_t key_on_map [8] = { 0, 1, 2, 0, 3, 4, 5, 0 };
 
     pthread_mutex_lock (&context->mutex);
 
-    switch (addr)
+    if (context->state.group_latch == YM2612_GROUP_1)
     {
-        case 0x2a:
-            context->state.dac_output_reg = data;
-            break;
-        case 0x2b:
-            context->state.dac_enable_reg = data;
-            break;
-        default:
-            break;
+        switch (addr)
+        {
+            /* Global Registers */
+            case 0x22:
+                /* TODO: LFO */
+                break;
+
+            case 0x24:
+            case 0x25:
+            case 0x26:
+            case 0x27:
+                /* TODO: Timers */
+                break;
+
+            case 0x28:
+                /* TODO: Key On/Off */
+                /* TODO: Separate key-on per operator. For now just use operator four as representative. */
+                channel = key_on_map [data & 0x07];
+                if (context->state.key_on [channel] == false && data >> 7)
+                {
+                    context->state.operator [channel].phase = 0;
+                }
+                context->state.key_on [channel] = data >> 7;
+                break;
+
+            case 0x2a:
+                context->state.dac_output_reg = data;
+                break;
+
+            case 0x2b:
+                context->state.dac_enable_reg = data;
+                break;
+
+            /* Operator Registers */
+
+            /* Channel Registers */
+            /* TODO: For now, doing initial sine output only, the block is used to calculate
+             *       the effective fnum, but itself is not saved outside of the latch. If it
+             *       is needed for another feature this may need to be revisited. */
+            case 0xa0:
+                fnum = ((context->state.fnum_high_latch [0] & 0x07) << 8) | data;
+                block = (context->state.fnum_high_latch [0] & 0x38) >> 3;
+                context->state.fnum [0] = (fnum << block) >> 1;
+                break;
+            case 0xa1:
+                fnum = ((context->state.fnum_high_latch [1] & 0x07) << 8) | data;
+                block = (context->state.fnum_high_latch [1] & 0x38) >> 3;
+                context->state.fnum [1] = (fnum << block) >> 1;
+                break;
+            case 0xa2:
+                fnum = ((context->state.fnum_high_latch [2] & 0x07) << 8) | data;
+                block = (context->state.fnum_high_latch [2] & 0x38) >> 3;
+                context->state.fnum [2] = (fnum << block) >> 1;
+                break;
+
+            case 0xa4:
+                context->state.fnum_high_latch [0] = data;
+                break;
+            case 0xa5:
+                context->state.fnum_high_latch [1] = data;
+                break;
+            case 0xa6:
+                context->state.fnum_high_latch [2] = data;
+                break;
+
+            default:
+                break;
+        }
+    }
+    else if (context->state.group_latch == YM2612_GROUP_2)
+    {
+        switch (addr)
+        {
+            /* Operator Registers */
+
+            /* Channel Registers */
+            case 0xa0:
+                fnum = ((context->state.fnum_high_latch [3] & 0x07) << 8) | data;
+                block = (context->state.fnum_high_latch [3] & 0x38) >> 3;
+                context->state.fnum [3] = (fnum << block) >> 1;
+                break;
+            case 0xa1:
+                fnum = ((context->state.fnum_high_latch [4] & 0x07) << 8) | data;
+                block = (context->state.fnum_high_latch [4] & 0x38) >> 3;
+                context->state.fnum [4] = (fnum << block) >> 1;
+                break;
+            case 0xa2:
+                fnum = ((context->state.fnum_high_latch [5] & 0x07) << 8) | data;
+                block = (context->state.fnum_high_latch [5] & 0x38) >> 3;
+                context->state.fnum [5] = (fnum << block) >> 1;
+                break;
+
+            case 0xa4:
+                context->state.fnum_high_latch [3] = data;
+                break;
+            case 0xa5:
+                context->state.fnum_high_latch [4] = data;
+                break;
+            case 0xa6:
+                context->state.fnum_high_latch [5] = data;
+                break;
+
+            default:
+                break;
+        }
     }
 
     pthread_mutex_unlock (&context->mutex);
+}
+
+
+/*
+ * Populate the exp () table.
+ * Note that we keep the always-set bit-10.
+ *
+ * TODO: This is based on the ym2413 implementation. Double check it's the same.
+ */
+static void ym2612_populate_exp_table (void)
+{
+    for (int i = 0; i < 256; i++)
+    {
+        exp_table [i] = round (exp2 (i / 256.0) * 1024);
+    }
+}
+
+
+/*
+ * Lookup an entry using the exp table.
+ * Input is fixed-point with 8 fractional bits.
+ * Output range is ±4084.
+ *
+ * TODO: This is based on the ym2413 implementation. Double check it's the same.
+ */
+static signmag16_t ym2612_exp (signmag16_t val)
+{
+    /* Note that the index is inverted to account
+     * for the log-sine table using -log2. */
+    uint8_t fractional = ~(val & 0xff);
+    uint16_t integral = (val & MAG_BITS) >> 8;
+
+    int16_t result = (exp_table [fractional] << 1) >> integral;
+
+    /* Propagate the sign */
+    result |= (val & SIGN_BIT);
+
+    return result;
+}
+
+
+/*
+ * Populate the log (sin ()) table.
+ * Fixed-point with 8 fractional bits.
+ *
+ * TODO: This is based on the ym2413 implementation. Double check it's the same.
+ */
+static void ym2612_populate_log_sin_table (void)
+{
+    for (int i = 0; i < 256; i++)
+    {
+        log_sin_table [i] = round (-log2 (sin ((i + 0.5) * M_PI / 2.0 / 256.0)) * 256.0);
+    }
+}
+
+
+/*
+ * Lookup an entry from the log-sin table.
+ * A 10-bit phase is used to index the table.
+ * As the 256-entry table stores only the first quarter
+ * of the sine wave, mirroring and flipping is used to
+ * give a 1024-entry waveform.
+ *
+ * TODO: This is based on the ym2413 implementation. Double check it's the same.
+ */
+static signmag16_t ym2612_sin (uint16_t phase)
+{
+    uint8_t index = phase & 0xff;
+
+    /* Mirror the table for the 2nd and 4th quarter of the wave.
+     * Instead of negating then number, we invert the bits to
+     * account for the wave samples representing 0.5 - 255.5. */
+    if (phase & (1 << 8))
+    {
+        index = ~index;
+    }
+
+    int16_t result = log_sin_table [index & 0xff];
+
+    /* The second half of the sine wave is identical to the
+     * first, but with the sign bit set to indicate that
+     * values are negative. To avoid branching, this is done
+     * by shifting the phase MSB into the sign bit position. */
+    result |= (phase << 6) & SIGN_BIT;
+
+    return result;
 }
 
 
@@ -132,12 +346,32 @@ void _ym2612_run_cycles (YM2612_Context *context, uint32_t clock_rate, uint32_t 
     {
         int16_t output_level = 0;
 
-        if (context->state.dac_enable_reg & 0x80)
+        for (uint32_t channel = 0; channel < 6; channel++)
         {
-            /* TODO: Once FM channels are implemented, the DAC amplitude will need to be
-             *       scaled appropriately. For now though the DAC is the only ym2612 feature
-             *       that makes sound. */
-            output_level += (context->state.dac_output_reg - 128);
+            if (channel == 5 && context->state.dac_enable_reg & 0x80)
+            {
+                /* TODO: DAC amplitude will need to be scaled appropriately. */
+                output_level += (context->state.dac_output_reg - 128);
+            }
+            else
+            {
+                context->state.operator [channel].phase += context->state.fnum [channel];
+
+                signmag16_t log_carrier_value = ym2612_sin (context->state.operator [channel].phase >> 10);
+                /* TODO: Volume, envelope, etc. */
+                log_carrier_value += 1536; /* Substitute for volume control */
+                signmag16_t carrier_value = ym2612_exp (log_carrier_value);
+
+                /* TODO: Shift was from YM2413 - May not be valid for 2612. */
+                if (carrier_value & SIGN_BIT)
+                {
+                    output_level -= ((carrier_value & MAG_BITS) >> 1);
+                }
+                else
+                {
+                    output_level += ((carrier_value & MAG_BITS) >> 1);
+                }
+            }
         }
 
         /* Propagate new samples into ring buffer.
@@ -180,6 +414,16 @@ void ym2612_run_cycles (YM2612_Context *context, uint32_t clock_rate, uint32_t c
  */
 YM2612_Context *ym2612_init (void)
 {
+    static bool first = true;
+
+    if (first)
+    {
+        /* Once-off initialisations */
+        first = false;
+        ym2612_populate_exp_table ();
+        ym2612_populate_log_sin_table ();
+    }
+
     YM2612_Context *context = calloc (1, sizeof (YM2612_Context));
     pthread_mutex_init (&context->mutex, NULL); /* TODO: mutex_destroy */
 

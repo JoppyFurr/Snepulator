@@ -5,12 +5,37 @@
 
 #define YM2612_RING_SIZE 2048
 
+#define YM2612_GROUP_1 0
+#define YM2612_GROUP_2 1
+
+
+typedef struct YM2612_Operator_State_s {
+
+    /* TODO: Envelope Generators */
+
+    /* Fixed-point phase accumulators - 10.10 bits */
+    uint32_t phase;
+
+} YM2612_Operator_State;
+
+
 typedef struct YM2612_State_s {
-    /* TEMP: For the initial spin, only the
-     *       bare minimum for DAC output. */
+
     uint8_t addr_latch;
+    uint8_t group_latch;
+
     uint8_t dac_output_reg;
     uint8_t dac_enable_reg;
+
+    /* TODO: There are actually 24 operators, four per channel that can be
+     *       configured using various algorithms to modulate one another.
+     *       For now though, to get some initial sound out for the FM channels,
+     *       just implement six non-modulated carriers, with only one key-on
+     *       register per channel. */
+    bool key_on [6];
+    uint16_t fnum_high_latch [6];
+    uint16_t fnum [6];
+    YM2612_Operator_State operator [6];
 
 } YM2612_State;
 
