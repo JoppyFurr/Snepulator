@@ -24,6 +24,28 @@ typedef struct YM2612_State_s {
     uint8_t addr_latch;
     uint8_t group_latch;
 
+    /* Timers & channel-3 mode */
+    uint16_t timer_a;
+    bool     timer_a_flag;
+    uint16_t timer_a_interval;
+    uint16_t timer_b;
+    bool     timer_b_flag;
+    uint8_t  timer_b_interval;
+    uint8_t  timer_b_divider;
+    union {
+        uint8_t timer_mode;
+        struct {
+            uint8_t timer_a_load:1;
+            uint8_t timer_b_load:1;
+            uint8_t timer_a_enable:1;
+            uint8_t timer_b_enable:1;
+            uint8_t timer_a_reset:1;
+            uint8_t timer_b_reset:1;
+            uint8_t ch3_mode:2;
+        };
+    };
+
+    /* DAC */
     uint8_t dac_output_reg;
     uint8_t dac_enable_reg;
 
@@ -53,6 +75,10 @@ typedef struct YM2612_Context_s {
     uint32_t clock_rate;
 
 } YM2612_Context;
+
+
+/* Read the status register. */
+uint8_t ym2612_status_read (YM2612_Context *context);
 
 /* Latch a register address. */
 void ym2612_addr1_write (YM2612_Context *context, uint8_t addr);

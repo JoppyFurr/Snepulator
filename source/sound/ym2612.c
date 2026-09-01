@@ -79,6 +79,32 @@ void ym2612_get_samples (YM2612_Context *context, int32_t *stream, uint32_t coun
 
 
 /*
+ * Read the status register.
+ *
+ *  [7] - Busy flag
+ *  [1] - Timer B
+ *  [0] - Timer A
+ */
+uint8_t ym2612_status_read (YM2612_Context *context)
+{
+    uint8_t status = 0;
+
+    if (context->state.timer_a_flag)
+    {
+        status |= BIT_0;
+    }
+    if (context->state.timer_b_flag)
+    {
+        status |= BIT_1;
+    }
+
+    /* TODO: Does anything rely on a non-zero busy flag? */
+
+    return status;
+}
+
+
+/*
  * Latch a register address.
  */
 void ym2612_addr1_write (YM2612_Context *context, uint8_t addr)
@@ -122,15 +148,41 @@ void ym2612_data_write (YM2612_Context *context, uint8_t data)
                 /* TODO: LFO */
                 break;
 
-            case 0x24:
-            case 0x25:
-            case 0x26:
-            case 0x27:
-                /* TODO: Timers */
+            case 0x24: /* Timer A - High */
+                context->state.timer_a_interval = (context->state.timer_a_interval & 0x0003) | data << 2;
+                break;
+            case 0x25: /* Timer A - Low */
+                context->state.timer_a_interval = (context->state.timer_a_interval & 0x03fc) | (data & 0x03);
+                break;
+            case 0x26: /* Timer B */
+                context->state.timer_b_interval = data;
+                break;
+            case 0x27: /* Timer Control */
+                /* Load - Both enables the timer, and does an initial load of the interval value. */
+                if (context->state.timer_a_load == false && (data & BIT_0))
+                {
+                    context->state.timer_a = context->state.timer_a_interval;
+                }
+                if (context->state.timer_b_load == false && (data & BIT_1))
+                {
+                    context->state.timer_b = context->state.timer_b_interval;
+                }
+
+                context->state.timer_mode = data;
+
+                /* Reset - Clears flags */
+                if (context->state.timer_a_reset)
+                {
+                    context->state.timer_a_flag = false;
+                }
+                if (context->state.timer_b_reset)
+                {
+                    context->state.timer_b_flag = false;
+                }
+
                 break;
 
             case 0x28:
-                /* TODO: Key On/Off */
                 /* TODO: Separate key-on per operator. For now just use operator four as representative. */
                 channel = key_on_map [data & 0x07];
                 if (context->state.key_on [channel] == false && data >> 7)
@@ -344,6 +396,35 @@ void _ym2612_run_cycles (YM2612_Context *context, uint32_t clock_rate, uint32_t 
 
     while (ym_samples--)
     {
+        /* Timers */
+        if (context->state.timer_a_load)
+        {
+            context->state.timer_a += 1;
+            if (context->state.timer_a >= 0x400)
+            {
+                /* TODO: Does the timer spend a cycle on 0x4000, or jump straight to interval from 0x3fff? */
+                context->state.timer_a = context->state.timer_a_interval;
+                if (context->state.timer_a_enable)
+                {
+                    context->state.timer_a_flag = true;
+                }
+            }
+        }
+        context->state.timer_b_divider += 1; /* Timer B ticks at 1/16 the rate of timer A */
+        if (context->state.timer_b_load && (context->state.timer_b_divider & 0x0f) == 0)
+        {
+            context->state.timer_b += 1;
+            if (context->state.timer_b >= 0x100)
+            {
+                context->state.timer_b = context->state.timer_b_interval;
+                if (context->state.timer_b_enable)
+                {
+                    context->state.timer_b_flag = true;
+                }
+            }
+        }
+
+        /* Synthesis */
         int16_t output_level = 0;
 
         for (uint32_t channel = 0; channel < 6; channel++)

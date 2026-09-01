@@ -146,7 +146,7 @@ static uint8_t smd_memory_read_8 (void *context_ptr, uint32_t addr)
 
             case 0xa10006: /* Player 3 - Data Register */
             case 0xa10007:
-                snepulator_error (__func__, "Player 3 input not implemented.", addr);
+                snepulator_error (__func__, "Player 3 input not implemented.");
                 return 0xff;
 
             case 0xa10008: /* Player 1 - Control Register */
@@ -563,8 +563,7 @@ static uint8_t smd_z80_memory_read (void *context_ptr, uint16_t addr)
     /* YM2612 */
     else if (addr >= 0x4000 && addr <= 0x5fff)
     {
-        /* TODO: Implement the YM2612 */
-        return 0x00;
+        return ym2612_status_read (context->ym2612_context);
     }
     /* Bank Register - Always reads 0xff */
     else if (addr >= 0x6000 && addr <= 0x60ff)
