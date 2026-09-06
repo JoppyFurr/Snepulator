@@ -26,6 +26,12 @@
 
 static uint8_t v_counter_table [313] = { };
 
+typedef enum pixel_status_e {
+    PIXEL_NONE = 0,
+    PIXEL_LOW_PRIORITY,
+    PIXEL_HIGH_PRIORITY
+} pixel_status;
+
 
 /*
  * Initialise the v_counter table.
@@ -339,7 +345,8 @@ bool smd_vdp_get_z80_interrupt (SMD_VDP_Context *context)
  * Note: This assumes that the pattern requested is on the line.
  */
 static void smd_vdp_draw_pattern_line (SMD_VDP_Context *context, uint16_t line, SMD_VDP_Pattern *pattern,
-                                       uint_pixel_t *palette, int_point_t position, bool flip_h, bool flip_v)
+                                       uint_pixel_t *palette, int_point_t position, bool flip_h, bool flip_v,
+                                       uint_pixel_t *output, pixel_status *status, bool priority)
 {
 
     /* Get the line within the pattern. Endian is chosen such that the
@@ -347,7 +354,7 @@ static void smd_vdp_draw_pattern_line (SMD_VDP_Context *context, uint16_t line, 
     uint32_t pattern_line_index = (flip_v) ? position.y - line + 7 : line - position.y;
     uint32_t pattern_line = util_ntoh32 (pattern->line [pattern_line_index]);
 
-    int32_t destination_start = position.x + line * context->frame_buffer.width;
+    int32_t destination_start = position.x;
 
     for (int32_t x = 0; x < 8; x++)
     {
@@ -367,7 +374,8 @@ static void smd_vdp_draw_pattern_line (SMD_VDP_Context *context, uint16_t line, 
 
         if (colour_index != 0)
         {
-            context->frame_buffer.active_area [destination_start + x] = palette [colour_index];
+            output [destination_start + x] = palette [colour_index];
+            status [destination_start + x] = (priority) ? PIXEL_HIGH_PRIORITY : PIXEL_LOW_PRIORITY;
         }
     }
 }
@@ -376,7 +384,7 @@ static void smd_vdp_draw_pattern_line (SMD_VDP_Context *context, uint16_t line, 
 /*
  * Render one line of the sprite layer.
  */
-static void smd_vdp_draw_sprites (SMD_VDP_Context *context, uint16_t line, bool priority)
+static void smd_vdp_draw_sprites (SMD_VDP_Context *context, uint16_t line, uint_pixel_t *output, pixel_status *status)
 {
     /* TODO: In Width=320 mode, the base-address register only provides 6 bits
      *       of the address. In H32 mode, it provides 7 bits. */
@@ -429,11 +437,6 @@ static void smd_vdp_draw_sprites (SMD_VDP_Context *context, uint16_t line, bool 
         sprite.data [2] = util_ntoh16 (sprite_table [line_sprite_buffer [line_sprite_count] * 4 + 2]);
         sprite.data [3] = util_ntoh16 (sprite_table [line_sprite_buffer [line_sprite_count] * 4 + 3]);
 
-        if (sprite.priority != priority)
-        {
-            continue;
-        }
-
         uint_pixel_t *palette = &context->state.cram [sprite.palette << 4];
         int_point_t position = { .x = sprite.x - 128, .y=sprite.y - 128};
 
@@ -451,7 +454,8 @@ static void smd_vdp_draw_sprites (SMD_VDP_Context *context, uint16_t line, bool 
             SMD_VDP_Pattern *pattern = (SMD_VDP_Pattern *) &context->state.vram [pattern_index * sizeof (SMD_VDP_Pattern)];
             tile_position.x = position.x + tile_x * 8;
 
-            smd_vdp_draw_pattern_line (context, line, pattern, palette, tile_position, sprite.h_flip, sprite.v_flip);
+            smd_vdp_draw_pattern_line (context, line, pattern, palette, tile_position, sprite.h_flip, sprite.v_flip,
+                                       output, status, sprite.priority);
         }
     }
 }
@@ -461,7 +465,8 @@ static void smd_vdp_draw_sprites (SMD_VDP_Context *context, uint16_t line, bool 
  * Render one line of the background layer.
  */
 static void smd_vdp_draw_background (SMD_VDP_Context *context, uint16_t line, uint16_t *name_table,
-                                     uint16_t h_scroll, uint16_t v_scroll, bool priority)
+                                     uint16_t h_scroll, uint16_t v_scroll,
+                                     uint_pixel_t *output, pixel_status *status)
 {
     uint16_t num_rows;
     uint16_t num_cols;
@@ -529,17 +534,13 @@ static void smd_vdp_draw_background (SMD_VDP_Context *context, uint16_t line, ui
         SMD_VDP_Name_Table_Entry tile;
         tile.data = util_ntoh16 (name_table_row [(screen_tile_x - h_scroll_coarse + 128) % num_cols]);
 
-        if (tile.priority != priority)
-        {
-            continue;
-        }
-
         SMD_VDP_Pattern *pattern = (SMD_VDP_Pattern *) &context->state.vram [(tile.pattern) * sizeof (SMD_VDP_Pattern)];
 
         uint_pixel_t *palette = &context->state.cram [tile.palette << 4];
 
         position.x = 8 * screen_tile_x + h_scroll_fine;
-        smd_vdp_draw_pattern_line (context, line, pattern, palette, position, tile.h_flip, tile.v_flip);
+        smd_vdp_draw_pattern_line (context, line, pattern, palette, position, tile.h_flip, tile.v_flip,
+                                   output, status, tile.priority);
     }
 }
 
@@ -598,8 +599,8 @@ void smd_vdp_render_line (SMD_VDP_Context *context, uint16_t line)
             break;
 
         case 2: /* Scrolling per strip of 8 lines */
-            h_scroll_a = util_ntoh16 (h_scroll_table [(line & 0xf8)* 2 + 0]) & 0x03ff;
-            h_scroll_b = util_ntoh16 (h_scroll_table [(line & 0xf8)* 2 + 1]) & 0x03ff;
+            h_scroll_a = util_ntoh16 (h_scroll_table [(line & 0xf8) * 2 + 0]) & 0x03ff;
+            h_scroll_b = util_ntoh16 (h_scroll_table [(line & 0xf8) * 2 + 1]) & 0x03ff;
             break;
 
         case 3: /* Scrolling per line */
@@ -623,29 +624,57 @@ void smd_vdp_render_line (SMD_VDP_Context *context, uint16_t line)
     uint16_t *name_table_a = (uint16_t *) &context->state.vram [(context->state.plane_a_name_table_base & 0x38) << 10];
     uint16_t *name_table_w = (uint16_t *) &context->state.vram [(context->state.window_name_table_base  & 0x3e) << 10];
 
-    /* First pass - Low priority */
-    smd_vdp_draw_background (context, line, name_table_b, h_scroll_b, v_scroll_b, false);
+    /* Plane A */
+    uint_pixel_t plane_a_output [320];
+    pixel_status plane_a_status [320] = { PIXEL_NONE };
     if (line_is_window)
     {
-        smd_vdp_draw_background (context, line, name_table_w, 0, 0, false);
+        smd_vdp_draw_background (context, line, name_table_w, 0, 0, plane_a_output, plane_a_status);
     }
     else
     {
-        smd_vdp_draw_background (context, line, name_table_a, h_scroll_a, v_scroll_a, false);
+        smd_vdp_draw_background (context, line, name_table_a, h_scroll_a, v_scroll_a, plane_a_output, plane_a_status);
     }
-    smd_vdp_draw_sprites (context, line, false);
 
-    /* Second pass - High priority */
-    smd_vdp_draw_background (context, line, name_table_b, h_scroll_b, v_scroll_b, true);
-    if (line_is_window)
+    /* Plane B */
+    uint_pixel_t plane_b_output [320];
+    pixel_status plane_b_status [320] = { PIXEL_NONE };
+    smd_vdp_draw_background (context, line, name_table_b, h_scroll_b, v_scroll_b, plane_b_output, plane_b_status);
+
+    /* Sprites */
+    uint_pixel_t sprite_output [320];
+    pixel_status sprite_status [320] = { PIXEL_NONE };
+    smd_vdp_draw_sprites (context, line, sprite_output, sprite_status);
+
+    /* Combine layers into output */
+    for (uint32_t x = 0; x < context->screen_width; x++)
     {
-        smd_vdp_draw_background (context, line, name_table_w, 0, 0, true);
+        if (sprite_status [x] == PIXEL_HIGH_PRIORITY)
+        {
+            context->frame_buffer.active_area [line_start + x] = sprite_output [x];
+        }
+        else if (plane_a_status [x] == PIXEL_HIGH_PRIORITY)
+        {
+            context->frame_buffer.active_area [line_start + x] = plane_a_output [x];
+        }
+        else if (plane_b_status [x] == PIXEL_HIGH_PRIORITY)
+        {
+            context->frame_buffer.active_area [line_start + x] = plane_b_output [x];
+        }
+        else if (sprite_status [x] == PIXEL_LOW_PRIORITY)
+        {
+            context->frame_buffer.active_area [line_start + x] = sprite_output [x];
+        }
+        else if (plane_a_status [x] == PIXEL_LOW_PRIORITY)
+        {
+            context->frame_buffer.active_area [line_start + x] = plane_a_output [x];
+        }
+        else if (plane_b_status [x] == PIXEL_LOW_PRIORITY)
+        {
+            context->frame_buffer.active_area [line_start + x] = plane_b_output [x];
+        }
     }
-    else
-    {
-        smd_vdp_draw_background (context, line, name_table_a, h_scroll_a, v_scroll_a, true);
-    }
-    smd_vdp_draw_sprites (context, line, true);
+
 }
 
 
