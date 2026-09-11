@@ -14396,6 +14396,60 @@ static uint32_t m68k_6701_beq_s (M68000_Context *context, uint16_t instruction)
 }
 
 
+/* bvc.w */
+static uint32_t m68k_6800_bvc_w (M68000_Context *context, uint16_t instruction)
+{
+    uint32_t address = address_with_displacement (context, context->state.pc);
+
+    if (!context->state.ccr_overflow)
+    {
+        context->state.pc = address;
+    }
+
+    return 0;
+}
+
+
+/* bvc.s */
+static uint32_t m68k_6801_bvc_s (M68000_Context *context, uint16_t instruction)
+{
+    if (!context->state.ccr_overflow)
+    {
+        int8_t displacement = instruction & 0xff;
+        context->state.pc += displacement;
+    }
+
+    return 0;
+}
+
+
+/* bvs.w */
+static uint32_t m68k_6900_bvs_w (M68000_Context *context, uint16_t instruction)
+{
+    uint32_t address = address_with_displacement (context, context->state.pc);
+
+    if (context->state.ccr_overflow)
+    {
+        context->state.pc = address;
+    }
+
+    return 0;
+}
+
+
+/* bvs.s */
+static uint32_t m68k_6901_bvs_s (M68000_Context *context, uint16_t instruction)
+{
+    if (context->state.ccr_overflow)
+    {
+        int8_t displacement = instruction & 0xff;
+        context->state.pc += displacement;
+    }
+
+    return 0;
+}
+
+
 /* bpl.w */
 static uint32_t m68k_6a00_bpl_w (M68000_Context *context, uint16_t instruction)
 {
@@ -25278,6 +25332,8 @@ static void m68k_init_instructions (void)
     m68k_instruction [0x6500] = m68k_6500_bcs_w;
     m68k_instruction [0x6600] = m68k_6600_bne_w;
     m68k_instruction [0x6700] = m68k_6700_beq_w;
+    m68k_instruction [0x6800] = m68k_6800_bvc_w;
+    m68k_instruction [0x6900] = m68k_6900_bvs_w;
     m68k_instruction [0x6a00] = m68k_6a00_bpl_w;
     m68k_instruction [0x6b00] = m68k_6b00_bmi_w;
     m68k_instruction [0x6c00] = m68k_6c00_bge_w;
@@ -25296,6 +25352,8 @@ static void m68k_init_instructions (void)
         m68k_instruction [0x6500 | d] = m68k_6501_bcs_s;
         m68k_instruction [0x6600 | d] = m68k_6601_bne_s;
         m68k_instruction [0x6700 | d] = m68k_6701_beq_s;
+        m68k_instruction [0x6800 | d] = m68k_6801_bvc_s;
+        m68k_instruction [0x6900 | d] = m68k_6901_bvs_s;
         m68k_instruction [0x6a00 | d] = m68k_6a01_bpl_s;
         m68k_instruction [0x6b00 | d] = m68k_6b01_bmi_s;
         m68k_instruction [0x6c00 | d] = m68k_6c01_bge_s;
