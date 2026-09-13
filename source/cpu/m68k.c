@@ -19893,6 +19893,97 @@ static uint32_t m68k_c0fc_mulu_w_dn_imm (M68000_Context *context, uint16_t instr
     return 0;
 }
 
+/* abcd.b Dn ← Dn + Dn + X */
+static uint32_t m68k_c100_abcd_b_dn_dn (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+    uint16_t source_reg = instruction & 0x07;
+
+    uint8_t b = context->state.d [source_reg].b;
+    uint8_t a = context->state.d [dest_reg].b;
+
+    /* Calculate pre-correction result */
+    uint8_t result = a + b + context->state.ccr_extend;
+
+    /* Calculate correction factor */
+    uint8_t correction = 0;
+    if ((a & 0x0f) + (b & 0x0f) + context->state.ccr_extend > 0x09)
+    {
+        correction += 0x06;
+    }
+    if (a + b + context->state.ccr_extend + correction > 0x9f)
+    {
+        correction += 0x60;
+        context->state.ccr_carry = 1;
+        context->state.ccr_extend = 1;
+    }
+    else
+    {
+        context->state.ccr_carry = 0;
+        context->state.ccr_extend = 0;
+    }
+
+    /* Add correction factor to get the BCD result */
+    uint8_t result_bcd = result + correction;
+
+    context->state.d [dest_reg].b = result_bcd;
+    context->state.ccr_overflow = (int8_t) result + (int8_t) correction > 127 || (int8_t) result + (int8_t) correction < -128;
+    context->state.ccr_negative = ((int8_t) result_bcd < 0);
+    if (result_bcd != 0)
+    {
+        context->state.ccr_zero = 0;
+    }
+
+    return 0;
+}
+
+
+/* abcd.b (-An) ← (-An) + (-An) + X */
+static uint32_t m68k_c108_abcd_b_pan_pan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t dest_reg = (instruction >> 9) & 0x07;
+    uint16_t source_reg = instruction & 0x07;
+
+    context->state.a [source_reg] -= (source_reg == 7) ? 2 : 1;
+    uint8_t b = read_byte (context, context->state.a [source_reg]);
+    context->state.a [dest_reg] -= (dest_reg == 7) ? 2 : 1;
+    uint8_t a = read_byte (context, context->state.a [dest_reg]);
+
+    /* Calculate pre-correction result */
+    uint8_t result = a + b + context->state.ccr_extend;
+
+    /* Calculate correction factor */
+    uint8_t correction = 0;
+    if ((a & 0x0f) + (b & 0x0f) + context->state.ccr_extend > 0x09)
+    {
+        correction += 0x06;
+    }
+    if (a + b + context->state.ccr_extend + correction > 0x9f)
+    {
+        correction += 0x60;
+        context->state.ccr_carry = 1;
+        context->state.ccr_extend = 1;
+    }
+    else
+    {
+        context->state.ccr_carry = 0;
+        context->state.ccr_extend = 0;
+    }
+
+    /* Add correction factor to get the BCD result */
+    uint8_t result_bcd = result + correction;
+
+    write_byte (context, context->state.a [dest_reg], result_bcd);
+    context->state.ccr_overflow = (int8_t) result + (int8_t) correction > 127 || (int8_t) result + (int8_t) correction < -128;
+    context->state.ccr_negative = ((int8_t) result_bcd < 0);
+    if (result_bcd != 0)
+    {
+        context->state.ccr_zero = 0;
+    }
+
+    return 0;
+}
+
 
 /* and.b (An) ← (An) & Dn */
 static uint32_t m68k_c110_and_b_an_dn (M68000_Context *context, uint16_t instruction)
@@ -25716,6 +25807,16 @@ static void m68k_init_instructions (void)
         m68k_instruction [0xc179 | (reg_a << 9)] = m68k_c179_and_w_al_dn;
         m68k_instruction [0xc1b8 | (reg_a << 9)] = m68k_c1b8_and_l_aw_dn;
         m68k_instruction [0xc1b9 | (reg_a << 9)] = m68k_c1b9_and_l_al_dn;
+    }
+
+    /* abcd */
+    for (uint16_t reg_x = 0; reg_x < 8; reg_x++)
+    {
+        for (uint16_t reg_y = 0; reg_y < 8; reg_y++)
+        {
+            m68k_instruction [0xc100 | (reg_x << 9) | reg_y] = m68k_c100_abcd_b_dn_dn;
+            m68k_instruction [0xc108 | (reg_x << 9) | reg_y] = m68k_c108_abcd_b_pan_pan;
+        }
     }
 
     /* exg */
