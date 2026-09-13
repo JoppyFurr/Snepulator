@@ -10788,6 +10788,157 @@ static uint32_t m68k_4ab9_tst_l_al (M68000_Context *context, uint16_t instructio
 }
 
 
+/* tas.b Dn */
+static uint32_t m68k_4ac0_tas_dn (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+
+    uint8_t value = context->state.d [reg].b;
+
+    context->state.ccr_negative = ((int8_t) value < 0);
+    context->state.ccr_zero = (value == 0);
+    context->state.ccr_overflow = 0;
+    context->state.ccr_carry = 0;
+
+    context->state.d [reg].b = value | 0x80;
+
+    return 0;
+}
+
+
+/* tas.b (An) */
+static uint32_t m68k_4ad0_tas_an (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint32_t address = context->state.a [reg];
+
+    uint8_t value = read_byte (context, address);
+
+    context->state.ccr_negative = ((int8_t) value < 0);
+    context->state.ccr_zero = (value == 0);
+    context->state.ccr_overflow = 0;
+    context->state.ccr_carry = 0;
+
+    write_byte (context, address, value | 0x80);
+
+    return 0;
+}
+
+
+/* tas.b (An+) */
+static uint32_t m68k_4ad8_tas_anp (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint32_t address = context->state.a [reg];
+    context->state.a [reg] += (reg == 7) ? 2 : 1;
+
+    uint8_t value = read_byte (context, address);
+
+    context->state.ccr_negative = ((int8_t) value < 0);
+    context->state.ccr_zero = (value == 0);
+    context->state.ccr_overflow = 0;
+    context->state.ccr_carry = 0;
+
+    write_byte (context, address, value | 0x80);
+
+    return 0;
+}
+
+
+/* tas.b (-An) */
+static uint32_t m68k_4ae0_tas_pan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    context->state.a [reg] -= (reg == 7) ? 2 : 1;
+    uint32_t address = context->state.a [reg];
+
+    uint8_t value = read_byte (context, address);
+
+    context->state.ccr_negative = ((int8_t) value < 0);
+    context->state.ccr_zero = (value == 0);
+    context->state.ccr_overflow = 0;
+    context->state.ccr_carry = 0;
+
+    write_byte (context, address, value | 0x80);
+
+    return 0;
+}
+
+
+/* tas.b d(An) */
+static uint32_t m68k_4ae8_tas_dan (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint32_t address = address_with_displacement (context, context->state.a [reg]);
+
+    uint8_t value = read_byte (context, address);
+
+    context->state.ccr_negative = ((int8_t) value < 0);
+    context->state.ccr_zero = (value == 0);
+    context->state.ccr_overflow = 0;
+    context->state.ccr_carry = 0;
+
+    write_byte (context, address, value | 0x80);
+
+    return 0;
+}
+
+
+/* tas.b d(An+Xi) */
+static uint32_t m68k_4af0_tas_danxi (M68000_Context *context, uint16_t instruction)
+{
+    uint16_t reg = instruction & 0x07;
+    uint32_t address = address_with_index (context, context->state.a [reg]);
+
+    uint8_t value = read_byte (context, address);
+
+    context->state.ccr_negative = ((int8_t) value < 0);
+    context->state.ccr_zero = (value == 0);
+    context->state.ccr_overflow = 0;
+    context->state.ccr_carry = 0;
+
+    write_byte (context, address, value | 0x80);
+
+    return 0;
+}
+
+
+/* tas.b (xxx.w) */
+static uint32_t m68k_4af8_tas_aw (M68000_Context *context, uint16_t instruction)
+{
+    uint32_t address = (int16_t) read_extension (context);
+
+    uint8_t value = read_byte (context, address);
+
+    context->state.ccr_negative = ((int8_t) value < 0);
+    context->state.ccr_zero = (value == 0);
+    context->state.ccr_overflow = 0;
+    context->state.ccr_carry = 0;
+
+    write_byte (context, address, value | 0x80);
+
+    return 0;
+}
+
+
+/* tas.b (xxx.l) */
+static uint32_t m68k_4af9_tas_al (M68000_Context *context, uint16_t instruction)
+{
+    uint32_t address = read_extension_long (context);
+
+    uint8_t value = read_byte (context, address);
+
+    context->state.ccr_negative = ((int8_t) value < 0);
+    context->state.ccr_zero = (value == 0);
+    context->state.ccr_overflow = 0;
+    context->state.ccr_carry = 0;
+
+    write_byte (context, address, value | 0x80);
+
+    return 0;
+}
+
+
 /* movem.w <registers> ← (An) */
 static uint32_t m68k_4c90_movem_w_regs_an (M68000_Context *context, uint16_t instruction)
 {
@@ -25186,6 +25337,19 @@ static void m68k_init_instructions (void)
     m68k_instruction [0x4879] = m68k_4879_pea_al;
     m68k_instruction [0x487a] = m68k_487a_pea_dpc;
     m68k_instruction [0x487b] = m68k_487b_pea_dpcxi;
+
+    /* tas */
+    for (uint16_t reg = 0; reg < 8; reg++)
+    {
+        m68k_instruction [0x4ac0 | reg] = m68k_4ac0_tas_dn;
+        m68k_instruction [0x4ad0 | reg] = m68k_4ad0_tas_an;
+        m68k_instruction [0x4ad8 | reg] = m68k_4ad8_tas_anp;
+        m68k_instruction [0x4ae0 | reg] = m68k_4ae0_tas_pan;
+        m68k_instruction [0x4ae8 | reg] = m68k_4ae8_tas_dan;
+        m68k_instruction [0x4af0 | reg] = m68k_4af0_tas_danxi;
+    }
+    m68k_instruction [0x4af8] = m68k_4af8_tas_aw;
+    m68k_instruction [0x4af9] = m68k_4af9_tas_al;
 
     /* trap */
     for (uint32_t vector = 0; vector < 16; vector++)
