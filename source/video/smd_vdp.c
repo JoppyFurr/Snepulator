@@ -345,10 +345,9 @@ bool smd_vdp_get_z80_interrupt (SMD_VDP_Context *context)
  * Note: This assumes that the pattern requested is on the line.
  */
 static void smd_vdp_draw_pattern_line (SMD_VDP_Context *context, uint16_t line, SMD_VDP_Pattern *pattern,
-                                       uint_pixel_t *palette, int_point_t position, bool flip_h, bool flip_v,
+                                       uint32_t palette, int_point_t position, bool flip_h, bool flip_v,
                                        uint_pixel_t *output, pixel_status *status, bool priority)
 {
-
     /* Get the line within the pattern. Endian is chosen such that the
      * pixel within the line can be selected with a single bit-shift. */
     uint32_t pattern_line_index = (flip_v) ? position.y - line + 7 : line - position.y;
@@ -374,7 +373,7 @@ static void smd_vdp_draw_pattern_line (SMD_VDP_Context *context, uint16_t line, 
 
         if (colour_index != 0)
         {
-            output [destination_start + x] = palette [colour_index];
+            output [destination_start + x] = context->state.cram [(palette << 4) + colour_index];
             status [destination_start + x] = (priority) ? PIXEL_HIGH_PRIORITY : PIXEL_LOW_PRIORITY;
         }
     }
@@ -437,7 +436,6 @@ static void smd_vdp_draw_sprites (SMD_VDP_Context *context, uint16_t line, uint_
         sprite.data [2] = util_ntoh16 (sprite_table [line_sprite_buffer [line_sprite_count] * 4 + 2]);
         sprite.data [3] = util_ntoh16 (sprite_table [line_sprite_buffer [line_sprite_count] * 4 + 3]);
 
-        uint_pixel_t *palette = &context->state.cram [sprite.palette << 4];
         int_point_t position = { .x = sprite.x - 128, .y=sprite.y - 128};
 
         uint32_t tile_y = (line - position.y) / 8;
@@ -454,7 +452,7 @@ static void smd_vdp_draw_sprites (SMD_VDP_Context *context, uint16_t line, uint_
             SMD_VDP_Pattern *pattern = (SMD_VDP_Pattern *) &context->state.vram [pattern_index * sizeof (SMD_VDP_Pattern)];
             tile_position.x = position.x + tile_x * 8;
 
-            smd_vdp_draw_pattern_line (context, line, pattern, palette, tile_position, sprite.h_flip, sprite.v_flip,
+            smd_vdp_draw_pattern_line (context, line, pattern, sprite.palette, tile_position, sprite.h_flip, sprite.v_flip,
                                        output, status, sprite.priority);
         }
     }
@@ -536,10 +534,8 @@ static void smd_vdp_draw_background (SMD_VDP_Context *context, uint16_t line, ui
 
         SMD_VDP_Pattern *pattern = (SMD_VDP_Pattern *) &context->state.vram [(tile.pattern) * sizeof (SMD_VDP_Pattern)];
 
-        uint_pixel_t *palette = &context->state.cram [tile.palette << 4];
-
         position.x = 8 * screen_tile_x + h_scroll_fine;
-        smd_vdp_draw_pattern_line (context, line, pattern, palette, position, tile.h_flip, tile.v_flip,
+        smd_vdp_draw_pattern_line (context, line, pattern, tile.palette, position, tile.h_flip, tile.v_flip,
                                    output, status, tile.priority);
     }
 }
