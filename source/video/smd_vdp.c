@@ -346,7 +346,7 @@ bool smd_vdp_get_z80_interrupt (SMD_VDP_Context *context)
  */
 static void smd_vdp_draw_pattern_line (SMD_VDP_Context *context, uint16_t line, SMD_VDP_Pattern *pattern,
                                        uint32_t palette, int_point_t position, bool flip_h, bool flip_v,
-                                       uint_pixel_t *output, pixel_status *status, bool priority)
+                                       uint8_t *output, pixel_status *status, bool priority)
 {
     /* Get the line within the pattern. Endian is chosen such that the
      * pixel within the line can be selected with a single bit-shift. */
@@ -373,7 +373,7 @@ static void smd_vdp_draw_pattern_line (SMD_VDP_Context *context, uint16_t line, 
 
         if (colour_index != 0)
         {
-            output [destination_start + x] = context->state.cram [(palette << 4) + colour_index];
+            output [destination_start + x] = (palette << 4) + colour_index;
             status [destination_start + x] = (priority) ? PIXEL_HIGH_PRIORITY : PIXEL_LOW_PRIORITY;
         }
     }
@@ -383,7 +383,7 @@ static void smd_vdp_draw_pattern_line (SMD_VDP_Context *context, uint16_t line, 
 /*
  * Render one line of the sprite layer.
  */
-static void smd_vdp_draw_sprites (SMD_VDP_Context *context, uint16_t line, uint_pixel_t *output, pixel_status *status)
+static void smd_vdp_draw_sprites (SMD_VDP_Context *context, uint16_t line, uint8_t *output, pixel_status *status)
 {
     /* TODO: In Width=320 mode, the base-address register only provides 6 bits
      *       of the address. In H32 mode, it provides 7 bits. */
@@ -464,7 +464,7 @@ static void smd_vdp_draw_sprites (SMD_VDP_Context *context, uint16_t line, uint_
  */
 static void smd_vdp_draw_background (SMD_VDP_Context *context, uint16_t line, uint16_t *name_table,
                                      uint16_t h_scroll, uint16_t v_scroll,
-                                     uint_pixel_t *output, pixel_status *status)
+                                     uint8_t *output, pixel_status *status)
 {
     uint16_t num_rows;
     uint16_t num_cols;
@@ -547,20 +547,23 @@ static void smd_vdp_draw_background (SMD_VDP_Context *context, uint16_t line, ui
  */
 void smd_vdp_render_line (SMD_VDP_Context *context, uint16_t line)
 {
-    /* Backdrop */
-    uint_pixel_t video_backdrop = context->state.cram [context->state.backdrop_colour & 0x3f];
-    context->frame_buffer.backdrop [line] = video_backdrop;
-
-    /* Start by filling the screen with the backdrop colour */
+    /* Index into active area */
     uint32_t line_start = line * context->frame_buffer.width;
-    for (int x = 0; x < context->frame_buffer.width; x++)
-    {
-        context->frame_buffer.active_area [line_start + x] = video_backdrop;
-    }
+
+    /* Backdrop */
+    uint8_t backdrop = context->state.backdrop_colour & 0x3f;
+    context->frame_buffer.backdrop [line] = context->state.cram [backdrop];
 
     /* If blanking is enabled, stop now, leaving the active area with only the backdrop colour. */
     if (!context->state.mode_2_blank)
     {
+        uint_pixel_t pixel_colour = context->state.cram [backdrop];
+
+        for (int x = 0; x < context->frame_buffer.width; x++)
+        {
+            context->frame_buffer.active_area [line_start + x] = pixel_colour;
+        }
+
         /* TODO: Any work that occurs even when blanking is enabled.
          *       Eg, like sprite-overflow on the SMS */
         return;
@@ -621,7 +624,7 @@ void smd_vdp_render_line (SMD_VDP_Context *context, uint16_t line)
     uint16_t *name_table_w = (uint16_t *) &context->state.vram [(context->state.window_name_table_base  & 0x3e) << 10];
 
     /* Plane A */
-    uint_pixel_t plane_a_output [320];
+    uint8_t plane_a_output [320];
     pixel_status plane_a_status [320] = { PIXEL_NONE };
     if (line_is_window)
     {
@@ -633,44 +636,119 @@ void smd_vdp_render_line (SMD_VDP_Context *context, uint16_t line)
     }
 
     /* Plane B */
-    uint_pixel_t plane_b_output [320];
+    uint8_t plane_b_output [320];
     pixel_status plane_b_status [320] = { PIXEL_NONE };
     smd_vdp_draw_background (context, line, name_table_b, h_scroll_b, v_scroll_b, plane_b_output, plane_b_status);
 
     /* Sprites */
-    uint_pixel_t sprite_output [320];
+    uint8_t sprite_output [320];
     pixel_status sprite_status [320] = { PIXEL_NONE };
     smd_vdp_draw_sprites (context, line, sprite_output, sprite_status);
 
     /* Combine layers into output */
-    for (uint32_t x = 0; x < context->screen_width; x++)
+    if (context->state.mode_4_shadow_and_hilight)
     {
-        if (sprite_status [x] == PIXEL_HIGH_PRIORITY)
+        /* TODO:
+         *  - High-priority background tiles also affect other tiles (sprites and background)
+         *    Sprites, backdrop, and other background are all drawn with normal brightness if
+         *    one of the background outputs is high priority (even if transparent)
+         *  - Sprite pixels with value 0x3e cause the background/backdrop to be drawn bright
+         *  - Backdrop in active area defaults to half brightness
+         *  - If a background tile has high priority, the 8x8 block of backdrop will be
+         *    drawn with normal brightness.
+         *  - Charles MacDonald document says that 0x0e/0x1e/0x2e are always normal brightness.
+         *
+         * Done:
+         *  - Low priority tiles, sprites or background, are drawn in shadow
+         *  - Sprite pixels with value 0x3f cause the background/backdrop to be drawn with in shadow.
+         */
+
+        for (uint32_t x = 0; x < context->screen_width; x++)
         {
-            context->frame_buffer.active_area [line_start + x] = sprite_output [x];
-        }
-        else if (plane_a_status [x] == PIXEL_HIGH_PRIORITY)
-        {
-            context->frame_buffer.active_area [line_start + x] = plane_a_output [x];
-        }
-        else if (plane_b_status [x] == PIXEL_HIGH_PRIORITY)
-        {
-            context->frame_buffer.active_area [line_start + x] = plane_b_output [x];
-        }
-        else if (sprite_status [x] == PIXEL_LOW_PRIORITY)
-        {
-            context->frame_buffer.active_area [line_start + x] = sprite_output [x];
-        }
-        else if (plane_a_status [x] == PIXEL_LOW_PRIORITY)
-        {
-            context->frame_buffer.active_area [line_start + x] = plane_a_output [x];
-        }
-        else if (plane_b_status [x] == PIXEL_LOW_PRIORITY)
-        {
-            context->frame_buffer.active_area [line_start + x] = plane_b_output [x];
+            uint8_t colour_index = backdrop;
+            bool shadow = false;
+
+            if (sprite_status [x] != PIXEL_NONE && sprite_output [x] == 0x3f)
+            {
+                shadow = true;
+            }
+
+            if (sprite_status [x] == PIXEL_HIGH_PRIORITY && sprite_output [x] != 0x3f)
+            {
+                colour_index = sprite_output [x];
+            }
+            else if (plane_a_status [x] == PIXEL_HIGH_PRIORITY)
+            {
+                colour_index = plane_a_output [x];
+            }
+            else if (plane_b_status [x] == PIXEL_HIGH_PRIORITY)
+            {
+                colour_index = plane_b_output [x];
+            }
+            else if (sprite_status [x] == PIXEL_LOW_PRIORITY && sprite_output [x] != 0x3f)
+            {
+                colour_index = sprite_output [x];
+                shadow = true;
+            }
+            else if (plane_a_status [x] == PIXEL_LOW_PRIORITY)
+            {
+                colour_index = plane_a_output [x];
+                shadow = true;
+            }
+            else if (plane_b_status [x] == PIXEL_LOW_PRIORITY)
+            {
+                colour_index = plane_b_output [x];
+                shadow = true;
+            }
+
+            uint_pixel_t pixel_colour = context->state.cram [colour_index];
+
+            if (shadow)
+            {
+                context->frame_buffer.active_area [line_start + x] = (uint_pixel_t) { .r = pixel_colour.r / 2,
+                                                                                      .g = pixel_colour.g / 2,
+                                                                                      .b = pixel_colour.b / 2 };
+            }
+            else
+            {
+                context->frame_buffer.active_area [line_start + x] = pixel_colour;
+            }
         }
     }
+    else
+    {
+        for (uint32_t x = 0; x < context->screen_width; x++)
+        {
+            uint8_t colour_index = backdrop;
 
+            if (sprite_status [x] == PIXEL_HIGH_PRIORITY)
+            {
+                colour_index = sprite_output [x];
+            }
+            else if (plane_a_status [x] == PIXEL_HIGH_PRIORITY)
+            {
+                colour_index = plane_a_output [x];
+            }
+            else if (plane_b_status [x] == PIXEL_HIGH_PRIORITY)
+            {
+                colour_index = plane_b_output [x];
+            }
+            else if (sprite_status [x] == PIXEL_LOW_PRIORITY)
+            {
+                colour_index = sprite_output [x];
+            }
+            else if (plane_a_status [x] == PIXEL_LOW_PRIORITY)
+            {
+                colour_index = plane_a_output [x];
+            }
+            else if (plane_b_status [x] == PIXEL_LOW_PRIORITY)
+            {
+                colour_index = plane_b_output [x];
+            }
+
+            context->frame_buffer.active_area [line_start + x] = context->state.cram [colour_index];
+        }
+    }
 }
 
 

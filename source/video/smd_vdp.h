@@ -58,6 +58,7 @@ typedef struct SMD_VDP_State_s {
     bool z80_interrupt;             /* Interrupt for the z80 */
 
     /* TODO: A method of listing configured features that are not yet implemented */
+    /* TODO: Consider naming - "mode_4" the register vs mode 4 the SMS video mode may be confusing. */
     union {
         uint8_t regs [24];
 #pragma pack (1)
@@ -88,7 +89,16 @@ typedef struct SMD_VDP_State_s {
             uint8_t unused_9; /* SMS V-Scroll */
             uint8_t line_counter_reset;
             uint8_t mode_3;
-            uint8_t mode_4;
+            union {
+                uint8_t mode_4;
+                struct {
+                    uint8_t mode_4_rs_1:1;
+                    uint8_t mode_4_interlace:2;
+                    uint8_t mode_4_shadow_and_hilight:1;
+                    uint8_t mode_4_unused_6_4:3;
+                    uint8_t mode_4_rs_0:1;
+                };
+            };
             uint8_t h_scroll_data_base;
             uint8_t unused_e; /* 128 KB only */
             uint8_t auto_increment;
