@@ -6,12 +6,12 @@
  *
  * TODO:
  *  - Operators
- *    - Four per channel
  *    - Algorithms
  *    - Detune
  *    - Special mode for channel 3
  *    - Multiply
  *    - Key per-operator
+ *    - Ksl
  *  - Algorithms & Modulation
  *  - Modulation
  *    - Total level
@@ -33,6 +33,7 @@
 #include <stdlib.h>
 
 #include "../snepulator.h"
+#include "../util.h"
 
 extern Snepulator_State state;
 
@@ -183,13 +184,31 @@ void ym2612_data_write (YM2612_Context *context, uint8_t data)
                 break;
 
             case 0x28:
-                /* TODO: Separate key-on per operator. For now just use operator four as representative. */
                 channel = key_on_map [data & 0x07];
-                if (context->state.key_on [channel] == false && data >> 7)
+                uint32_t first_operator = channel * 4;
+
+                for (uint32_t operator_index = first_operator; operator_index < first_operator + 4; operator_index++)
                 {
-                    context->state.operator [channel].phase = 0;
+                    YM2612_Operator_State *operator = &context->state.operator [operator_index];
+                    bool key_on = (data >> (operator_index - first_operator + 4)) & 1;
+
+                    if (key_on == true && !operator->key_on)
+                    {
+                        /* TODO: At key-on, is the attenuation reset to max, or does it
+                         *       continue from where it was with the previous note? */
+                        operator->phase = 0;
+                        operator->eg_state = YM2612_STATE_ATTACK;
+                        operator->key_on = true;
+                    }
+
+                    else if (key_on == false && operator->key_on)
+                    {
+                        operator->eg_state = YM2612_STATE_RELEASE;
+                        operator->key_on = false;
+                    }
+
                 }
-                context->state.key_on [channel] = data >> 7;
+
                 break;
 
             case 0x2a:
@@ -364,6 +383,144 @@ static signmag16_t ym2612_sin (uint16_t phase)
 }
 
 
+uint8_t eg_increment_table [64] [8] = {
+    { 0, 0, 0, 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0, 0, 0, 0 }, { 0, 1, 0, 1, 0, 1, 0, 1 }, { 0, 1, 0, 1, 0, 1, 0, 1 },
+    { 0, 1, 0, 1, 0, 1, 0, 1 }, { 0, 1, 0, 1, 0, 1, 0, 1 }, { 0, 1, 1, 1, 0, 1, 1, 1 }, { 0, 1, 1, 1, 0, 1, 1, 1 },
+    { 0, 1, 0, 1, 0, 1, 0, 1 }, { 0, 1, 0, 1, 1, 1, 0, 1 }, { 0, 1, 1, 1, 0, 1, 1, 1 }, { 0, 1, 1, 1, 1, 1, 1, 1 },
+    { 0, 1, 0, 1, 0, 1, 0, 1 }, { 0, 1, 0, 1, 1, 1, 0, 1 }, { 0, 1, 1, 1, 0, 1, 1, 1 }, { 0, 1, 1, 1, 1, 1, 1, 1 },
+    { 0, 1, 0, 1, 0, 1, 0, 1 }, { 0, 1, 0, 1, 1, 1, 0, 1 }, { 0, 1, 1, 1, 0, 1, 1, 1 }, { 0, 1, 1, 1, 1, 1, 1, 1 },
+    { 0, 1, 0, 1, 0, 1, 0, 1 }, { 0, 1, 0, 1, 1, 1, 0, 1 }, { 0, 1, 1, 1, 0, 1, 1, 1 }, { 0, 1, 1, 1, 1, 1, 1, 1 },
+    { 0, 1, 0, 1, 0, 1, 0, 1 }, { 0, 1, 0, 1, 1, 1, 0, 1 }, { 0, 1, 1, 1, 0, 1, 1, 1 }, { 0, 1, 1, 1, 1, 1, 1, 1 },
+    { 0, 1, 0, 1, 0, 1, 0, 1 }, { 0, 1, 0, 1, 1, 1, 0, 1 }, { 0, 1, 1, 1, 0, 1, 1, 1 }, { 0, 1, 1, 1, 1, 1, 1, 1 },
+    { 0, 1, 0, 1, 0, 1, 0, 1 }, { 0, 1, 0, 1, 1, 1, 0, 1 }, { 0, 1, 1, 1, 0, 1, 1, 1 }, { 0, 1, 1, 1, 1, 1, 1, 1 },
+    { 0, 1, 0, 1, 0, 1, 0, 1 }, { 0, 1, 0, 1, 1, 1, 0, 1 }, { 0, 1, 1, 1, 0, 1, 1, 1 }, { 0, 1, 1, 1, 1, 1, 1, 1 },
+    { 0, 1, 0, 1, 0, 1, 0, 1 }, { 0, 1, 0, 1, 1, 1, 0, 1 }, { 0, 1, 1, 1, 0, 1, 1, 1 }, { 0, 1, 1, 1, 1, 1, 1, 1 },
+    { 0, 1, 0, 1, 0, 1, 0, 1 }, { 0, 1, 0, 1, 1, 1, 0, 1 }, { 0, 1, 1, 1, 0, 1, 1, 1 }, { 0, 1, 1, 1, 1, 1, 1, 1 },
+    { 1, 1, 1, 1, 1, 1, 1, 1 }, { 1, 1, 1, 2, 1, 1, 1, 2 }, { 1, 2, 1, 2, 1, 2, 1, 2 }, { 1, 2, 2, 2, 1, 2, 2, 2 },
+    { 2, 2, 2, 2, 2, 2, 2, 2 }, { 2, 2, 2, 4, 2, 2, 2, 4 }, { 2, 4, 2, 4, 2, 4, 2, 4 }, { 2, 4, 4, 4, 2, 4, 4, 4 },
+    { 4, 4, 4, 4, 4, 4, 4, 4 }, { 4, 4, 4, 8, 4, 4, 4, 8 }, { 4, 8, 4, 8, 4, 8, 4, 8 }, { 4, 8, 8, 8, 4, 8, 8, 8 },
+    { 8, 8, 8, 8, 8, 8, 8, 8 }, { 8, 8, 8, 8, 8, 8, 8, 8 }, { 8, 8, 8, 8, 8, 8, 8, 8 }, { 8, 8, 8, 8, 8, 8, 8, 8 }
+};
+
+
+/*
+ * Calculate the number of eg_level steps to decay by.
+ * Input:  6-bit effective decay rate.
+ * Output: Number of steps to attenuate by.
+ */
+static uint16_t ym2612_decay (YM2612_Context *context, uint16_t rate)
+{
+    uint32_t global_counter = context->state.eg_global_counter;
+
+    uint32_t shift = (rate >= 44) ? 0 : 11 - (rate / 4);
+
+    /* Only perform a decay step if all bits shifted from the global counter are zeros */
+    if ((global_counter & ((1 << shift) - 1)) == 0)
+    {
+        uint32_t update_cycle = (global_counter >> shift) & 0x07;
+        return eg_increment_table [rate] [update_cycle];
+    }
+
+    /* Zero steps if the global counter didn't trigger an earlier return */
+    return 0;
+}
+
+
+/*
+ * Run the envelope generator for one update cycle of an operator.
+ */
+static void ym2612_envelope_cycle (YM2612_Context *context, YM2612_Operator_State *operator,
+                                   YM2612_Envelope_Params *params)
+{
+    switch (operator->eg_state)
+    {
+        case YM2612_STATE_ATTACK:
+            /* TODO: Implement the attack curve. For now, just assume it occurs instantly */
+            operator->eg_level = 0;
+            if (operator->eg_level == 0)
+            {
+                operator->eg_state = YM2612_STATE_DECAY;
+            }
+            break;
+
+        case YM2612_STATE_DECAY:
+            operator->eg_level += ym2612_decay (context, params->effective_decay);
+            if (operator->eg_level >= params->effective_sustain_level)
+            {
+                operator->eg_state = YM2612_STATE_SUSTAIN;
+            }
+            break;
+
+        case YM2612_STATE_SUSTAIN:
+            operator->eg_level += ym2612_decay (context, params->effective_sustain);
+            break;
+
+        case YM2612_STATE_RELEASE:
+            operator->eg_level += ym2612_decay (context, params->effective_release);
+            break;
+    }
+
+    ENFORCE_MAXIMUM (operator->eg_level, 1023);
+}
+
+
+/*
+ * Run one sample of a YM2612 channel.
+ */
+static int16_t ym2413_run_channel_sample (YM2612_Context *context, uint16_t channel)
+{
+    uint32_t first_operator = channel * 4;
+
+    /* TODO: Calculate effective parameters (fnum, block, etc) */
+
+    /* Run envelope generator on every third sample */
+    if (context->completed_samples % 3 == 0)
+    {
+        for (uint32_t operator = first_operator; operator < first_operator + 4; operator++)
+        {
+            /* TODO: Some of these parameters could be calculated once at register-write time */
+            /* TODO: KSL & anything else that effects the effective rate */
+            /* TODO: Use register values. For now a single arbitrary hard-coded configuration. */
+            context->state.envelope_params [operator].effective_attack = 63;
+            context->state.envelope_params [operator].effective_decay = 32;
+            context->state.envelope_params [operator].effective_sustain = 4;
+            context->state.envelope_params [operator].effective_release = 32;
+            context->state.envelope_params [operator].effective_sustain_level = 228;
+
+            ym2612_envelope_cycle (context, &context->state.operator [operator], &context->state.envelope_params [operator]);
+        }
+    }
+
+    /* Update phase */
+    for (uint32_t operator = first_operator; operator < first_operator + 4; operator++)
+    {
+        context->state.operator [operator].phase += context->state.fnum [channel];
+
+        /* TODO: Calculate output level for each operator so that it may modulate
+         *       the next in the algorithm chain. */
+    }
+
+    /* TODO: Configurable algorithms. For now, just assume the final operator of each channel is the carrier. */
+    YM2612_Operator_State *carrier = &context->state.operator [first_operator + 3];
+
+    signmag16_t log_carrier_value = ym2612_sin (carrier->phase >> 10);
+    /* TODO: Volume, envelope, ksl, etc. */
+    log_carrier_value += 1152; /* TODO: Replace with volume control */
+    log_carrier_value += carrier->eg_level << 2; /* TODO: Arbitrary shift */
+    signmag16_t carrier_value = ym2612_exp (log_carrier_value);
+
+    /* TODO: Shift was from YM2413 - May not be valid for 2612. */
+    if (carrier_value & SIGN_BIT)
+    {
+        return -((carrier_value & MAG_BITS) >> 1);
+    }
+    else
+    {
+        return ((carrier_value & MAG_BITS) >> 1);
+    }
+}
+
+
 /*
  * Run the YM2612 for a number of CPU clock cycles.
  */
@@ -424,8 +581,18 @@ void _ym2612_run_cycles (YM2612_Context *context, uint32_t clock_rate, uint32_t 
             }
         }
 
+        /* EG Global counter - Increments once per three samples */
+        context->state.eg_global_counter_divider += 1;
+        if (context->state.eg_global_counter_divider == 3)
+        {
+            context->state.eg_global_counter += 1;
+            context->state.eg_global_counter_divider = 0;
+        }
+
         /* Synthesis */
         int16_t output_level = 0;
+
+        /* TODO: Consider breaking this out into a function ym2612_run_channel_sample */
 
         for (uint32_t channel = 0; channel < 6; channel++)
         {
@@ -436,22 +603,7 @@ void _ym2612_run_cycles (YM2612_Context *context, uint32_t clock_rate, uint32_t 
             }
             else
             {
-                context->state.operator [channel].phase += context->state.fnum [channel];
-
-                signmag16_t log_carrier_value = ym2612_sin (context->state.operator [channel].phase >> 10);
-                /* TODO: Volume, envelope, etc. */
-                log_carrier_value += 1536; /* Substitute for volume control */
-                signmag16_t carrier_value = ym2612_exp (log_carrier_value);
-
-                /* TODO: Shift was from YM2413 - May not be valid for 2612. */
-                if (carrier_value & SIGN_BIT)
-                {
-                    output_level -= ((carrier_value & MAG_BITS) >> 1);
-                }
-                else
-                {
-                    output_level += ((carrier_value & MAG_BITS) >> 1);
-                }
+                output_level += ym2413_run_channel_sample (context, channel);
             }
         }
 

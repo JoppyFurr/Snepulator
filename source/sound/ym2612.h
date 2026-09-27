@@ -8,21 +8,42 @@
 #define YM2612_GROUP_1 0
 #define YM2612_GROUP_2 1
 
+typedef enum YM2612_Envelope_State_e {
+    YM2612_STATE_ATTACK = 0,
+    YM2612_STATE_DECAY,
+    YM2612_STATE_SUSTAIN,
+    YM2612_STATE_RELEASE
+} YM2612_Envelope_State;
+
 
 typedef struct YM2612_Operator_State_s {
 
-    /* TODO: Envelope Generators */
+    bool key_on;
+
+    /* Envelope Generators */
+    YM2612_Envelope_State eg_state;
+    uint16_t eg_level;
 
     /* Fixed-point phase accumulators - 10.10 bits */
     uint32_t phase;
 
 } YM2612_Operator_State;
 
+typedef struct YM2612_Envelope_Params_s {
+    uint32_t effective_attack;
+    uint32_t effective_decay;
+    uint32_t effective_sustain;
+    uint32_t effective_release;
+    uint32_t effective_sustain_level;
+} YM2612_Envelope_Params;
 
 typedef struct YM2612_State_s {
 
     uint8_t addr_latch;
     uint8_t group_latch;
+
+    uint16_t eg_global_counter_divider;
+    uint16_t eg_global_counter;
 
     /* Timers & channel-3 mode */
     uint16_t timer_a;
@@ -49,15 +70,10 @@ typedef struct YM2612_State_s {
     uint8_t dac_output_reg;
     uint8_t dac_enable_reg;
 
-    /* TODO: There are actually 24 operators, four per channel that can be
-     *       configured using various algorithms to modulate one another.
-     *       For now though, to get some initial sound out for the FM channels,
-     *       just implement six non-modulated carriers, with only one key-on
-     *       register per channel. */
-    bool key_on [6];
     uint16_t fnum_high_latch [6];
     uint16_t fnum [6];
-    YM2612_Operator_State operator [6];
+    YM2612_Operator_State operator [24];
+    YM2612_Envelope_Params envelope_params [24];
 
 } YM2612_State;
 
