@@ -131,7 +131,6 @@ void ym2612_addr2_write (YM2612_Context *context, uint8_t addr)
 void ym2612_data_write (YM2612_Context *context, uint8_t data)
 {
     uint8_t addr = context->state.addr_latch;
-    /* TODO: If switching to C23, then these can live inside the switch statement */
     uint32_t fnum;
     uint32_t block;
     uint32_t channel;

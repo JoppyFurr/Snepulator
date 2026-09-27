@@ -5,7 +5,6 @@
 
 /* Headers that supply the types used in this file. */
 #include <pthread.h>
-#include <stdbool.h>
 #include <stdint.h>
 
 #include "snepulator_compat.h"
