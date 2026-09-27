@@ -410,6 +410,11 @@ static void smd_memory_write_8 (void *context_ptr, uint32_t addr, uint8_t data)
             }
         }
 
+        else if (addr == 0xa130f1)
+        {
+            printf ("[%s] Write to SRAM control register value=0x%02x. (Not implemented)\n", __func__, data);
+        }
+
         else
         {
             snepulator_error (__func__, "Internal register / expansion access %06x not implemented.", addr);
