@@ -322,7 +322,7 @@ Console snepulator_select_console_for_rom (const char *path)
         return CONSOLE_LOGO;
     }
 
-    /* First priority: Check for a known console-specific file extension */
+    /* Trust known console-specific file extensions */
     const char *extension_ptr = strrchr (path, '.');
     if (extension_ptr != NULL)
     {
@@ -369,7 +369,19 @@ Console snepulator_select_console_for_rom (const char *path)
 #endif
     }
 
-    /* Second priority: Check if the ROM matches any known headers */
+#ifdef DEVELOPER_BUILD
+    /* Check for Mega Drive header */
+    uint8_t buffer [4];
+    if (util_file_read_bytes (buffer, 0x100 ,4 ,path) == EXIT_SUCCESS)
+    {
+        if (memcmp (buffer, "SEGA", 4) == 0)
+        {
+            return CONSOLE_MEGA_DRIVE;
+        }
+    }
+#endif
+
+    /* Check for ColecoVision header */
     uint16_t first_word;
     if (util_file_read_bytes ((void *) &first_word, 0, 2, path) == EXIT_SUCCESS)
     {
