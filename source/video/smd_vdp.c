@@ -575,6 +575,10 @@ void smd_vdp_render_line (SMD_VDP_Context *context, uint16_t line)
     if (context->state.mode_3 & 0x04)
     {
         printf ("[%s] Scroll per 2-cell column not implemented.\n", __func__);
+
+        /* For now, just use the scroll value for the first column. */
+        v_scroll_a = context->state.vsram [0];
+        v_scroll_b = context->state.vsram [1];
     }
     else
     {
