@@ -577,11 +577,36 @@ int main (int argc, char **argv)
     SDL_GL_SetAttribute (SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute (SDL_GL_CONTEXT_MINOR_VERSION, 2);
 
-    /* Three times the video buffer resolution */
-    /* TODO: Make dialogues fit (full-screen?) */
-    /* TODO: Check if we're running on a small-screened device and use a lower window size */
+    Console console = CONSOLE_NONE;
+    if (arg_filename)
+    {
+        console = snepulator_select_console_for_rom (arg_filename);
+    }
+
+    uint32_t window_width = 0;
+    uint32_t window_height= 0;
+
+    /* Window size starts at three times the console native resolution with 8 pixels of border */
+    switch (console)
+    {
+        case CONSOLE_MEGA_DRIVE:
+            window_width = (320 + 8) * 3 * state.video_par;
+            window_height = (224 + 8) * 3;
+            break;
+        case CONSOLE_MASTER_SYSTEM:
+            window_width = (256 + 8) * 3 * state.video_par;
+            window_height = 224 * 3; /* Allow for SMS2 high resolution mode */
+            break;
+        case CONSOLE_SG_1000:
+        case CONSOLE_COLECOVISION:
+        default:
+            window_width =  (256 + 8) * 3 * state.video_par;
+            window_height = (192 + 8) * 3;
+            break;
+    }
+
     window = SDL_CreateWindow ("Snepulator", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-                               (256  + 16) * 3 * state.video_par, 224 * 3,
+                               window_width, window_height,
                                SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL);
     if (window == NULL)
     {
