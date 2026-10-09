@@ -16,7 +16,11 @@
 
 #define SR_MASK 0xa71f
 
+#ifdef EXPORT_INSTRUCTIONS
+uint32_t (*m68k_instruction [SIZE_64K]) (M68000_Context *, uint16_t) = { };
+#else
 static uint32_t (*m68k_instruction [SIZE_64K]) (M68000_Context *, uint16_t) = { };
+#endif
 
 
 /*

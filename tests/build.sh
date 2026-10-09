@@ -4,7 +4,7 @@
 set -e
 
 CC=gcc
-CFLAGS="-std=c17 -O2 -Wall -Werror"
+CFLAGS="-std=c23 -O2 -Wall -Werror -DEXPORT_INSTRUCTIONS"
 
 # Caching
 if command -v ccache > /dev/null
