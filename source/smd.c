@@ -883,9 +883,7 @@ SMD_Context *smd_init (void)
     state.get_rom_hash = smd_get_rom_hash;
     state.run_callback = smd_run;
 #ifdef DEVELOPER_BUILD
-#if 0
-    state.diagnostics_show = smd_diagnostics_show;
-#endif
+    /* state.diagnostics_show = smd_diagnostics_show; */
 #endif
 
     /* For now, assume NTSC */

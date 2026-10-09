@@ -359,17 +359,14 @@ Console snepulator_select_console_for_rom (const char *path)
         {
             return CONSOLE_GAME_GEAR;
         }
-#ifdef DEVELOPER_BUILD
         else if (strcmp (extension, ".md") == 0 ||
                  strcmp (extension, ".gen") == 0)
         {
             /* TODO: Support for .smd roms */
             return CONSOLE_MEGA_DRIVE;
         }
-#endif
     }
 
-#ifdef DEVELOPER_BUILD
     /* Check for Mega Drive header */
     uint8_t buffer [4];
     if (util_file_read_bytes (buffer, 0x100 ,4 ,path) == EXIT_SUCCESS)
@@ -379,7 +376,6 @@ Console snepulator_select_console_for_rom (const char *path)
             return CONSOLE_MEGA_DRIVE;
         }
     }
-#endif
 
     /* Check for ColecoVision header */
     uint16_t first_word;
@@ -972,11 +968,9 @@ void snepulator_system_init (Console console)
             state.console_context = sms_init ();
             break;
 
-#ifdef DEVELOPER_BUILD
         case CONSOLE_MEGA_DRIVE:
             state.console_context = smd_init ();
             break;
-#endif
 
         default:
             /* Default to Master System */
