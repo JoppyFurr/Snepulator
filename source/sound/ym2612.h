@@ -20,22 +20,33 @@ typedef struct YM2612_Operator_State_s {
 
     bool key_on;
 
+    /* Configured values */
+    /* TODO: total level, detune, multiply, AM, rate scale, SSG-EG */
+    uint32_t attack_rate;
+    uint32_t decay_rate;
+    uint32_t sustain_rate;
+    uint32_t release_rate;
+    uint32_t sustain_level;
+
     /* Envelope Generators */
+    uint32_t effective_attack;
+    uint32_t effective_decay;
+    uint32_t effective_sustain;
+    uint32_t effective_release;
     YM2612_Envelope_State eg_state;
-    uint16_t eg_level;
+    uint32_t eg_level;
 
     /* Fixed-point phase accumulators - 10.10 bits */
     uint32_t phase;
 
 } YM2612_Operator_State;
 
-typedef struct YM2612_Envelope_Params_s {
-    uint32_t effective_attack;
-    uint32_t effective_decay;
-    uint32_t effective_sustain;
-    uint32_t effective_release;
-    uint32_t effective_sustain_level;
-} YM2612_Envelope_Params;
+typedef struct YM2612_Channel_State_s {
+
+    uint32_t fnum_high_latch;
+    uint32_t fnum;
+
+} YM2612_Channel_State;
 
 typedef struct YM2612_State_s {
 
@@ -70,10 +81,8 @@ typedef struct YM2612_State_s {
     uint8_t dac_output_reg;
     uint8_t dac_enable_reg;
 
-    uint16_t fnum_high_latch [6];
-    uint16_t fnum [6];
     YM2612_Operator_State operator [24];
-    YM2612_Envelope_Params envelope_params [24];
+    YM2612_Channel_State channel [6];
 
 } YM2612_State;
 

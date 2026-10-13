@@ -139,11 +139,11 @@ void ym2612_data_write (YM2612_Context *context, uint8_t data)
 
     pthread_mutex_lock (&context->mutex);
 
-    if (context->state.group_latch == YM2612_GROUP_1)
+    /* Global Registers */
+    if (addr < 0x30 && context->state.group_latch == YM2612_GROUP_1)
     {
         switch (addr)
         {
-            /* Global Registers */
             case 0x22:
                 /* TODO: LFO */
                 break;
@@ -218,77 +218,79 @@ void ym2612_data_write (YM2612_Context *context, uint8_t data)
                 context->state.dac_enable_reg = data;
                 break;
 
-            /* Operator Registers */
-
-            /* Channel Registers */
-            /* TODO: For now, doing initial sine output only, the block is used to calculate
-             *       the effective fnum, but itself is not saved outside of the latch. If it
-             *       is needed for another feature this may need to be revisited. */
-            case 0xa0:
-                fnum = ((context->state.fnum_high_latch [0] & 0x07) << 8) | data;
-                block = (context->state.fnum_high_latch [0] & 0x38) >> 3;
-                context->state.fnum [0] = (fnum << block) >> 1;
-                break;
-            case 0xa1:
-                fnum = ((context->state.fnum_high_latch [1] & 0x07) << 8) | data;
-                block = (context->state.fnum_high_latch [1] & 0x38) >> 3;
-                context->state.fnum [1] = (fnum << block) >> 1;
-                break;
-            case 0xa2:
-                fnum = ((context->state.fnum_high_latch [2] & 0x07) << 8) | data;
-                block = (context->state.fnum_high_latch [2] & 0x38) >> 3;
-                context->state.fnum [2] = (fnum << block) >> 1;
-                break;
-
-            case 0xa4:
-                context->state.fnum_high_latch [0] = data;
-                break;
-            case 0xa5:
-                context->state.fnum_high_latch [1] = data;
-                break;
-            case 0xa6:
-                context->state.fnum_high_latch [2] = data;
-                break;
-
             default:
                 break;
         }
     }
-    else if (context->state.group_latch == YM2612_GROUP_2)
+
+    /* Operator Registers */
+    else if (addr >= 0x30 && addr < 0x90)
     {
-        switch (addr)
+        YM2612_Operator_State *operator_group = &context->state.operator [(context->state.group_latch == YM2612_GROUP_1) ? 0 : 12];
+
+        const size_t operator_mapping [16] = { 0, 4, 8, 0xff, 2, 6, 10, 0xff, 1, 5, 9, 0xff, 3, 7, 11, 0xff };
+        size_t operator = operator_mapping [addr & 0x0f];
+
+        if (operator < 12)
         {
-            /* Operator Registers */
+            switch (addr & 0xf0)
+            {
+                /* Rate Scale, Attack Rate */
+                case 0x50:
+                    operator_group [operator].attack_rate = (data & 0x1f) << 1;
+                    break;
 
-            /* Channel Registers */
-            case 0xa0:
-                fnum = ((context->state.fnum_high_latch [3] & 0x07) << 8) | data;
-                block = (context->state.fnum_high_latch [3] & 0x38) >> 3;
-                context->state.fnum [3] = (fnum << block) >> 1;
-                break;
-            case 0xa1:
-                fnum = ((context->state.fnum_high_latch [4] & 0x07) << 8) | data;
-                block = (context->state.fnum_high_latch [4] & 0x38) >> 3;
-                context->state.fnum [4] = (fnum << block) >> 1;
-                break;
-            case 0xa2:
-                fnum = ((context->state.fnum_high_latch [5] & 0x07) << 8) | data;
-                block = (context->state.fnum_high_latch [5] & 0x38) >> 3;
-                context->state.fnum [5] = (fnum << block) >> 1;
-                break;
+                /* AM, Decay Rate */
+                case 0x60:
+                    operator_group [operator].decay_rate = (data & 0x1f) << 1;
+                    break;
 
-            case 0xa4:
-                context->state.fnum_high_latch [3] = data;
-                break;
-            case 0xa5:
-                context->state.fnum_high_latch [4] = data;
-                break;
-            case 0xa6:
-                context->state.fnum_high_latch [5] = data;
-                break;
+                /* Sustain Rate */
+                case 0x70:
+                    operator_group [operator].sustain_rate = (data & 0x1f) << 1;
+                    break;
 
-            default:
-                break;
+                /* Sustain Level, Release Rate */
+                case 0x80:
+                    operator_group [operator].release_rate = ((data & 0x0f) << 2) + 2;
+                    operator_group [operator].sustain_level = ((data & 0xf0) == 0xf0) ? 992 : (data & 0xf0) << 1;
+                    break;
+
+                default:
+                    break;
+            }
+        }
+    }
+
+    /* Channel Registers */
+    else if (addr >= 0xa0 && addr < 0xc0)
+    {
+        YM2612_Channel_State *channel_group = &context->state.channel [(context->state.group_latch == YM2612_GROUP_1) ? 0 : 3];
+        size_t channel = addr & 0x03;
+
+        if (channel < 3)
+        {
+            switch (addr & 0xfc)
+            {
+                /* TODO: For now, doing initial sine output only, the block is used to calculate
+                 *       the effective fnum, but itself is not saved outside of the latch. If it
+                 *       is needed for another feature this may need to be revisited. */
+
+                /* Fnum 7:0 */
+                case 0xa0:
+                    fnum = ((channel_group [channel].fnum_high_latch & 0x07) << 8) | data;
+                    block = (channel_group [channel].fnum_high_latch & 0x38) >> 3;
+                    channel_group [channel].fnum = (fnum << block) >> 1;
+                    break;
+
+                /* Block, Fnum 10:8 */
+                case 0xa4:
+                    channel_group [channel].fnum_high_latch = data;
+                    break;
+
+                default:
+                    break;
+            }
         }
     }
 
@@ -428,8 +430,7 @@ static uint16_t ym2612_decay (YM2612_Context *context, uint16_t rate)
 /*
  * Run the envelope generator for one update cycle of an operator.
  */
-static void ym2612_envelope_cycle (YM2612_Context *context, YM2612_Operator_State *operator,
-                                   YM2612_Envelope_Params *params)
+static void ym2612_envelope_cycle (YM2612_Context *context, YM2612_Operator_State *operator)
 {
     switch (operator->eg_state)
     {
@@ -443,19 +444,19 @@ static void ym2612_envelope_cycle (YM2612_Context *context, YM2612_Operator_Stat
             break;
 
         case YM2612_STATE_DECAY:
-            operator->eg_level += ym2612_decay (context, params->effective_decay);
-            if (operator->eg_level >= params->effective_sustain_level)
+            operator->eg_level += ym2612_decay (context, operator->effective_decay);
+            if (operator->eg_level >= operator->sustain_level)
             {
                 operator->eg_state = YM2612_STATE_SUSTAIN;
             }
             break;
 
         case YM2612_STATE_SUSTAIN:
-            operator->eg_level += ym2612_decay (context, params->effective_sustain);
+            operator->eg_level += ym2612_decay (context, operator->effective_sustain);
             break;
 
         case YM2612_STATE_RELEASE:
-            operator->eg_level += ym2612_decay (context, params->effective_release);
+            operator->eg_level += ym2612_decay (context, operator->effective_release);
             break;
     }
 
@@ -475,25 +476,25 @@ static int16_t ym2413_run_channel_sample (YM2612_Context *context, uint16_t chan
     /* Run envelope generator on every third sample */
     if (context->completed_samples % 3 == 0)
     {
-        for (uint32_t operator = first_operator; operator < first_operator + 4; operator++)
+        for (uint32_t i = first_operator; i < first_operator + 4; i++)
         {
-            /* TODO: Some of these parameters could be calculated once at register-write time */
-            /* TODO: KSL & anything else that effects the effective rate */
-            /* TODO: Use register values. For now a single arbitrary hard-coded configuration. */
-            context->state.envelope_params [operator].effective_attack = 63;
-            context->state.envelope_params [operator].effective_decay = 32;
-            context->state.envelope_params [operator].effective_sustain = 4;
-            context->state.envelope_params [operator].effective_release = 32;
-            context->state.envelope_params [operator].effective_sustain_level = 228;
+            YM2612_Operator_State *operator = &context->state.operator [i];
+            /* TODO: Effective parameters could be calculated once at register-write time */
+            /* TODO: KSL hasn't been implemented yet, so for now the effective rate is just
+             *       a copy of the base rate. */
+            operator->effective_attack = operator->attack_rate;
+            operator->effective_decay = operator->decay_rate;
+            operator->effective_sustain = operator->sustain_rate;
+            operator->effective_release = operator->release_rate;
 
-            ym2612_envelope_cycle (context, &context->state.operator [operator], &context->state.envelope_params [operator]);
+            ym2612_envelope_cycle (context, operator);
         }
     }
 
     /* Update phase */
     for (uint32_t operator = first_operator; operator < first_operator + 4; operator++)
     {
-        context->state.operator [operator].phase += context->state.fnum [channel];
+        context->state.operator [operator].phase += context->state.channel [channel].fnum;
 
         /* TODO: Calculate output level for each operator so that it may modulate
          *       the next in the algorithm chain. */
