@@ -21,7 +21,8 @@ typedef struct YM2612_Operator_State_s {
     bool key_on;
 
     /* Configured values */
-    /* TODO: total level, detune, multiply, AM, rate scale, SSG-EG */
+    /* TODO: detune, multiply, AM, rate scale, SSG-EG */
+    uint32_t total_level;
     uint32_t attack_rate;
     uint32_t decay_rate;
     uint32_t sustain_rate;

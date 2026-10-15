@@ -235,6 +235,11 @@ void ym2612_data_write (YM2612_Context *context, uint8_t data)
         {
             switch (addr & 0xf0)
             {
+                /* Total Level */
+                case 0x40:
+                    operator_group [operator].total_level = (data & 0x7f) << 3;
+                    break;
+
                 /* Rate Scale, Attack Rate */
                 case 0x50:
                     operator_group [operator].attack_rate = (data & 0x1f) << 1;
@@ -503,10 +508,11 @@ static int16_t ym2413_run_channel_sample (YM2612_Context *context, uint16_t chan
     /* TODO: Configurable algorithms. For now, just assume the final operator of each channel is the carrier. */
     YM2612_Operator_State *carrier = &context->state.operator [first_operator + 3];
 
-    signmag16_t log_carrier_value = ym2612_sin (carrier->phase >> 10);
-    /* TODO: Volume, envelope, ksl, etc. */
-    log_carrier_value += 1152; /* TODO: Replace with volume control */
-    log_carrier_value += carrier->eg_level << 2; /* TODO: Arbitrary shift */
+    signmag16_t log_carrier_value = carrier->total_level + carrier->eg_level;
+    ENFORCE_MAXIMUM (log_carrier_value, 1023);
+    log_carrier_value += ym2612_sin (carrier->phase >> 10);
+    log_carrier_value += 1152; /* TODO: Sort out volume level */
+
     signmag16_t carrier_value = ym2612_exp (log_carrier_value);
 
     /* TODO: Shift was from YM2413 - May not be valid for 2612. */
