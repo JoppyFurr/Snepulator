@@ -12,20 +12,16 @@
  *    - Multiply
  *    - Key per-operator
  *    - Ksl
- *  - Algorithms & Modulation
  *  - Modulation
  *    - Total level
  *    - Feedback
  *  - Envelopes
- *    - State machine
  *    - Attack
- *    - Decay
- *    - Sustain level & rate
- *    - Release
  *    - SSG-EG
  *    - CSM
  *  - LFO / AMS / PMS
  *  - Stereo
+ *  - DAC quantization
  */
 
 
@@ -306,8 +302,6 @@ void ym2612_data_write (YM2612_Context *context, uint8_t data)
 /*
  * Populate the exp () table.
  * Note that we keep the always-set bit-10.
- *
- * TODO: This is based on the ym2413 implementation. Double check it's the same.
  */
 static void ym2612_populate_exp_table (void)
 {
@@ -321,9 +315,7 @@ static void ym2612_populate_exp_table (void)
 /*
  * Lookup an entry using the exp table.
  * Input is fixed-point with 8 fractional bits.
- * Output range is ±4084.
- *
- * TODO: This is based on the ym2413 implementation. Double check it's the same.
+ * Output range is ±8168.
  */
 static signmag16_t ym2612_exp (signmag16_t val)
 {
@@ -332,7 +324,7 @@ static signmag16_t ym2612_exp (signmag16_t val)
     uint8_t fractional = ~(val & 0xff);
     uint16_t integral = (val & MAG_BITS) >> 8;
 
-    int16_t result = (exp_table [fractional] << 1) >> integral;
+    int16_t result = (exp_table [fractional] << 2) >> integral;
 
     /* Propagate the sign */
     result |= (val & SIGN_BIT);
@@ -344,8 +336,6 @@ static signmag16_t ym2612_exp (signmag16_t val)
 /*
  * Populate the log (sin ()) table.
  * Fixed-point with 8 fractional bits.
- *
- * TODO: This is based on the ym2413 implementation. Double check it's the same.
  */
 static void ym2612_populate_log_sin_table (void)
 {
@@ -362,8 +352,6 @@ static void ym2612_populate_log_sin_table (void)
  * As the 256-entry table stores only the first quarter
  * of the sine wave, mirroring and flipping is used to
  * give a 1024-entry waveform.
- *
- * TODO: This is based on the ym2413 implementation. Double check it's the same.
  */
 static signmag16_t ym2612_sin (uint16_t phase)
 {
@@ -508,21 +496,20 @@ static int16_t ym2413_run_channel_sample (YM2612_Context *context, uint16_t chan
     /* TODO: Configurable algorithms. For now, just assume the final operator of each channel is the carrier. */
     YM2612_Operator_State *carrier = &context->state.operator [first_operator + 3];
 
-    signmag16_t log_carrier_value = carrier->total_level + carrier->eg_level;
-    ENFORCE_MAXIMUM (log_carrier_value, 1023);
+    /* Fixed-precision attenuation value with 8 fractional bits. */
+    signmag16_t log_carrier_value = (carrier->total_level + carrier->eg_level) << 2;
+    ENFORCE_MAXIMUM (log_carrier_value, 1023 << 2);
     log_carrier_value += ym2612_sin (carrier->phase >> 10);
-    log_carrier_value += 1152; /* TODO: Sort out volume level */
 
     signmag16_t carrier_value = ym2612_exp (log_carrier_value);
 
-    /* TODO: Shift was from YM2413 - May not be valid for 2612. */
     if (carrier_value & SIGN_BIT)
     {
-        return -((carrier_value & MAG_BITS) >> 1);
+        return -(carrier_value & MAG_BITS);
     }
     else
     {
-        return ((carrier_value & MAG_BITS) >> 1);
+        return (carrier_value & MAG_BITS);
     }
 }
 
@@ -604,8 +591,7 @@ void _ym2612_run_cycles (YM2612_Context *context, uint32_t clock_rate, uint32_t 
         {
             if (channel == 5 && context->state.dac_enable_reg & 0x80)
             {
-                /* TODO: DAC amplitude will need to be scaled appropriately. */
-                output_level += (context->state.dac_output_reg - 128);
+                output_level += (context->state.dac_output_reg - 128) << 6;
             }
             else
             {
@@ -621,9 +607,7 @@ void _ym2612_run_cycles (YM2612_Context *context, uint32_t clock_rate, uint32_t 
                             (float) (AUDIO_SAMPLE_RATE * 144);
 
             int16_t sample = roundf (portion * output_level + (1.0 - portion) * context->previous_output_level);
-            /* TODO: 128 constant is just the maximum amplitude of the DAC, once converted to signed,
-             *       this will need sorting out once FM channels are added in. */
-            context->sample_ring [context->write_index % YM2612_RING_SIZE] = BASE_VOLUME * sample / 128;
+            context->sample_ring [context->write_index % YM2612_RING_SIZE] = BASE_VOLUME * sample / 8168;
             context->write_index++;
         }
 
