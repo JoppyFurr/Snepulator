@@ -409,7 +409,7 @@ void snepulator_input_modal_render (void)
 
                 show_remap_button = true;
             }
-#ifdef DEVELOPER_BUILD
+
             if (ImGui::BeginTabItem ("MD Pad"))
             {
                 if (gamepad [0].type != GAMEPAD_TYPE_SMD)
@@ -500,7 +500,7 @@ void snepulator_input_modal_render (void)
 
                 show_remap_button = true;
             }
-#endif
+
             if (ImGui::BeginTabItem ("Sports Pad"))
             {
                 uint32_t available_width = ImGui::GetContentRegionAvail().x;
