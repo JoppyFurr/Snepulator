@@ -289,6 +289,11 @@ void ym2612_data_write (YM2612_Context *context, uint8_t data)
                     channel_group [channel].fnum_high_latch = data;
                     break;
 
+                /* Feedback, Algorithm */
+                case 0xb0:
+                    channel_group [channel].algorithm = data & 0x07;
+                    break;
+
                 default:
                     break;
             }
@@ -377,7 +382,7 @@ static signmag16_t ym2612_sin (uint16_t phase)
 }
 
 
-uint8_t eg_increment_table [64] [8] = {
+static const uint8_t eg_increment_table [64] [8] = {
     { 0, 0, 0, 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0, 0, 0, 0 }, { 0, 1, 0, 1, 0, 1, 0, 1 }, { 0, 1, 0, 1, 0, 1, 0, 1 },
     { 0, 1, 0, 1, 0, 1, 0, 1 }, { 0, 1, 0, 1, 0, 1, 0, 1 }, { 0, 1, 1, 1, 0, 1, 1, 1 }, { 0, 1, 1, 1, 0, 1, 1, 1 },
     { 0, 1, 0, 1, 0, 1, 0, 1 }, { 0, 1, 0, 1, 1, 1, 0, 1 }, { 0, 1, 1, 1, 0, 1, 1, 1 }, { 0, 1, 1, 1, 1, 1, 1, 1 },
@@ -458,9 +463,19 @@ static void ym2612_envelope_cycle (YM2612_Context *context, YM2612_Operator_Stat
 
 
 /*
+ * Indicates which operators within a channel act as a carrier
+ * under the configured algorithm.
+ */
+static const bool algorithm_carriers [8][4] = {
+        { 0, 0, 0, 1 }, { 0, 0, 0, 1 }, { 0, 0, 0, 1 }, { 0, 0, 0, 1 },
+        { 0, 1, 0, 1 }, { 0, 1, 1, 1 }, { 0, 1, 1, 1 }, { 1, 1, 1, 1 }
+};
+
+
+/*
  * Run one sample of a YM2612 channel.
  */
-static int16_t ym2413_run_channel_sample (YM2612_Context *context, uint16_t channel)
+static int32_t ym2413_run_channel_sample (YM2612_Context *context, uint16_t channel)
 {
     uint32_t first_operator = channel * 4;
 
@@ -469,7 +484,7 @@ static int16_t ym2413_run_channel_sample (YM2612_Context *context, uint16_t chan
     /* Run envelope generator on every third sample */
     if (context->completed_samples % 3 == 0)
     {
-        for (uint32_t i = first_operator; i < first_operator + 4; i++)
+        for (size_t i = first_operator; i < first_operator + 4; i++)
         {
             YM2612_Operator_State *operator = &context->state.operator [i];
             /* TODO: Effective parameters could be calculated once at register-write time */
@@ -485,7 +500,7 @@ static int16_t ym2413_run_channel_sample (YM2612_Context *context, uint16_t chan
     }
 
     /* Update phase */
-    for (uint32_t operator = first_operator; operator < first_operator + 4; operator++)
+    for (size_t operator = first_operator; operator < first_operator + 4; operator++)
     {
         context->state.operator [operator].phase += context->state.channel [channel].fnum;
 
@@ -493,24 +508,34 @@ static int16_t ym2413_run_channel_sample (YM2612_Context *context, uint16_t chan
          *       the next in the algorithm chain. */
     }
 
-    /* TODO: Configurable algorithms. For now, just assume the final operator of each channel is the carrier. */
-    YM2612_Operator_State *carrier = &context->state.operator [first_operator + 3];
-
-    /* Fixed-precision attenuation value with 8 fractional bits. */
-    signmag16_t log_carrier_value = (carrier->total_level + carrier->eg_level) << 2;
-    ENFORCE_MAXIMUM (log_carrier_value, 1023 << 2);
-    log_carrier_value += ym2612_sin (carrier->phase >> 10);
-
-    signmag16_t carrier_value = ym2612_exp (log_carrier_value);
-
-    if (carrier_value & SIGN_BIT)
+    /* Sum the output from all carriers in this channel */
+    int32_t channel_output = 0;
+    for (size_t i = 0; i < 4; i++)
     {
-        return -(carrier_value & MAG_BITS);
+        if (!algorithm_carriers [context->state.channel[channel].algorithm] [i])
+        {
+            continue;
+        }
+
+        YM2612_Operator_State *carrier = &context->state.operator [first_operator + i];
+
+        /* Fixed-precision attenuation value with 8 fractional bits. */
+        signmag16_t log_carrier_value = (carrier->total_level + carrier->eg_level) << 2;
+        ENFORCE_MAXIMUM (log_carrier_value, 1023 << 2);
+        log_carrier_value += ym2612_sin (carrier->phase >> 10);
+        signmag16_t carrier_value = ym2612_exp (log_carrier_value);
+
+        if (carrier_value & SIGN_BIT)
+        {
+            channel_output -= (carrier_value & MAG_BITS);
+        }
+        else
+        {
+            channel_output += (carrier_value & MAG_BITS);
+        }
     }
-    else
-    {
-        return (carrier_value & MAG_BITS);
-    }
+
+    return channel_output;
 }
 
 

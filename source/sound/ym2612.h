@@ -44,6 +44,7 @@ typedef struct YM2612_Operator_State_s {
 
 typedef struct YM2612_Channel_State_s {
 
+    uint32_t algorithm;
     uint32_t fnum_high_latch;
     uint32_t fnum;
 
