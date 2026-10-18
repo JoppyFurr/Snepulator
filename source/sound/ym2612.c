@@ -6,15 +6,14 @@
  *
  * TODO:
  *  - Operators
- *    - Algorithms
  *    - Detune
  *    - Special mode for channel 3
  *    - Multiply
- *    - Key per-operator
  *    - Ksl
  *  - Modulation
- *    - Total level
  *    - Feedback
+ *    - Modulation sample delay pipeline delay (1-3-2-4)
+ *    - Modulation delay for consecutive channels
  *  - Envelopes
  *    - Attack
  *    - SSG-EG
@@ -466,18 +465,36 @@ static void ym2612_envelope_cycle (YM2612_Context *context, YM2612_Operator_Stat
  * Indicates which operators within a channel act as a carrier
  * under the configured algorithm.
  */
-static const bool algorithm_carriers [8][4] = {
-        { 0, 0, 0, 1 }, { 0, 0, 0, 1 }, { 0, 0, 0, 1 }, { 0, 0, 0, 1 },
-        { 0, 1, 0, 1 }, { 0, 1, 1, 1 }, { 0, 1, 1, 1 }, { 1, 1, 1, 1 }
+static const bool algorithm_carriers [8] [4] = {
+    { 0, 0, 0, 1 }, { 0, 0, 0, 1 }, { 0, 0, 0, 1 }, { 0, 0, 0, 1 },
+    { 0, 1, 0, 1 }, { 0, 1, 1, 1 }, { 0, 1, 1, 1 }, { 1, 1, 1, 1 }
+};
+
+
+/*
+ * Indicates which operators modulate a channel under the
+ * configured algorithm. The three values per entry represent
+ * operators 1, 2, and 3 as modulators.
+ */
+static const bool algorithm_modulators [8] [4] [3] = {
+    { { 0, 0, 0 }, { 1, 0, 0 }, { 0, 1, 0 }, { 0, 0, 1 } },
+    { { 0, 0, 0 }, { 0, 0, 0 }, { 1, 1, 0 }, { 0, 0, 1 } },
+    { { 0, 0, 0 }, { 0, 0, 0 }, { 0, 1, 0 }, { 1, 0, 1 } },
+    { { 0, 0, 0 }, { 1, 0, 0 }, { 0, 0, 0 }, { 0, 1, 1 } },
+    { { 0, 0, 0 }, { 1, 0, 0 }, { 0, 0, 0 }, { 0, 0, 1 } },
+    { { 0, 0, 0 }, { 1, 0, 0 }, { 1, 0, 0 }, { 1, 0, 0 } },
+    { { 0, 0, 0 }, { 1, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 } },
+    { { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 } }
 };
 
 
 /*
  * Run one sample of a YM2612 channel.
  */
-static int32_t ym2413_run_channel_sample (YM2612_Context *context, uint16_t channel)
+static int32_t ym2413_run_channel_sample (YM2612_Context *context, uint16_t channel_index)
 {
-    uint32_t first_operator = channel * 4;
+    YM2612_Channel_State *channel = &context->state.channel [channel_index];
+    uint32_t first_operator = channel_index * 4;
 
     /* TODO: Calculate effective parameters (fnum, block, etc) */
 
@@ -499,39 +516,31 @@ static int32_t ym2413_run_channel_sample (YM2612_Context *context, uint16_t chan
         }
     }
 
-    /* Update phase */
-    for (size_t operator = first_operator; operator < first_operator + 4; operator++)
-    {
-        context->state.operator [operator].phase += context->state.channel [channel].fnum;
-
-        /* TODO: Calculate output level for each operator so that it may modulate
-         *       the next in the algorithm chain. */
-    }
-
-    /* Sum the output from all carriers in this channel */
+    /* Run phase accumulation and output for each operator in the channel */
     int32_t channel_output = 0;
     for (size_t i = 0; i < 4; i++)
     {
-        if (!algorithm_carriers [context->state.channel[channel].algorithm] [i])
-        {
-            continue;
-        }
+        YM2612_Operator_State *operator = &context->state.operator [first_operator + i];
 
-        YM2612_Operator_State *carrier = &context->state.operator [first_operator + i];
+        /* Update phase */
+        operator->phase += channel->fnum;
 
-        /* Fixed-precision attenuation value with 8 fractional bits. */
-        signmag16_t log_carrier_value = (carrier->total_level + carrier->eg_level) << 2;
-        ENFORCE_MAXIMUM (log_carrier_value, 1023 << 2);
-        log_carrier_value += ym2612_sin (carrier->phase >> 10);
-        signmag16_t carrier_value = ym2612_exp (log_carrier_value);
+        int32_t modulation = 0;
+        const bool *modulators = algorithm_modulators [channel->algorithm] [i];
+        modulation += (modulators [0]) ? context->state.operator [first_operator    ].output : 0;
+        modulation += (modulators [1]) ? context->state.operator [first_operator + 1].output : 0;
+        modulation += (modulators [2]) ? context->state.operator [first_operator + 2].output : 0;
 
-        if (carrier_value & SIGN_BIT)
+        /* Calculate operator output, fixed-precision with 8 fractional bits. */
+        signmag16_t operator_log_value = (operator->total_level + operator->eg_level) << 2;
+        ENFORCE_MAXIMUM (operator_log_value, 1023 << 2);
+        operator_log_value += ym2612_sin ((operator->phase >> 10) + (modulation >> 1));
+        signmag16_t operator_value = ym2612_exp (operator_log_value);
+        operator->output = (operator_value & SIGN_BIT) ? -(operator_value & MAG_BITS) : operator_value;
+
+        if (algorithm_carriers [channel->algorithm] [i])
         {
-            channel_output -= (carrier_value & MAG_BITS);
-        }
-        else
-        {
-            channel_output += (carrier_value & MAG_BITS);
+            channel_output += operator->output;
         }
     }
 

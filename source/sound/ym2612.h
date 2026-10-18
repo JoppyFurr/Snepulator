@@ -40,6 +40,9 @@ typedef struct YM2612_Operator_State_s {
     /* Fixed-point phase accumulators - 10.10 bits */
     uint32_t phase;
 
+    /* Most recent output, stored for use with modulation */
+    int32_t output;
+
 } YM2612_Operator_State;
 
 typedef struct YM2612_Channel_State_s {
