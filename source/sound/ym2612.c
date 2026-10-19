@@ -8,7 +8,6 @@
  *  - Operators
  *    - Detune
  *    - Special mode for channel 3
- *    - Multiply
  *    - Ksl
  *  - Modulation
  *    - Feedback
@@ -230,6 +229,12 @@ void ym2612_data_write (YM2612_Context *context, uint8_t data)
         {
             switch (addr & 0xf0)
             {
+                /* Detune, Multiply */
+                case 0x30:
+                    /* Store double the configured multiply value so that ½ can be represented */
+                    operator_group [operator].multiply = (data & 0x0f) ? (data & 0x0f) * 2 : 1;
+                    break;
+
                 /* Total Level */
                 case 0x40:
                     operator_group [operator].total_level = (data & 0x7f) << 3;
@@ -522,8 +527,9 @@ static int32_t ym2413_run_channel_sample (YM2612_Context *context, uint16_t chan
     {
         YM2612_Operator_State *operator = &context->state.operator [first_operator + i];
 
-        /* Update phase */
-        operator->phase += channel->fnum;
+        /* Update phase, right-shift to account for storing double the
+         * multiply value, which is done to allow ½ to be represented. */
+        operator->phase += (channel->fnum * operator->multiply) >> 1;
 
         int32_t modulation = 0;
         const bool *modulators = algorithm_modulators [channel->algorithm] [i];
