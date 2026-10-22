@@ -14,12 +14,14 @@
  *    - Modulation sample delay pipeline delay (1-3-2-4)
  *    - Modulation delay for consecutive channels
  *  - Envelopes
- *    - Attack
  *    - SSG-EG
  *    - CSM
  *  - LFO / AMS / PMS
  *  - Stereo
  *  - DAC quantization
+ *
+ * Quirks not implemented:
+ *  - If attack-rate is changed to >= 62 after key-on, the envelope stalls.
  */
 
 
@@ -192,6 +194,13 @@ void ym2612_data_write (YM2612_Context *context, uint8_t data)
                         operator->phase = 0;
                         operator->eg_state = YM2612_STATE_ATTACK;
                         operator->key_on = true;
+
+                        /* Skip the attack phase if the rate is high enough */
+                        if (operator->attack_rate >= 62)
+                        {
+                            operator->eg_state = YM2612_STATE_DECAY;
+                            operator->eg_level = 0;
+                        }
                     }
 
                     else if (key_on == false && operator->key_on)
@@ -437,8 +446,7 @@ static void ym2612_envelope_cycle (YM2612_Context *context, YM2612_Operator_Stat
     switch (operator->eg_state)
     {
         case YM2612_STATE_ATTACK:
-            /* TODO: Implement the attack curve. For now, just assume it occurs instantly */
-            operator->eg_level = 0;
+            operator->eg_level -= ((ym2612_decay (context, operator->effective_attack) * (operator->eg_level + 1)) >> 4);
             if (operator->eg_level == 0)
             {
                 operator->eg_state = YM2612_STATE_DECAY;
