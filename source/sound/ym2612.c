@@ -8,7 +8,6 @@
  *  - Operators
  *    - Detune
  *    - Special mode for channel 3
- *    - Ksl
  *  - Modulation
  *    - Feedback
  *    - Modulation sample delay pipeline delay (1-3-2-4)
@@ -252,6 +251,7 @@ void ym2612_data_write (YM2612_Context *context, uint8_t data)
                 /* Rate Scale, Attack Rate */
                 case 0x50:
                     operator_group [operator].attack_rate = (data & 0x1f) << 1;
+                    operator_group [operator].rate_scale = data >> 6;
                     break;
 
                 /* AM, Decay Rate */
@@ -295,6 +295,8 @@ void ym2612_data_write (YM2612_Context *context, uint8_t data)
                     fnum = ((channel_group [channel].fnum_high_latch & 0x07) << 8) | data;
                     block = (channel_group [channel].fnum_high_latch & 0x38) >> 3;
                     channel_group [channel].fnum = (fnum << block) >> 1;
+                    channel_group [channel].key_code = (block << 2) | ((fnum & BIT_10) >> 9) |
+                        (fnum >= 0x48) | ((fnum & 0x38) == 0x38);
                     break;
 
                 /* Block, Fnum 10:8 */
@@ -441,12 +443,15 @@ static uint16_t ym2612_decay (YM2612_Context *context, uint16_t rate)
 /*
  * Run the envelope generator for one update cycle of an operator.
  */
-static void ym2612_envelope_cycle (YM2612_Context *context, YM2612_Operator_State *operator)
+static void ym2612_envelope_cycle (YM2612_Context *context, YM2612_Operator_State *operator, uint32_t ksr)
 {
+    uint32_t rate = 0;
+
     switch (operator->eg_state)
     {
         case YM2612_STATE_ATTACK:
-            operator->eg_level -= ((ym2612_decay (context, operator->effective_attack) * (operator->eg_level + 1)) >> 4);
+            rate = operator->attack_rate ? operator->attack_rate + ksr : 0;
+            operator->eg_level -= ((ym2612_decay (context, rate) * (operator->eg_level + 1)) >> 4);
             if (operator->eg_level == 0)
             {
                 operator->eg_state = YM2612_STATE_DECAY;
@@ -454,7 +459,8 @@ static void ym2612_envelope_cycle (YM2612_Context *context, YM2612_Operator_Stat
             break;
 
         case YM2612_STATE_DECAY:
-            operator->eg_level += ym2612_decay (context, operator->effective_decay);
+            rate = operator->decay_rate ? operator->decay_rate + ksr : 0;
+            operator->eg_level += ym2612_decay (context, rate);
             if (operator->eg_level >= operator->sustain_level)
             {
                 operator->eg_state = YM2612_STATE_SUSTAIN;
@@ -462,11 +468,13 @@ static void ym2612_envelope_cycle (YM2612_Context *context, YM2612_Operator_Stat
             break;
 
         case YM2612_STATE_SUSTAIN:
-            operator->eg_level += ym2612_decay (context, operator->effective_sustain);
+            rate = operator->sustain_rate ? operator->sustain_rate + ksr : 0;
+            operator->eg_level += ym2612_decay (context, rate);
             break;
 
         case YM2612_STATE_RELEASE:
-            operator->eg_level += ym2612_decay (context, operator->effective_release);
+            rate = operator->release_rate ? operator->release_rate + ksr : 0;
+            operator->eg_level += ym2612_decay (context, rate);
             break;
     }
 
@@ -517,15 +525,9 @@ static int32_t ym2413_run_channel_sample (YM2612_Context *context, uint16_t chan
         for (size_t i = first_operator; i < first_operator + 4; i++)
         {
             YM2612_Operator_State *operator = &context->state.operator [i];
-            /* TODO: Effective parameters could be calculated once at register-write time */
-            /* TODO: KSL hasn't been implemented yet, so for now the effective rate is just
-             *       a copy of the base rate. */
-            operator->effective_attack = operator->attack_rate;
-            operator->effective_decay = operator->decay_rate;
-            operator->effective_sustain = operator->sustain_rate;
-            operator->effective_release = operator->release_rate;
+            uint32_t ksr = channel->key_code >> (3 - operator->rate_scale);
 
-            ym2612_envelope_cycle (context, operator);
+            ym2612_envelope_cycle (context, operator, ksr);
         }
     }
 

@@ -21,7 +21,7 @@ typedef struct YM2612_Operator_State_s {
     bool key_on;
 
     /* Configured values */
-    /* TODO: detune, multiply, AM, rate scale, SSG-EG */
+    /* TODO: detune, multiply, AM, SSG-EG */
     uint32_t multiply;
     uint32_t total_level;
     uint32_t attack_rate;
@@ -29,12 +29,9 @@ typedef struct YM2612_Operator_State_s {
     uint32_t sustain_rate;
     uint32_t release_rate;
     uint32_t sustain_level;
+    uint32_t rate_scale;
 
     /* Envelope Generators */
-    uint32_t effective_attack;
-    uint32_t effective_decay;
-    uint32_t effective_sustain;
-    uint32_t effective_release;
     YM2612_Envelope_State eg_state;
     uint32_t eg_level;
 
@@ -51,6 +48,7 @@ typedef struct YM2612_Channel_State_s {
     uint32_t algorithm;
     uint32_t fnum_high_latch;
     uint32_t fnum;
+    uint32_t key_code;
 
 } YM2612_Channel_State;
 
