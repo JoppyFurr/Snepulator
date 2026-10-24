@@ -6,7 +6,6 @@
  *
  * TODO:
  *  - Operators
- *    - Detune
  *    - Special mode for channel 3
  *  - Modulation
  *    - Modulation sample delay pipeline delay (1-3-2-4)
@@ -240,6 +239,7 @@ void ym2612_data_write (YM2612_Context *context, uint8_t data)
                 case 0x30:
                     /* Store double the configured multiply value so that ½ can be represented */
                     operator_group [operator].multiply = (data & 0x0f) ? (data & 0x0f) * 2 : 1;
+                    operator_group [operator].detune = (data & 0x70) >> 4;
                     break;
 
                 /* Total Level */
@@ -483,6 +483,22 @@ static void ym2612_envelope_cycle (YM2612_Context *context, YM2612_Operator_Stat
 
 
 /*
+ * Detune table, used to give the operator frequency a small
+ * nudge away from the channel frequency.
+ */
+static const uint32_t detune_table [32] [4] = {
+    { 0,  0,  1,  2 }, { 0,  0,  1,  2 }, { 0,  0,  1,  2 }, { 0,  0,  1,  2 },
+    { 0,  1,  2,  2 }, { 0,  1,  2,  3 }, { 0,  1,  2,  3 }, { 0,  1,  2,  3 },
+    { 0,  1,  2,  4 }, { 0,  1,  3,  4 }, { 0,  1,  3,  4 }, { 0,  1,  3,  5 },
+    { 0,  2,  4,  5 }, { 0,  2,  4,  6 }, { 0,  2,  4,  6 }, { 0,  2,  5,  7 },
+    { 0,  2,  5,  8 }, { 0,  3,  6,  8 }, { 0,  3,  6,  9 }, { 0,  3,  7, 10 },
+    { 0,  4,  8, 11 }, { 0,  4,  8, 12 }, { 0,  4,  9, 13 }, { 0,  5, 10, 14 },
+    { 0,  5, 11, 16 }, { 0,  6, 12, 17 }, { 0,  6, 13, 19 }, { 0,  7, 14, 20 },
+    { 0,  8, 16, 22 }, { 0,  8, 16, 22 }, { 0,  8, 16, 22 }, { 0,  8, 16, 22 }
+};
+
+
+/*
  * Indicates which operators within a channel act as a carrier
  * under the configured algorithm.
  */
@@ -537,9 +553,23 @@ static int32_t ym2413_run_channel_sample (YM2612_Context *context, uint16_t chan
     {
         YM2612_Operator_State *operator = &context->state.operator [first_operator + i];
 
-        /* Update phase, right-shift to account for storing double the
-         * multiply value, which is done to allow ½ to be represented. */
-        operator->phase += (channel->fnum * operator->multiply) >> 1;
+        /* Update phase */
+        uint32_t phase_increment = channel->fnum;
+        if (operator->detune & BIT_3)
+        {
+            phase_increment -= detune_table [channel->key_code] [operator->detune & 0x03];
+        }
+        else
+        {
+            phase_increment += detune_table [channel->key_code] [operator->detune & 0x03];
+        }
+        phase_increment &= 0x1ffff; /* fnum + detune gives a 17-bit number */
+
+        /* Multiply, right-shift to account for storing double the multiply
+         * value, which is done to allow ½ to be represented. */
+        phase_increment = (phase_increment * operator->multiply) >> 1;
+
+        operator->phase += phase_increment;
 
         int32_t modulation = 0;
         const bool *modulators = algorithm_modulators [channel->algorithm] [i];
