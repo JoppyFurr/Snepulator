@@ -9,7 +9,6 @@
  *    - Detune
  *    - Special mode for channel 3
  *  - Modulation
- *    - Feedback
  *    - Modulation sample delay pipeline delay (1-3-2-4)
  *    - Modulation delay for consecutive channels
  *  - Envelopes
@@ -307,6 +306,7 @@ void ym2612_data_write (YM2612_Context *context, uint8_t data)
                 /* Feedback, Algorithm */
                 case 0xb0:
                     channel_group [channel].algorithm = data & 0x07;
+                    channel_group [channel].feedback = (data & 0x38) >> 3;
                     break;
 
                 default:
@@ -543,21 +543,30 @@ static int32_t ym2413_run_channel_sample (YM2612_Context *context, uint16_t chan
 
         int32_t modulation = 0;
         const bool *modulators = algorithm_modulators [channel->algorithm] [i];
-        modulation += (modulators [0]) ? context->state.operator [first_operator    ].output : 0;
-        modulation += (modulators [1]) ? context->state.operator [first_operator + 1].output : 0;
-        modulation += (modulators [2]) ? context->state.operator [first_operator + 2].output : 0;
+        modulation += (modulators [0]) ? context->state.operator [first_operator    ].output [0] : 0;
+        modulation += (modulators [1]) ? context->state.operator [first_operator + 1].output [0] : 0;
+        modulation += (modulators [2]) ? context->state.operator [first_operator + 2].output [0] : 0;
+
+        /* Feedback */
+        if (i == 0 && channel->feedback)
+        {
+            modulation += (operator->output [0] + operator->output [1]) >> (9 - channel->feedback);
+        }
 
         /* Calculate operator output, fixed-precision with 8 fractional bits. */
         signmag16_t operator_log_value = (operator->total_level + operator->eg_level) << 2;
         ENFORCE_MAXIMUM (operator_log_value, 1023 << 2);
         operator_log_value += ym2612_sin ((operator->phase >> 10) + (modulation >> 1));
         signmag16_t operator_value = ym2612_exp (operator_log_value);
-        operator->output = (operator_value & SIGN_BIT) ? -(operator_value & MAG_BITS) : operator_value;
+        int32_t operator_output = (operator_value & SIGN_BIT) ? -(operator_value & MAG_BITS) : operator_value;
 
         if (algorithm_carriers [channel->algorithm] [i])
         {
-            channel_output += operator->output;
+            channel_output += operator_output;
         }
+
+        operator->output [1] = operator->output [0];
+        operator->output [0] = operator_output;
     }
 
     return channel_output;
