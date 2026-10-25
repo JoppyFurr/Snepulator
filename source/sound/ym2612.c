@@ -14,7 +14,6 @@
  *    - SSG-EG
  *    - CSM
  *  - LFO / AMS / PMS
- *  - Stereo
  *  - DAC quantization
  *
  * Quirks not implemented:
@@ -64,8 +63,8 @@ void ym2612_get_samples (YM2612_Context *context, int32_t *stream, uint32_t coun
         size_t sample_index = (context->read_index + i) & (YM2612_RING_SIZE - 1);
 
         /* Left, Right */
-        stream [2 * i    ] += context->sample_ring [sample_index];
-        stream [2 * i + 1] += context->sample_ring [sample_index];
+        stream [2 * i    ] += context->sample_ring_left [sample_index];
+        stream [2 * i + 1] += context->sample_ring_right [sample_index];
     }
 
     context->read_index += count;
@@ -307,6 +306,12 @@ void ym2612_data_write (YM2612_Context *context, uint8_t data)
                 case 0xb0:
                     channel_group [channel].algorithm = data & 0x07;
                     channel_group [channel].feedback = (data & 0x38) >> 3;
+                    break;
+
+                /* Panning, PMS, AMS */
+                case 0xb4:
+                    channel_group [channel].pan_right = (data >> 6) & 1;
+                    channel_group [channel].pan_left = data >> 7;
                     break;
 
                 default:
@@ -672,19 +677,32 @@ void _ym2612_run_cycles (YM2612_Context *context, uint32_t clock_rate, uint32_t 
         }
 
         /* Synthesis */
-        int16_t output_level = 0;
+        int32_t output_level_left = 0;
+        int32_t output_level_right = 0;
 
         /* TODO: Consider breaking this out into a function ym2612_run_channel_sample */
 
-        for (uint32_t channel = 0; channel < 6; channel++)
+        for (size_t channel_index = 0; channel_index < 6; channel_index++)
         {
-            if (channel == 5 && context->state.dac_enable_reg & 0x80)
+            YM2612_Channel_State *channel = &context->state.channel [channel_index];
+            int32_t channel_output = 0;
+
+            if (channel_index == 5 && context->state.dac_enable_reg & 0x80)
             {
-                output_level += (context->state.dac_output_reg - 128) << 6;
+                channel_output = (context->state.dac_output_reg - 128) << 6;
             }
             else
             {
-                output_level += ym2413_run_channel_sample (context, channel);
+                channel_output = ym2413_run_channel_sample (context, channel_index);
+            }
+
+            if (channel->pan_left)
+            {
+                output_level_left += channel_output;
+            }
+            if (channel->pan_right)
+            {
+                output_level_right += channel_output;
             }
         }
 
@@ -695,12 +713,15 @@ void _ym2612_run_cycles (YM2612_Context *context, uint32_t clock_rate, uint32_t 
             float portion = (float) ((context->write_index * context->clock_rate) % (AUDIO_SAMPLE_RATE * 144)) /
                             (float) (AUDIO_SAMPLE_RATE * 144);
 
-            int16_t sample = roundf (portion * output_level + (1.0 - portion) * context->previous_output_level);
-            context->sample_ring [context->write_index % YM2612_RING_SIZE] = BASE_VOLUME * sample / 8168;
+            int32_t sample_left = roundf (portion * output_level_left + (1.0 - portion) * context->previous_output_level_left);
+            int32_t sample_right = roundf (portion * output_level_right + (1.0 - portion) * context->previous_output_level_right);
+            context->sample_ring_left [context->write_index % YM2612_RING_SIZE] = BASE_VOLUME * sample_left / 8168;
+            context->sample_ring_right [context->write_index % YM2612_RING_SIZE] = BASE_VOLUME * sample_right / 8168;
             context->write_index++;
         }
 
-        context->previous_output_level = output_level;
+        context->previous_output_level_left = output_level_left;
+        context->previous_output_level_right = output_level_right;
         context->completed_samples++;
     }
 }
@@ -742,6 +763,22 @@ YM2612_Context *ym2612_init (void)
     /* Initialize assuming NTSC Mega Drive - Will be updated when the run callback is made. */
     context->clock_rate = 7670453;
 
+    /* Default Values */
+    context->state.dac_output_reg = 0x80;
+    for (int channel_index = 0; channel_index < 6; channel_index++)
+    {
+        YM2612_Channel_State *channel = &context->state.channel [channel_index];
+
+        channel->pan_left = true;
+        channel->pan_right = true;
+    }
+    for (int operator_index = 0; operator_index < 24; operator_index++)
+    {
+        YM2612_Operator_State *operator = &context->state.operator [operator_index];
+
+        operator->total_level = 127;
+        operator->eg_level = 1023;
+    }
 
     return context;
 }

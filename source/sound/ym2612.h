@@ -51,6 +51,8 @@ typedef struct YM2612_Channel_State_s {
     uint32_t fnum_high_latch;
     uint32_t fnum;
     uint32_t key_code;
+    bool pan_left;
+    bool pan_right;
 
 } YM2612_Channel_State;
 
@@ -98,8 +100,10 @@ typedef struct YM2612_Context_s {
     YM2612_State state;
 
     /* Ring buffer */
-    int16_t sample_ring [YM2612_RING_SIZE];
-    int16_t previous_output_level; /* For linear interpolation */
+    int16_t sample_ring_left [YM2612_RING_SIZE];
+    int16_t sample_ring_right [YM2612_RING_SIZE];
+    int16_t previous_output_level_left; /* For linear interpolation */
+    int16_t previous_output_level_right;
     uint64_t write_index;
     uint64_t read_index;
     uint64_t completed_samples; /* YM2612 samples, not sound card samples */
