@@ -3,12 +3,13 @@
  * Sega Mega Drive implementation.
  */
 
-#include <errno.h>
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "snepulator.h"
+#include "path.h"
 #include "util.h"
 
 #include "gamepad.h"
@@ -66,6 +67,18 @@ static uint8_t smd_memory_read_8 (void *context_ptr, uint32_t addr)
     /* Cartridge ROM: 0x000000 -- 0x3fffff */
     if (addr <= 0x3fffff)
     {
+        /* If SRAM is present, check for access */
+        if (context->sram_size && addr >= context->sram_start && addr < context->sram_start + context->sram_size * 2)
+        {
+            /* SRAM is always enabled if it is placed above the ROM, or
+             * gated by the sram control register if it overlaps the ROM. */
+            if (context->sram_start >= context->rom_size || context->state.sram_control & 0x01)
+            {
+                /* Read from SRAM */
+                return context->sram [((addr - context->sram_start) / 2) & (context->sram_size - 1)];
+            }
+        }
+
         if (context->rom != NULL)
         {
             return context->rom [addr & context->rom_mask];
@@ -315,8 +328,22 @@ static void smd_memory_write_8 (void *context_ptr, uint32_t addr, uint8_t data)
     /* Cartridge ROM: 0x000000 -- 0x3fffff */
     if (addr <= 0x3fffff)
     {
-        printf ("[%s]: Attempt to write value %02x to cartridge address %06x.\n", __func__, data, addr);
-        printf ("[%s]:   -> PC=%06x.\n", __func__, context->m68k_context->state.pc);
+        /* If SRAM is present, check for access */
+        if (context->sram_size && addr >= context->sram_start && addr < context->sram_start + context->sram_size * 2)
+        {
+            /* SRAM is always enabled if it is placed above the ROM, or
+             * gated by the sram control register if it overlaps the ROM. */
+            if (context->sram_start >= context->rom_size || context->state.sram_control & 0x01)
+            {
+                /* Read from SRAM */
+                context->sram [((addr - context->sram_start) / 2) & (context->sram_size - 1)] = data;
+            }
+        }
+        else
+        {
+            printf ("[%s]: Attempt to write value %02x to cartridge address %06x.\n", __func__, data, addr);
+            printf ("[%s]:   -> PC=%06x.\n", __func__, context->m68k_context->state.pc);
+        }
     }
 
     /* Z80 Address Space access */
@@ -412,7 +439,7 @@ static void smd_memory_write_8 (void *context_ptr, uint32_t addr, uint8_t data)
 
         else if (addr == 0xa130f1)
         {
-            printf ("[%s] Write to SRAM control register value=0x%02x. (Not implemented)\n", __func__, data);
+            context->state.sram_control = data;
         }
 
         else
@@ -683,6 +710,43 @@ static bool smd_z80_get_nmi (void *context_ptr)
 
 
 /*
+ * Backup the on-cartridge SRAM.
+ */
+static void smd_sync (void *context_ptr)
+{
+    SMD_Context *context = (SMD_Context *) context_ptr;
+
+    if (context->sram_size)
+    {
+        /* Only write the file if there has been a change */
+        if (memcmp (context->sram, context->sram_last_write, SMD_MAX_SRAM_SIZE) == 0)
+        {
+            return;
+        }
+
+        uint32_t bytes_written = 0;
+        char *path = path_sram (context->rom_hash);
+        FILE *sram_file = fopen (path, "wb");
+
+        if (sram_file != NULL)
+        {
+            while (bytes_written < context->sram_size)
+            {
+                bytes_written += fwrite (context->sram + bytes_written, 1, context->sram_size - bytes_written, sram_file);
+            }
+
+            fclose (sram_file);
+        }
+
+        /* Update sram_last_write */
+        memcpy (context->sram_last_write, context->sram, SMD_MAX_SRAM_SIZE);
+
+        free (path);
+    }
+}
+
+
+/*
  * Emulate the Mega Drive for the specified number of clock cycles.
  * Called with the run_mutex held.
  */
@@ -731,6 +795,14 @@ static void smd_run (void *context_ptr, uint32_t cycles)
         /* TODO: Variable clock rate when able to switch between PAL and NTSC */
         ym2612_run_cycles (context->ym2612_context, SMD_NTSC_MASTER_CLOCK / 7, 489); /* TODO: Same note as m68k */
         sn76489_run_cycles (context->psg_context, SMD_NTSC_MASTER_CLOCK / 15 , 228);
+    }
+
+    /* Periodic sync of cartridge-ram to file every five minutes.
+     * This is in addition to the save that occurs when exiting. */
+    if (util_get_ticks () > state.sync_time + 300000)
+    {
+        smd_sync (context);
+        state.sync_time = util_get_ticks ();
     }
 }
 
@@ -812,6 +884,83 @@ static void smd_cleanup (void *context_ptr)
 
 
 /*
+ * Process the Mega Drive ROM's header.
+ * Note that this is not the Super Magic Drive header.
+ */
+void smd_process_header (SMD_Context *context)
+{
+    /* 0x100: System Type - Sanity-check that a header is present */
+    if (strncmp ((char *) &context->rom [0x100], "SEGA", 4) != 0)
+    {
+        fprintf (stdout, "Invalid ROM header.\n");
+        return;
+    }
+
+    /* 0x150: Print the overseas game title */
+    char title [49] = { '\0' };
+    size_t title_length = 0;
+    for (size_t i = 0; i < 48; i++)
+    {
+        char c = context->rom [0x150 + i];
+
+        /* Skip over back-to-back whitespace */
+        if (title_length && isspace (title [title_length - 1]) && isspace (c))
+        {
+            continue;
+        }
+
+        /* Avoid all-caps titles */
+        if (title_length && isalpha (title [title_length - 1]))
+        {
+            title [title_length++] = tolower (context->rom [0x150 + i]);
+        }
+        else
+        {
+            title [title_length++] = context->rom [0x150 + i];
+        }
+    }
+    fprintf (stdout, "Title: %s\n", title);
+
+    /* 0x1b0: Extra Memory */
+    if (strncmp ((char *) &context->rom [0x1b0], "RA", 2) == 0)
+    {
+        if (context->rom [0x1b3] == 0x20)
+        {
+            uint32_t sram_start = util_ntoh32 (* (uint32_t *) &context->rom [0x1b4]);
+            uint32_t sram_end = util_ntoh32 (* (uint32_t *) &context->rom [0x1b8]);
+            uint32_t sram_range = util_round_up (sram_end - sram_start);
+            switch (context->rom [0x1b2])
+            {
+                case 0xa0:
+                case 0xe0:
+                    fprintf (stdout, "Warning: 16-bit SRAM not implemented.\n");
+                    break;
+
+                case 0xb0: /* Even bytes */
+                case 0xf0:
+                case 0xb8: /* Odd bytes */
+                case 0xf8:
+                    context->sram_start = sram_start;
+                    context->sram_size = sram_range / 2;
+
+                    if (context->sram_size > SMD_MAX_SRAM_SIZE)
+                    {
+                        fprintf (stdout, "Warning: Oversized SRAM not implemented.\n");
+                        context->sram_size = SMD_MAX_SRAM_SIZE;
+                    }
+
+                    break;
+            }
+        }
+        else if (context->rom [0x1b3] == 0x40)
+        {
+            fprintf (stdout, "Warning: EEPROM not implemented.\n");
+        }
+    }
+}
+
+
+/*
  * Reset the Mega Drive and load a new ROM.
  */
 SMD_Context *smd_init (void)
@@ -875,13 +1024,41 @@ SMD_Context *smd_init (void)
         fprintf (stdout, "%d KiB ROM %s loaded.\n", context->rom_size >> 10, state.cart_filename);
         context->rom_mask = util_round_up (context->rom_size) - 1;
         util_hash_rom (context->rom, context->rom_size, context->rom_hash);
+        smd_process_header (context);
     }
+
+    /* Load SRAM if it exists */
+    char *sram_path = path_sram (context->rom_hash);
+    FILE *sram_file = fopen (sram_path, "rb");
+    if (sram_file != NULL)
+    {
+        uint32_t bytes_read = 0;
+
+        while (bytes_read < context->sram_size && !feof(sram_file))
+        {
+            bytes_read += fread (context->sram + bytes_read, 1, context->sram_size - bytes_read, sram_file);
+
+            if (ferror (sram_file))
+            {
+                snepulator_error ("Error", "Error reading SRAM data.");
+                fclose (sram_file);
+                smd_cleanup (context);
+                return NULL;
+            }
+        }
+        fclose (sram_file);
+
+        /* Update sram_last_write */
+        memcpy (context->sram_last_write, context->sram, SMD_MAX_SRAM_SIZE);
+    }
+    free (sram_path);
 
     /* Hook up callbacks */
     state.audio_callback = smd_audio_callback;
     state.cleanup = smd_cleanup;
     state.get_rom_hash = smd_get_rom_hash;
     state.run_callback = smd_run;
+    state.sync = smd_sync;
 #ifdef DEVELOPER_BUILD
     /* state.diagnostics_show = smd_diagnostics_show; */
 #endif

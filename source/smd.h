@@ -8,6 +8,7 @@
 
 #define SMD_RAM_SIZE        SIZE_64K
 #define SMD_Z80_RAM_SIZE    SIZE_8K
+#define SMD_MAX_SRAM_SIZE   SIZE_32K
 
 
 typedef struct SMD_State_s {
@@ -24,6 +25,9 @@ typedef struct SMD_State_s {
     bool z80_reset_n;
     bool z80_busreq;
     uint32_t z80_bank;
+
+    /* Mapper Registers */
+    uint8_t sram_control;
 
 } SMD_State;
 
@@ -43,11 +47,18 @@ typedef struct SMD_Context_s {
 
     uint8_t ram [SMD_RAM_SIZE];
     uint8_t z80_ram [SMD_Z80_RAM_SIZE];
+    uint8_t sram [SMD_MAX_SRAM_SIZE];
+    uint8_t sram_last_write [SMD_MAX_SRAM_SIZE];
 
+    /* ROM Details */
     uint8_t *rom;
     uint32_t rom_size;
     uint32_t rom_mask;
     uint8_t  rom_hash [HASH_LENGTH];
+
+    /* SRAM Details */
+    uint32_t sram_start;
+    uint32_t sram_size;
 
 } SMD_Context;
 
