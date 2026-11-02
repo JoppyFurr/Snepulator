@@ -160,11 +160,27 @@ void smd_vdp_control_write (SMD_VDP_Context *context, uint16_t data)
                             break;
 
                         case 5: /* VSRAM */
-                            printf ("[%s] DMA Operation: M68k Memory -> VSRAM transfer. (Not implemented)\n", __func__);
-                            printf ("[%s] DMA Source: 0x%06x.\n", __func__, context->state.dma_source << 1);
-                            printf ("[%s] DMA Dest:   0x%04x.\n", __func__, context->state.address);
-                            printf ("[%s] DMA Length: %d words.\n", __func__, context->state.dma_length);
-                            printf ("[%s] Increment:  %d.\n", __func__, context->state.auto_increment);
+                            dma_length = context->state.dma_length;
+                            source_address = context->state.dma_source << 1;
+
+                            /* TODO: Does the auto-incremented address used for DMA get written
+                             *       back to the address register? */
+                            do {
+                                uint16_t data = context->memory_read_16 (context->parent, source_address);
+
+                                if ((context->state.address >> 1) < 40)
+                                {
+                                    context->state.vsram [(context->state.address >> 1)] = data;
+                                }
+                                else
+                                {
+                                    break;
+                                }
+
+                                source_address += 2;
+                                context->state.address += context->state.auto_increment;
+                                dma_length--;
+                            } while (dma_length > 0);
                             break;
 
                         default:
