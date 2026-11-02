@@ -284,6 +284,12 @@ static uint16_t smd_memory_read_16 (void *context_ptr, uint32_t addr)
     /* Internal Registers and Expansion */
     else if (addr <= 0xbfffff)
     {
+        /* Z80 Bus Request */
+        if (addr == 0xa11100)
+        {
+            return (!context->state.z80_busreq) << 8;
+        }
+
         snepulator_error (__func__, "Internal registers / expansion address %06x not implemented.", addr);
         return 0xffff;
     }
