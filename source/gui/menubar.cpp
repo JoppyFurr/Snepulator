@@ -172,6 +172,7 @@ static void snepulator_console_menu ()
         {
             snepulator_system_init (state.console);
         }
+        /* TODO: Only show on consoles this is implemented for */
         if (ImGui::MenuItem ("Soft Reset", NULL, false, running_or_paused && state.soft_reset != NULL))
         {
             state.soft_reset ();
@@ -198,6 +199,7 @@ static void snepulator_console_menu ()
         ImGui::Separator ();
 
         /* TODO: Hide or grey this when playing another console? */
+        /* TODO: Only show on consoles this is implemented for */
         if (ImGui::MenuItem ("FM Sound",  NULL, state.fm_sound))  {
             snepulator_fm_sound_set (!state.fm_sound);
         }
@@ -207,10 +209,12 @@ static void snepulator_console_menu ()
         {
             snepulator_overclock_set (!state.overclock);
         }
+        /* TODO: Only show on consoles this is implemented for */
         if (ImGui::MenuItem ("Remove Sprite Limit", NULL, state.remove_sprite_limit))
         {
             snepulator_remove_sprite_limit_set (!state.remove_sprite_limit);
         }
+        /* TODO: Only show on consoles this is implemented for */
         if (ImGui::MenuItem ("Disable Blanking", NULL, state.disable_blanking))
         {
             snepulator_disable_blanking_set (!state.disable_blanking);

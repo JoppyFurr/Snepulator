@@ -181,6 +181,7 @@ static uint8_t smd_memory_read_8 (void *context_ptr, uint32_t addr)
     }
 
     /* Internal Registers and Expansion */
+    /* TODO: Could this be combined with 16-bit access with a helper function? */
     else if (addr <= 0xbfffff)
     {
         /* Z80 Bus Request */
@@ -892,6 +893,9 @@ static void smd_cleanup (void *context_ptr)
 /*
  * Process the Mega Drive ROM's header.
  * Note that this is not the Super Magic Drive header.
+ *
+ * TODO: Handle "II" for 2, currently shows as "Ii"
+ * TODO: Handle Japanese text
  */
 void smd_process_header (SMD_Context *context)
 {
