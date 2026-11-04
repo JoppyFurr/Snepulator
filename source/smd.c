@@ -307,6 +307,8 @@ static uint16_t smd_memory_read_16 (void *context_ptr, uint32_t addr)
             case 0xc00004:
             case 0xc00006:
                 return smd_vdp_status_read (context->vdp_context);
+            case 0xc00008:
+                return smd_vdp_hv_counter_read (context->vdp_context);
 
                 break;
             default:
