@@ -112,8 +112,9 @@ static uint8_t smd_memory_read_8 (void *context_ptr, uint32_t addr)
         {
             case 0xa10000: /* Version Register */
             case 0xa10001:
-                /* TODO: Value is different on PAL */
-                return 0xa1; /* Export NTSC console with no expansion unit. */
+                return 1 | BIT_5 | /* Revision 1, no disk drive */
+                       (context->format == VIDEO_FORMAT_PAL ? BIT_6 : 0) |
+                       (context->region == REGION_WORLD     ? BIT_7 : 0);
 
             case 0xa10002: /* Player 1 - Data Register */
             case 0xa10003:
@@ -798,9 +799,8 @@ static void smd_run (void *context_ptr, uint32_t cycles)
 
         smd_vdp_run_one_scanline (context->vdp_context);
 
-        /* TODO: Variable clock rate when able to switch between PAL and NTSC */
-        ym2612_run_cycles (context->ym2612_context, SMD_NTSC_MASTER_CLOCK / 7, 489); /* TODO: Same note as m68k */
-        sn76489_run_cycles (context->psg_context, SMD_NTSC_MASTER_CLOCK / 15 , 228);
+        ym2612_run_cycles (context->ym2612_context, state.clock_rate / 7, 489); /* TODO: Same note as m68k */
+        sn76489_run_cycles (context->psg_context, state.clock_rate / 15 , 228);
     }
 
     /* Periodic sync of cartridge-ram to file every five minutes.
@@ -967,6 +967,35 @@ void smd_process_header (SMD_Context *context)
 
 
 /*
+ * Propagate user settings into the console context.
+ */
+static void smd_update_settings (void *context_ptr)
+{
+    SMD_Context *context = (SMD_Context *) context_ptr;
+
+    /* Update console */
+    context->region              = state.region;
+
+    /* TODO: Implement auto mode. For now it always selects NTSC. */
+    if (state.format_auto)
+    {
+        state.format = VIDEO_FORMAT_NTSC;
+        context->format = VIDEO_FORMAT_NTSC;
+    }
+    else
+    {
+        context->format = state.format;
+    }
+
+    /* Update clock rate */
+    state.clock_rate = (context->format == VIDEO_FORMAT_PAL) ? SMD_PAL_MASTER_CLOCK : SMD_NTSC_MASTER_CLOCK;
+
+    /* Update VDP */
+    context->vdp_context->format = context->format;
+}
+
+
+/*
  * Reset the Mega Drive and load a new ROM.
  */
 SMD_Context *smd_init (void)
@@ -1033,6 +1062,9 @@ SMD_Context *smd_init (void)
         smd_process_header (context);
     }
 
+    /* Pull in the settings - Done after the ROM is loaded for auto-region. */
+    smd_update_settings (context);
+
     /* Load SRAM if it exists */
     char *sram_path = path_sram (context->rom_hash);
     FILE *sram_file = fopen (sram_path, "rb");
@@ -1065,6 +1097,7 @@ SMD_Context *smd_init (void)
     state.get_rom_hash = smd_get_rom_hash;
     state.run_callback = smd_run;
     state.sync = smd_sync;
+    state.update_settings = smd_update_settings;
 #ifdef DEVELOPER_BUILD
     /* state.diagnostics_show = smd_diagnostics_show; */
 #endif

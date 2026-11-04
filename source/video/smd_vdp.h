@@ -133,6 +133,7 @@ typedef struct SMD_VDP_Context_s {
     uint16_t (* memory_read_16) (void *, uint32_t);
 
     SMD_VDP_State state;
+    Video_Format format;
 
     /* Mode data */
     uint32_t screen_width;
@@ -140,6 +141,7 @@ typedef struct SMD_VDP_Context_s {
     uint32_t sprites_per_line;
     uint32_t sprites_max;
     uint32_t lines_active;
+    uint32_t lines_total;
 
     /* Video output */
     Video_Frame frame_buffer;

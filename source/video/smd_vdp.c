@@ -11,7 +11,6 @@
  *  - Hacks (eg, removing sprite limit, disable blanking)
  *  - Hilight & Shadow
  *  - H32 mode, consider adjustment of aspect ratio to keep the image size the same?
- *  - PAL mode
  *  - Interlace mode
  *  - Sprite masking (X=0, X=1)
  *  - Sprite collisions
@@ -24,7 +23,9 @@
 #include "../util.h"
 #include "smd_vdp.h"
 
-static uint8_t v_counter_table [313] = { };
+static uint8_t v_counter_ntsc_224 [313] = { };
+static uint8_t v_counter_pal_224 [313] = { };
+static uint8_t v_counter_pal_240 [313] = { };
 
 typedef enum pixel_status_e {
     PIXEL_NONE = 0,
@@ -36,22 +37,24 @@ typedef enum pixel_status_e {
 /*
  * Initialise the v_counter table.
  *
- * TODO: May only be valid for NTSC.
  * TODO: Consider a pre-calculated table like this for SMS.
  */
 static void smd_vdp_init_v_counter (void)
 {
+    /* NTSC - 224 lines */
     uint32_t table_index = 0;
+    for (uint32_t value = 0x000; value <= 0x0ea; value++) v_counter_ntsc_224 [table_index++] = value;
+    for (uint32_t value = 0x1e5; value <= 0x1ff; value++) v_counter_ntsc_224 [table_index++] = value;
 
-    for (uint32_t value = 0x00; value <= 0xea; value++)
-    {
-        v_counter_table [table_index++] = value;
-    }
+    /* PAL - 224 lines */
+    table_index = 0;
+    for (uint32_t value = 0x000; value <= 0x102; value++) v_counter_pal_224 [table_index++] = value;
+    for (uint32_t value = 0x1ca; value <= 0x1ff; value++) v_counter_pal_224 [table_index++] = value;
 
-    for (uint32_t value = 0xe5; value <= 0xff; value++)
-    {
-        v_counter_table [table_index++] = value;
-    }
+    /* PAL - 240 lines */
+    table_index = 0;
+    for (uint32_t value = 0x000; value <= 0x10a; value++) v_counter_pal_240 [table_index++] = value;
+    for (uint32_t value = 0x1d2; value <= 0x1ff; value++) v_counter_pal_240 [table_index++] = value;
 }
 
 
@@ -64,16 +67,15 @@ uint16_t smd_vdp_status_read (SMD_VDP_Context *context)
     context->state.second_half_pending = false;
 
     /* TODO: VBlank / HBlank bits */
-    /* TODO: Bit  [8:9] - FIFO status (full / empty) */
+    /* TODO: Bits [8:9] - FIFO status (full / empty) */
     /* TODO: Bit  [ 7 ] - Vertical Interrupt Occurred */
     /* TODO: Bit  [ 6 ] - Sprite Overflow */
     /* TODO: Bit  [ 5 ] - Sprite Collision */
     /* TODO: Bit  [ 4 ] - Odd vs Even frame (interlace mode) */
-    /* TODO: Bits [ 2 ] - Horizontal Blanking */
-    /* TODO: Bit  [ 1 ] - DMA in progress */
-    /* TODO: Bit  [ 0 ] - PAL */
-
     status_register |= (context->state.line >= context->lines_active) ? BIT_3 : 0;
+    /* TODO: Bit  [ 2 ] - Horizontal Blanking */
+    /* TODO: Bit  [ 1 ] - DMA in progress */
+    status_register |= (context->format == VIDEO_FORMAT_PAL) ? BIT_0 : 0;
 
     return status_register;
 }
@@ -87,7 +89,24 @@ uint16_t smd_vdp_hv_counter_read (SMD_VDP_Context *context)
     /* TODO: Different behaviour is needed for interlaced mode. */
     /* TODO: Horizontal counter always returns zero for now. */
 
-    uint8_t v_counter = v_counter_table [context->state.line];;
+    uint8_t v_counter = 0;
+
+    if (context->format == VIDEO_FORMAT_NTSC)
+    {
+        /* Assume 224 active lines, NTSC doesn't do V30 lines properly. */
+        v_counter = v_counter_ntsc_224 [context->state.line];;
+    }
+    else /* PAL */
+    {
+        if (context->lines_active == 224)
+        {
+            v_counter = v_counter_pal_224 [context->state.line];;
+        }
+        else
+        {
+            v_counter = v_counter_pal_240 [context->state.line];;
+        }
+    }
 
     return v_counter << 8;
 }
@@ -777,6 +796,8 @@ void smd_vdp_render_line (SMD_VDP_Context *context, uint16_t line)
  */
 void smd_vdp_update_mode (SMD_VDP_Context *context)
 {
+    context->lines_total = (context->format == VIDEO_FORMAT_PAL) ? 313 : 262;
+
     if ((context->state.mode_4 & 0x81) == 00)
     {
         /* H32 Mode */
@@ -808,8 +829,7 @@ void smd_vdp_update_mode (SMD_VDP_Context *context)
 void smd_vdp_run_one_scanline (SMD_VDP_Context *context)
 {
     /* Update the V-Counter */
-    /* TODO: For now, hard-coded for NTSC mode. PAL is 313 lines. */
-    context->state.line = (context->state.line + 1) % 262;
+    context->state.line = (context->state.line + 1) % context->lines_total;
 
     /* If this is the first line, update the mode */
     if (context->state.line == 0)
