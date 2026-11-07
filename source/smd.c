@@ -896,8 +896,19 @@ static void smd_cleanup (void *context_ptr)
  * Process the Mega Drive ROM's header.
  * Note that this is not the Super Magic Drive header.
  *
- * TODO: Handle "II" for 2, currently shows as "Ii"
- * TODO: Handle Japanese text
+ * TODO: Some titles expect to be seen with only 16 characters per line,
+ *       possibly due to being written in a hex editor. If the word break
+ *       happens to line up with the line break, some games don't include
+ *       any space between the pair of words that are already broken by
+ *       the line boundary. This results in them becoming joined-up when
+ *       treating the 48 byte buffer as a single line of text:
+ *
+ *       THIS TITLE COULD
+ *       SHOW THE PROBLEM
+ *
+ *       becomes
+ *
+ *       This Title Couldshow The Problem
  */
 void smd_process_header (SMD_Context *context)
 {
@@ -908,12 +919,24 @@ void smd_process_header (SMD_Context *context)
         return;
     }
 
-    /* 0x150: Print the overseas game title */
+    /* 0x120: Game Title (Japan) - Print only if it is different */
+    if (memcmp (&context->rom [0x120], &context->rom [0x150], 48) != 0)
+    {
+        char *title = util_shift_jis_to_utf_8 (&context->rom [0x120], 48);
+        if (title != NULL)
+        {
+            util_text_to_title_case (title);
+            fprintf (stdout, "Title (Japan): %s\n", title);
+            free (title);
+        }
+    }
+
+    /* 0x150: Game Title (World) */
     char *title = util_shift_jis_to_utf_8 (&context->rom [0x150], 48);
     if (title != NULL)
     {
         util_text_to_title_case (title);
-        fprintf (stdout, "Title: %s\n", title);
+        fprintf (stdout, "Title (World): %s\n", title);
         free (title);
     }
 
