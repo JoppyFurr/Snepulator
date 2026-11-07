@@ -7,9 +7,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../snepulator.h"
-#include "../util.h"
-#include "../save_state.h"
+#include "snepulator.h"
+#include "util/util.h"
+#include "save_state.h"
 #include "z80.h"
 #include "z80_names.h"
 

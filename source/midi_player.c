@@ -22,7 +22,7 @@
 #include <math.h>
 
 #include "snepulator.h"
-#include "util.h"
+#include "util/util.h"
 
 #include "sound/band_limit.h"
 #include "sound/sn76489.h"

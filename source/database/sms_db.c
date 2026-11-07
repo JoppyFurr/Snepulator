@@ -7,7 +7,7 @@
 
 #include <string.h>
 
-#include "../snepulator.h"
+#include "snepulator.h"
 #include "sms_db.h"
 
 SMS_DB_Entry sms_db [] = {

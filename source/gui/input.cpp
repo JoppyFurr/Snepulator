@@ -36,8 +36,8 @@ static const ImU32 colour_button_waiting = ImColor (colour_waiting_v);
 static const ImU32 colour_button_pressed = ImColor (colour_pressed_v);
 
 extern "C" {
-#include "../snepulator.h"
-#include "../gamepad.h"
+#include "snepulator.h"
+#include "gamepad.h"
 
 extern bool config_capture_events;
 extern Snepulator_State state;

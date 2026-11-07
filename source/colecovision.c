@@ -10,7 +10,7 @@
 #include <SDL2/SDL.h>
 
 #include "snepulator.h"
-#include "util.h"
+#include "util/util.h"
 #include "save_state.h"
 
 #include "gamepad.h"

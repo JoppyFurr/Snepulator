@@ -10,8 +10,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "../snepulator.h"
-#include "../util.h"
+#include "snepulator.h"
+#include "util/util.h"
 #include "m68k.h"
 
 #define SR_MASK 0xa71f

@@ -5,7 +5,7 @@
 
 #include <string.h>
 
-#include "../snepulator.h"
+#include "snepulator.h"
 #include "sg_db.h"
 
 SG_DB_Entry sg_db [] = {

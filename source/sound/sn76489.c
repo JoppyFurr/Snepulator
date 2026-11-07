@@ -8,9 +8,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../snepulator.h"
-#include "../util.h"
-#include "../save_state.h"
+#include "snepulator.h"
+#include "util/util.h"
+#include "save_state.h"
 #include "band_limit.h"
 #include "sn76489.h"
 extern Snepulator_State state;

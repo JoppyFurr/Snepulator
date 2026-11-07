@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../snepulator_types.h"
+#include "snepulator_types.h"
 #include "band_limit.h"
 
 #define PHASE_COUNT 32

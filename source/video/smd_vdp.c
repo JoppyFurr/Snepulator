@@ -19,8 +19,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "../snepulator.h"
-#include "../util.h"
+#include "snepulator.h"
+#include "util/util.h"
 #include "smd_vdp.h"
 
 static uint8_t v_counter_ntsc_224 [313] = { };

@@ -16,7 +16,7 @@
 
 extern "C" {
 #include "snepulator.h"
-#include "util.h"
+#include "util/util.h"
 #include "config.h"
 #include "gamepad.h"
 #include "gamepad_sdl.h"

@@ -8,10 +8,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../snepulator.h"
-#include "../util.h"
-#include "../gamepad.h"
-#include "../database/sms_db.h"
+#include "snepulator.h"
+#include "util/util.h"
+#include "gamepad.h"
+#include "database/sms_db.h"
 
 extern Snepulator_State state;
 extern Snepulator_Gamepad gamepad [3];

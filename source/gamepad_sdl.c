@@ -9,7 +9,7 @@
 
 #include "snepulator.h"
 #include "gamepad.h"
-#include "util.h"
+#include "util/util.h"
 
 extern Snepulator_State state;
 extern Snepulator_Gamepad gamepad [3];

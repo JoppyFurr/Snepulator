@@ -1,3 +1,5 @@
  -std=c23
  -include pthread.h
  -include stdint.h
+ -I
+ .

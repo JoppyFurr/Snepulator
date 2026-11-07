@@ -10,7 +10,7 @@
 
 #include "snepulator.h"
 #include "path.h"
-#include "util.h"
+#include "util/util.h"
 
 #include "gamepad.h"
 #include "cpu/m68k.h"
@@ -911,7 +911,9 @@ void smd_process_header (SMD_Context *context)
     /* TODO: Consider a new util/text.c file for string handling.
      *       Consider processing the string as word tokens with special cases for minor
      *       words like 'of', 'and', and  Roman numerals like 'II' where capitalising the
-     *       first letter isn't quite right. */
+     *       first letter isn't quite right.
+     *       Could use memcmp to check if the domestic and export titles are identical or
+     *       different. */
 
     /* 0x150: Print the overseas game title */
     char *title = util_shift_jis_to_utf_8 (&context->rom [0x150], 48);

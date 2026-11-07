@@ -13,7 +13,7 @@
 #include "snepulator.h"
 #include "gamepad.h"
 #include "config.h"
-#include "util.h"
+#include "util/util.h"
 
 extern Snepulator_State state;
 

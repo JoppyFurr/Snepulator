@@ -10,7 +10,7 @@
 #include <string.h>
 
 #include "snepulator.h"
-#include "util.h"
+#include "util/util.h"
 #include "config.h"
 #include "database/sms_db.h"
 

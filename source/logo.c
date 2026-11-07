@@ -7,7 +7,7 @@
 #include <string.h>
 
 #include "snepulator.h"
-#include "util.h"
+#include "util/util.h"
 
 #include "../images/snepulator_logo.c"
 #include "logo.h"

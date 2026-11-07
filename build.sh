@@ -55,6 +55,7 @@ build_snepulator ()
     eval $CC $CFLAGS -c source/sound/sn76489.c      -o work/sn76489.o
     eval $CC $CFLAGS -c source/sound/ym2413.c       -o work/ym2413.o
     eval $CC $CFLAGS -c source/sound/ym2612.c       -o work/ym2612.o
+    eval $CC $CFLAGS -c source/util/util.c          -o work/util.o
     eval $CC $CFLAGS -c source/video/tms9928a.c     -o work/tms9928a.o
     eval $CC $CFLAGS -c source/video/smd_vdp.c      -o work/smd_vdp.o
     eval $CC $CFLAGS -c source/video/sms_vdp.c      -o work/sms_vdp.o
@@ -70,7 +71,6 @@ build_snepulator ()
     eval $CC $CFLAGS -c source/smd.c                -o work/smd.o
     eval $CC $CFLAGS -c source/sms.c                -o work/sms.o
     eval $CC $CFLAGS -c source/snepulator.c         -o work/snepulator.o
-    eval $CC $CFLAGS -c source/util.c               -o work/util.o
     eval $CC $CFLAGS -c source/vgm_player.c         -o work/vgm_player.o
 }
 
@@ -188,6 +188,7 @@ fi
 
 CFLAGS="-std=c23 -O2 -Wall -Werror -D_POSIX_C_SOURCE=200809L \
         $(${SDL2_CONFIG} --cflags) \
+        -I source/ \
         -I libraries/BLAKE3/ \
         -I libraries/gl3w/ \
         -I libraries/libspng-0.7.4/ \
@@ -198,6 +199,7 @@ CFLAGS="-std=c23 -O2 -Wall -Werror -D_POSIX_C_SOURCE=200809L \
 
 CXXFLAGS="-std=c++17 -O2 -Wall -Werror \
           $(${SDL2_CONFIG} --cflags) \
+          -I source/ \
           -I libraries/gl3w/ \
           -I ${IMGUI_PATH}/ \
           -I ${IMGUI_PATH}/backends/ \

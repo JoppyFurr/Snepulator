@@ -11,7 +11,7 @@
 
 #include "snepulator.h"
 #include "path.h"
-#include "util.h"
+#include "util/util.h"
 #include "database/sms_db.h"
 #include "save_state.h"
 
