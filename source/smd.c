@@ -3,7 +3,6 @@
  * Sega Mega Drive implementation.
  */
 
-#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -909,60 +908,11 @@ void smd_process_header (SMD_Context *context)
         return;
     }
 
-    /* TODO: Consider a new util/text.c file for string handling.
-     *       Consider processing the string as word tokens with special cases for minor
-     *       words like 'of', 'and', and  Roman numerals like 'II' where capitalising the
-     *       first letter isn't quite right.
-     *       Could use memcmp to check if the domestic and export titles are identical or
-     *       different. */
-
     /* 0x150: Print the overseas game title */
     char *title = util_shift_jis_to_utf_8 (&context->rom [0x150], 48);
     if (title != NULL)
     {
-        /* In-place modification of the converted string to remove excess spaces and capitals */
-        size_t length = 0;
-        bool previous_was_space = false;
-        bool previous_was_upper = false;
-        for (size_t i = 0; title [i] != '\0'; i++)
-        {
-            /* Don't modify non-ASCII characters */
-            if (title [i] & 0x80)
-            {
-                title [length++] = title [i];
-                previous_was_space = false;
-                previous_was_upper = false;
-            }
-            else
-            {
-                /* Capture isspace and isupper first, because
-                 * in-place modification can change the result. */
-                bool is_space = isspace (title [i]);
-                bool is_capital = isupper (title [i]);
-
-                /* Strip out extra spaces */
-                if (isspace (title [i]) && previous_was_space)
-                {
-                    continue;
-                }
-
-                /* Replace all-caps with title-case */
-                if (previous_was_upper)
-                {
-                    title [length++] = tolower (title [i]);
-                }
-                else
-                {
-                    title [length++] = title [i];
-                }
-
-                previous_was_space = is_space;
-                previous_was_upper = is_capital;
-            }
-        }
-
-        title [length] = '\0';
-
+        util_text_to_title_case (title);
         fprintf (stdout, "Title: %s\n", title);
         free (title);
     }

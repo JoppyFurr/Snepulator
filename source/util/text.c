@@ -3,6 +3,7 @@
  * Text utility functions implementation
  */
 
+#include <ctype.h>
 #include <iconv.h>
 #include <stdlib.h>
 
@@ -49,4 +50,62 @@ char *util_shift_jis_to_utf_8 (const uint8_t *input, size_t input_bytes)
 
     iconv_close (cd);
     return output_buffer;
+}
+
+
+/*
+ * Convert a UTF-8 string to Title Case.
+ * This includes stripping out excess whitespace.
+ *
+ * Note: This works in-place, modifying the original string.
+ *
+ * TODO:
+ *  - Consider first tokenizing the string into words and re-building the string
+ *  - Consider special cases for minor words like 'of', and 'and'
+ *  - Consider special cases fro Roman numerals like 'II'
+ */
+void util_text_to_title_case (char *text)
+{
+    size_t length = 0;
+    bool previous_was_space = false;
+    bool previous_was_upper = false;
+
+    for (size_t i = 0; text [i] != '\0'; i++)
+    {
+        /* Don't modify non-ASCII characters */
+        if (text [i] & 0x80)
+        {
+            text [length++] = text [i];
+            previous_was_space = false;
+            previous_was_upper = false;
+        }
+        else
+        {
+            /* Capture isspace and isupper first, because
+             * in-place modification can change the result. */
+            bool is_space = isspace (text [i]);
+            bool is_capital = isupper (text [i]);
+
+            /* Strip out extra spaces */
+            if (isspace (text [i]) && previous_was_space)
+            {
+                continue;
+            }
+
+            /* Replace all-caps with title-case */
+            if (previous_was_upper)
+            {
+                text [length++] = tolower (text [i]);
+            }
+            else
+            {
+                text [length++] = text [i];
+            }
+
+            previous_was_space = is_space;
+            previous_was_upper = is_capital;
+        }
+    }
+
+    text [length] = '\0';
 }
