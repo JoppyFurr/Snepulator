@@ -11,6 +11,7 @@
 #include "snepulator.h"
 #include "path.h"
 #include "util/util.h"
+#include "util/text.h"
 
 #include "gamepad.h"
 #include "cpu/m68k.h"

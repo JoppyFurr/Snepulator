@@ -57,6 +57,3 @@ uint16_t util_hton16 (uint16_t h);
 uint32_t util_hton32 (uint32_t h);
 uint16_t util_ntoh16 (uint16_t n);
 uint32_t util_ntoh32 (uint32_t n);
-
-/* Conversion from Shift-JIS text to UTF-8 */
-char *util_shift_jis_to_utf_8 (const uint8_t *input, size_t input_bytes);
