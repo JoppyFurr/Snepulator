@@ -6,13 +6,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <errno.h>
 #include <unistd.h>
-
-#include <algorithm>
-#include <regex>
-#include <string>
-#include <vector>
 
 #include <GL/gl3w.h>
 #include <SDL2/SDL.h>
