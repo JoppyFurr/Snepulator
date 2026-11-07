@@ -4,7 +4,9 @@
  */
 
 #include <ctype.h>
+#ifndef TARGET_WINDOWS
 #include <iconv.h>
+#endif
 #include <stdlib.h>
 
 #include "snepulator.h"
@@ -14,11 +16,14 @@
  * Returns an allocated string that needs to be freed,
  * or NULL if the conversion failed.
  *
- * TODO: Confirm this works on Windows - May need an extra library to either be
- *       included in the .zip or to be statically linked.
+ * TODO: For now, conversion is not enabled on Windows. This
+ *       requires sorting out extra mingw libraries.
  */
 char *util_shift_jis_to_utf_8 (const uint8_t *input, size_t input_bytes)
 {
+#ifdef TARGET_WINDOWS
+    return NULL;
+#else
     iconv_t cd = iconv_open ("UTF-8", "SHIFT-JIS");
     if (cd == (iconv_t) -1)
     {
@@ -50,6 +55,7 @@ char *util_shift_jis_to_utf_8 (const uint8_t *input, size_t input_bytes)
 
     iconv_close (cd);
     return output_buffer;
+#endif
 }
 
 
