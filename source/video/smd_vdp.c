@@ -13,6 +13,7 @@
  *  - Interlace mode
  *  - Sprite masking (X=0, X=1)
  *  - Sprite collisions
+ *  - Improve timing timing for when v-count changes
  */
 
 #include <stdio.h>
@@ -22,9 +23,12 @@
 #include "util/util.h"
 #include "smd_vdp.h"
 
-static uint8_t v_counter_ntsc_224 [313] = { };
-static uint8_t v_counter_pal_224 [313] = { };
-static uint8_t v_counter_pal_240 [313] = { };
+static uint8_t h_counter_256 [171] = { };
+static uint8_t h_counter_320 [211] = { };
+
+static uint16_t v_counter_ntsc_224 [313] = { };
+static uint16_t v_counter_pal_224 [313] = { };
+static uint16_t v_counter_pal_240 [313] = { };
 
 typedef enum pixel_status_e {
     PIXEL_NONE = 0,
@@ -35,14 +39,24 @@ typedef enum pixel_status_e {
 static const uint16_t v_scroll_none [20] = { };
 
 /*
- * Initialise the v_counter table.
+ * Initialise the h_counter and v_counter tables.
  *
  * TODO: Consider a pre-calculated table like this for SMS.
  */
-static void smd_vdp_init_v_counter (void)
+static void smd_vdp_init_hv_counter (void)
 {
-    /* NTSC - 224 lines */
+    /* H-counter - 256 columns */
     uint32_t table_index = 0;
+    for (uint32_t value = 0x00; value <= 0x93; value++) h_counter_256 [table_index++] = value;
+    for (uint32_t value = 0xe9; value <= 0xff; value++) h_counter_256 [table_index++] = value;
+
+    /* H-counter - 320 columns */
+    table_index = 0;
+    for (uint32_t value = 0x00; value <= 0xb6; value++) h_counter_320 [table_index++] = value;
+    for (uint32_t value = 0xe4; value <= 0xff; value++) h_counter_320 [table_index++] = value;
+
+    /* NTSC - 224 lines */
+    table_index = 0;
     for (uint32_t value = 0x000; value <= 0x0ea; value++) v_counter_ntsc_224 [table_index++] = value;
     for (uint32_t value = 0x1e5; value <= 0x1ff; value++) v_counter_ntsc_224 [table_index++] = value;
 
@@ -61,10 +75,24 @@ static void smd_vdp_init_v_counter (void)
 /*
  * Read the VDP status register.
  */
-uint16_t smd_vdp_status_read (SMD_VDP_Context *context)
+uint16_t smd_vdp_status_read (SMD_VDP_Context *context, uint64_t cycle_count)
 {
     uint16_t status_register = 0x3400;
     context->state.second_half_pending = false;
+
+    bool h_blank = false;
+    if ((context->state.mode_4 & 0x81) == 0x00)
+    {
+        /* 256 pixels wide */
+        size_t progress = 171 * (cycle_count % 489) / 489;
+        h_blank = (progress < 5 || progress > 146);
+    }
+    else
+    {
+        /* 320 pixels wide */
+        size_t progress = 211 * (cycle_count % 489) / 489;
+        h_blank = (progress < 6 || progress > 178);
+    }
 
     /* TODO: VBlank / HBlank bits */
     /* TODO: Bits [8:9] - FIFO status (full / empty) */
@@ -73,7 +101,7 @@ uint16_t smd_vdp_status_read (SMD_VDP_Context *context)
     /* TODO: Bit  [ 5 ] - Sprite Collision */
     /* TODO: Bit  [ 4 ] - Odd vs Even frame (interlace mode) */
     status_register |= (context->state.line >= context->lines_active) ? BIT_3 : 0;
-    /* TODO: Bit  [ 2 ] - Horizontal Blanking */
+    status_register |= h_blank ? BIT_2 : 0;
     /* TODO: Bit  [ 1 ] - DMA in progress */
     status_register |= (context->format == VIDEO_FORMAT_PAL) ? BIT_0 : 0;
 
@@ -82,15 +110,28 @@ uint16_t smd_vdp_status_read (SMD_VDP_Context *context)
 
 
 /*
- * Read the VDP HV counter register.
+ * Read the VDP HV-counter register.
  */
-uint16_t smd_vdp_hv_counter_read (SMD_VDP_Context *context)
+uint16_t smd_vdp_hv_counter_read (SMD_VDP_Context *context, uint64_t cycle_count)
 {
-    /* TODO: Different behaviour is needed for interlaced mode. */
-    /* TODO: Horizontal counter always returns zero for now. */
+
+    uint8_t h_counter = 0;
+    if ((context->state.mode_4 & 0x81) == 0x00)
+    {
+        /* 256 pixels wide */
+        size_t progress = 171 * (cycle_count % 489) / 489;
+        h_counter = h_counter_256 [progress];
+    }
+    else
+    {
+        /* 320 pixels wide */
+        size_t progress = 211 * (cycle_count % 489) / 489;
+        h_counter = h_counter_320 [progress];
+    }
+
+    /* TODO: Different v-count behaviour is needed for interlaced mode. */
 
     uint8_t v_counter = 0;
-
     if (context->format == VIDEO_FORMAT_NTSC)
     {
         /* Assume 224 active lines, NTSC doesn't do V30 lines properly. */
@@ -108,7 +149,7 @@ uint16_t smd_vdp_hv_counter_read (SMD_VDP_Context *context)
         }
     }
 
-    return v_counter << 8;
+    return (v_counter << 8) | h_counter;
 }
 
 
@@ -833,7 +874,7 @@ void smd_vdp_update_mode (SMD_VDP_Context *context)
 {
     context->lines_total = (context->format == VIDEO_FORMAT_PAL) ? 313 : 262;
 
-    if ((context->state.mode_4 & 0x81) == 00)
+    if ((context->state.mode_4 & 0x81) == 0x00)
     {
         /* H32 Mode */
         context->screen_width = 256;
@@ -935,7 +976,7 @@ SMD_VDP_Context *smd_vdp_init (void *parent,
     {
         /* Once-off initialisations */
         first = false;
-        smd_vdp_init_v_counter ();
+        smd_vdp_init_hv_counter ();
     }
 
     context = calloc (1, sizeof (SMD_VDP_Context));

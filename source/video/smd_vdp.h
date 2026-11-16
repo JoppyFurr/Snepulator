@@ -150,10 +150,10 @@ typedef struct SMD_VDP_Context_s {
 } SMD_VDP_Context;
 
 /* Read the VDP status register. */
-uint16_t smd_vdp_status_read (SMD_VDP_Context *context);
+uint16_t smd_vdp_status_read (SMD_VDP_Context *context, uint64_t cycle_count);
 
-/* Read the VDP HV counter register. */
-uint16_t smd_vdp_hv_counter_read (SMD_VDP_Context *context);
+/* Read the VDP HV-counter register. */
+uint16_t smd_vdp_hv_counter_read (SMD_VDP_Context *context, uint64_t cycle_count);
 
 /* Write to the VDP control port. */
 void smd_vdp_control_write (SMD_VDP_Context *context, uint16_t data);

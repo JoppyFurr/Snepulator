@@ -201,17 +201,17 @@ static uint8_t smd_memory_read_8 (void *context_ptr, uint32_t addr)
         {
             case 0xc00004:
             case 0xc00006:
-                return smd_vdp_status_read (context->vdp_context) >> 8;
+                return smd_vdp_status_read (context->vdp_context, context->m68k_context->cycle_count) >> 8;
 
             case 0xc00005:
             case 0xc00007:
-                return smd_vdp_status_read (context->vdp_context);
+                return smd_vdp_status_read (context->vdp_context, context->m68k_context->cycle_count);
 
             case 0xc00008: /* V Counter */
-                return smd_vdp_hv_counter_read (context->vdp_context) >> 8;;
+                return smd_vdp_hv_counter_read (context->vdp_context, context->m68k_context->cycle_count) >> 8;;
 
             case 0xc00009: /* H Counter */
-                return smd_vdp_hv_counter_read (context->vdp_context);
+                return smd_vdp_hv_counter_read (context->vdp_context, context->m68k_context->cycle_count);
 
             default:
                 snepulator_error (__func__, "VDP address %06x not implemented.", addr);
@@ -306,9 +306,9 @@ static uint16_t smd_memory_read_16 (void *context_ptr, uint32_t addr)
                 return smd_vdp_data_read (context->vdp_context);
             case 0xc00004:
             case 0xc00006:
-                return smd_vdp_status_read (context->vdp_context);
+                return smd_vdp_status_read (context->vdp_context, context->m68k_context->cycle_count);
             case 0xc00008:
-                return smd_vdp_hv_counter_read (context->vdp_context);
+                return smd_vdp_hv_counter_read (context->vdp_context, context->m68k_context->cycle_count);
 
                 break;
             default:
@@ -792,7 +792,9 @@ static void smd_run (void *context_ptr, uint32_t cycles)
     {
         /* TODO: 489 is rounded up. A better solution is to add 3420 master_clock
          *       cycles to a pool and subtract as many full m68k cycles as we can,
-         *       saving any leftovers for the next line. */
+         *       saving any leftovers for the next line.
+         *       When fixing this, also update the VDP which assumes 489 cycles per
+         *       line when calculating the h-count value. */
         m68k_run_cycles (context->m68k_context, 489);
 
         if (context->state.z80_reset_n && !context->state.z80_busreq)
