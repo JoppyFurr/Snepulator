@@ -26315,9 +26315,11 @@ void m68k_run_cycles (M68000_Context *context, int64_t cycles)
         }
 
         uint8_t interrupt = context->get_int (context->parent);
+        uint32_t used_cycles = 0;
         if (interrupt > context->state.sr_interrupt_priority)
         {
             m68k_exception (context, 0x60 + (interrupt << 2));
+            used_cycles = 10; /* TODO: Work out the real timing */
             context->state.sr_interrupt_priority = interrupt;
 
             /* TODO: Investigate behaviour of interrupt acknowledgement. Right
@@ -26326,8 +26328,10 @@ void m68k_run_cycles (M68000_Context *context, int64_t cycles)
         }
         else
         {
-            context->clock_cycles -= m68k_run_instruction (context);
+            used_cycles = m68k_run_instruction (context);
+            context->clock_cycles -= used_cycles;
         }
+        context->cycle_count += used_cycles;
     }
 }
 

@@ -50,6 +50,7 @@ typedef struct M68000_Context_s {
 
     void *parent;
     M68000_State state;
+    uint64_t cycle_count; /* Cycle counter since power-on */
     int32_t clock_cycles; /* Outstanding clock cycles to run. */
 
     /* Connections to the rest of the system */
